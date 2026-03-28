@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import React, { useState } from 'react';
 import { 
   Home, 
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { ON_ENGENHARIA_LOGO_SRC } from '@/lib/branding';
 
 interface SidebarProps {
   className?: string;
@@ -166,14 +167,29 @@ export function Sidebar({ className = '' }: SidebarProps) {
           flex items-center justify-between p-4 border-b border-gray-200
           ${isCollapsed ? 'px-2' : 'px-4'}
         `}>
-          {!isCollapsed && (
-            <div className="flex-1 min-w-0">
-              <h1 className="text-lg font-bold text-gray-900 truncate">
-                ON Engenharia
-              </h1>
-              <p className="text-xs text-gray-500 truncate">
-                Sistema de Orçamentos
-              </p>
+          {isCollapsed ? (
+            <div className="flex flex-1 justify-center">
+              <img
+                src={ON_ENGENHARIA_LOGO_SRC}
+                alt="ON Engenharia"
+                className="h-8 w-auto max-w-[2.5rem] object-contain"
+              />
+            </div>
+          ) : (
+            <div className="flex flex-1 min-w-0 items-center gap-3">
+              <img
+                src={ON_ENGENHARIA_LOGO_SRC}
+                alt=""
+                className="h-9 w-auto object-contain shrink-0"
+              />
+              <div className="min-w-0 flex-1">
+                <h1 className="text-lg font-bold text-gray-900 truncate">
+                  ON Engenharia
+                </h1>
+                <p className="text-xs text-gray-500 truncate">
+                  Sistema de Orçamentos
+                </p>
+              </div>
             </div>
           )}
           

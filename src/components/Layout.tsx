@@ -1,8 +1,9 @@
-﻿"use client";
+"use client";
 import React from 'react';
 import { Grid3X3, ChevronRight } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { useApp } from '@/contexts/AppContext';
+import { ON_ENGENHARIA_LOGO_SRC } from '@/lib/branding';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -64,15 +65,22 @@ export function Layout({ children }: LayoutProps) {
               </div>
             </div>
             <div className="px-4 sm:px-6 lg:px-8 py-4">
-              <div className="lg:ml-16"> {/* Margem para compensar botão mobile apenas */}
-                <h1 className="text-2xl font-bold text-gray-900">
-                  {getPageTitle()}
-                </h1>
-                {getPageDescription() && (
-                  <p className="mt-1 text-sm text-gray-500">
-                    {getPageDescription()}
-                  </p>
-                )}
+              <div className="lg:ml-16 flex items-start gap-3 sm:gap-4"> {/* Margem para compensar botão mobile apenas */}
+                <img
+                  src={ON_ENGENHARIA_LOGO_SRC}
+                  alt="ON Engenharia"
+                  className="h-10 sm:h-11 w-auto object-contain shrink-0 mt-0.5"
+                />
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-2xl font-bold text-gray-900">
+                    {getPageTitle()}
+                  </h1>
+                  {getPageDescription() && (
+                    <p className="mt-1 text-sm text-gray-500">
+                      {getPageDescription()}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </header>

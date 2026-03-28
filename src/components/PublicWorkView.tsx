@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useState, useEffect } from 'react';
 import { 
   BarChart3, 
@@ -15,6 +15,7 @@ import {
 import { WorkTracking } from '@/types';
 import { CanvasVisual } from './CanvasVisual';
 import { supabase } from '@/lib/supabaseClient';
+import { ON_ENGENHARIA_LOGO_SRC } from '@/lib/branding';
 
 interface PublicWorkViewProps {
   workId: string;
@@ -245,7 +246,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             {/* Esquerda: logo fixa do sistema + logo do engenheiro */}
             <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0 order-2 sm:order-1">
-              <img src="/OnEngenharia.webp" alt="ON Engenharia" className="h-14 sm:h-16 w-auto object-contain" />
+              <img src={ON_ENGENHARIA_LOGO_SRC} alt="ON Engenharia" className="h-14 sm:h-16 w-auto object-contain" />
               {workData.budget_data?.client_logo_url && (
                 <img
                   src={workData.budget_data.client_logo_url}

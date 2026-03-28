@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   ArrowLeft,
@@ -35,6 +35,7 @@ import { PostProgressModal } from './PostProgressModal';
 import { CanvasVisual } from './CanvasVisual';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { AlertDialog } from '@/components/ui/alert-dialog';
+import { ON_ENGENHARIA_LOGO_SRC } from '@/lib/branding';
 
 type ViewMode = 'dashboard' | 'select-budget' | 'tracking-detail';
 
@@ -2174,7 +2175,12 @@ export function EngineerPortal() {
                   Faça upload da sua logo. Ela aparecerá ao lado da logo do sistema na página pública da obra.
                 </p>
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <img
+                      src={ON_ENGENHARIA_LOGO_SRC}
+                      alt="Logo do sistema (fixo)"
+                      className="h-12 w-auto max-w-[120px] object-contain bg-gray-50 rounded border border-gray-200 p-1"
+                    />
                     {activeTracking.budget_data?.client_logo_url ? (
                       <>
                         <img
@@ -2595,9 +2601,11 @@ export function EngineerPortal() {
               </button>
               <div className="h-6 border-l border-slate-300" />
               <div className="flex items-center space-x-3">
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${ON_COLORS.navy} 0%, ${ON_COLORS.blue} 100%)` }}>
-                  <Activity className="w-5 h-5 text-white" />
-                </div>
+                <img
+                  src={ON_ENGENHARIA_LOGO_SRC}
+                  alt="ON Engenharia"
+                  className="h-9 w-auto max-h-9 object-contain"
+                />
                 <div>
                   <span className="text-base font-bold text-[#1D3140] block">Portal do Engenheiro</span>
                   <span className="text-xs text-slate-500 block">Gestão de Obras</span>

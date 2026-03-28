@@ -15,6 +15,7 @@ import { EditorGrupo } from '@/components/EditorGrupo';
 import { EngineerPortal } from '@/components/EngineerPortal';
 import { Login } from '@/components/Login';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ON_ENGENHARIA_LOGO_SRC } from '@/lib/branding';
 
 function AuthenticatedApp() {
   const { currentView, activeModule } = useApp();
@@ -70,6 +71,11 @@ export default function AppShell() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
+          <img
+            src={ON_ENGENHARIA_LOGO_SRC}
+            alt="ON Engenharia"
+            className="h-14 w-auto object-contain mx-auto mb-6 opacity-90"
+          />
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Carregando...</p>
         </div>

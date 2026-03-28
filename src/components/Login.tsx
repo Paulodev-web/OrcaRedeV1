@@ -1,7 +1,8 @@
-﻿"use client";
+"use client";
 import { useState, FormEvent } from 'react';
 import { User, Lock, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import { ON_ENGENHARIA_LOGO_SRC } from '@/lib/branding';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -44,6 +45,11 @@ export function Login() {
 
         {/* Conteúdo principal */}
         <div className="relative z-10 flex flex-col justify-center items-center text-white p-12 w-full">
+          <img
+            src={ON_ENGENHARIA_LOGO_SRC}
+            alt="ON Engenharia"
+            className="h-24 sm:h-28 w-auto object-contain drop-shadow-lg mb-10"
+          />
           {/* Ilustração/Visual principal */}
           <div className="mb-12 relative">
             {/* Tela principal */}
@@ -103,15 +109,23 @@ export function Login() {
         <div className="mx-auto w-full max-w-sm lg:w-96">
           {/* Header do login no mobile */}
           <div className="lg:hidden text-center mb-8">
+            <img
+              src={ON_ENGENHARIA_LOGO_SRC}
+              alt="ON Engenharia"
+              className="h-20 w-auto object-contain mx-auto mb-4"
+            />
             <h1 className="text-3xl font-bold text-gray-900 mb-2">ON Engenharia</h1>
             <p className="text-gray-600">Sistema de Orçamentos</p>
           </div>
 
           <div className="mb-8">
-            <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                <User className="w-8 h-8 text-blue-600" />
-              </div>
+            <div className="hidden lg:flex justify-center mb-6">
+              <img
+                src={ON_ENGENHARIA_LOGO_SRC}
+                alt=""
+                className="h-16 w-auto object-contain"
+                aria-hidden
+              />
             </div>
             <h2 className="text-center text-2xl font-bold text-gray-900 mb-2">
               Bem-vindo de volta

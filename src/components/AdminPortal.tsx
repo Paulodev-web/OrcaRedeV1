@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useState } from 'react';
 import {
   LogOut,
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { ON_ENGENHARIA_LOGO_SRC } from '@/lib/branding';
 
 interface Module {
   id: string;
@@ -116,9 +117,11 @@ export function AdminPortal() {
           <div className="flex items-center justify-between h-16">
             {/* Brand */}
             <div className="flex items-center space-x-3">
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center shadow-sm" style={{ background: `linear-gradient(135deg, ${ON_COLORS.navy} 0%, ${ON_COLORS.blue} 100%)` }}>
-                <Zap className="w-5 h-5 text-white" />
-              </div>
+              <img
+                src={ON_ENGENHARIA_LOGO_SRC}
+                alt="ON Engenharia"
+                className="h-9 w-auto max-h-9 object-contain"
+              />
               <div>
                 <span className="text-base font-bold text-[#1D3140] leading-tight block">
                   ON Engenharia
