@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createSupabaseServerClient } from '@/lib/supabaseServer';
+import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
 
 type ActionResult = { success: boolean; error?: string };
 
@@ -15,12 +15,14 @@ interface MaterialInput {
 export async function addMaterialAction(material: MaterialInput): Promise<ActionResult> {
   try {
     const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
 
     const { error } = await supabase.from('materials').insert({
       code: material.codigo,
       name: material.descricao,
       price: material.precoUnit,
       unit: material.unidade,
+      user_id: userId,
     });
 
     if (error) {

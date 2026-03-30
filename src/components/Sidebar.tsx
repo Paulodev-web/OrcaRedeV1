@@ -147,7 +147,7 @@ export function Sidebar({ className = '' }: SidebarProps) {
       {/* Overlay para mobile */}
       {isMobileOpen && (
         <div 
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+          className="lg:hidden fixed inset-0 bg-black/40 z-40"
           onClick={toggleMobileSidebar}
         />
       )}

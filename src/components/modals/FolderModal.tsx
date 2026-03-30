@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useState, useEffect } from 'react';
 import { X, Folder, AlertCircle } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
@@ -65,7 +65,7 @@ export function FolderModal({ isOpen, onClose, onSave, initialName = '', initial
   const availableFolders = folders.filter(folder => mode === 'create' || folder.id !== initialName);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl max-w-lg w-full border border-gray-200">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-gray-200">

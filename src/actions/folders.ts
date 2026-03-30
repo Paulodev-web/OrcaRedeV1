@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createSupabaseServerClient } from '@/lib/supabaseServer';
+import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
 
 type ActionResult = { success: boolean; error?: string };
 
@@ -12,11 +12,13 @@ export async function addFolderAction(
 ): Promise<ActionResult> {
   try {
     const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
 
     const { error } = await supabase.from('budget_folders').insert({
       name: name.trim(),
       color: color || null,
       parent_id: parentId || null,
+      user_id: userId,
     });
 
     if (error) {

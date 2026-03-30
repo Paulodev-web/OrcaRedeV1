@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createSupabaseServerClient } from '@/lib/supabaseServer';
+import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
 
 type ActionResult = { success: boolean; error?: string };
 
@@ -27,6 +27,7 @@ interface UpdateItemGroupInput {
 export async function addItemGroupAction(data: AddItemGroupInput): Promise<ActionResult> {
   try {
     const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
 
     if (data.company_ids.length === 0) {
       return { success: false, error: 'Nenhuma concessionária especificada.' };
@@ -40,6 +41,7 @@ export async function addItemGroupAction(data: AddItemGroupInput): Promise<Actio
           name: data.name,
           description: data.description || null,
           company_id: companyId,
+          user_id: userId,
         })
         .select('id')
         .single();

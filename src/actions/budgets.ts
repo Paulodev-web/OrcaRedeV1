@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createSupabaseServerClient } from '@/lib/supabaseServer';
+import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
 
 type ActionResult = { success: boolean; error?: string };
 
@@ -22,6 +22,7 @@ interface UpdateBudgetInput {
 export async function addBudgetAction(data: AddBudgetInput): Promise<ActionResult> {
   try {
     const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
 
     const { error } = await supabase.from('budgets').insert({
       project_name: data.project_name,
@@ -30,6 +31,7 @@ export async function addBudgetAction(data: AddBudgetInput): Promise<ActionResul
       company_id: data.company_id,
       status: 'Em Andamento',
       render_version: 2,
+      user_id: userId,
     });
 
     if (error) {
@@ -112,6 +114,7 @@ export async function finalizeBudgetAction(budgetId: string): Promise<ActionResu
 export async function duplicateBudgetAction(budgetId: string): Promise<ActionResult & { newBudgetId?: string }> {
   try {
     const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
 
     // 1. Fetch the original budget
     const { data: originalBudget, error: budgetError } = await supabase
@@ -135,6 +138,7 @@ export async function duplicateBudgetAction(budgetId: string): Promise<ActionRes
         status: 'Em Andamento',
         plan_image_url: originalBudget.plan_image_url,
         render_version: originalBudget.render_version || 1,
+        user_id: userId,
       })
       .select()
       .single();

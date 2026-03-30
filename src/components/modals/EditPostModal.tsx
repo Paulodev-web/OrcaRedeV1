@@ -538,7 +538,7 @@ export function EditPostModal({ isOpen, onClose, post }: EditPostModalProps) {
   if (!isOpen || !currentPost) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg w-full max-w-5xl max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b">

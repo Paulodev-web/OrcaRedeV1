@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import React, { useState, useEffect, useCallback, useMemo, ErrorInfo } from 'react';
 import { X, Loader2, Search, Plus, Minus, Package, Folder, ArrowUpDown, ArrowUp, ArrowDown, Copy } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
@@ -29,7 +29,7 @@ class ModalErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md">
             <h3 className="text-lg font-semibold text-red-600 mb-2">Erro no Modal</h3>
             <p className="text-gray-600 mb-4">Ocorreu um erro inesperado. Tente novamente.</p>
@@ -435,7 +435,7 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
   const hasAdditionalItems = selectedGroups.length > 0 || selectedMaterials.length > 0;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b">

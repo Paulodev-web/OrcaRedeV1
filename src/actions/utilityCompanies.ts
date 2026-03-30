@@ -1,17 +1,18 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createSupabaseServerClient } from '@/lib/supabaseServer';
+import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
 
 type ActionResult = { success: boolean; error?: string };
 
 export async function addUtilityCompanyAction(name: string): Promise<ActionResult> {
   try {
     const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
 
     const { error } = await supabase
       .from('utility_companies')
-      .insert({ name: name.trim() });
+      .insert({ name: name.trim(), user_id: userId });
 
     if (error) {
       if (error.code === '23505') {

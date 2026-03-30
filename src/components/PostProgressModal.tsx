@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import React, { useState, useRef } from 'react';
 import {
   X,
@@ -134,7 +134,7 @@ export function PostProgressModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="p-6 border-b border-gray-200">

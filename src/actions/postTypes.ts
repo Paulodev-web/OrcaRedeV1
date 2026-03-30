@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createSupabaseServerClient } from '@/lib/supabaseServer';
+import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
 
 type ActionResult = { success: boolean; error?: string };
 
@@ -25,6 +25,7 @@ function isDuplicateCodeError(message: string | undefined, table: 'materials' | 
 export async function addPostTypeAction(data: PostTypeInput): Promise<ActionResult> {
   try {
     const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
 
     // Step 1: create the linked material
     const { data: newMaterial, error: materialError } = await supabase
@@ -35,6 +36,7 @@ export async function addPostTypeAction(data: PostTypeInput): Promise<ActionResu
         description: data.description?.trim() || null,
         unit: 'unidade',
         price: data.price,
+        user_id: userId,
       })
       .select('id')
       .single();
@@ -58,6 +60,7 @@ export async function addPostTypeAction(data: PostTypeInput): Promise<ActionResu
       height_m: data.height_m || null,
       price: data.price,
       material_id: newMaterial.id,
+      user_id: userId,
     });
 
     if (postTypeError) {
