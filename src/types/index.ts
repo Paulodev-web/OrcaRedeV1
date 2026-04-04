@@ -239,3 +239,55 @@ export interface TrackedPostMaterial {
     unit: string;
   };
 }
+
+// =============================================================================
+// Módulo: Comparação de Fornecedores e Cenários de Compra
+// =============================================================================
+
+export type SupplierQuoteStatus = 'pendente' | 'conciliado' | 'aprovado';
+export type SupplierMatchStatus = 'sem_match' | 'automatico' | 'manual';
+
+export interface SupplierQuote {
+  id: string;
+  budget_id: string;
+  supplier_name: string;
+  pdf_path: string;
+  status: SupplierQuoteStatus;
+  observacoes_gerais?: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupplierQuoteItem {
+  id: string;
+  quote_id: string;
+  descricao: string;
+  unidade: string;
+  quantidade: number;
+  preco_unit: number;
+  total_item: number;
+  ipi_percent: number;
+  st_incluso: boolean;
+  alerta: boolean;
+  matched_material_id?: string | null;
+  conversion_factor: number;
+  match_status: SupplierMatchStatus;
+  created_at: string;
+}
+
+export interface SupplierMaterialMapping {
+  id: string;
+  user_id: string;
+  supplier_name: string;
+  supplier_material_name: string;
+  internal_material_id: string;
+  conversion_factor: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BudgetOption {
+  id: string;
+  name: string;
+}
