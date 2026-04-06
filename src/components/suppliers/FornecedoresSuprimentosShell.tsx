@@ -12,6 +12,15 @@ import type {
   SupplierQuoteItemWithMaterial,
 } from '@/actions/supplierQuotes';
 import Link from 'next/link';
+import {
+  ArrowLeft,
+  BarChart3,
+  ChevronRight,
+  GitMerge,
+  Grid3X3,
+  Package,
+  Upload,
+} from 'lucide-react';
 
 export type FornecedoresTab = 'importar' | 'conciliar' | 'cenarios';
 
@@ -52,6 +61,15 @@ function buildFornecedoresHref(
   return `/fornecedores?${p.toString()}`;
 }
 
+const tabTriggerClass =
+  'group inline-flex flex-1 min-w-0 sm:flex-none items-center justify-center gap-2 rounded-none rounded-t-lg border border-transparent border-b-0 px-4 py-2.5 text-sm font-medium text-gray-600 shadow-none transition-colors ' +
+  'data-[state=active]:bg-[#64ABDE]/15 data-[state=active]:text-[#1D3140] data-[state=active]:border-gray-200 data-[state=active]:shadow-none ' +
+  'data-[state=inactive]:text-gray-600 ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#64ABDE] focus-visible:ring-offset-2';
+
+const tabIconClass =
+  'h-4 w-4 shrink-0 text-gray-400 group-data-[state=active]:text-[#64ABDE]';
+
 export default function FornecedoresSuprimentosShell({
   budgets,
   activeTab,
@@ -79,114 +97,143 @@ export default function FornecedoresSuprimentosShell({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Suprimentos e Cotações</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Importe propostas em PDF, concilie materiais com o orçamento e compare cenários de compra.
-        </p>
+      <div className="text-xs text-gray-400 flex items-center gap-1.5 flex-wrap">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 transition-colors hover:text-[#64ABDE]"
+        >
+          <Grid3X3 className="w-3.5 h-3.5 shrink-0" aria-hidden />
+          <span>Portal</span>
+        </Link>
+        <ChevronRight className="w-3 h-3 shrink-0 opacity-70" aria-hidden />
+        <span className="text-gray-600 font-medium">Suprimentos</span>
+      </div>
+
+      <div className="flex items-start gap-3 sm:gap-4">
+        <Link
+          href="/"
+          className="mt-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 shadow-sm transition-colors hover:bg-gray-50 hover:text-[#1D3140]"
+          aria-label="Voltar ao portal"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden />
+        </Link>
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-[#64ABDE]/40 bg-[#64ABDE]/15">
+          <Package className="h-6 w-6 text-[#64ABDE]" aria-hidden />
+        </div>
+        <div className="min-w-0 flex-1 pt-0.5">
+          <h1 className="text-2xl font-bold text-[#1D3140]">Suprimentos e Cotações</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Importe propostas em PDF, concilie materiais com o orçamento e compare cenários de compra.
+          </p>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-        <TabsList className="flex w-full flex-wrap h-auto gap-1 p-1 sm:inline-flex sm:h-10">
-          <TabsTrigger value="importar" className="flex-1 sm:flex-none">
-            Importar
+        <TabsList className="flex w-full flex-wrap h-auto items-end gap-1 rounded-none border-0 border-b border-gray-200 bg-transparent p-0 shadow-none">
+          <TabsTrigger value="importar" className={tabTriggerClass}>
+            <Upload className={tabIconClass} aria-hidden />
+            Importar PDF
           </TabsTrigger>
-          <TabsTrigger value="conciliar" className="flex-1 sm:flex-none">
-            Conciliar
+          <TabsTrigger value="conciliar" className={tabTriggerClass}>
+            <GitMerge className={tabIconClass} aria-hidden />
+            Conciliar itens
           </TabsTrigger>
-          <TabsTrigger value="cenarios" className="flex-1 sm:flex-none">
-            Cenários
+          <TabsTrigger value="cenarios" className={tabTriggerClass}>
+            <BarChart3 className={tabIconClass} aria-hidden />
+            Cenários de compra
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="importar" className="mt-6">
-          <SupplierPdfImporter budgets={budgets} />
-        </TabsContent>
+        <div className="rounded-b-xl border border-t-0 border-gray-200 bg-white px-6 py-6 shadow-sm lg:px-8 lg:py-8">
+          <TabsContent value="importar" className="mt-0 focus-visible:ring-0">
+            <SupplierPdfImporter budgets={budgets} embedded />
+          </TabsContent>
 
-        <TabsContent value="conciliar" className="mt-6">
-          {!quoteId && (
-            <div className="bg-white rounded-lg border border-gray-200 p-10 text-center text-sm text-gray-500">
-              <p>Nenhuma cotação selecionada.</p>
-              <p className="mt-2">
-                Importe um PDF na aba{' '}
-                <button
-                  type="button"
-                  onClick={() => onTabChange('importar')}
-                  className="text-blue-600 font-medium hover:underline"
+          <TabsContent value="conciliar" className="mt-0 focus-visible:ring-0">
+            {!quoteId && (
+              <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50/50 p-10 text-center text-sm text-gray-500">
+                <p>Nenhuma cotação selecionada.</p>
+                <p className="mt-2">
+                  Importe um PDF na aba{' '}
+                  <button
+                    type="button"
+                    onClick={() => onTabChange('importar')}
+                    className="font-medium text-[#64ABDE] hover:text-[#1D3140] hover:underline"
+                  >
+                    Importar PDF
+                  </button>{' '}
+                  e salve a cotação para abrir a conciliação aqui.
+                </p>
+              </div>
+            )}
+
+            {quoteId && conciliationError && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
+                <p className="font-medium">Não foi possível carregar esta cotação.</p>
+                <p className="mt-1 text-amber-800">{conciliationError}</p>
+                <Link
+                  href={buildFornecedoresHref('importar', {})}
+                  className="mt-4 inline-block font-medium text-[#64ABDE] hover:text-[#1D3140] hover:underline"
                 >
-                  Importar
-                </button>{' '}
-                e salve a cotação para abrir a conciliação aqui.
+                  Voltar para Importar
+                </Link>
+              </div>
+            )}
+
+            {quoteId && conciliation && (
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-semibold text-[#1D3140]">Conciliação de materiais</h2>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                      Fornecedor:{' '}
+                      <span className="font-semibold text-gray-800">
+                        {conciliation.quote.supplier_name}
+                      </span>
+                      {' · '}
+                      {matchedCount} de {conciliation.items.length} itens vinculados
+                    </p>
+                  </div>
+                  <div className="text-right text-sm text-gray-500">
+                    <p>
+                      Status:{' '}
+                      <span
+                        className={`font-medium ${
+                          conciliation.quote.status === 'conciliado'
+                            ? 'text-green-600'
+                            : 'text-amber-600'
+                        }`}
+                      >
+                        {conciliation.quote.status === 'conciliado' ? 'Conciliado' : 'Pendente'}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+                <ConciliationTable
+                  quote={conciliation.quote}
+                  items={conciliation.items}
+                  budgetMaterials={conciliation.budgetMaterials}
+                />
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="cenarios" className="mt-0 focus-visible:ring-0">
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold text-[#1D3140]">Cenários de compra</h2>
+              <p className="text-sm text-gray-500 mt-0.5">
+                Compare fornecedores e encontre a estratégia de menor custo.
               </p>
             </div>
-          )}
-
-          {quoteId && conciliationError && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-sm text-amber-900">
-              <p className="font-medium">Não foi possível carregar esta cotação.</p>
-              <p className="mt-1 text-amber-800">{conciliationError}</p>
-              <Link
-                href={buildFornecedoresHref('importar', {})}
-                className="inline-block mt-4 text-blue-600 hover:underline"
-              >
-                Voltar para Importar
-              </Link>
-            </div>
-          )}
-
-          {quoteId && conciliation && (
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Conciliação de materiais</h2>
-                  <p className="text-sm text-gray-500 mt-0.5">
-                    Fornecedor:{' '}
-                    <span className="font-semibold text-gray-800">
-                      {conciliation.quote.supplier_name}
-                    </span>
-                    {' · '}
-                    {matchedCount} de {conciliation.items.length} itens vinculados
-                  </p>
-                </div>
-                <div className="text-right text-sm text-gray-500">
-                  <p>
-                    Status:{' '}
-                    <span
-                      className={`font-medium ${
-                        conciliation.quote.status === 'conciliado'
-                          ? 'text-green-600'
-                          : 'text-amber-600'
-                      }`}
-                    >
-                      {conciliation.quote.status === 'conciliado' ? 'Conciliado' : 'Pendente'}
-                    </span>
-                  </p>
-                </div>
-              </div>
-              <ConciliationTable
-                quote={conciliation.quote}
-                items={conciliation.items}
-                budgetMaterials={conciliation.budgetMaterials}
-              />
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="cenarios" className="mt-6">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Cenários de compra</h2>
-            <p className="text-sm text-gray-500 mt-0.5">
-              Compare fornecedores e encontre a estratégia de menor custo.
-            </p>
-          </div>
-          <PurchaseScenariosPanel
-            budgets={budgets}
-            selectedBudgetId={budgetId}
-            selectedBudgetName={selectedBudgetName}
-            scenarios={scenarios}
-            quotes={quotes}
-          />
-        </TabsContent>
+            <PurchaseScenariosPanel
+              budgets={budgets}
+              selectedBudgetId={budgetId}
+              selectedBudgetName={selectedBudgetName}
+              scenarios={scenarios}
+              quotes={quotes}
+            />
+          </TabsContent>
+        </div>
       </Tabs>
     </div>
   );

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   LogOut,
   ChevronRight,
@@ -11,6 +11,7 @@ import {
   Grid3X3,
   Shield,
   Hammer,
+  Package,
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -57,29 +58,34 @@ const modules: Module[] = [
     bgColor: 'bg-[#64ABDE]/15',
     borderColor: 'border-[#64ABDE]/40',
   },
+  {
+    id: 'fornecedores',
+    title: 'Suprimentos e Cotações',
+    description: 'Importação de PDFs de fornecedores, conciliação de itens e cenários de compra',
+    icon: Package,
+    status: 'active',
+    badge: 'Compras',
+    color: 'text-[#1D3140]',
+    bgColor: 'bg-[#64ABDE]/15',
+    borderColor: 'border-[#64ABDE]/40',
+  },
 ];
 
 export function AdminPortal() {
+  const router = useRouter();
   const { setActiveModule, setCurrentView } = useApp();
   const { signOut, user } = useAuth();
-  const [loadingModule, setLoadingModule] = useState<string | null>(null);
-
-  const handleOpenModule = async (moduleId: string) => {
-    setLoadingModule(moduleId);
-    await new Promise((r) => setTimeout(r, 350));
-    
-    // Se for o OrçaRede, redireciona para o sistema de orçamentos
+  const handleOpenModule = (moduleId: string) => {
     if (moduleId === 'orca-rede') {
       setActiveModule('orcamentos');
     } else if (moduleId === 'portal-engenheiro') {
-      // Para o portal do engenheiro
       setActiveModule('portal-engenheiro');
       setCurrentView('portal-engenheiro');
+    } else if (moduleId === 'fornecedores') {
+      router.push('/fornecedores');
     } else {
       setActiveModule(moduleId);
     }
-    
-    setLoadingModule(null);
   };
 
   const handleLogout = async () => {
@@ -226,8 +232,6 @@ export function AdminPortal() {
           {modules.map((mod) => {
             const Icon = mod.icon;
             const isActive = mod.status === 'active';
-            const isLoading = loadingModule === mod.id;
-
             return (
               <div
                 key={mod.id}
@@ -267,24 +271,12 @@ export function AdminPortal() {
 
                   {isActive ? (
                     <button
-                      className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl text-white text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md disabled:cursor-wait disabled:opacity-80"
-                      style={{ background: isLoading ? ON_COLORS.blue : `linear-gradient(135deg, ${ON_COLORS.navy} 0%, ${ON_COLORS.blue} 100%)` }}
-                      disabled={isLoading}
+                      type="button"
+                      className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl text-white text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md"
+                      style={{ background: `linear-gradient(135deg, ${ON_COLORS.navy} 0%, ${ON_COLORS.blue} 100%)` }}
                     >
-                      {isLoading ? (
-                        <>
-                          <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                          </svg>
-                          <span>Abrindo...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>Acessar módulo</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </>
-                      )}
+                      <span>Acessar módulo</span>
+                      <ArrowRight className="w-4 h-4" />
                     </button>
                   ) : (
                     <div className="w-full flex items-center justify-center py-2.5 px-4 rounded-xl bg-slate-100 text-sm font-medium text-slate-500 border border-slate-200">

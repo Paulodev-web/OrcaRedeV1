@@ -28,9 +28,11 @@ const formatNumber = (value: number) =>
 
 interface Props {
   budgets: BudgetOption[];
+  /** Quando true, omite o título de página e suaviza cards internos (uso dentro do shell de suprimentos). */
+  embedded?: boolean;
 }
 
-export default function SupplierPdfImporter({ budgets }: Props) {
+export default function SupplierPdfImporter({ budgets, embedded = false }: Props) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -52,6 +54,10 @@ export default function SupplierPdfImporter({ budgets }: Props) {
   const canUpload = selectedBudgetId !== '' && supplierName.trim() !== '';
   const alertCount = items?.filter((item) => item.alerta).length ?? 0;
   const selectedBudgetName = budgets.find((b) => b.id === selectedBudgetId)?.name;
+
+  const cardSurface = embedded
+    ? 'rounded-lg border border-gray-100 bg-gray-50/60'
+    : 'rounded-lg border border-transparent bg-white shadow';
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
@@ -151,23 +157,38 @@ export default function SupplierPdfImporter({ budgets }: Props) {
       {/* ------------------------------------------------------------------ */}
       {/* Header                                                              */}
       {/* ------------------------------------------------------------------ */}
-      <div className="flex items-center justify-between flex-shrink-0">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Importar Proposta de Fornecedor</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Faça upload de um orçamento em PDF para extrair, revisar e salvar os itens automaticamente.
-          </p>
+      {!embedded && (
+        <div className="flex items-center justify-between flex-shrink-0">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Importar Proposta de Fornecedor</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Faça upload de um orçamento em PDF para extrair, revisar e salvar os itens automaticamente.
+            </p>
+          </div>
+          {items && (
+            <button
+              type="button"
+              onClick={handleReset}
+              className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+            >
+              <RotateCcw className="h-4 w-4" />
+              <span>Novo Upload</span>
+            </button>
+          )}
         </div>
-        {items && (
+      )}
+      {embedded && items && (
+        <div className="flex justify-end flex-shrink-0">
           <button
+            type="button"
             onClick={handleReset}
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <RotateCcw className="h-4 w-4" />
             <span>Novo Upload</span>
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ------------------------------------------------------------------ */}
       {/* Banner de erro                                                      */}
@@ -190,9 +211,9 @@ export default function SupplierPdfImporter({ budgets }: Props) {
       {/* ------------------------------------------------------------------ */}
       {/* Formulário de contexto: orçamento + fornecedor                      */}
       {/* ------------------------------------------------------------------ */}
-      <div className="bg-white rounded-lg shadow flex-shrink-0">
+      <div className={`${cardSurface} flex-shrink-0`}>
         <div className="p-6">
-          <h2 className="text-base font-semibold text-gray-900 mb-4">
+          <h2 className="text-base font-semibold text-[#1D3140] mb-4">
             1. Contexto da cotação
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -260,9 +281,9 @@ export default function SupplierPdfImporter({ budgets }: Props) {
       {/* Bloco de upload — oculto após extração                             */}
       {/* ------------------------------------------------------------------ */}
       {!items && (
-        <div className="bg-white rounded-lg shadow flex-shrink-0">
+        <div className={`${cardSurface} flex-shrink-0`}>
           <div className="p-6">
-            <h2 className="text-base font-semibold text-gray-900 mb-4">2. Arquivo PDF</h2>
+            <h2 className="text-base font-semibold text-[#1D3140] mb-4">2. Arquivo PDF</h2>
 
             {/* Zona de drop */}
             <label
@@ -271,16 +292,16 @@ export default function SupplierPdfImporter({ budgets }: Props) {
                 'flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-lg transition-colors',
                 canUpload
                   ? selectedFile
-                    ? 'border-blue-400 bg-blue-50 cursor-pointer'
+                    ? 'border-[#64ABDE] bg-[#64ABDE]/10 cursor-pointer'
                     : 'border-gray-300 bg-gray-50 hover:bg-gray-100 hover:border-gray-400 cursor-pointer'
                   : 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60',
               ].join(' ')}
             >
               {selectedFile ? (
                 <div className="flex flex-col items-center gap-2">
-                  <FileText className="h-10 w-10 text-blue-500" />
-                  <p className="text-sm font-medium text-blue-700">{selectedFile.name}</p>
-                  <p className="text-xs text-blue-500">
+                  <FileText className="h-10 w-10 text-[#64ABDE]" />
+                  <p className="text-sm font-medium text-[#1D3140]">{selectedFile.name}</p>
+                  <p className="text-xs text-[#64ABDE]">
                     {(selectedFile.size / 1024).toFixed(1)} KB
                   </p>
                 </div>
@@ -321,7 +342,7 @@ export default function SupplierPdfImporter({ budgets }: Props) {
                 type="button"
                 onClick={handleProcess}
                 disabled={!selectedFile || !canUpload || isPending}
-                className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-5 py-2 bg-[#64ABDE] text-white rounded-md hover:brightness-95 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isPending ? (
                   <>
@@ -344,11 +365,11 @@ export default function SupplierPdfImporter({ budgets }: Props) {
       {/* Tabela de revisão + botão de salvar                                */}
       {/* ------------------------------------------------------------------ */}
       {items && (
-        <div className="bg-white rounded-lg shadow flex-1 flex flex-col overflow-hidden">
+        <div className={`${cardSurface} flex-1 flex flex-col overflow-hidden`}>
           {/* Cabeçalho da tabela */}
-          <div className="p-4 border-b flex items-center justify-between flex-shrink-0">
+          <div className="p-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
             <div>
-              <h2 className="text-base font-semibold text-gray-900">
+              <h2 className="text-base font-semibold text-[#1D3140]">
                 3. Revisão dos itens extraídos
               </h2>
               <p className="text-sm text-gray-500 mt-0.5">

@@ -381,10 +381,10 @@ export default function PurchaseScenariosPanel({
   return (
     <div className="flex flex-col gap-6">
       {/* Seletor de orçamento */}
-      <div className="bg-white rounded-lg shadow p-5">
+      <div className="rounded-lg border border-gray-100 bg-gray-50/60 p-5">
         <label
           htmlFor="scenarios-budget-select"
-          className="block text-sm font-medium text-gray-700 mb-2"
+          className="block text-sm font-medium text-[#1D3140] mb-2"
         >
           Selecione o Orçamento / Obra
         </label>
@@ -393,7 +393,7 @@ export default function PurchaseScenariosPanel({
             id="scenarios-budget-select"
             value={selectedBudgetId}
             onChange={handleBudgetChange}
-            className="w-full appearance-none rounded-lg border border-gray-300 bg-white py-2.5 pl-3 pr-10 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full appearance-none rounded-lg border border-gray-300 bg-white py-2.5 pl-3 pr-10 text-sm text-gray-900 focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
           >
             <option value="">Selecione o orçamento...</option>
             {budgets.map((b) => (
@@ -427,8 +427,8 @@ export default function PurchaseScenariosPanel({
 
           {/* Resumo das cotações */}
           {quotes && quotes.length > 0 && (
-            <div className="bg-white rounded-lg shadow p-5">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">
+            <div className="rounded-lg border border-gray-100 bg-gray-50/60 p-5">
+              <h3 className="text-sm font-semibold text-[#1D3140] mb-3">
                 Cotações disponíveis para:{' '}
                 <span className="text-gray-900">{selectedBudgetName}</span>
               </h3>
@@ -437,7 +437,7 @@ export default function PurchaseScenariosPanel({
                   <a
                     key={q.id}
                     href={`/fornecedores?tab=conciliar&quoteId=${encodeURIComponent(q.id)}`}
-                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors hover:border-blue-300 ${
+                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors hover:border-[#64ABDE]/50 ${
                       q.status === 'conciliado'
                         ? 'border-green-200 bg-green-50 text-green-700'
                         : 'border-amber-200 bg-amber-50 text-amber-700'
@@ -454,14 +454,14 @@ export default function PurchaseScenariosPanel({
           )}
 
           {!hasData && (
-            <div className="bg-white rounded-lg shadow p-10 text-center">
+            <div className="rounded-lg border border-gray-100 bg-gray-50/60 p-10 text-center">
               <p className="text-gray-400 text-sm">
                 Nenhum item conciliado encontrado para este orçamento. Faça o upload e concilie
                 pelo menos uma proposta primeiro.
               </p>
               <a
                 href="/fornecedores?tab=importar"
-                className="inline-block mt-3 text-sm text-blue-600 hover:underline"
+                className="inline-block mt-3 text-sm font-medium text-[#64ABDE] hover:text-[#1D3140] hover:underline"
               >
                 Importar proposta →
               </a>
@@ -471,14 +471,14 @@ export default function PurchaseScenariosPanel({
           {hasData && (
             <>
               {/* Tabs */}
-              <div className="bg-white rounded-lg shadow overflow-hidden">
-                <div className="flex border-b border-gray-200">
+              <div className="rounded-lg border border-gray-100 bg-gray-50/60 overflow-hidden">
+                <div className="flex border-b border-gray-200 bg-white/80">
                   <button
                     type="button"
                     onClick={() => setActiveTab('A')}
                     className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
                       activeTab === 'A'
-                        ? 'border-blue-600 text-blue-600'
+                        ? 'border-[#64ABDE] text-[#64ABDE]'
                         : 'border-transparent text-gray-500 hover:text-gray-700'
                     }`}
                   >
@@ -490,7 +490,7 @@ export default function PurchaseScenariosPanel({
                     onClick={() => setActiveTab('B')}
                     className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
                       activeTab === 'B'
-                        ? 'border-blue-600 text-blue-600'
+                        ? 'border-[#64ABDE] text-[#64ABDE]'
                         : 'border-transparent text-gray-500 hover:text-gray-700'
                     }`}
                   >
