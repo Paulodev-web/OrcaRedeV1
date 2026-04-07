@@ -246,9 +246,15 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
         setFinalizeError(result.error);
         return;
       }
-      router.push(
-        `/fornecedores?tab=cenarios&budgetId=${encodeURIComponent(quote.budget_id)}`
-      );
+      if (quote.budget_id) {
+        router.push(
+          `/fornecedores/trabalho?tab=cenarios&budgetId=${encodeURIComponent(quote.budget_id)}`
+        );
+      } else if (quote.session_id) {
+        router.push(`/fornecedores/sessao/${quote.session_id}`);
+      } else {
+        router.push('/fornecedores');
+      }
     });
   };
 

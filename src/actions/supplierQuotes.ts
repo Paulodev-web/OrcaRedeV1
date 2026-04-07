@@ -2,7 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
-import type { SupplierItem } from '@/actions/supplierIngestion';
+import { autoMatchQuoteItems } from '@/services/suppliers/autoMatchQuoteItems';
+import type { SupplierExtractItem } from '@/types/supplierExtract';
 import type { SupplierQuote, SupplierQuoteItem } from '@/types';
 
 // ---------------------------------------------------------------------------
@@ -17,11 +18,13 @@ type ActionResult<T = void> =
 // Persiste a cotação e seus itens extraídos. Retorna o quoteId criado.
 // ---------------------------------------------------------------------------
 export interface CreateQuoteInput {
-  budget_id: string;
+  /** Null quando a cotação pertence a uma sessão global (catálogo). */
+  budget_id: string | null;
+  session_id?: string | null;
   supplier_name: string;
   pdf_path: string;
   observacoes_gerais: string;
-  items: SupplierItem[];
+  items: SupplierExtractItem[];
 }
 
 export async function createSupplierQuoteAction(
@@ -36,6 +39,7 @@ export async function createSupplierQuoteAction(
       .from('supplier_quotes')
       .insert({
         budget_id: input.budget_id,
+        session_id: input.session_id ?? null,
         supplier_name: input.supplier_name.trim(),
         pdf_path: input.pdf_path,
         observacoes_gerais: input.observacoes_gerais || null,
@@ -94,10 +98,9 @@ export async function runAutoMatchAction(
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
 
-    // 1. Valida ownership da cotação e obtém supplier_name
     const { data: quote, error: quoteError } = await supabase
       .from('supplier_quotes')
-      .select('id, supplier_name')
+      .select('id')
       .eq('id', quoteId)
       .eq('user_id', userId)
       .single();
@@ -106,69 +109,11 @@ export async function runAutoMatchAction(
       return { success: false, error: 'Cotação não encontrada.' };
     }
 
-    // 2. Busca todos os itens ainda sem match
-    const { data: items, error: itemsError } = await supabase
-      .from('supplier_quote_items')
-      .select('id, descricao')
-      .eq('quote_id', quoteId)
-      .eq('match_status', 'sem_match');
-
-    if (itemsError) {
-      return { success: false, error: 'Erro ao buscar itens da cotação.' };
-    }
-
-    if (!items || items.length === 0) {
-      return { success: true, data: { matched: 0, total: 0 } };
-    }
-
-    // 3. Carrega os mapeamentos deste usuário para este fornecedor
-    const { data: mappings, error: mappingsError } = await supabase
-      .from('supplier_material_mappings')
-      .select('supplier_material_name, internal_material_id, conversion_factor')
-      .eq('user_id', userId)
-      .eq('supplier_name', quote.supplier_name);
-
-    if (mappingsError) {
-      return { success: false, error: 'Erro ao buscar memória de correspondências.' };
-    }
-
-    if (!mappings || mappings.length === 0) {
-      console.log('[supplierQuotes] Auto-match: sem mapeamentos para fornecedor', quote.supplier_name);
-      return { success: true, data: { matched: 0, total: items.length } };
-    }
-
-    // Mapa de lookup normalizado (case-insensitive, sem espaços extras)
-    const mappingMap = new Map(
-      mappings.map((m) => [
-        m.supplier_material_name.toLowerCase().trim(),
-        m,
-      ])
-    );
-
-    // 4. Aplica o match item a item
-    let matchedCount = 0;
-    for (const item of items) {
-      const key = item.descricao.toLowerCase().trim();
-      const mapping = mappingMap.get(key);
-
-      if (mapping) {
-        const { error: updateError } = await supabase
-          .from('supplier_quote_items')
-          .update({
-            matched_material_id: mapping.internal_material_id,
-            conversion_factor: mapping.conversion_factor,
-            match_status: 'automatico',
-          })
-          .eq('id', item.id);
-
-        if (!updateError) matchedCount++;
-      }
-    }
-
+    const result = await autoMatchQuoteItems(supabase, userId, quoteId);
     console.log(
-      `[supplierQuotes] Auto-match concluído: ${matchedCount}/${items.length} itens vinculados`
+      `[supplierQuotes] Auto-match concluído: ${result.matched}/${result.total} itens vinculados`
     );
-    return { success: true, data: { matched: matchedCount, total: items.length } };
+    return { success: true, data: result };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro inesperado no auto-match.';
     return { success: false, error: message };
@@ -314,6 +259,41 @@ export async function getBudgetMaterialsAction(
 }
 
 // ---------------------------------------------------------------------------
+// getCatalogMaterialsAction
+// Catálogo global do usuário (sessão sem orçamento).
+// ---------------------------------------------------------------------------
+export async function getCatalogMaterialsAction(): Promise<
+  ActionResult<{ materials: BudgetMaterialOption[] }>
+> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const { data, error } = await supabase
+      .from('materials')
+      .select('id, code, name, unit')
+      .eq('user_id', userId)
+      .order('name', { ascending: true });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    const materials: BudgetMaterialOption[] = (data ?? []).map((m) => ({
+      id: m.id,
+      code: m.code,
+      name: m.name,
+      unit: m.unit,
+    }));
+
+    return { success: true, data: { materials } };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao buscar catálogo de materiais.';
+    return { success: false, error: message };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // saveManualMatchAction
 // Salva a vinculação manual de um item com um material interno.
 // Persiste também na memória De/Para (supplier_material_mappings) para uso futuro.
@@ -367,6 +347,7 @@ export async function saveManualMatchAction(
     }
 
     revalidatePath('/fornecedores');
+    revalidatePath('/fornecedores/trabalho');
     return { success: true, data: undefined };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao salvar vínculo manual.';
@@ -396,6 +377,7 @@ export async function markQuoteConciliatedAction(
     }
 
     revalidatePath('/fornecedores');
+    revalidatePath('/fornecedores/trabalho');
     return { success: true, data: undefined };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao concluir conciliação.';

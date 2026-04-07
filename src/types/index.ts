@@ -249,7 +249,9 @@ export type SupplierMatchStatus = 'sem_match' | 'automatico' | 'manual';
 
 export interface SupplierQuote {
   id: string;
-  budget_id: string;
+  /** Null em cotações de sessão global (conciliação com catálogo). */
+  budget_id: string | null;
+  session_id?: string | null;
   supplier_name: string;
   pdf_path: string;
   status: SupplierQuoteStatus;

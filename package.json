@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "gen:supabase-types": "supabase gen types typescript --linked --schema public > src/types/supabase.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

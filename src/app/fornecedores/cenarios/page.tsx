@@ -8,8 +8,8 @@ export default async function FornecedoresCenariosRedirectPage({ searchParams }:
   const { budgetId } = await searchParams;
   if (budgetId) {
     redirect(
-      `/fornecedores?tab=cenarios&budgetId=${encodeURIComponent(budgetId)}`
+      `/fornecedores/trabalho?tab=cenarios&budgetId=${encodeURIComponent(budgetId)}`
     );
   }
-  redirect('/fornecedores?tab=cenarios');
+  redirect('/fornecedores/trabalho?tab=cenarios');
 }

@@ -129,7 +129,7 @@ function ScenarioACard({ scenarios }: { scenarios: ScenariosResult }) {
                 </td>
                 <td className="px-4 py-3">
                   <a
-                    href={`/fornecedores?tab=conciliar&quoteId=${encodeURIComponent(supplier.quote_id)}`}
+                    href={`/fornecedores/trabalho?tab=conciliar&quoteId=${encodeURIComponent(supplier.quote_id)}`}
                     className="text-xs text-blue-600 hover:underline"
                   >
                     Ver cotação
@@ -376,9 +376,9 @@ export default function PurchaseScenariosPanel({
   const handleBudgetChange = (value: string) => {
     const id = value === BUDGET_SELECT_EMPTY ? '' : value;
     if (id) {
-      router.push(`/fornecedores?tab=cenarios&budgetId=${encodeURIComponent(id)}`);
+      router.push(`/fornecedores/trabalho?tab=cenarios&budgetId=${encodeURIComponent(id)}`);
     } else {
-      router.push('/fornecedores?tab=cenarios');
+      router.push('/fornecedores/trabalho?tab=cenarios');
     }
   };
 
@@ -449,7 +449,7 @@ export default function PurchaseScenariosPanel({
                 {quotes.map((q) => (
                   <a
                     key={q.id}
-                    href={`/fornecedores?tab=conciliar&quoteId=${encodeURIComponent(q.id)}`}
+                    href={`/fornecedores/trabalho?tab=conciliar&quoteId=${encodeURIComponent(q.id)}`}
                     className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors hover:border-[#64ABDE]/50 ${
                       q.status === 'conciliado'
                         ? 'border-green-200 bg-green-50 text-green-700'
@@ -473,7 +473,7 @@ export default function PurchaseScenariosPanel({
                 pelo menos uma proposta primeiro.
               </p>
               <a
-                href="/fornecedores?tab=importar"
+                href="/fornecedores/trabalho?tab=importar"
                 className="inline-block mt-3 text-sm font-medium text-[#64ABDE] hover:text-[#1D3140] hover:underline"
               >
                 Importar proposta →

@@ -58,7 +58,7 @@ function buildFornecedoresHref(
   p.set('tab', tab);
   if (opts.quoteId) p.set('quoteId', opts.quoteId);
   if (opts.budgetId) p.set('budgetId', opts.budgetId);
-  return `/fornecedores?${p.toString()}`;
+  return `/fornecedores/trabalho?${p.toString()}`;
 }
 
 const tabTriggerClass =
@@ -106,7 +106,14 @@ export default function FornecedoresSuprimentosShell({
           <span>Portal</span>
         </Link>
         <ChevronRight className="w-3 h-3 shrink-0 opacity-70" aria-hidden />
-        <span className="text-gray-600 font-medium">Suprimentos</span>
+        <Link
+          href="/fornecedores"
+          className="text-gray-600 font-medium transition-colors hover:text-[#64ABDE]"
+        >
+          Sessões
+        </Link>
+        <ChevronRight className="w-3 h-3 shrink-0 opacity-70" aria-hidden />
+        <span className="text-gray-600 font-medium">Modo clássico</span>
       </div>
 
       <div className="flex items-start gap-3 sm:gap-4">

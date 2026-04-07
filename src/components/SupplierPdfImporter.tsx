@@ -143,7 +143,7 @@ export default function SupplierPdfImporter({ budgets, embedded = false }: Props
 
       // 3. Abre a aba Conciliar na mesma página
       router.push(
-        `/fornecedores?tab=conciliar&quoteId=${encodeURIComponent(quoteId)}`
+        `/fornecedores/trabalho?tab=conciliar&quoteId=${encodeURIComponent(quoteId)}`
       );
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro ao salvar cotação.';

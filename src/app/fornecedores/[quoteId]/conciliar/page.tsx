@@ -7,6 +7,6 @@ interface Props {
 export default async function FornecedoresConciliarRedirectPage({ params }: Props) {
   const { quoteId } = await params;
   redirect(
-    `/fornecedores?tab=conciliar&quoteId=${encodeURIComponent(quoteId)}`
+    `/fornecedores/trabalho?tab=conciliar&quoteId=${encodeURIComponent(quoteId)}`
   );
 }
