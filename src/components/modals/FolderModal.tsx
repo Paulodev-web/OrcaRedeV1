@@ -2,6 +2,13 @@
 import { useState, useEffect } from 'react';
 import { X, Folder, AlertCircle } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface FolderModalProps {
   isOpen: boolean;
@@ -22,6 +29,8 @@ const FOLDER_COLORS = [
   { name: 'Cinza', value: '#6B7280' },
   { name: 'Laranja', value: '#F97316' },
 ];
+
+const ROOT_FOLDER_VALUE = '__root_folder__';
 
 export function FolderModal({ isOpen, onClose, onSave, initialName = '', initialColor = '#3B82F6', mode }: FolderModalProps) {
   const { folders, currentFolderId } = useApp();
@@ -128,20 +137,23 @@ export function FolderModal({ isOpen, onClose, onSave, initialName = '', initial
               <label htmlFor="parent-folder" className="block text-sm font-medium text-gray-700 mb-1.5">
                 Pasta Pai (Opcional)
               </label>
-              <select
-                id="parent-folder"
-                value={parentId || ''}
-                onChange={(e) => setParentId(e.target.value || null)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-sm"
+              <Select
+                value={parentId || ROOT_FOLDER_VALUE}
+                onValueChange={(value) => setParentId(value === ROOT_FOLDER_VALUE ? null : value)}
                 disabled={loading}
               >
-                <option value="">Raiz (Sem pasta pai)</option>
-                {availableFolders.map((folder) => (
-                  <option key={folder.id} value={folder.id}>
-                    {folder.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="parent-folder" className="w-full">
+                  <SelectValue placeholder="Raiz (Sem pasta pai)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ROOT_FOLDER_VALUE}>Raiz (Sem pasta pai)</SelectItem>
+                  {availableFolders.map((folder) => (
+                    <SelectItem key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="mt-1 text-xs text-gray-500">
                 Escolha onde criar a nova pasta
               </p>

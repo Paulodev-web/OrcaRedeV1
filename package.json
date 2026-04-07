@@ -11,6 +11,7 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@radix-ui/react-accordion": "^1.2.12",
+    "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-tabs": "^1.1.13",
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.100.1",

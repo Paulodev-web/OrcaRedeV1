@@ -11,6 +11,13 @@ import {
   TrendingDown,
 } from 'lucide-react';
 import type { BudgetOption } from '@/types';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type {
   ScenariosResult,
   ScenarioItem,
@@ -24,6 +31,8 @@ const formatCurrency = (v: number) =>
 
 const formatNumber = (v: number) =>
   new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
+
+const BUDGET_SELECT_EMPTY = '__no_budget__';
 
 type QuoteSummary = {
   id: string;
@@ -364,8 +373,8 @@ export default function PurchaseScenariosPanel({
 }: Props) {
   const router = useRouter();
 
-  const handleBudgetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const id = e.target.value;
+  const handleBudgetChange = (value: string) => {
+    const id = value === BUDGET_SELECT_EMPTY ? '' : value;
     if (id) {
       router.push(`/fornecedores?tab=cenarios&budgetId=${encodeURIComponent(id)}`);
     } else {
@@ -388,21 +397,25 @@ export default function PurchaseScenariosPanel({
         >
           Selecione o Orçamento / Obra
         </label>
-        <div className="relative max-w-sm">
-          <select
-            id="scenarios-budget-select"
-            value={selectedBudgetId}
-            onChange={handleBudgetChange}
-            className="w-full appearance-none rounded-lg border border-gray-300 bg-white py-2.5 pl-3 pr-10 text-sm text-gray-900 focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+        <div className="max-w-sm">
+          <Select
+            value={selectedBudgetId ? selectedBudgetId : BUDGET_SELECT_EMPTY}
+            onValueChange={handleBudgetChange}
           >
-            <option value="">Selecione o orçamento...</option>
-            {budgets.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <SelectTrigger id="scenarios-budget-select" className="w-full">
+              <SelectValue placeholder="Selecione o orçamento..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={BUDGET_SELECT_EMPTY}>
+                Selecione o orçamento...
+              </SelectItem>
+              {budgets.map((b) => (
+                <SelectItem key={b.id} value={b.id}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

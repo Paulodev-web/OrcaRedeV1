@@ -4,8 +4,17 @@ import { Plus, Edit, Trash2, Filter, Loader2, Search } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { AlertDialog } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { GrupoItem } from '@/types';
 import { deleteItemGroupAction } from '@/actions/itemGroups';
+
+const EMPTY_COMPANY_VALUE = '__no_company__';
 
 export function GerenciarGrupos() {
   const { 
@@ -145,22 +154,31 @@ export function GerenciarGrupos() {
               <label className="text-sm font-medium text-gray-700">
                 Visualizar grupos da concessionária:
               </label>
-              <select
-                value={selectedConcessionaria}
-                onChange={(e) => setSelectedConcessionaria(e.target.value)}
-                className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              <Select
+                value={selectedConcessionaria || EMPTY_COMPANY_VALUE}
+                onValueChange={(value) => setSelectedConcessionaria(value === EMPTY_COMPANY_VALUE ? '' : value)}
                 disabled={utilityCompanies.length === 0}
               >
-                {utilityCompanies.length === 0 ? (
-                  <option value="">Nenhuma concessionária encontrada</option>
-                ) : (
-                  utilityCompanies.map((concessionaria) => (
-                    <option key={concessionaria.id} value={concessionaria.id}>
-                      {concessionaria.sigla}
-                    </option>
-                  ))
-                )}
-              </select>
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue placeholder="Nenhuma concessionária encontrada" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={EMPTY_COMPANY_VALUE}>
+                    {utilityCompanies.length === 0
+                      ? 'Nenhuma concessionária encontrada'
+                      : 'Selecione uma concessionária'}
+                  </SelectItem>
+                  {utilityCompanies.length === 0 ? (
+                    <></>
+                  ) : (
+                    utilityCompanies.map((concessionaria) => (
+                      <SelectItem key={concessionaria.id} value={concessionaria.id}>
+                        {concessionaria.sigla}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Campo de Busca */}

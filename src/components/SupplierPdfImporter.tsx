@@ -5,13 +5,19 @@ import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
   ArrowRight,
-  ChevronDown,
   FileText,
   Loader2,
   RotateCcw,
   Save,
   Upload,
 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { extractSupplierDataAction, type SupplierItem } from '@/actions/supplierIngestion';
 import { createSupplierQuoteAction, runAutoMatchAction } from '@/actions/supplierQuotes';
 import { supabase } from '@/lib/supabaseClient';
@@ -25,6 +31,9 @@ const formatNumber = (value: number) =>
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value);
+
+/** Valor sentinela para compatibilidade com Radix Select (evita `value=""`). */
+const BUDGET_SELECT_EMPTY = '__no_budget__';
 
 interface Props {
   budgets: BudgetOption[];
@@ -225,23 +234,27 @@ export default function SupplierPdfImporter({ budgets, embedded = false }: Props
               >
                 Orçamento / Obra <span className="text-red-500">*</span>
               </label>
-              <div className="relative">
-                <select
-                  id="budget-select"
-                  value={selectedBudgetId}
-                  onChange={(e) => setSelectedBudgetId(e.target.value)}
-                  disabled={!!items || isPending}
-                  className="w-full appearance-none rounded-lg border border-gray-300 bg-white py-2.5 pl-3 pr-10 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
-                >
-                  <option value="">Selecione o orçamento...</option>
+              <Select
+                value={selectedBudgetId ? selectedBudgetId : BUDGET_SELECT_EMPTY}
+                onValueChange={(v) =>
+                  setSelectedBudgetId(v === BUDGET_SELECT_EMPTY ? '' : v)
+                }
+                disabled={!!items || isPending}
+              >
+                <SelectTrigger id="budget-select" className="w-full">
+                  <SelectValue placeholder="Selecione o orçamento..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={BUDGET_SELECT_EMPTY}>
+                    Selecione o orçamento...
+                  </SelectItem>
                   {budgets.map((b) => (
-                    <option key={b.id} value={b.id}>
+                    <SelectItem key={b.id} value={b.id}>
                       {b.name}
-                    </option>
+                    </SelectItem>
                   ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              </div>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Input de nome do fornecedor */}

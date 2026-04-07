@@ -4,8 +4,17 @@ import { X, Loader2 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { AlertDialog } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Orcamento } from '@/types';
 import { addBudgetAction, updateBudgetAction } from '@/actions/budgets';
+
+const EMPTY_COMPANY_VALUE = '__no_company__';
 
 interface CriarOrcamentoModalProps {
   isOpen: boolean;
@@ -162,21 +171,23 @@ export function CriarOrcamentoModal({ isOpen, onClose, editingBudget }: CriarOrc
             <label htmlFor="companyId" className="block text-sm font-medium text-gray-700 mb-1">
               Concessionária *
             </label>
-            <select
-              id="companyId"
-              value={selectedCompanyId}
-              onChange={(e) => setSelectedCompanyId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
+            <Select
+              value={selectedCompanyId || EMPTY_COMPANY_VALUE}
+              onValueChange={(value) => setSelectedCompanyId(value === EMPTY_COMPANY_VALUE ? '' : value)}
               disabled={isPending}
             >
-              <option value="">Selecione uma concessionária</option>
-              {utilityCompanies.map((company) => (
-                <option key={company.id} value={company.id}>
-                  {company.nome}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="companyId" className="w-full">
+                <SelectValue placeholder="Selecione uma concessionária" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={EMPTY_COMPANY_VALUE}>Selecione uma concessionária</SelectItem>
+                {utilityCompanies.map((company) => (
+                  <SelectItem key={company.id} value={company.id}>
+                    {company.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex justify-end space-x-3 mt-6">

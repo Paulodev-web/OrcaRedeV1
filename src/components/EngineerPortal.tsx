@@ -35,6 +35,13 @@ import { PostProgressModal } from './PostProgressModal';
 import { CanvasVisual } from './CanvasVisual';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { AlertDialog } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { ON_ENGENHARIA_LOGO_SRC } from '@/lib/branding';
 import { deleteWorkTrackingAction } from '@/actions/workTrackings';
 
@@ -2156,16 +2163,22 @@ export function EngineerPortal() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Status da Obra</label>
-                <select 
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                <Select
                   value={activeTracking.status}
-                  onChange={(e) => updateTracking(activeTracking.id, (t) => ({...t, status: e.target.value as WorkTracking['status']}))}
+                  onValueChange={(value) =>
+                    updateTracking(activeTracking.id, (t) => ({ ...t, status: value as WorkTracking['status'] }))
+                  }
                 >
-                  <option value="Planejado">Planejado</option>
-                  <option value="Em Andamento">Em Andamento</option>
-                  <option value="Pausado">Pausado</option>
-                  <option value="Concluído">Concluído</option>
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Planejado">Planejado</SelectItem>
+                    <SelectItem value="Em Andamento">Em Andamento</SelectItem>
+                    <SelectItem value="Pausado">Pausado</SelectItem>
+                    <SelectItem value="Concluído">Concluído</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
@@ -2190,22 +2203,26 @@ export function EngineerPortal() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Qualidade PDF</label>
-                <select
-                  value={pdfRenderVersion}
-                  onChange={(e) => {
-                    const newVersion = Number(e.target.value) as 1 | 2;
+                <Select
+                  value={String(pdfRenderVersion)}
+                  onValueChange={(value) => {
+                    const newVersion = Number(value) as 1 | 2;
                     setPdfRenderVersion(newVersion);
                     updateTracking(activeTracking.id, (t) => ({
-                      ...t, 
+                      ...t,
                       render_version: newVersion,
                       updated_at: new Date().toISOString()
                     }));
                   }}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value={1}>Padrão (Legado)</option>
-                  <option value={2}>Alta Resolução</option>
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Padrão (Legado)</SelectItem>
+                    <SelectItem value="2">Alta Resolução</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Logo da empresa - aparece na página do cliente */}
