@@ -198,19 +198,6 @@ export function AdminPortal() {
                   <span className="capitalize">{today}</span>
                 </div>
               </div>
-
-              <div className="hidden lg:flex items-center space-x-3">
-                <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Shield className="w-4 h-4 text-white/80" />
-                    <span className="text-white/90 text-xs font-medium">Status do Sistema</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
-                    <span className="text-white text-sm font-semibold">Operacional</span>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
