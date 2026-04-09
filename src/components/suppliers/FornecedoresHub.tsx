@@ -46,10 +46,11 @@ export default function FornecedoresHub({
   const prefetchSession = (sessionId: string) => {
     const href = `/fornecedores/sessao/${sessionId}`;
     const start = performance.now();
-    void router.prefetch(href).finally(() => {
+    router.prefetch(href);
+    window.setTimeout(() => {
       const elapsed = Math.round(performance.now() - start);
       console.info(`[perf] prefetch_session ${sessionId}: ${elapsed}ms`);
-    });
+    }, 0);
   };
 
   const handleDelete = async (sessionId: string) => {

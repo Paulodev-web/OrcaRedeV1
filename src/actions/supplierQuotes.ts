@@ -179,25 +179,30 @@ export async function getQuoteWithItemsAction(
       return { success: false, error: `Erro ao buscar itens: ${itemsError.message}` };
     }
 
-    const items: SupplierQuoteItemWithMaterial[] = (rawItems ?? []).map((row) => ({
-      id: row.id,
-      quote_id: row.quote_id,
-      descricao: row.descricao,
-      unidade: row.unidade,
-      quantidade: row.quantidade,
-      preco_unit: row.preco_unit,
-      total_item: row.total_item,
-      ipi_percent: row.ipi_percent,
-      st_incluso: row.st_incluso,
-      alerta: row.alerta,
-      matched_material_id: row.matched_material_id ?? null,
-      conversion_factor: row.conversion_factor,
-      match_status: row.match_status,
-      created_at: row.created_at,
-      material_name: row.materials?.name ?? null,
-      material_code: row.materials?.code ?? null,
-      material_unit: row.materials?.unit ?? null,
-    }));
+    const items: SupplierQuoteItemWithMaterial[] = (rawItems ?? []).map((row) => {
+      const materialRow = Array.isArray(row.materials)
+        ? row.materials[0]
+        : row.materials;
+      return {
+        id: row.id,
+        quote_id: row.quote_id,
+        descricao: row.descricao,
+        unidade: row.unidade,
+        quantidade: row.quantidade,
+        preco_unit: row.preco_unit,
+        total_item: row.total_item,
+        ipi_percent: row.ipi_percent,
+        st_incluso: row.st_incluso,
+        alerta: row.alerta,
+        matched_material_id: row.matched_material_id ?? null,
+        conversion_factor: row.conversion_factor,
+        match_status: row.match_status,
+        created_at: row.created_at,
+        material_name: materialRow?.name ?? null,
+        material_code: materialRow?.code ?? null,
+        material_unit: materialRow?.unit ?? null,
+      };
+    });
 
     return { success: true, data: { quote, items } };
   } catch (err: unknown) {
