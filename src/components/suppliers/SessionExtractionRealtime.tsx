@@ -163,7 +163,7 @@ export default function SessionExtractionRealtime({
                 )}
                 {j.status === 'completed' && j.quote_id && (
                   <Link
-                    href={`/fornecedores/trabalho?tab=conciliar&quoteId=${encodeURIComponent(j.quote_id)}`}
+                    href={`/fornecedores/sessao/${sessionId}?tab=conciliar&quoteId=${encodeURIComponent(j.quote_id)}`}
                     className="text-xs font-medium text-[#64ABDE] hover:underline"
                   >
                     Conciliar
@@ -188,7 +188,7 @@ export default function SessionExtractionRealtime({
                   <span className="ml-2 text-xs text-gray-500">{q.status}</span>
                 </div>
                 <Link
-                  href={`/fornecedores/trabalho?tab=conciliar&quoteId=${encodeURIComponent(q.id)}`}
+                  href={`/fornecedores/sessao/${sessionId}?tab=conciliar&quoteId=${encodeURIComponent(q.id)}`}
                   className="text-[#64ABDE] hover:underline text-sm font-medium"
                 >
                   Abrir conciliação

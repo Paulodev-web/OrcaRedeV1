@@ -26,6 +26,11 @@ export async function createQuotationSessionAction(input: {
   budgetId: string | null;
 }): Promise<ActionResult<{ sessionId: string }>> {
   try {
+    const title = input.title.trim();
+    if (!title) {
+      return { success: false, error: 'Informe um título para a sessão.' };
+    }
+
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
 
@@ -33,7 +38,7 @@ export async function createQuotationSessionAction(input: {
       .from('quotation_sessions')
       .insert({
         user_id: userId,
-        title: input.title.trim(),
+        title,
         budget_id: input.budgetId,
         status: 'active',
       })
@@ -48,6 +53,104 @@ export async function createQuotationSessionAction(input: {
     return { success: true, data: { sessionId: data.id } };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao criar sessão.';
+    return { success: false, error: message };
+  }
+}
+
+export async function updateQuotationSessionAction(
+  sessionId: string,
+  input: { title: string; budgetId: string | null }
+): Promise<ActionResult<void>> {
+  try {
+    const title = input.title.trim();
+    if (!title) {
+      return { success: false, error: 'Informe um título para a sessão.' };
+    }
+
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const { data, error } = await supabase
+      .from('quotation_sessions')
+      .update({
+        title,
+        budget_id: input.budgetId,
+      })
+      .eq('id', sessionId)
+      .eq('user_id', userId)
+      .select('id')
+      .single();
+
+    if (error || !data) {
+      return { success: false, error: error?.message ?? 'Erro ao atualizar sessão.' };
+    }
+
+    revalidatePath('/fornecedores');
+    revalidatePath(`/fornecedores/sessao/${sessionId}`);
+    return { success: true, data: undefined };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao atualizar sessão.';
+    return { success: false, error: message };
+  }
+}
+
+export async function deleteQuotationSessionAction(
+  sessionId: string
+): Promise<ActionResult<void>> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const { data: quotes, error: quotesError } = await supabase
+      .from('supplier_quotes')
+      .select('id')
+      .eq('session_id', sessionId)
+      .eq('user_id', userId);
+
+    if (quotesError) {
+      return { success: false, error: quotesError.message };
+    }
+
+    const quoteIds = (quotes ?? []).map((q) => q.id);
+
+    if (quoteIds.length > 0) {
+      const { error: itemsError } = await supabase
+        .from('supplier_quote_items')
+        .delete()
+        .in('quote_id', quoteIds);
+
+      if (itemsError) {
+        return { success: false, error: itemsError.message };
+      }
+
+      const { error: quotesDeleteError } = await supabase
+        .from('supplier_quotes')
+        .delete()
+        .in('id', quoteIds)
+        .eq('user_id', userId);
+
+      if (quotesDeleteError) {
+        return { success: false, error: quotesDeleteError.message };
+      }
+    }
+
+    const { data: deletedSession, error: sessionError } = await supabase
+      .from('quotation_sessions')
+      .delete()
+      .eq('id', sessionId)
+      .eq('user_id', userId)
+      .select('id')
+      .single();
+
+    if (sessionError || !deletedSession) {
+      return { success: false, error: sessionError?.message ?? 'Sessão não encontrada.' };
+    }
+
+    revalidatePath('/fornecedores');
+    revalidatePath(`/fornecedores/sessao/${sessionId}`);
+    return { success: true, data: undefined };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao excluir sessão.';
     return { success: false, error: message };
   }
 }
@@ -180,7 +283,8 @@ export async function completeQuotationSessionAction(
     }
 
     revalidatePath('/fornecedores');
-    revalidatePath(`/fornecedores/${sessionId}`);
+    revalidatePath(`/fornecedores/sessao/${sessionId}`);
+    revalidatePath(`/fornecedores/sessao/${sessionId}/cenarios`);
     return { success: true, data: undefined };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao encerrar sessão.';

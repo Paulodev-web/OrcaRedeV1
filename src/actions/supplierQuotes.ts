@@ -140,7 +140,7 @@ export async function getQuoteWithItemsAction(
 
     const { data: quote, error: quoteError } = await supabase
       .from('supplier_quotes')
-      .select('*')
+      .select('id, budget_id, session_id, supplier_name, pdf_path, status, observacoes_gerais, user_id, created_at, updated_at')
       .eq('id', quoteId)
       .eq('user_id', userId)
       .single();
@@ -152,7 +152,20 @@ export async function getQuoteWithItemsAction(
     const { data: rawItems, error: itemsError } = await supabase
       .from('supplier_quote_items')
       .select(`
-        *,
+        id,
+        quote_id,
+        descricao,
+        unidade,
+        quantidade,
+        preco_unit,
+        total_item,
+        ipi_percent,
+        st_incluso,
+        alerta,
+        matched_material_id,
+        conversion_factor,
+        match_status,
+        created_at,
         materials (
           code,
           name,
@@ -346,8 +359,26 @@ export async function saveManualMatchAction(
       // Não retorna erro — a vinculação do item já foi salva com sucesso
     }
 
+    const { data: itemRow } = await supabase
+      .from('supplier_quote_items')
+      .select('quote_id')
+      .eq('id', input.itemId)
+      .single();
+
+    if (itemRow?.quote_id) {
+      const { data: quoteRow } = await supabase
+        .from('supplier_quotes')
+        .select('session_id')
+        .eq('id', itemRow.quote_id)
+        .eq('user_id', userId)
+        .single();
+
+      if (quoteRow?.session_id) {
+        revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}`);
+        revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/cenarios`);
+      }
+    }
     revalidatePath('/fornecedores');
-    revalidatePath('/fornecedores/trabalho');
     return { success: true, data: undefined };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao salvar vínculo manual.';
@@ -376,8 +407,18 @@ export async function markQuoteConciliatedAction(
       return { success: false, error: error.message };
     }
 
+    const { data: quoteRow } = await supabase
+      .from('supplier_quotes')
+      .select('session_id')
+      .eq('id', quoteId)
+      .eq('user_id', userId)
+      .single();
+
+    if (quoteRow?.session_id) {
+      revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}`);
+      revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/cenarios`);
+    }
     revalidatePath('/fornecedores');
-    revalidatePath('/fornecedores/trabalho');
     return { success: true, data: undefined };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao concluir conciliação.';
@@ -390,21 +431,37 @@ export async function markQuoteConciliatedAction(
 // Lista todas as cotações de um orçamento (para a tela de cenários).
 // ---------------------------------------------------------------------------
 export async function listQuotesByBudgetAction(
-  budgetId: string
+  budgetId: string,
+  sessionId?: string
 ): Promise<ActionResult<{ quotes: (SupplierQuote & { item_count: number; matched_count: number })[] }>> {
   try {
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
 
-    const { data: quotes, error } = await supabase
+    let query = supabase
       .from('supplier_quotes')
       .select(`
-        *,
+        id,
+        budget_id,
+        session_id,
+        supplier_name,
+        pdf_path,
+        status,
+        observacoes_gerais,
+        user_id,
+        created_at,
+        updated_at,
         supplier_quote_items (id, match_status)
       `)
       .eq('budget_id', budgetId)
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
+
+    if (sessionId) {
+      query = query.eq('session_id', sessionId);
+    }
+
+    const { data: quotes, error } = await query;
 
     if (error) {
       return { success: false, error: error.message };
@@ -475,14 +532,15 @@ export interface ScenariosResult {
 }
 
 export async function calculateScenariosAction(
-  budgetId: string
+  budgetId: string,
+  sessionId?: string
 ): Promise<ActionResult<ScenariosResult>> {
   try {
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
 
     // Busca todos os itens com match de todas as cotações do orçamento
-    const { data: rawItems, error } = await supabase
+    let query = supabase
       .from('supplier_quote_items')
       .select(`
         id,
@@ -503,6 +561,12 @@ export async function calculateScenariosAction(
       .eq('supplier_quotes.budget_id', budgetId)
       .eq('supplier_quotes.user_id', userId)
       .neq('match_status', 'sem_match');
+
+    if (sessionId) {
+      query = query.eq('supplier_quotes.session_id', sessionId);
+    }
+
+    const { data: rawItems, error } = await query;
 
     if (error) {
       return { success: false, error: error.message };
@@ -643,4 +707,37 @@ export async function calculateScenariosAction(
     const message = err instanceof Error ? err.message : 'Erro ao calcular cenários.';
     return { success: false, error: message };
   }
+}
+
+export async function getConciliationPayloadByQuoteAction(
+  quoteId: string
+): Promise<
+  ActionResult<{
+    quote: SupplierQuote;
+    items: SupplierQuoteItemWithMaterial[];
+    budgetMaterials: BudgetMaterialOption[];
+  }>
+> {
+  const quoteResult = await getQuoteWithItemsAction(quoteId);
+  if (!quoteResult.success) {
+    return { success: false, error: quoteResult.error };
+  }
+
+  const quote = quoteResult.data.quote;
+  const mats = quote.budget_id
+    ? await getBudgetMaterialsAction(quote.budget_id)
+    : await getCatalogMaterialsAction();
+
+  if (!mats.success) {
+    return { success: false, error: mats.error };
+  }
+
+  return {
+    success: true,
+    data: {
+      quote,
+      items: quoteResult.data.items,
+      budgetMaterials: mats.data.materials,
+    },
+  };
 }

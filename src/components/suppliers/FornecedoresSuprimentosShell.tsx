@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SupplierPdfImporter from '@/components/SupplierPdfImporter';
@@ -30,6 +31,7 @@ type QuoteSummary = {
   status: string;
   item_count: number;
   matched_count: number;
+  budget_id: string | null;
 };
 
 export interface ConciliationPayload {
@@ -43,6 +45,7 @@ interface Props {
   activeTab: FornecedoresTab;
   quoteId: string;
   budgetId: string;
+  conciliationQuotes: QuoteSummary[];
   conciliation: ConciliationPayload | null;
   conciliationError: string | null;
   scenarios: ScenariosResult | null;
@@ -75,6 +78,7 @@ export default function FornecedoresSuprimentosShell({
   activeTab,
   quoteId,
   budgetId,
+  conciliationQuotes,
   conciliation,
   conciliationError,
   scenarios,
@@ -82,6 +86,11 @@ export default function FornecedoresSuprimentosShell({
   selectedBudgetName,
 }: Props) {
   const router = useRouter();
+  const [expandedQuoteId, setExpandedQuoteId] = useState(quoteId);
+
+  useEffect(() => {
+    setExpandedQuoteId(quoteId);
+  }, [quoteId]);
 
   const onTabChange = (value: string) => {
     const next = value as FornecedoresTab;
@@ -94,6 +103,19 @@ export default function FornecedoresSuprimentosShell({
 
   const matchedCount =
     conciliation?.items.filter((i) => i.match_status !== 'sem_match').length ?? 0;
+  const hasConciliationQuotes = conciliationQuotes.length > 0;
+
+  const onConciliationCardToggle = (nextQuoteId: string) => {
+    const willExpand = expandedQuoteId !== nextQuoteId;
+    const nextExpandedId = willExpand ? nextQuoteId : '';
+    setExpandedQuoteId(nextExpandedId);
+    router.replace(
+      buildFornecedoresHref('conciliar', {
+        quoteId: nextExpandedId || undefined,
+        budgetId: budgetId || undefined,
+      })
+    );
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -157,9 +179,9 @@ export default function FornecedoresSuprimentosShell({
           </TabsContent>
 
           <TabsContent value="conciliar" className="mt-0 focus-visible:ring-0">
-            {!quoteId && (
+            {!hasConciliationQuotes && (
               <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50/50 p-10 text-center text-sm text-gray-500">
-                <p>Nenhuma cotação selecionada.</p>
+                <p>Nenhuma proposta disponível para conciliação.</p>
                 <p className="mt-2">
                   Importe um PDF na aba{' '}
                   <button
@@ -174,53 +196,112 @@ export default function FornecedoresSuprimentosShell({
               </div>
             )}
 
-            {quoteId && conciliationError && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
-                <p className="font-medium">Não foi possível carregar esta cotação.</p>
-                <p className="mt-1 text-amber-800">{conciliationError}</p>
-                <Link
-                  href={buildFornecedoresHref('importar', {})}
-                  className="mt-4 inline-block font-medium text-[#64ABDE] hover:text-[#1D3140] hover:underline"
-                >
-                  Voltar para Importar
-                </Link>
-              </div>
-            )}
-
-            {quoteId && conciliation && (
+            {hasConciliationQuotes && (
               <div className="flex flex-col gap-4">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <h2 className="text-lg font-semibold text-[#1D3140]">Conciliação de materiais</h2>
-                    <p className="text-sm text-gray-500 mt-0.5">
-                      Fornecedor:{' '}
-                      <span className="font-semibold text-gray-800">
-                        {conciliation.quote.supplier_name}
-                      </span>
-                      {' · '}
-                      {matchedCount} de {conciliation.items.length} itens vinculados
-                    </p>
-                  </div>
-                  <div className="text-right text-sm text-gray-500">
-                    <p>
-                      Status:{' '}
-                      <span
-                        className={`font-medium ${
-                          conciliation.quote.status === 'conciliado'
-                            ? 'text-green-600'
-                            : 'text-amber-600'
+                <div>
+                  <h2 className="text-lg font-semibold text-[#1D3140]">Conciliação de propostas</h2>
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    Clique em uma proposta para expandir e conciliar os materiais.
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  {conciliationQuotes.map((quoteSummary) => {
+                    const isExpanded = expandedQuoteId === quoteSummary.id;
+                    const progressPct =
+                      quoteSummary.item_count > 0
+                        ? Math.round((quoteSummary.matched_count / quoteSummary.item_count) * 100)
+                        : 0;
+                    return (
+                      <div
+                        key={quoteSummary.id}
+                        className={`rounded-lg border transition-colors ${
+                          isExpanded
+                            ? 'border-[#64ABDE]/50 bg-[#64ABDE]/5'
+                            : 'border-gray-200 bg-white hover:border-gray-300'
                         }`}
                       >
-                        {conciliation.quote.status === 'conciliado' ? 'Conciliado' : 'Pendente'}
-                      </span>
-                    </p>
-                  </div>
+                        <button
+                          type="button"
+                          onClick={() => onConciliationCardToggle(quoteSummary.id)}
+                          className="flex w-full items-center justify-between gap-4 p-4 text-left"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-base font-semibold text-[#1D3140]">
+                              {quoteSummary.supplier_name}
+                            </p>
+                            <p className="mt-1 text-sm text-gray-500">
+                              {quoteSummary.matched_count} de {quoteSummary.item_count} itens vinculados
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span
+                              className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                                quoteSummary.status === 'conciliado'
+                                  ? 'bg-green-100 text-green-700'
+                                  : 'bg-amber-100 text-amber-700'
+                              }`}
+                            >
+                              {quoteSummary.status === 'conciliado' ? 'Conciliado' : 'Pendente'}
+                            </span>
+                            <span className="w-10 text-right text-sm font-semibold text-gray-700">
+                              {progressPct}%
+                            </span>
+                          </div>
+                        </button>
+                        {isExpanded && (
+                          <div className="border-t border-[#64ABDE]/20 p-4">
+                            {conciliationError && (
+                              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                                <p className="font-medium">Não foi possível carregar esta cotação.</p>
+                                <p className="mt-1 text-amber-800">{conciliationError}</p>
+                              </div>
+                            )}
+                            {conciliation && conciliation.quote.id === quoteSummary.id && (
+                              <div className="flex flex-col gap-4">
+                                <div className="flex flex-wrap items-start justify-between gap-4">
+                                  <div>
+                                    <h3 className="text-lg font-semibold text-[#1D3140]">
+                                      Conciliação de materiais
+                                    </h3>
+                                    <p className="text-sm text-gray-500 mt-0.5">
+                                      Fornecedor:{' '}
+                                      <span className="font-semibold text-gray-800">
+                                        {conciliation.quote.supplier_name}
+                                      </span>
+                                      {' · '}
+                                      {matchedCount} de {conciliation.items.length} itens vinculados
+                                    </p>
+                                  </div>
+                                  <div className="text-right text-sm text-gray-500">
+                                    <p>
+                                      Status:{' '}
+                                      <span
+                                        className={`font-medium ${
+                                          conciliation.quote.status === 'conciliado'
+                                            ? 'text-green-600'
+                                            : 'text-amber-600'
+                                        }`}
+                                      >
+                                        {conciliation.quote.status === 'conciliado'
+                                          ? 'Conciliado'
+                                          : 'Pendente'}
+                                      </span>
+                                    </p>
+                                  </div>
+                                </div>
+                                <ConciliationTable
+                                  quote={conciliation.quote}
+                                  items={conciliation.items}
+                                  budgetMaterials={conciliation.budgetMaterials}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-                <ConciliationTable
-                  quote={conciliation.quote}
-                  items={conciliation.items}
-                  budgetMaterials={conciliation.budgetMaterials}
-                />
               </div>
             )}
           </TabsContent>

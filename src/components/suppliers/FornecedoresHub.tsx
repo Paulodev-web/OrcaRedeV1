@@ -3,10 +3,15 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FolderOpen, Globe2, Loader2, Plus } from 'lucide-react';
+import { FolderOpen, Globe2, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { BudgetOption } from '@/types';
 import type { QuotationSessionWithStats } from '@/actions/quotationSessions';
-import { createQuotationSessionAction, completeQuotationSessionAction } from '@/actions/quotationSessions';
+import {
+  completeQuotationSessionAction,
+  createQuotationSessionAction,
+  deleteQuotationSessionAction,
+  updateQuotationSessionAction,
+} from '@/actions/quotationSessions';
 import NewQuotationSessionModal from '@/components/suppliers/NewQuotationSessionModal';
 
 interface Props {
@@ -21,7 +26,9 @@ export default function FornecedoresHub({
   sessionsError,
 }: Props) {
   const router = useRouter();
-  const [modalOpen, setModalOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingSession, setEditingSession] = useState<QuotationSessionWithStats | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
 
   const handleComplete = async (sessionId: string) => {
@@ -36,12 +43,37 @@ export default function FornecedoresHub({
     }
   };
 
+  const prefetchSession = (sessionId: string) => {
+    const href = `/fornecedores/sessao/${sessionId}`;
+    const start = performance.now();
+    void router.prefetch(href).finally(() => {
+      const elapsed = Math.round(performance.now() - start);
+      console.info(`[perf] prefetch_session ${sessionId}: ${elapsed}ms`);
+    });
+  };
+
+  const handleDelete = async (sessionId: string) => {
+    const accepted = confirm(
+      'Excluir esta sessão? Esta ação é irreversível e também removerá as cotações e itens vinculados.'
+    );
+    if (!accepted) return;
+
+    setPendingId(sessionId);
+    const res = await deleteQuotationSessionAction(sessionId);
+    setPendingId(null);
+    if (res.success) {
+      router.refresh();
+    } else {
+      alert(res.error);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
-          onClick={() => setModalOpen(true)}
+          onClick={() => setCreateModalOpen(true)}
           className="inline-flex items-center gap-2 rounded-lg bg-[#64ABDE] px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:brightness-95"
         >
           <Plus className="h-4 w-4" />
@@ -56,17 +88,43 @@ export default function FornecedoresHub({
       )}
 
       <NewQuotationSessionModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
+        open={createModalOpen}
+        onOpenChange={setCreateModalOpen}
         budgets={budgets}
-        onCreated={async (input) => {
+        mode="create"
+        onSubmit={async (input) => {
           const res = await createQuotationSessionAction(input);
           if (!res.success) {
             alert(res.error);
             return;
           }
-          setModalOpen(false);
+          setCreateModalOpen(false);
           router.push(`/fornecedores/sessao/${res.data.sessionId}`);
+          router.refresh();
+        }}
+      />
+      <NewQuotationSessionModal
+        open={editModalOpen}
+        onOpenChange={(open) => {
+          setEditModalOpen(open);
+          if (!open) setEditingSession(null);
+        }}
+        budgets={budgets}
+        mode="edit"
+        initialValues={
+          editingSession
+            ? { title: editingSession.title, budgetId: editingSession.budget_id }
+            : undefined
+        }
+        onSubmit={async (input) => {
+          if (!editingSession) return;
+          const res = await updateQuotationSessionAction(editingSession.id, input);
+          if (!res.success) {
+            alert(res.error);
+            return;
+          }
+          setEditModalOpen(false);
+          setEditingSession(null);
           router.refresh();
         }}
       />
@@ -125,6 +183,8 @@ export default function FornecedoresHub({
                 <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-4">
                   <Link
                     href={`/fornecedores/sessao/${s.id}`}
+                    onMouseEnter={() => prefetchSession(s.id)}
+                    onFocus={() => prefetchSession(s.id)}
                     className="inline-flex flex-1 items-center justify-center rounded-lg bg-[#64ABDE]/15 px-3 py-2 text-sm font-medium text-[#1D3140] hover:bg-[#64ABDE]/25"
                   >
                     Abrir sessão
@@ -143,6 +203,29 @@ export default function FornecedoresHub({
                       )}
                     </button>
                   )}
+                  <button
+                    type="button"
+                    disabled={pendingId === s.id}
+                    onClick={() => {
+                      setEditingSession(s);
+                      setEditModalOpen(true);
+                    }}
+                    className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={pendingId === s.id}
+                    onClick={() => void handleDelete(s.id)}
+                    className="inline-flex items-center justify-center rounded-lg border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    {pendingId === s.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </button>
                 </div>
               </div>
             </li>

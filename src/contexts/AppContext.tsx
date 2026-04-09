@@ -322,7 +322,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       
       // Buscar TODOS os orçamentos usando a função helper de paginação
-      const data = await fetchAllRecords('budgets', '*, plan_image_url, folder_id', 'created_at', false, { user_id: user.id });
+      const data = await fetchAllRecords(
+        'budgets',
+        'id, project_name, company_id, client_name, city, status, updated_at, plan_image_url, folder_id',
+        'created_at',
+        false,
+        { user_id: user.id }
+      );
 
 
 

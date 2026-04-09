@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Select,
   SelectContent,
@@ -17,18 +17,28 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   budgets: BudgetOption[];
-  onCreated: (input: { title: string; budgetId: string | null }) => Promise<void>;
+  mode?: 'create' | 'edit';
+  initialValues?: { title: string; budgetId: string | null };
+  onSubmit: (input: { title: string; budgetId: string | null }) => Promise<void>;
 }
 
 export default function NewQuotationSessionModal({
   open,
   onOpenChange,
   budgets,
-  onCreated,
+  mode = 'create',
+  initialValues,
+  onSubmit,
 }: Props) {
   const [title, setTitle] = useState('');
   const [scope, setScope] = useState<string>(SCOPE_GLOBAL);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setTitle(initialValues?.title ?? '');
+    setScope(initialValues?.budgetId ?? SCOPE_GLOBAL);
+  }, [initialValues, open]);
 
   const reset = () => {
     setTitle('');
@@ -41,7 +51,7 @@ export default function NewQuotationSessionModal({
     if (!t) return;
     setSaving(true);
     try {
-      await onCreated({
+      await onSubmit({
         title: t,
         budgetId: scope === SCOPE_GLOBAL ? null : scope,
       });
@@ -73,10 +83,12 @@ export default function NewQuotationSessionModal({
           <X className="h-5 w-5" />
         </button>
         <h2 id="new-session-title" className="text-lg font-semibold text-[#1D3140] pr-8">
-          Nova sessão de cotação
+          {mode === 'create' ? 'Nova sessão de cotação' : 'Editar sessão de cotação'}
         </h2>
         <p className="mt-1 text-sm text-gray-500">
-          Escolha se a conciliação usará a lista de materiais de um orçamento ou o catálogo global.
+          {mode === 'create'
+            ? 'Escolha se a conciliação usará a lista de materiais de um orçamento ou o catálogo global.'
+            : 'Atualize o nome da sessão e, se necessário, o escopo da conciliação.'}
         </p>
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div>
@@ -122,7 +134,7 @@ export default function NewQuotationSessionModal({
               className="inline-flex items-center gap-2 rounded-lg bg-[#64ABDE] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-              Criar e abrir
+              {mode === 'create' ? 'Criar e abrir' : 'Salvar alterações'}
             </button>
           </div>
         </form>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useTransition } from 'react';
+import React, { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
@@ -212,6 +212,12 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
   const allMatched = matchedCount === totalCount;
   const progressPct = totalCount > 0 ? Math.round((matchedCount / totalCount) * 100) : 0;
 
+  useEffect(() => {
+    if (!quote.session_id) return;
+    const href = `/fornecedores/sessao/${quote.session_id}/cenarios`;
+    void router.prefetch(href);
+  }, [quote.session_id, router]);
+
   const handleSaved = (
     itemId: string,
     materialId: string,
@@ -240,18 +246,18 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
 
   const handleFinalize = () => {
     setFinalizeError(null);
+    const start = performance.now();
     startFinalizing(async () => {
       const result = await markQuoteConciliatedAction(quote.id);
       if (!result.success) {
         setFinalizeError(result.error);
         return;
       }
-      if (quote.budget_id) {
-        router.push(
-          `/fornecedores/trabalho?tab=cenarios&budgetId=${encodeURIComponent(quote.budget_id)}`
+      if (quote.session_id) {
+        console.info(
+          `[perf] finalize_to_cenarios ${quote.session_id}: ${Math.round(performance.now() - start)}ms`
         );
-      } else if (quote.session_id) {
-        router.push(`/fornecedores/sessao/${quote.session_id}`);
+        router.push(`/fornecedores/sessao/${quote.session_id}/cenarios`);
       } else {
         router.push('/fornecedores');
       }
