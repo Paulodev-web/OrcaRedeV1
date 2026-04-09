@@ -46,11 +46,11 @@ export default async function SessionCenariosPage({ params }: Props) {
         </div>
 
         <header className="flex items-start gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-[#64ABDE]/40 bg-[#64ABDE]/15">
-            <BarChart3 className="h-6 w-6 text-[#64ABDE]" aria-hidden />
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-50">
+            <BarChart3 className="h-6 w-6 text-blue-600" aria-hidden />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-[#1D3140]">
+            <h1 className="text-2xl font-bold text-gray-900">
               Análise de Cenários de Compra
             </h1>
             <p className="mt-1 text-sm text-gray-500">
@@ -71,7 +71,7 @@ export default async function SessionCenariosPage({ params }: Props) {
             </p>
             <Link
               href={`/fornecedores/sessao/${sessionId}?tab=conciliar`}
-              className="inline-block mt-4 text-sm font-medium text-[#64ABDE] hover:text-[#1D3140] hover:underline"
+              className="mt-4 inline-block text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
             >
               ← Voltar para conciliação
             </Link>

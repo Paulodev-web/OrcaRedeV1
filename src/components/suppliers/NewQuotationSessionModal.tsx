@@ -82,7 +82,7 @@ export default function NewQuotationSessionModal({
         >
           <X className="h-5 w-5" />
         </button>
-        <h2 id="new-session-title" className="text-lg font-semibold text-[#1D3140] pr-8">
+        <h2 id="new-session-title" className="pr-8 text-lg font-semibold text-gray-900">
           {mode === 'create' ? 'Nova sessão de cotação' : 'Editar sessão de cotação'}
         </h2>
         <p className="mt-1 text-sm text-gray-500">
@@ -131,7 +131,7 @@ export default function NewQuotationSessionModal({
             <button
               type="submit"
               disabled={saving || !title.trim()}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#64ABDE] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {mode === 'create' ? 'Criar e abrir' : 'Salvar alterações'}

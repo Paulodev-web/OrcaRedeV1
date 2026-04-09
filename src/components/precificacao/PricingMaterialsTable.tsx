@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus, Trash2 } from 'lucide-react';
-import type { PricingMaterialLine } from './types';
+import { BUDGET_CONSOLIDATED_LINE_ID, type PricingMaterialLine } from './types';
 
 interface PricingMaterialsTableProps {
   budgetItems: PricingMaterialLine[];
@@ -31,7 +31,7 @@ export function PricingMaterialsTable({
         <div>
           <h2 className="text-sm font-semibold text-[#1D3140]">Materiais e Serviços</h2>
           <p className="mt-1 text-xs text-gray-500">
-            Ajuste itens importados e adicione linhas manuais para compor o custo direto.
+            O orçamento gera uma linha com o custo de materiais consolidado; use linhas manuais para custos extras.
           </p>
         </div>
         <button
@@ -70,7 +70,11 @@ export function PricingMaterialsTable({
                       placeholder="Descrição do item"
                     />
                     <span className="mt-1 inline-flex rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-600">
-                      {item.source === 'budget' ? 'Importado' : 'Manual'}
+                      {item.source === 'budget'
+                        ? item.id === BUDGET_CONSOLIDATED_LINE_ID
+                          ? 'Importado (consolidado)'
+                          : 'Importado'
+                        : 'Manual'}
                     </span>
                   </td>
                   <td className="py-2 pr-3">

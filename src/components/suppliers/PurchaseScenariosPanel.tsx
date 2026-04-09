@@ -393,7 +393,7 @@ export default function PurchaseScenariosPanel({
       <div className="rounded-lg border border-gray-100 bg-gray-50/60 p-5">
         <label
           htmlFor="scenarios-budget-select"
-          className="block text-sm font-medium text-[#1D3140] mb-2"
+          className="mb-2 block text-sm font-medium text-gray-900"
         >
           Selecione o Orçamento / Obra
         </label>
@@ -441,7 +441,7 @@ export default function PurchaseScenariosPanel({
           {/* Resumo das cotações */}
           {quotes && quotes.length > 0 && (
             <div className="rounded-lg border border-gray-100 bg-gray-50/60 p-5">
-              <h3 className="text-sm font-semibold text-[#1D3140] mb-3">
+              <h3 className="mb-3 text-sm font-semibold text-gray-900">
                 Cotações disponíveis para:{' '}
                 <span className="text-gray-900">{selectedBudgetName}</span>
               </h3>
@@ -450,7 +450,7 @@ export default function PurchaseScenariosPanel({
                   <a
                     key={q.id}
                     href={`/fornecedores/trabalho?tab=conciliar&quoteId=${encodeURIComponent(q.id)}`}
-                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors hover:border-[#64ABDE]/50 ${
+                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors hover:border-blue-300 ${
                       q.status === 'conciliado'
                         ? 'border-green-200 bg-green-50 text-green-700'
                         : 'border-amber-200 bg-amber-50 text-amber-700'
@@ -474,7 +474,7 @@ export default function PurchaseScenariosPanel({
               </p>
               <a
                 href="/fornecedores/trabalho?tab=importar"
-                className="inline-block mt-3 text-sm font-medium text-[#64ABDE] hover:text-[#1D3140] hover:underline"
+                className="mt-3 inline-block text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
               >
                 Importar proposta →
               </a>
@@ -491,7 +491,7 @@ export default function PurchaseScenariosPanel({
                     onClick={() => setActiveTab('A')}
                     className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
                       activeTab === 'A'
-                        ? 'border-[#64ABDE] text-[#64ABDE]'
+                        ? 'border-blue-600 text-blue-600'
                         : 'border-transparent text-gray-500 hover:text-gray-700'
                     }`}
                   >
@@ -503,7 +503,7 @@ export default function PurchaseScenariosPanel({
                     onClick={() => setActiveTab('B')}
                     className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
                       activeTab === 'B'
-                        ? 'border-[#64ABDE] text-[#64ABDE]'
+                        ? 'border-blue-600 text-blue-600'
                         : 'border-transparent text-gray-500 hover:text-gray-700'
                     }`}
                   >

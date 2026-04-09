@@ -66,12 +66,12 @@ function buildFornecedoresHref(
 
 const tabTriggerClass =
   'group inline-flex flex-1 min-w-0 sm:flex-none items-center justify-center gap-2 rounded-none rounded-t-lg border border-transparent border-b-0 px-4 py-2.5 text-sm font-medium text-gray-600 shadow-none transition-colors ' +
-  'data-[state=active]:bg-[#64ABDE]/15 data-[state=active]:text-[#1D3140] data-[state=active]:border-gray-200 data-[state=active]:shadow-none ' +
+  'data-[state=active]:bg-blue-100 data-[state=active]:text-gray-900 data-[state=active]:border-gray-200 data-[state=active]:shadow-none ' +
   'data-[state=inactive]:text-gray-600 ' +
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#64ABDE] focus-visible:ring-offset-2';
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2';
 
 const tabIconClass =
-  'h-4 w-4 shrink-0 text-gray-400 group-data-[state=active]:text-[#64ABDE]';
+  'h-4 w-4 shrink-0 text-gray-400 group-data-[state=active]:text-blue-600';
 
 export default function FornecedoresSuprimentosShell({
   budgets,
@@ -122,7 +122,7 @@ export default function FornecedoresSuprimentosShell({
       <div className="text-xs text-gray-400 flex items-center gap-1.5 flex-wrap">
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 transition-colors hover:text-[#64ABDE]"
+          className="inline-flex items-center gap-1.5 transition-colors hover:text-blue-600"
         >
           <Grid3X3 className="w-3.5 h-3.5 shrink-0" aria-hidden />
           <span>Portal</span>
@@ -130,7 +130,7 @@ export default function FornecedoresSuprimentosShell({
         <ChevronRight className="w-3 h-3 shrink-0 opacity-70" aria-hidden />
         <Link
           href="/fornecedores"
-          className="text-gray-600 font-medium transition-colors hover:text-[#64ABDE]"
+          className="text-gray-600 font-medium transition-colors hover:text-blue-600"
         >
           Sessões
         </Link>
@@ -141,16 +141,16 @@ export default function FornecedoresSuprimentosShell({
       <div className="flex items-start gap-3 sm:gap-4">
         <Link
           href="/"
-          className="mt-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 shadow-sm transition-colors hover:bg-gray-50 hover:text-[#1D3140]"
+          className="mt-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 shadow-sm transition-colors hover:bg-gray-50 hover:text-gray-900"
           aria-label="Voltar ao portal"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
         </Link>
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-[#64ABDE]/40 bg-[#64ABDE]/15">
-          <Package className="h-6 w-6 text-[#64ABDE]" aria-hidden />
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-50">
+          <Package className="h-6 w-6 text-blue-600" aria-hidden />
         </div>
         <div className="min-w-0 flex-1 pt-0.5">
-          <h1 className="text-2xl font-bold text-[#1D3140]">Suprimentos e Cotações</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Suprimentos e Cotações</h1>
           <p className="text-sm text-gray-500 mt-1">
             Importe propostas em PDF, concilie materiais com o orçamento e compare cenários de compra.
           </p>
@@ -187,7 +187,7 @@ export default function FornecedoresSuprimentosShell({
                   <button
                     type="button"
                     onClick={() => onTabChange('importar')}
-                    className="font-medium text-[#64ABDE] hover:text-[#1D3140] hover:underline"
+                    className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
                   >
                     Importar PDF
                   </button>{' '}
@@ -199,7 +199,7 @@ export default function FornecedoresSuprimentosShell({
             {hasConciliationQuotes && (
               <div className="flex flex-col gap-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-[#1D3140]">Conciliação de propostas</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">Conciliação de propostas</h2>
                   <p className="text-sm text-gray-500 mt-0.5">
                     Clique em uma proposta para expandir e conciliar os materiais.
                   </p>
@@ -216,7 +216,7 @@ export default function FornecedoresSuprimentosShell({
                         key={quoteSummary.id}
                         className={`rounded-lg border transition-colors ${
                           isExpanded
-                            ? 'border-[#64ABDE]/50 bg-[#64ABDE]/5'
+                            ? 'border-blue-300 bg-blue-50'
                             : 'border-gray-200 bg-white hover:border-gray-300'
                         }`}
                       >
@@ -226,7 +226,7 @@ export default function FornecedoresSuprimentosShell({
                           className="flex w-full items-center justify-between gap-4 p-4 text-left"
                         >
                           <div className="min-w-0">
-                            <p className="text-base font-semibold text-[#1D3140]">
+                            <p className="text-base font-semibold text-gray-900">
                               {quoteSummary.supplier_name}
                             </p>
                             <p className="mt-1 text-sm text-gray-500">
@@ -249,7 +249,7 @@ export default function FornecedoresSuprimentosShell({
                           </div>
                         </button>
                         {isExpanded && (
-                          <div className="border-t border-[#64ABDE]/20 p-4">
+                          <div className="border-t border-blue-200 p-4">
                             {conciliationError && (
                               <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                                 <p className="font-medium">Não foi possível carregar esta cotação.</p>
@@ -260,7 +260,7 @@ export default function FornecedoresSuprimentosShell({
                               <div className="flex flex-col gap-4">
                                 <div className="flex flex-wrap items-start justify-between gap-4">
                                   <div>
-                                    <h3 className="text-lg font-semibold text-[#1D3140]">
+                                    <h3 className="text-lg font-semibold text-gray-900">
                                       Conciliação de materiais
                                     </h3>
                                     <p className="text-sm text-gray-500 mt-0.5">
@@ -308,7 +308,7 @@ export default function FornecedoresSuprimentosShell({
 
           <TabsContent value="cenarios" className="mt-0 focus-visible:ring-0">
             <div className="mb-6">
-              <h2 className="text-lg font-semibold text-[#1D3140]">Cenários de compra</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Cenários de compra</h2>
               <p className="text-sm text-gray-500 mt-0.5">
                 Compare fornecedores e encontre a estratégia de menor custo.
               </p>

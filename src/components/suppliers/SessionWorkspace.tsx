@@ -62,7 +62,7 @@ export default function SessionWorkspace({
         <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold text-[#1D3140]">Conciliação de materiais</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Conciliação de materiais</h2>
               <p className="text-sm text-gray-500 mt-0.5">
                 {conciliationQuotes.length} proposta{conciliationQuotes.length > 1 ? 's' : ''} &middot;{' '}
                 {totalMatched} de {totalItems} itens validados ({progressPct}%)
@@ -70,7 +70,7 @@ export default function SessionWorkspace({
               <div className="mt-2 w-64 bg-gray-100 rounded-full h-2">
                 <div
                   className={`h-2 rounded-full transition-all duration-500 ${
-                    progressPct === 100 ? 'bg-green-500' : 'bg-[#64ABDE]'
+                    progressPct === 100 ? 'bg-green-500' : 'bg-blue-600'
                   }`}
                   style={{ width: `${progressPct}%` }}
                 />
@@ -81,7 +81,7 @@ export default function SessionWorkspace({
               <button
                 type="button"
                 onClick={() => setConciliationOpen(true)}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#64ABDE] px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-[#5596c5] transition-colors"
+                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
               >
                 <GitMerge className="h-4 w-4" />
                 Abrir conciliação

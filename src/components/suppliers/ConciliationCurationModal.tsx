@@ -211,10 +211,13 @@ export default function ConciliationCurationModal({ sessionId, open, onOpenChang
     (sum, m) => sum + m.linked_items.filter((it) => it.match_status === 'ia_suggested').length,
     0,
   );
+  const supplierColumnsCount = supplierColumnOrder.length;
+  const firstColumnWidthPct = supplierColumnsCount > 0 ? 30 : 100;
+  const supplierColumnWidthPct = supplierColumnsCount > 0 ? 70 / supplierColumnsCount : 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[min(92vh,calc(100dvh-1.5rem))] max-h-[min(92vh,calc(100dvh-1.5rem))] w-[min(100vw-1rem,1400px)] max-w-[min(100vw-1rem,1400px)] flex-col gap-0 p-0">
+      <DialogContent className="flex h-[min(92vh,calc(100dvh-1.5rem))] max-h-[min(92vh,calc(100dvh-1.5rem))] w-[min(100vw-1rem,1400px)] max-w-[min(100vw-1rem,1400px)] flex-col gap-0 overflow-hidden p-0">
         <DialogHeader className="shrink-0 space-y-1 px-6 pb-4 pr-14 pt-6">
           <DialogTitle>Curadoria de conciliação</DialogTitle>
           <DialogDescription>
@@ -223,7 +226,7 @@ export default function ConciliationCurationModal({ sessionId, open, onOpenChang
           </DialogDescription>
           <div className="flex flex-wrap items-center gap-3 pt-2 text-xs">
             <span className="text-gray-600">
-              <span className="font-medium text-[#1D3140]">{totalApproved}</span> validados
+              <span className="font-medium text-gray-900">{totalApproved}</span> validados
             </span>
             {totalIaSuggested > 0 && (
               <span className="text-amber-600">
@@ -247,7 +250,7 @@ export default function ConciliationCurationModal({ sessionId, open, onOpenChang
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm placeholder:text-gray-400 focus:border-[#64ABDE] focus:outline-none"
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none"
               placeholder="Buscar material ou item…"
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
@@ -255,7 +258,7 @@ export default function ConciliationCurationModal({ sessionId, open, onOpenChang
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-auto px-6 pb-2">
+        <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-6 pb-2">
           {loading && (
             <div className="flex items-center justify-center py-12 text-gray-500">
               <Loader2 className="h-5 w-5 animate-spin mr-2" />
@@ -277,19 +280,25 @@ export default function ConciliationCurationModal({ sessionId, open, onOpenChang
 
           {!loading && !error && (filteredMaterials.length > 0 || unlinked.length > 0) && (
             <div className="min-w-0">
-              <table className="w-max min-w-full border-collapse text-sm">
+              <table className="w-full table-fixed border-collapse text-sm">
+                <colgroup>
+                  <col style={{ width: `${firstColumnWidthPct}%` }} />
+                  {supplierColumnOrder.map((name) => (
+                    <col key={name} style={{ width: `${supplierColumnWidthPct}%` }} />
+                  ))}
+                </colgroup>
                 <thead>
                   <tr className="border-b-2 border-gray-200">
                     {/* Sticky first column header (corner: top + left) */}
                     <th
-                      className="sticky left-0 top-0 z-30 min-w-[min(280px,40vw)] max-w-[min(320px,45vw)] bg-white px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 shadow-[1px_0_0_0_#e5e7eb,0_1px_0_0_#e5e7eb]"
+                      className="sticky left-0 top-0 z-30 bg-white px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 shadow-[1px_0_0_0_#e5e7eb,0_1px_0_0_#e5e7eb]"
                     >
                       Fonte da verdade
                     </th>
                     {supplierColumnOrder.map((name) => (
                       <th
                         key={name}
-                        className="sticky top-0 z-20 min-w-[220px] max-w-[280px] bg-white px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[#1D3140] shadow-[0_1px_0_0_#e5e7eb] border-r border-gray-100 last:border-r-0 align-bottom"
+                        className="sticky top-0 z-20 border-r border-gray-100 bg-white px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-900 shadow-[0_1px_0_0_#e5e7eb] last:border-r-0 align-bottom"
                         title={name}
                       >
                         <span className="line-clamp-4 break-words font-semibold normal-case tracking-normal">
@@ -303,8 +312,8 @@ export default function ConciliationCurationModal({ sessionId, open, onOpenChang
                   {filteredMaterials.map((mat) => (
                     <tr key={mat.material_id} className="hover:bg-gray-50/50 transition-colors">
                       {/* Sticky material column */}
-                      <td className="sticky left-0 z-10 min-w-[min(280px,40vw)] max-w-[min(320px,45vw)] bg-white px-4 py-3 align-top border-r border-gray-200 shadow-[1px_0_0_0_#e5e7eb]">
-                        <p className="break-words text-sm font-semibold leading-snug text-[#1D3140]">
+                      <td className="sticky left-0 z-10 border-r border-gray-200 bg-white px-4 py-3 align-top shadow-[1px_0_0_0_#e5e7eb]">
+                        <p className="break-words text-sm font-semibold leading-snug text-gray-900">
                           {mat.material_name}
                         </p>
                         <p className="text-xs text-gray-400 mt-0.5">
@@ -323,7 +332,7 @@ export default function ConciliationCurationModal({ sessionId, open, onOpenChang
                         return (
                           <td
                             key={supplierName}
-                            className="min-w-[220px] max-w-[280px] px-4 py-3 align-top border-r border-gray-100 last:border-r-0"
+                            className="min-w-0 border-r border-gray-100 px-4 py-3 align-top last:border-r-0"
                           >
                             <SupplierCell items={cellItems} onApproved={handleItemApproved} />
                           </td>
@@ -337,7 +346,7 @@ export default function ConciliationCurationModal({ sessionId, open, onOpenChang
                     <tr>
                       <td
                         colSpan={1 + supplierColumnOrder.length}
-                        className="px-4 pt-6 pb-2"
+                        className="max-w-full min-w-0 px-4 pb-2 pt-6"
                       >
                         <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
                           Itens sem vínculo com material ({unlinked.length})

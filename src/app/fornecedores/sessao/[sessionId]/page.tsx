@@ -81,7 +81,7 @@ export default async function QuotationSessionPage({ params }: Props) {
         <div className="text-sm text-gray-500">
           <Link
             href="/fornecedores"
-            className="text-[#64ABDE] hover:underline"
+            className="text-blue-600 hover:underline"
           >
             ← Hub de sessões
           </Link>
@@ -89,7 +89,7 @@ export default async function QuotationSessionPage({ params }: Props) {
 
         <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-[#1D3140]">
+            <h1 className="text-2xl font-bold text-gray-900">
               {session.title}
             </h1>
             <p className="mt-1 text-sm text-gray-500">

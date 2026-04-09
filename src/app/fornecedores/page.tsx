@@ -26,14 +26,14 @@ export default async function FornecedoresPage() {
     <main className="min-h-screen bg-gray-50 p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         <div>
-          <p className="text-xs text-gray-400 mb-1">
-            <Link href="/" className="hover:text-[#64ABDE]">
+          <p className="mb-1 text-xs text-gray-400">
+            <Link href="/" className="hover:text-blue-600">
               Portal
             </Link>
             <span className="mx-1">/</span>
             <span className="text-gray-600">Fornecedores</span>
           </p>
-          <h1 className="text-2xl font-bold text-[#1D3140]">Sessões de cotação</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Sessões de cotação</h1>
           <p className="text-sm text-gray-500 mt-1">
             Crie uma sessão por obra ou use o modo global (catálogo). Importe PDFs em lote,
             concilie materiais e compare cenários de compra.

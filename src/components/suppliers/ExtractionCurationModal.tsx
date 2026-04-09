@@ -178,7 +178,7 @@ export default function ExtractionCurationModal({
                         <td className="px-3 py-2">
                           {isEditing ? (
                             <input
-                              className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-[#64ABDE] focus:outline-none"
+                              className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
                               value={editState!.descricao}
                               onChange={(e) =>
                                 setEditState((s) => (s ? { ...s, descricao: e.target.value } : s))
@@ -191,7 +191,7 @@ export default function ExtractionCurationModal({
                         <td className="px-3 py-2">
                           {isEditing ? (
                             <input
-                              className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-[#64ABDE] focus:outline-none"
+                              className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
                               value={editState!.unidade}
                               onChange={(e) =>
                                 setEditState((s) => (s ? { ...s, unidade: e.target.value } : s))
@@ -205,7 +205,7 @@ export default function ExtractionCurationModal({
                           {isEditing ? (
                             <input
                               type="number"
-                              className="w-full rounded border border-gray-300 px-2 py-1 text-right text-sm focus:border-[#64ABDE] focus:outline-none"
+                              className="w-full rounded border border-gray-300 px-2 py-1 text-right text-sm focus:border-blue-500 focus:outline-none"
                               value={editState!.quantidade}
                               onChange={(e) =>
                                 setEditState((s) => (s ? { ...s, quantidade: e.target.value } : s))
@@ -220,7 +220,7 @@ export default function ExtractionCurationModal({
                             <input
                               type="number"
                               step="0.01"
-                              className="w-full rounded border border-gray-300 px-2 py-1 text-right text-sm focus:border-[#64ABDE] focus:outline-none"
+                              className="w-full rounded border border-gray-300 px-2 py-1 text-right text-sm focus:border-blue-500 focus:outline-none"
                               value={editState!.preco_unit}
                               onChange={(e) =>
                                 setEditState((s) => (s ? { ...s, preco_unit: e.target.value } : s))
@@ -235,7 +235,7 @@ export default function ExtractionCurationModal({
                             <input
                               type="number"
                               step="0.01"
-                              className="w-full rounded border border-gray-300 px-2 py-1 text-right text-sm focus:border-[#64ABDE] focus:outline-none"
+                              className="w-full rounded border border-gray-300 px-2 py-1 text-right text-sm focus:border-blue-500 focus:outline-none"
                               value={editState!.total_item}
                               onChange={(e) =>
                                 setEditState((s) => (s ? { ...s, total_item: e.target.value } : s))
@@ -274,7 +274,7 @@ export default function ExtractionCurationModal({
                             <button
                               type="button"
                               onClick={() => startEditing(item)}
-                              className="rounded p-1 text-gray-400 hover:text-[#64ABDE] hover:bg-blue-50"
+                              className="rounded p-1 text-gray-400 hover:bg-blue-50 hover:text-blue-600"
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </button>
@@ -289,7 +289,7 @@ export default function ExtractionCurationModal({
                     <td colSpan={5} className="px-3 py-2 text-right text-gray-700">
                       Total geral
                     </td>
-                    <td className="px-3 py-2 text-right text-[#1D3140]">{fmtCurrency(totalGeral)}</td>
+                    <td className="px-3 py-2 text-right text-gray-900">{fmtCurrency(totalGeral)}</td>
                     <td />
                   </tr>
                 </tfoot>
@@ -310,7 +310,7 @@ export default function ExtractionCurationModal({
             type="button"
             onClick={handleValidate}
             disabled={isValidating || loading || items.length === 0}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#64ABDE] px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#5596c5] disabled:opacity-50 transition-colors"
+            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-50"
           >
             {isValidating ? (
               <Loader2 className="h-4 w-4 animate-spin" />

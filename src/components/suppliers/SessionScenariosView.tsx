@@ -45,7 +45,7 @@ interface Props {
 const tabBtnClass = (active: boolean) =>
   `flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
     active
-      ? 'border-[#64ABDE] text-[#64ABDE]'
+      ? 'border-blue-600 text-blue-600'
       : 'border-transparent text-gray-500 hover:text-gray-700'
   }`;
 
@@ -81,17 +81,17 @@ function ScenarioSummaryCards({ scenarios }: { scenarios: ScenariosResult }) {
         )}
       </div>
 
-      <div className="rounded-xl border border-purple-100 bg-purple-50 p-5">
+      <div className="rounded-xl border border-sky-100 bg-sky-50 p-5">
         <div className="flex items-center gap-2 mb-2">
-          <Shuffle className="h-5 w-5 text-purple-600" />
-          <p className="text-xs text-purple-600 font-semibold uppercase tracking-wide">
+          <Shuffle className="h-5 w-5 text-sky-600" />
+          <p className="text-xs text-sky-600 font-semibold uppercase tracking-wide">
             Cenário B — Melhor por Item
           </p>
         </div>
-        <p className="text-2xl font-bold text-purple-800">
+        <p className="text-2xl font-bold text-sky-800">
           {formatCurrency(scenarioB.total_normalizado)}
         </p>
-        <p className="text-sm text-purple-600 mt-1">
+        <p className="text-sm text-sky-600 mt-1">
           {scenarioB.items.length} materiais analisados
         </p>
       </div>

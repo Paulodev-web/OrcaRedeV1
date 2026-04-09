@@ -11,7 +11,7 @@ import { BudgetImportSelect } from './BudgetImportSelect';
 import { LaborInput } from './LaborInput';
 import { PricingMaterialsTable } from './PricingMaterialsTable';
 import { PricingSummary } from './PricingSummary';
-import type { PricingMaterialLine } from './types';
+import { BUDGET_CONSOLIDATED_LINE_ID, type PricingMaterialLine } from './types';
 
 function parseNonNegativeNumber(value: string): number {
   const parsed = Number.parseFloat(value);
@@ -77,16 +77,22 @@ export function PrecificacaoCalculator() {
     }
 
     const consolidatedMaterials = consolidateMaterialsFromBudgetDetails(budgetDetails);
-    const importedItems: PricingMaterialLine[] = consolidatedMaterials.map((material) => ({
-      id: material.materialId,
-      description: material.nome,
-      quantity: material.quantidade,
-      unit: material.unidade || 'UN',
-      unitPrice: material.precoUnit,
-      source: 'budget',
-    }));
+    if (consolidatedMaterials.length === 0) {
+      setBudgetItems([]);
+      return;
+    }
 
-    setBudgetItems(importedItems);
+    const totalMateriais = consolidatedMaterials.reduce((acc, m) => acc + m.subtotal, 0);
+    setBudgetItems([
+      {
+        id: BUDGET_CONSOLIDATED_LINE_ID,
+        description: 'Materiais e insumos do orçamento (valor consolidado)',
+        quantity: 1,
+        unit: 'ORÇ',
+        unitPrice: totalMateriais,
+        source: 'budget',
+      },
+    ]);
   }, [budgetDetails, selectedBudgetId]);
 
   const materialsSubtotal = useMemo(() => {
@@ -159,7 +165,8 @@ export function PrecificacaoCalculator() {
         </p>
         <h1 className="mt-1 text-2xl font-bold text-[#1D3140]">Módulo de Precificação</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Calculadora de preço de venda com base em custo direto e parâmetros de BDI.
+          Calculadora de preço de venda com base em custo direto e parâmetros de BDI. Ao importar um orçamento, o custo
+          de materiais entra como um único valor consolidado (não a lista completa de itens).
           {selectedBudgetName ? ` Orçamento selecionado: ${selectedBudgetName}.` : ''}
         </p>
       </div>
