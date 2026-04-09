@@ -246,6 +246,9 @@ export interface TrackedPostMaterial {
 
 export type SupplierQuoteStatus = 'pendente' | 'conciliado' | 'aprovado';
 export type SupplierMatchStatus = 'sem_match' | 'automatico' | 'manual';
+export type SupplierMatchMethod = 'exact_memory' | 'semantic_ai' | 'manual';
+export type SupplierMappingSource = 'manual' | 'ai';
+export type SemanticSuggestionStatus = 'suggested' | 'accepted' | 'rejected';
 
 export interface SupplierQuote {
   id: string;
@@ -275,6 +278,9 @@ export interface SupplierQuoteItem {
   matched_material_id?: string | null;
   conversion_factor: number;
   match_status: SupplierMatchStatus;
+  match_level?: number | null;
+  match_confidence?: number | null;
+  match_method?: SupplierMatchMethod | null;
   created_at: string;
 }
 
@@ -285,8 +291,25 @@ export interface SupplierMaterialMapping {
   supplier_material_name: string;
   internal_material_id: string;
   conversion_factor: number;
+  last_seen_at?: string;
+  times_used: number;
+  source: SupplierMappingSource;
+  confidence_snapshot?: number | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface SemanticMatchSuggestion {
+  id: string;
+  supplier_quote_item_id: string;
+  suggested_material_id: string;
+  suggested_conversion_factor: number;
+  confidence_score: number;
+  rationale?: string | null;
+  status: SemanticSuggestionStatus;
+  model: string;
+  created_at: string;
+  reviewed_at?: string | null;
 }
 
 export interface BudgetOption {

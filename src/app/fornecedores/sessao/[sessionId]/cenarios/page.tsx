@@ -41,7 +41,7 @@ export default async function SessionCenariosPage({ params }: Props) {
             className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
-            Voltar para Sessão
+            Voltar para Conciliação
           </Link>
         </div>
 
@@ -51,10 +51,12 @@ export default async function SessionCenariosPage({ params }: Props) {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-[#1D3140]">
-              Cenários de Compra
+              Análise de Cenários de Compra
             </h1>
             <p className="mt-1 text-sm text-gray-500">
-              Sessão: {session.title}
+              Sessão: <span className="font-medium text-gray-700">{session.title}</span>
+              {' · '}
+              {quotes.length} fornecedor(es) cotado(s)
             </p>
           </div>
         </header>
@@ -65,8 +67,7 @@ export default async function SessionCenariosPage({ params }: Props) {
               Nenhum item conciliado encontrado para este orçamento.
             </p>
             <p className="mt-2 text-sm text-gray-400">
-              Volte à sessão e concilie pelo menos uma proposta para gerar
-              cenários.
+              Volte à sessão e concilie pelo menos uma proposta para gerar cenários.
             </p>
             <Link
               href={`/fornecedores/sessao/${sessionId}?tab=conciliar`}

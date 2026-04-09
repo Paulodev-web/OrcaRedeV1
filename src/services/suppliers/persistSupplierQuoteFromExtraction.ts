@@ -45,6 +45,9 @@ export async function persistSupplierQuoteFromExtraction(
     alerta: item.alerta,
     match_status: 'sem_match',
     conversion_factor: 1,
+    match_level: null,
+    match_confidence: null,
+    match_method: null,
   }));
 
   const { error: itemsError } = await supabase.from('supplier_quote_items').insert(itemsToInsert);

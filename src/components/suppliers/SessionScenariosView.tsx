@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
   AlertTriangle,
   Award,
@@ -14,7 +14,6 @@ import {
 import type {
   ScenariosResult,
   ScenarioItem,
-  ScenarioSupplier,
 } from '@/actions/supplierQuotes';
 
 const formatCurrency = (v: number) =>
@@ -51,6 +50,90 @@ const tabBtnClass = (active: boolean) =>
   }`;
 
 // ---------------------------------------------------------------------------
+// Summary cards
+// ---------------------------------------------------------------------------
+function ScenarioSummaryCards({ scenarios }: { scenarios: ScenariosResult }) {
+  const { scenarioA, scenarioB, budget_total_reference } = scenarios;
+  const bestSupplier = scenarioA[0];
+  const hasSaving = scenarioB.saving_vs_cheapest_a > 0;
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="rounded-xl border border-blue-100 bg-blue-50 p-5">
+        <div className="flex items-center gap-2 mb-2">
+          <Package className="h-5 w-5 text-blue-600" />
+          <p className="text-xs text-blue-600 font-semibold uppercase tracking-wide">
+            Cenário A — Pacote Fechado
+          </p>
+        </div>
+        {bestSupplier && (
+          <>
+            <p className="text-2xl font-bold text-blue-800">
+              {formatCurrency(bestSupplier.total_normalizado)}
+            </p>
+            <p className="text-sm text-blue-600 mt-1">
+              Melhor: <span className="font-semibold">{bestSupplier.supplier_name}</span>
+            </p>
+            <p className="text-xs text-blue-400 mt-0.5">
+              {bestSupplier.items_covered}/{bestSupplier.total_items} itens cobertos
+            </p>
+          </>
+        )}
+      </div>
+
+      <div className="rounded-xl border border-purple-100 bg-purple-50 p-5">
+        <div className="flex items-center gap-2 mb-2">
+          <Shuffle className="h-5 w-5 text-purple-600" />
+          <p className="text-xs text-purple-600 font-semibold uppercase tracking-wide">
+            Cenário B — Melhor por Item
+          </p>
+        </div>
+        <p className="text-2xl font-bold text-purple-800">
+          {formatCurrency(scenarioB.total_normalizado)}
+        </p>
+        <p className="text-sm text-purple-600 mt-1">
+          {scenarioB.items.length} materiais analisados
+        </p>
+      </div>
+
+      <div
+        className={`rounded-xl border p-5 ${
+          hasSaving
+            ? 'border-green-100 bg-green-50'
+            : 'border-gray-100 bg-gray-50'
+        }`}
+      >
+        <div className="flex items-center gap-2 mb-2">
+          <TrendingDown
+            className={`h-5 w-5 ${hasSaving ? 'text-green-600' : 'text-gray-500'}`}
+          />
+          <p
+            className={`text-xs font-semibold uppercase tracking-wide ${
+              hasSaving ? 'text-green-600' : 'text-gray-500'
+            }`}
+          >
+            {hasSaving ? 'Economia potencial' : 'Diferença B vs. A'}
+          </p>
+        </div>
+        <p
+          className={`text-2xl font-bold ${
+            hasSaving ? 'text-green-700' : 'text-gray-600'
+          }`}
+        >
+          {hasSaving ? '−' : '+'}
+          {formatCurrency(Math.abs(scenarioB.saving_vs_cheapest_a))}
+        </p>
+        {budget_total_reference > 0 && (
+          <p className="text-xs text-gray-400 mt-1">
+            vs. {formatCurrency(budget_total_reference)} do melhor pacote
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Tabelona: cross-comparison table (material x supplier)
 // ---------------------------------------------------------------------------
 function TabelonaView({ scenarios }: { scenarios: ScenariosResult }) {
@@ -78,7 +161,7 @@ function TabelonaView({ scenarios }: { scenarios: ScenariosResult }) {
     <div className="space-y-4">
       <p className="text-xs text-gray-500">
         Comparação preço a preço, material a material. Preços normalizados para
-        a unidade interna do sistema. O menor preço por material está destacado.
+        a unidade interna do sistema (preço ÷ fator de conversão). O menor preço por material está destacado.
       </p>
       <div className="overflow-x-auto border border-gray-200 rounded-lg">
         <table className="min-w-full divide-y divide-gray-200 text-sm">
@@ -147,7 +230,12 @@ function TabelonaView({ scenarios }: { scenarios: ScenariosResult }) {
                             : 'text-gray-700'
                         }`}
                       >
-                        {formatCurrency(offer.preco_normalizado)}
+                        <p>{formatCurrency(offer.preco_normalizado)}</p>
+                        {offer.conversion_factor !== 1 && (
+                          <p className="text-xs text-gray-400 font-normal">
+                            ÷{formatNumber(offer.conversion_factor)}
+                          </p>
+                        )}
                       </td>
                     );
                   })}
@@ -312,7 +400,7 @@ function ScenarioAView({ scenarios }: { scenarios: ScenariosResult }) {
 }
 
 function ScenarioBView({ scenarios }: { scenarios: ScenariosResult }) {
-  const { scenarioB, budget_total_reference } = scenarios;
+  const { scenarioB } = scenarios;
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   if (scenarioB.items.length === 0) {
@@ -323,53 +411,12 @@ function ScenarioBView({ scenarios }: { scenarios: ScenariosResult }) {
     );
   }
 
-  const hasSaving = scenarioB.saving_vs_cheapest_a > 0;
-
   return (
     <div className="space-y-4">
       <p className="text-xs text-gray-500">
         Fracionar a compra: cada item é adquirido do fornecedor com menor preço
         normalizado.
       </p>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
-          <p className="text-xs text-blue-600 font-medium uppercase tracking-wide mb-1">
-            Total Cenário B
-          </p>
-          <p className="text-2xl font-bold text-blue-800">
-            {formatCurrency(scenarioB.total_normalizado)}
-          </p>
-        </div>
-        <div
-          className={`border rounded-lg p-4 ${
-            hasSaving
-              ? 'bg-green-50 border-green-100'
-              : 'bg-gray-50 border-gray-100'
-          }`}
-        >
-          <p
-            className={`text-xs font-medium uppercase tracking-wide mb-1 ${
-              hasSaving ? 'text-green-600' : 'text-gray-500'
-            }`}
-          >
-            {hasSaving ? 'Economia vs. Cenário A' : 'Diferença vs. Cenário A'}
-          </p>
-          <p
-            className={`text-2xl font-bold ${
-              hasSaving ? 'text-green-700' : 'text-gray-600'
-            }`}
-          >
-            {hasSaving ? '−' : '+'}
-            {formatCurrency(Math.abs(scenarioB.saving_vs_cheapest_a))}
-          </p>
-          {budget_total_reference > 0 && (
-            <p className="text-xs text-gray-400 mt-0.5">
-              vs. {formatCurrency(budget_total_reference)} do melhor pacote
-            </p>
-          )}
-        </div>
-      </div>
 
       <div className="overflow-x-auto border border-gray-200 rounded-lg">
         <table className="min-w-full divide-y divide-gray-200">
@@ -396,9 +443,8 @@ function ScenarioBView({ scenarios }: { scenarios: ScenariosResult }) {
               const hasMultipleOffers = item.all_offers.length > 1;
 
               return (
-                <>
+                <React.Fragment key={item.material_id}>
                   <tr
-                    key={item.material_id}
                     className={`hover:bg-gray-50 transition-colors ${
                       isExpanded ? 'bg-blue-50' : ''
                     }`}
@@ -515,7 +561,7 @@ function ScenarioBView({ scenarios }: { scenarios: ScenariosResult }) {
                       </td>
                     </tr>
                   )}
-                </>
+                </React.Fragment>
               );
             })}
           </tbody>
@@ -555,6 +601,9 @@ export default function SessionScenariosView({
 
   return (
     <div className="space-y-6">
+      {/* Summary cards */}
+      <ScenarioSummaryCards scenarios={scenarios} />
+
       {pendingQuotes.length > 0 && (
         <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
           <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
@@ -579,7 +628,7 @@ export default function SessionScenariosView({
             className={tabBtnClass(activeTab === 'tabelona')}
           >
             <Table2 className="h-4 w-4" />
-            Tabelona
+            Tabelona de Comparação
           </button>
           <button
             type="button"
@@ -599,3 +648,4 @@ export default function SessionScenariosView({
     </div>
   );
 }
+

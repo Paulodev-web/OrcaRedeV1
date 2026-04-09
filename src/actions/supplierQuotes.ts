@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
 import { autoMatchQuoteItems } from '@/services/suppliers/autoMatchQuoteItems';
 import type { SupplierExtractItem } from '@/types/supplierExtract';
-import type { SupplierQuote, SupplierQuoteItem } from '@/types';
+import type { SupplierQuote, SupplierQuoteItem, SupplierMatchMethod } from '@/types';
 
 // ---------------------------------------------------------------------------
 // Tipos de retorno padronizados (mesmo padrão das demais actions do projeto)
@@ -53,7 +53,6 @@ export async function createSupplierQuoteAction(
       return { success: false, error: quoteError?.message ?? 'Erro ao criar cotação.' };
     }
 
-    // 2. Bulk insert dos itens extraídos
     const itemsToInsert = input.items.map((item) => ({
       quote_id: quote.id,
       descricao: item.descricao,
@@ -66,6 +65,9 @@ export async function createSupplierQuoteAction(
       alerta: item.alerta,
       match_status: 'sem_match',
       conversion_factor: 1,
+      match_level: null,
+      match_confidence: null,
+      match_method: null,
     }));
 
     const { error: itemsError } = await supabase
@@ -129,6 +131,7 @@ export interface SupplierQuoteItemWithMaterial extends SupplierQuoteItem {
   material_name?: string | null;
   material_code?: string | null;
   material_unit?: string | null;
+  suggestion_rationale?: string | null;
 }
 
 export async function getQuoteWithItemsAction(
@@ -165,11 +168,22 @@ export async function getQuoteWithItemsAction(
         matched_material_id,
         conversion_factor,
         match_status,
+        match_level,
+        match_confidence,
+        match_method,
         created_at,
         materials (
           code,
           name,
           unit
+        ),
+        semantic_match_suggestions (
+          id,
+          suggested_material_id,
+          suggested_conversion_factor,
+          confidence_score,
+          rationale,
+          status
         )
       `)
       .eq('quote_id', quoteId)
@@ -183,6 +197,13 @@ export async function getQuoteWithItemsAction(
       const materialRow = Array.isArray(row.materials)
         ? row.materials[0]
         : row.materials;
+
+      const suggestions = (row.semantic_match_suggestions ?? []) as {
+        rationale?: string;
+        status: string;
+      }[];
+      const acceptedSuggestion = suggestions.find((s) => s.status === 'accepted');
+
       return {
         id: row.id,
         quote_id: row.quote_id,
@@ -197,10 +218,14 @@ export async function getQuoteWithItemsAction(
         matched_material_id: row.matched_material_id ?? null,
         conversion_factor: row.conversion_factor,
         match_status: row.match_status,
+        match_level: row.match_level ?? null,
+        match_confidence: row.match_confidence ?? null,
+        match_method: (row.match_method as SupplierMatchMethod) ?? null,
         created_at: row.created_at,
         material_name: materialRow?.name ?? null,
         material_code: materialRow?.code ?? null,
         material_unit: materialRow?.unit ?? null,
+        suggestion_rationale: acceptedSuggestion?.rationale ?? null,
       };
     });
 
@@ -331,13 +356,15 @@ export async function saveManualMatchAction(
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
 
-    // 1. Atualiza o item da cotação
     const { error: itemError } = await supabase
       .from('supplier_quote_items')
       .update({
         matched_material_id: input.materialId,
         conversion_factor: input.conversionFactor,
         match_status: 'manual',
+        match_method: 'manual',
+        match_level: null,
+        match_confidence: null,
       })
       .eq('id', input.itemId);
 
@@ -345,7 +372,6 @@ export async function saveManualMatchAction(
       return { success: false, error: `Erro ao salvar vínculo: ${itemError.message}` };
     }
 
-    // 2. Persiste na memória De/Para (upsert — cria ou atualiza)
     const { error: mappingError } = await supabase
       .from('supplier_material_mappings')
       .upsert(
@@ -355,13 +381,15 @@ export async function saveManualMatchAction(
           supplier_material_name: input.supplierMaterialName,
           internal_material_id: input.materialId,
           conversion_factor: input.conversionFactor,
+          source: 'manual',
+          last_seen_at: new Date().toISOString(),
+          times_used: 1,
         },
         { onConflict: 'user_id,supplier_name,supplier_material_name' }
       );
 
     if (mappingError) {
       console.warn('[supplierQuotes] Falha ao persistir memória De/Para:', mappingError.message);
-      // Não retorna erro — a vinculação do item já foi salva com sucesso
     }
 
     const { data: itemRow } = await supabase
@@ -387,6 +415,93 @@ export async function saveManualMatchAction(
     return { success: true, data: undefined };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao salvar vínculo manual.';
+    return { success: false, error: message };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// acceptAiSuggestionAction
+// Aceita uma sugestão da IA e persiste na memória De/Para para uso futuro.
+// ---------------------------------------------------------------------------
+export interface AcceptAiSuggestionInput {
+  itemId: string;
+  suggestionId: string;
+  materialId: string;
+  conversionFactor: number;
+  supplierName: string;
+  supplierMaterialName: string;
+}
+
+export async function acceptAiSuggestionAction(
+  input: AcceptAiSuggestionInput
+): Promise<ActionResult<void>> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const { error: itemError } = await supabase
+      .from('supplier_quote_items')
+      .update({
+        matched_material_id: input.materialId,
+        conversion_factor: input.conversionFactor,
+        match_status: 'automatico',
+        match_method: 'semantic_ai',
+        match_level: 2,
+      })
+      .eq('id', input.itemId);
+
+    if (itemError) {
+      return { success: false, error: `Erro ao aceitar sugestão: ${itemError.message}` };
+    }
+
+    await supabase
+      .from('semantic_match_suggestions')
+      .update({ status: 'accepted', reviewed_at: new Date().toISOString() })
+      .eq('id', input.suggestionId);
+
+    const { error: mappingError } = await supabase
+      .from('supplier_material_mappings')
+      .upsert(
+        {
+          user_id: userId,
+          supplier_name: input.supplierName,
+          supplier_material_name: input.supplierMaterialName,
+          internal_material_id: input.materialId,
+          conversion_factor: input.conversionFactor,
+          source: 'ai',
+          last_seen_at: new Date().toISOString(),
+          times_used: 1,
+        },
+        { onConflict: 'user_id,supplier_name,supplier_material_name' }
+      );
+
+    if (mappingError) {
+      console.warn('[supplierQuotes] Falha ao persistir mapping IA aceita:', mappingError.message);
+    }
+
+    const { data: itemRow } = await supabase
+      .from('supplier_quote_items')
+      .select('quote_id')
+      .eq('id', input.itemId)
+      .single();
+
+    if (itemRow?.quote_id) {
+      const { data: quoteRow } = await supabase
+        .from('supplier_quotes')
+        .select('session_id')
+        .eq('id', itemRow.quote_id)
+        .eq('user_id', userId)
+        .single();
+
+      if (quoteRow?.session_id) {
+        revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}`);
+        revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/cenarios`);
+      }
+    }
+    revalidatePath('/fornecedores');
+    return { success: true, data: undefined };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao aceitar sugestão IA.';
     return { success: false, error: message };
   }
 }

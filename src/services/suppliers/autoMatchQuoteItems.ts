@@ -1,7 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
- * Cruza itens sem match contra supplier_material_mappings (mesma lógica da action).
+ * Nível 1 — Memória Exata: cruza itens sem match contra supplier_material_mappings.
+ * Registra match_level=1 e match_method='exact_memory' para identificar a origem.
+ * Atualiza last_seen_at nos mappings utilizados.
  */
 export async function autoMatchQuoteItems(
   supabase: SupabaseClient,
@@ -31,7 +33,7 @@ export async function autoMatchQuoteItems(
 
   const { data: mappings, error: mappingsError } = await supabase
     .from('supplier_material_mappings')
-    .select('supplier_material_name, internal_material_id, conversion_factor')
+    .select('id, supplier_material_name, internal_material_id, conversion_factor, times_used')
     .eq('user_id', userId)
     .eq('supplier_name', quote.supplier_name);
 
@@ -55,10 +57,23 @@ export async function autoMatchQuoteItems(
           matched_material_id: mapping.internal_material_id,
           conversion_factor: mapping.conversion_factor,
           match_status: 'automatico',
+          match_level: 1,
+          match_method: 'exact_memory',
+          match_confidence: 100,
         })
         .eq('id', item.id);
 
-      if (!updateError) matchedCount++;
+      if (!updateError) {
+        matchedCount++;
+
+        await supabase
+          .from('supplier_material_mappings')
+          .update({
+            last_seen_at: new Date().toISOString(),
+            times_used: (mapping.times_used ?? 0) + 1,
+          })
+          .eq('id', mapping.id);
+      }
     }
   }
 

@@ -5,22 +5,25 @@ import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
   ArrowRight,
+  Brain,
   CheckCircle2,
   ChevronRight,
+  Database,
+  HelpCircle,
   Loader2,
   Search,
-  Zap,
+  Sparkles,
 } from 'lucide-react';
 import {
   saveManualMatchAction,
   markQuoteConciliatedAction,
 } from '@/actions/supplierQuotes';
 import type { SupplierQuote } from '@/types';
-import type { SupplierQuoteItemWithMaterial, BudgetMaterialOption } from '@/actions/supplierQuotes';
+import type {
+  SupplierQuoteItemWithMaterial,
+  BudgetMaterialOption,
+} from '@/actions/supplierQuotes';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 
@@ -28,22 +31,36 @@ const formatNumber = (v: number) =>
   new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
 
 const STATUS_CONFIG = {
-  sem_match: {
-    label: 'Sem vínculo',
-    className: 'bg-red-100 text-red-700 border border-red-200',
-    icon: <AlertTriangle className="h-3 w-3" />,
-  },
-  automatico: {
-    label: 'Auto',
+  exact_memory: {
+    label: 'Memória',
     className: 'bg-blue-100 text-blue-700 border border-blue-200',
-    icon: <Zap className="h-3 w-3" />,
+    icon: <Database className="h-3 w-3" />,
+  },
+  semantic_ai: {
+    label: 'IA',
+    className: 'bg-purple-100 text-purple-700 border border-purple-200',
+    icon: <Brain className="h-3 w-3" />,
   },
   manual: {
     label: 'Manual',
     className: 'bg-green-100 text-green-700 border border-green-200',
     icon: <CheckCircle2 className="h-3 w-3" />,
   },
+  sem_match: {
+    label: 'Pendente',
+    className: 'bg-red-100 text-red-700 border border-red-200',
+    icon: <HelpCircle className="h-3 w-3" />,
+  },
 } as const;
+
+function getStatusConfig(item: SupplierQuoteItemWithMaterial) {
+  if (item.match_status === 'sem_match') return STATUS_CONFIG.sem_match;
+  if (item.match_method === 'exact_memory') return STATUS_CONFIG.exact_memory;
+  if (item.match_method === 'semantic_ai') return STATUS_CONFIG.semantic_ai;
+  if (item.match_method === 'manual') return STATUS_CONFIG.manual;
+  if (item.match_status === 'automatico') return STATUS_CONFIG.exact_memory;
+  return STATUS_CONFIG.manual;
+}
 
 // ---------------------------------------------------------------------------
 // Sub-component: linha expandida para vinculação manual
@@ -101,7 +118,6 @@ function MatchRow({ item, budgetMaterials, supplierName, onSaved }: MatchRowProp
         Vincular: <span className="normal-case font-normal text-blue-900">{item.descricao}</span>
       </p>
 
-      {/* Search + lista de materiais */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
         <input
@@ -134,7 +150,6 @@ function MatchRow({ item, budgetMaterials, supplierName, onSaved }: MatchRowProp
         )}
       </div>
 
-      {/* Fator de conversão */}
       {selectedMat && (
         <div className="flex items-end gap-4 pt-1">
           <div className="flex-1">
@@ -234,6 +249,9 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
               matched_material_id: materialId,
               conversion_factor: factor,
               match_status: 'manual' as const,
+              match_method: 'manual' as const,
+              match_level: null,
+              match_confidence: null,
               material_name: matName,
               material_code: matCode,
               material_unit: matUnit,
@@ -246,7 +264,6 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
 
   const handleFinalize = () => {
     setFinalizeError(null);
-    const start = performance.now();
     startFinalizing(async () => {
       const result = await markQuoteConciliatedAction(quote.id);
       if (!result.success) {
@@ -254,9 +271,6 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
         return;
       }
       if (quote.session_id) {
-        console.info(
-          `[perf] finalize_to_cenarios ${quote.session_id}: ${Math.round(performance.now() - start)}ms`
-        );
         router.push(`/fornecedores/sessao/${quote.session_id}/cenarios`);
       } else {
         router.push('/fornecedores');
@@ -266,7 +280,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Progresso */}
+      {/* Progress bar */}
       <div className="bg-white rounded-lg shadow p-5">
         <div className="flex items-center justify-between mb-2">
           <div>
@@ -299,7 +313,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
           <thead className="bg-gray-50">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
-                Status
+                Origem
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Item do Fornecedor
@@ -315,7 +329,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
           </thead>
           <tbody className="bg-white divide-y divide-gray-100">
             {items.map((item) => {
-              const statusCfg = STATUS_CONFIG[item.match_status];
+              const statusCfg = getStatusConfig(item);
               const isExpanded = expandedId === item.id;
               const preco_normalizado =
                 item.conversion_factor > 0 ? item.preco_unit / item.conversion_factor : item.preco_unit;
@@ -325,11 +339,11 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
                   <tr
                     className={`transition-colors ${
                       item.match_status === 'sem_match'
-                        ? 'bg-red-50 hover:bg-red-100'
+                        ? 'bg-red-50/50 hover:bg-red-50'
                         : 'hover:bg-gray-50'
                     } ${isExpanded ? 'border-b-0' : ''}`}
                   >
-                    {/* Status badge */}
+                    {/* Status/Origin badge */}
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${statusCfg.className}`}
@@ -337,6 +351,12 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
                         {statusCfg.icon}
                         {statusCfg.label}
                       </span>
+                      {item.match_method === 'semantic_ai' && item.match_confidence != null && (
+                        <p className="mt-1 text-xs text-purple-500 flex items-center gap-0.5">
+                          <Sparkles className="h-3 w-3" />
+                          {item.match_confidence}%
+                        </p>
+                      )}
                     </td>
 
                     {/* Descrição do fornecedor */}
@@ -347,6 +367,11 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
                       <p className="text-xs text-gray-400 mt-0.5">
                         {item.unidade} · Qtd {formatNumber(item.quantidade)} · {formatCurrency(item.preco_unit)}
                       </p>
+                      {item.suggestion_rationale && item.match_method === 'semantic_ai' && (
+                        <p className="mt-1 text-xs text-purple-600 italic line-clamp-1" title={item.suggestion_rationale}>
+                          {item.suggestion_rationale}
+                        </p>
+                      )}
                     </td>
 
                     {/* Material interno */}
@@ -390,22 +415,19 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
 
                     {/* Expand toggle */}
                     <td className="px-2 py-3 text-center">
-                      {item.matched_material_id ? (
-                        <button
-                          type="button"
-                          onClick={() => setExpandedId(isExpanded ? null : item.id)}
-                          className="p-1 text-gray-400 hover:text-gray-600 rounded transition-colors"
-                          title="Editar vínculo"
-                        >
-                          <ChevronRight
-                            className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                          />
-                        </button>
-                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => setExpandedId(isExpanded ? null : item.id)}
+                        className="p-1 text-gray-400 hover:text-gray-600 rounded transition-colors"
+                        title={item.matched_material_id ? 'Editar vínculo' : 'Vincular material'}
+                      >
+                        <ChevronRight
+                          className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                        />
+                      </button>
                     </td>
                   </tr>
 
-                  {/* Linha expandida de vinculação */}
                   {isExpanded && (
                     <tr>
                       <td colSpan={5} className="px-4 pb-4 pt-0 bg-white">
@@ -425,7 +447,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
         </table>
       </div>
 
-      {/* Footer de ação */}
+      {/* Footer */}
       <div className="bg-white rounded-lg shadow p-5 flex items-center justify-between">
         <div className="text-sm text-gray-500">
           {allMatched ? (
