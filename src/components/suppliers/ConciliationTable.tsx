@@ -23,6 +23,7 @@ import type {
   SupplierQuoteItemWithMaterial,
   BudgetMaterialOption,
 } from '@/actions/supplierQuotes';
+import { onPortalPrimaryButtonSmClass } from '@/lib/branding';
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -33,7 +34,7 @@ const formatNumber = (v: number) =>
 const STATUS_CONFIG = {
   exact_memory: {
     label: 'Memória',
-    className: 'bg-blue-100 text-blue-700 border border-blue-200',
+    className: 'border border-[#64ABDE]/40 bg-[#64ABDE]/15 text-[#1D3140]',
     icon: <Database className="h-3 w-3" />,
   },
   semantic_ai: {
@@ -119,9 +120,9 @@ function MatchRow({ item, budgetMaterials, supplierName, onSaved }: MatchRowProp
   };
 
   return (
-    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-      <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
-        Vincular: <span className="normal-case font-normal text-blue-900">{item.descricao}</span>
+    <div className="space-y-3 rounded-lg border border-[#64ABDE]/40 bg-[#64ABDE]/10 p-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-[#1D3140]">
+        Vincular: <span className="font-normal normal-case text-[#64ABDE]">{item.descricao}</span>
       </p>
 
       <div className="relative">
@@ -131,7 +132,7 @@ function MatchRow({ item, budgetMaterials, supplierName, onSaved }: MatchRowProp
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar material do orçamento..."
-          className="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+          className="w-full rounded-md border border-gray-300 bg-white py-2 pl-8 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
         />
       </div>
 
@@ -144,8 +145,8 @@ function MatchRow({ item, budgetMaterials, supplierName, onSaved }: MatchRowProp
               key={mat.id}
               type="button"
               onClick={() => setSelectedMaterialId(mat.id)}
-              className={`w-full text-left px-3 py-2 text-sm transition-colors hover:bg-blue-50 ${
-                selectedMaterialId === mat.id ? 'bg-blue-100 font-medium text-blue-800' : 'text-gray-700'
+              className={`w-full px-3 py-2 text-left text-sm transition-colors hover:bg-[#64ABDE]/10 ${
+                selectedMaterialId === mat.id ? 'bg-[#64ABDE]/20 font-medium text-[#1D3140]' : 'text-gray-700'
               }`}
             >
               <span className="font-mono text-xs text-gray-400 mr-2">{mat.code}</span>
@@ -169,7 +170,7 @@ function MatchRow({ item, budgetMaterials, supplierName, onSaved }: MatchRowProp
                 step="any"
                 value={conversionFactor}
                 onChange={(e) => setConversionFactor(e.target.value)}
-                className="w-28 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-28 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
               />
               <p className="text-xs text-gray-500">
                 Fornecedor vende em{' '}
@@ -195,7 +196,7 @@ function MatchRow({ item, budgetMaterials, supplierName, onSaved }: MatchRowProp
             type="button"
             onClick={handleSave}
             disabled={!canSave || isPending}
-            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`flex items-center gap-1.5 rounded-md px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 ${onPortalPrimaryButtonSmClass}`}
           >
             {isPending ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -304,7 +305,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
         </div>
         <div className="w-full bg-gray-100 rounded-full h-2">
           <div
-            className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+            className="h-2 rounded-full bg-[#64ABDE] transition-all duration-500"
             style={{ width: `${progressPct}%` }}
           />
         </div>
@@ -367,7 +368,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
 
                     {/* Descrição do fornecedor */}
                     <td className="px-4 py-3">
-                      <p className="text-sm text-gray-900 line-clamp-2 max-w-xs" title={item.descricao}>
+                      <p className="text-sm text-[#1D3140] line-clamp-2 max-w-xs" title={item.descricao}>
                         {item.descricao}
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5">
@@ -384,7 +385,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
                     <td className="px-4 py-3">
                       {item.matched_material_id ? (
                         <div>
-                          <p className="text-sm text-gray-900 font-medium">{item.material_name}</p>
+                          <p className="text-sm text-[#1D3140] font-medium">{item.material_name}</p>
                           <p className="text-xs text-gray-400">
                             <span className="font-mono">{item.material_code}</span>
                             {item.conversion_factor !== 1 && (
@@ -398,7 +399,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
                         <button
                           type="button"
                           onClick={() => setExpandedId(isExpanded ? null : item.id)}
-                          className="text-sm text-blue-600 hover:underline"
+                          className="text-sm text-[#64ABDE] transition-colors hover:text-[#1D3140] hover:underline"
                         >
                           + Vincular material
                         </button>
@@ -409,7 +410,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
                     <td className="px-4 py-3 text-right">
                       {item.matched_material_id ? (
                         <div>
-                          <p className="text-sm font-semibold text-gray-900">
+                          <p className="text-sm font-semibold text-[#1D3140]">
                             {formatCurrency(preco_normalizado)}
                           </p>
                           <p className="text-xs text-gray-400">/{item.material_unit ?? item.unidade}</p>

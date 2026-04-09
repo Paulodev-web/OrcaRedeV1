@@ -45,8 +45,8 @@ interface Props {
 const tabBtnClass = (active: boolean) =>
   `flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
     active
-      ? 'border-blue-600 text-blue-600'
-      : 'border-transparent text-gray-500 hover:text-gray-700'
+      ? 'border-[#64ABDE] text-[#64ABDE]'
+      : 'border-transparent text-slate-500 hover:text-[#1D3140]'
   }`;
 
 // ---------------------------------------------------------------------------
@@ -59,39 +59,39 @@ function ScenarioSummaryCards({ scenarios }: { scenarios: ScenariosResult }) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div className="rounded-xl border border-blue-100 bg-blue-50 p-5">
-        <div className="flex items-center gap-2 mb-2">
-          <Package className="h-5 w-5 text-blue-600" />
-          <p className="text-xs text-blue-600 font-semibold uppercase tracking-wide">
+      <div className="rounded-xl border border-[#64ABDE]/40 bg-[#64ABDE]/10 p-5">
+        <div className="mb-2 flex items-center gap-2">
+          <Package className="h-5 w-5 text-[#1D3140]" />
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#64ABDE]">
             Cenário A — Pacote Fechado
           </p>
         </div>
         {bestSupplier && (
           <>
-            <p className="text-2xl font-bold text-blue-800">
+            <p className="text-2xl font-bold text-[#1D3140]">
               {formatCurrency(bestSupplier.total_normalizado)}
             </p>
-            <p className="text-sm text-blue-600 mt-1">
-              Melhor: <span className="font-semibold">{bestSupplier.supplier_name}</span>
+            <p className="mt-1 text-sm text-[#64ABDE]">
+              Melhor: <span className="font-semibold text-[#1D3140]">{bestSupplier.supplier_name}</span>
             </p>
-            <p className="text-xs text-blue-400 mt-0.5">
+            <p className="mt-0.5 text-xs text-slate-500">
               {bestSupplier.items_covered}/{bestSupplier.total_items} itens cobertos
             </p>
           </>
         )}
       </div>
 
-      <div className="rounded-xl border border-sky-100 bg-sky-50 p-5">
-        <div className="flex items-center gap-2 mb-2">
-          <Shuffle className="h-5 w-5 text-sky-600" />
-          <p className="text-xs text-sky-600 font-semibold uppercase tracking-wide">
+      <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+        <div className="mb-2 flex items-center gap-2">
+          <Shuffle className="h-5 w-5 text-[#1D3140]" />
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
             Cenário B — Melhor por Item
           </p>
         </div>
-        <p className="text-2xl font-bold text-sky-800">
+        <p className="text-2xl font-bold text-[#1D3140]">
           {formatCurrency(scenarioB.total_normalizado)}
         </p>
-        <p className="text-sm text-sky-600 mt-1">
+        <p className="mt-1 text-sm text-slate-600">
           {scenarioB.items.length} materiais analisados
         </p>
       </div>
@@ -198,7 +198,7 @@ function TabelonaView({ scenarios }: { scenarios: ScenariosResult }) {
               return (
                 <tr key={item.material_id} className="hover:bg-gray-50">
                   <td className="sticky left-0 z-10 bg-white px-4 py-3">
-                    <p className="font-medium text-gray-900 truncate max-w-[240px]">
+                    <p className="max-w-[240px] truncate font-medium text-[#1D3140]">
                       {item.material_name}
                     </p>
                     <p className="text-xs text-gray-400 font-mono">
@@ -357,7 +357,7 @@ function ScenarioAView({ scenarios }: { scenarios: ScenariosResult }) {
                           Mais barato
                         </span>
                       )}
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className="text-sm font-medium text-[#1D3140]">
                         {supplier.supplier_name}
                       </span>
                     </div>
@@ -366,7 +366,7 @@ function ScenarioAView({ scenarios }: { scenarios: ScenariosResult }) {
                     {supplier.items_covered} / {supplier.total_items}
                     <div className="w-full bg-gray-100 rounded-full h-1 mt-1">
                       <div
-                        className="bg-blue-400 h-1 rounded-full"
+                        className="h-1 rounded-full bg-[#64ABDE]"
                         style={{
                           width: `${Math.round(
                             (supplier.items_covered / supplier.total_items) * 100
@@ -378,7 +378,7 @@ function ScenarioAView({ scenarios }: { scenarios: ScenariosResult }) {
                   <td className="px-4 py-3 text-right">
                     <p
                       className={`text-sm font-bold ${
-                        isBest ? 'text-green-700' : 'text-gray-900'
+                        isBest ? 'text-green-700' : 'text-[#1D3140]'
                       }`}
                     >
                       {formatCurrency(supplier.total_normalizado)}
@@ -446,11 +446,11 @@ function ScenarioBView({ scenarios }: { scenarios: ScenariosResult }) {
                 <React.Fragment key={item.material_id}>
                   <tr
                     className={`hover:bg-gray-50 transition-colors ${
-                      isExpanded ? 'bg-blue-50' : ''
+                      isExpanded ? 'bg-[#64ABDE]/10' : ''
                     }`}
                   >
                     <td className="px-4 py-3">
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm font-medium text-[#1D3140]">
                         {item.material_name}
                       </p>
                       <p className="text-xs text-gray-400">
@@ -465,12 +465,12 @@ function ScenarioBView({ scenarios }: { scenarios: ScenariosResult }) {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <p className="text-sm font-bold text-gray-900">
+                      <p className="text-sm font-bold text-[#1D3140]">
                         {formatCurrency(item.best_price_normalized)}
                       </p>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <p className="text-sm font-semibold text-blue-700">
+                      <p className="text-sm font-semibold text-[#64ABDE]">
                         {formatCurrency(item.best_total)}
                       </p>
                     </td>
@@ -495,29 +495,29 @@ function ScenarioBView({ scenarios }: { scenarios: ScenariosResult }) {
 
                   {isExpanded && (
                     <tr key={`${item.material_id}-expanded`}>
-                      <td colSpan={5} className="px-4 pb-4 pt-0 bg-blue-50">
-                        <div className="mt-2 border border-blue-200 rounded-lg overflow-hidden">
-                          <table className="min-w-full divide-y divide-blue-100">
-                            <thead className="bg-blue-100">
+                      <td colSpan={5} className="bg-[#64ABDE]/10 px-4 pb-4 pt-0">
+                        <div className="mt-2 overflow-hidden rounded-lg border border-[#64ABDE]/30">
+                          <table className="min-w-full divide-y divide-[#64ABDE]/20">
+                            <thead className="bg-[#64ABDE]/15">
                               <tr>
-                                <th className="px-3 py-2 text-left text-xs font-medium text-blue-600 uppercase">
+                                <th className="px-3 py-2 text-left text-xs font-medium uppercase text-[#1D3140]">
                                   Fornecedor
                                 </th>
-                                <th className="px-3 py-2 text-right text-xs font-medium text-blue-600 uppercase">
+                                <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">
                                   Preço Unit.
                                 </th>
-                                <th className="px-3 py-2 text-right text-xs font-medium text-blue-600 uppercase">
+                                <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">
                                   Fator
                                 </th>
-                                <th className="px-3 py-2 text-right text-xs font-medium text-blue-600 uppercase">
+                                <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">
                                   Normalizado
                                 </th>
-                                <th className="px-3 py-2 text-right text-xs font-medium text-blue-600 uppercase">
+                                <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">
                                   Total
                                 </th>
                               </tr>
                             </thead>
-                            <tbody className="bg-white divide-y divide-blue-50">
+                            <tbody className="divide-y divide-[#64ABDE]/10 bg-white">
                               {item.all_offers
                                 .slice()
                                 .sort(
@@ -573,7 +573,7 @@ function ScenarioBView({ scenarios }: { scenarios: ScenariosResult }) {
               >
                 Total Cenário B:
               </td>
-              <td className="px-4 py-3 text-sm font-bold text-blue-700 text-right">
+              <td className="px-4 py-3 text-right text-sm font-bold text-[#1D3140]">
                 {formatCurrency(scenarioB.total_normalizado)}
               </td>
               <td />
@@ -620,7 +620,7 @@ export default function SessionScenariosView({
         </div>
       )}
 
-      <div className="rounded-lg border border-gray-100 bg-white overflow-hidden shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-[#64ABDE]/40 bg-white shadow-md">
         <div className="flex border-b border-gray-200 bg-white/80">
           <button
             type="button"

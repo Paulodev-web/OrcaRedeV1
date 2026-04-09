@@ -33,8 +33,8 @@ export default async function SessionCenariosPage({ params }: Props) {
   const quotes = quotesResult.success ? quotesResult.data.quotes : [];
 
   return (
-    <main className="min-h-screen bg-gray-50 p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <main className="min-h-screen bg-slate-100 p-6 lg:p-8">
+      <div className="mx-auto max-w-7xl space-y-6">
         <div className="flex items-center gap-4">
           <Link
             href={`/fornecedores/sessao/${sessionId}?tab=conciliar`}
@@ -46,15 +46,15 @@ export default async function SessionCenariosPage({ params }: Props) {
         </div>
 
         <header className="flex items-start gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-50">
-            <BarChart3 className="h-6 w-6 text-blue-600" aria-hidden />
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#64ABDE]/40 bg-[#64ABDE]/15">
+            <BarChart3 className="h-6 w-6 text-[#1D3140]" aria-hidden />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-[#1D3140]">
               Análise de Cenários de Compra
             </h1>
-            <p className="mt-1 text-sm text-gray-500">
-              Sessão: <span className="font-medium text-gray-700">{session.title}</span>
+            <p className="mt-1 text-sm text-slate-500">
+              Sessão: <span className="font-medium text-slate-700">{session.title}</span>
               {' · '}
               {quotes.length} fornecedor(es) cotado(s)
             </p>
@@ -71,7 +71,7 @@ export default async function SessionCenariosPage({ params }: Props) {
             </p>
             <Link
               href={`/fornecedores/sessao/${sessionId}?tab=conciliar`}
-              className="mt-4 inline-block text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+              className="mt-4 inline-block text-sm font-medium text-[#64ABDE] transition-colors hover:text-[#1D3140] hover:underline"
             >
               ← Voltar para conciliação
             </Link>

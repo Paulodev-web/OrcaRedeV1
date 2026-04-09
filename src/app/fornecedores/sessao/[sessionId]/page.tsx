@@ -76,12 +76,12 @@ export default async function QuotationSessionPage({ params }: Props) {
   });
 
   return (
-    <main className="min-h-screen bg-gray-50 p-6 lg:p-8">
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="text-sm text-gray-500">
+    <main className="min-h-screen bg-slate-100 p-6 lg:p-8">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <div className="text-sm text-slate-500">
           <Link
             href="/fornecedores"
-            className="text-blue-600 hover:underline"
+            className="text-[#64ABDE] transition-colors hover:text-[#1D3140] hover:underline"
           >
             ← Hub de sessões
           </Link>
@@ -89,10 +89,10 @@ export default async function QuotationSessionPage({ params }: Props) {
 
         <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-[#1D3140]">
               {session.title}
             </h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-slate-500">
               {session.budget_id ? (
                 <>
                   Escopo: orçamento{' '}

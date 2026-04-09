@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FolderOpen, Globe2, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
+import { FolderOpen, Globe2, Loader2, MoreVertical, Plus } from 'lucide-react';
 import type { BudgetOption } from '@/types';
 import type { QuotationSessionWithStats } from '@/actions/quotationSessions';
 import {
@@ -13,11 +13,112 @@ import {
   updateQuotationSessionAction,
 } from '@/actions/quotationSessions';
 import NewQuotationSessionModal from '@/components/suppliers/NewQuotationSessionModal';
+import { onPortalPrimaryButtonSmClass } from '@/lib/branding';
 
 interface Props {
   budgets: BudgetOption[];
   initialSessions: QuotationSessionWithStats[];
   sessionsError: string | null;
+}
+
+function SessionCardKebab({
+  isActive,
+  pending,
+  onEdit,
+  onComplete,
+  onDelete,
+}: {
+  isActive: boolean;
+  pending: boolean;
+  onEdit: () => void;
+  onComplete: () => void | Promise<void>;
+  onDelete: () => void | Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: PointerEvent) => {
+      if (rootRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [open]);
+
+  return (
+    <div className="relative" ref={rootRef}>
+      <button
+        type="button"
+        className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800 disabled:opacity-50"
+        disabled={pending}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label="Ações da sessão"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
+      >
+        {pending ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <MoreVertical className="h-4 w-4" />
+        )}
+      </button>
+      {open && (
+        <ul
+          role="menu"
+          className="absolute right-0 top-full z-50 mt-1 min-w-[11rem] rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <li role="none">
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+              onClick={() => {
+                setOpen(false);
+                onEdit();
+              }}
+            >
+              Editar
+            </button>
+          </li>
+          {isActive && (
+            <li role="none">
+              <button
+                type="button"
+                role="menuitem"
+                className="flex w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                onClick={() => {
+                  setOpen(false);
+                  void onComplete();
+                }}
+              >
+                Encerrar
+              </button>
+            </li>
+          )}
+          <li role="none">
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+              onClick={() => {
+                setOpen(false);
+                void onDelete();
+              }}
+            >
+              Excluir
+            </button>
+          </li>
+        </ul>
+      )}
+    </div>
+  );
 }
 
 export default function FornecedoresHub({
@@ -44,13 +145,7 @@ export default function FornecedoresHub({
   };
 
   const prefetchSession = (sessionId: string) => {
-    const href = `/fornecedores/sessao/${sessionId}`;
-    const start = performance.now();
-    router.prefetch(href);
-    window.setTimeout(() => {
-      const elapsed = Math.round(performance.now() - start);
-      console.info(`[perf] prefetch_session ${sessionId}: ${elapsed}ms`);
-    }, 0);
+    router.prefetch(`/fornecedores/sessao/${sessionId}`);
   };
 
   const handleDelete = async (sessionId: string) => {
@@ -75,7 +170,7 @@ export default function FornecedoresHub({
         <button
           type="button"
           onClick={() => setCreateModalOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
+          className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm ${onPortalPrimaryButtonSmClass}`}
         >
           <Plus className="h-4 w-4" />
           Nova sessão de cotação
@@ -139,94 +234,69 @@ export default function FornecedoresHub({
         <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {initialSessions.map((s) => (
             <li key={s.id}>
-              <div className="flex h-full flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <h2 className="truncate font-semibold text-gray-900">{s.title}</h2>
-                    <p className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
-                      {s.budget_id ? (
-                        <>
-                          <FolderOpen className="h-3.5 w-3.5 shrink-0" />
-                          <span>Orçamento vinculado</span>
-                        </>
-                      ) : (
-                        <>
-                          <Globe2 className="h-3.5 w-3.5 shrink-0" />
-                          <span>Global (catálogo)</span>
-                        </>
-                      )}
-                    </p>
+              <div className="relative flex h-full flex-col rounded-2xl border border-[#64ABDE]/40 bg-white shadow-md transition-shadow hover:shadow-lg">
+                <Link
+                  href={`/fornecedores/sessao/${s.id}`}
+                  className="absolute inset-0 z-0 rounded-2xl outline-none ring-2 ring-transparent ring-offset-2 focus-visible:ring-[#64ABDE]"
+                  aria-label={`Abrir sessão: ${s.title}`}
+                  onMouseEnter={() => prefetchSession(s.id)}
+                  onFocus={() => prefetchSession(s.id)}
+                />
+                <div className="relative z-10 flex flex-1 flex-col p-5 pointer-events-none">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <h2 className="truncate font-semibold text-[#1D3140]">{s.title}</h2>
+                      <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+                        {s.budget_id ? (
+                          <>
+                            <FolderOpen className="h-3.5 w-3.5 shrink-0" />
+                            <span>Orçamento vinculado</span>
+                          </>
+                        ) : (
+                          <>
+                            <Globe2 className="h-3.5 w-3.5 shrink-0" />
+                            <span>Global (catálogo)</span>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          s.status === 'active'
+                            ? 'bg-emerald-50 text-emerald-800'
+                            : 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {s.status === 'active' ? 'Ativa' : 'Encerrada'}
+                      </span>
+                      <div className="pointer-events-auto">
+                        <SessionCardKebab
+                          isActive={s.status === 'active'}
+                          pending={pendingId === s.id}
+                          onEdit={() => {
+                            setEditingSession(s);
+                            setEditModalOpen(true);
+                          }}
+                          onComplete={() => handleComplete(s.id)}
+                          onDelete={() => handleDelete(s.id)}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                      s.status === 'active'
-                        ? 'bg-emerald-50 text-emerald-800'
-                        : 'bg-gray-100 text-gray-600'
-                    }`}
-                  >
-                    {s.status === 'active' ? 'Ativa' : 'Encerrada'}
-                  </span>
-                </div>
 
-                <dl className="mt-4 grid grid-cols-2 gap-2 text-xs text-gray-600">
-                  <div className="rounded-lg bg-gray-50 px-2 py-1.5">
-                    <dt className="text-gray-400">Cotações</dt>
-                    <dd className="font-semibold text-gray-900">{s.quotesCount}</dd>
-                  </div>
-                  <div className="rounded-lg bg-gray-50 px-2 py-1.5">
-                    <dt className="text-gray-400">Jobs pendentes</dt>
-                    <dd className="font-semibold text-amber-700">
-                      {s.jobsByStatus.pending + s.jobsByStatus.processing}
-                    </dd>
-                  </div>
-                </dl>
-
-                <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-4">
-                  <Link
-                    href={`/fornecedores/sessao/${s.id}`}
-                    onMouseEnter={() => prefetchSession(s.id)}
-                    onFocus={() => prefetchSession(s.id)}
-                    className="inline-flex flex-1 items-center justify-center rounded-lg bg-blue-100 px-3 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-blue-200"
-                  >
-                    Abrir sessão
-                  </Link>
-                  {s.status === 'active' && (
-                    <button
-                      type="button"
-                      disabled={pendingId === s.id}
-                      onClick={() => void handleComplete(s.id)}
-                      className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-                    >
-                      {pendingId === s.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        'Encerrar'
-                      )}
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    disabled={pendingId === s.id}
-                    onClick={() => {
-                      setEditingSession(s);
-                      setEditModalOpen(true);
-                    }}
-                    className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    disabled={pendingId === s.id}
-                    onClick={() => void handleDelete(s.id)}
-                    className="inline-flex items-center justify-center rounded-lg border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
-                  >
-                    {pendingId === s.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </button>
+                  <dl className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-600">
+                    <div className="rounded-lg bg-slate-50 px-2 py-1.5">
+                      <dt className="text-slate-400">Cotações</dt>
+                      <dd className="font-semibold text-[#1D3140]">{s.quotesCount}</dd>
+                    </div>
+                    <div className="rounded-lg bg-slate-50 px-2 py-1.5">
+                      <dt className="text-slate-400">Jobs pendentes</dt>
+                      <dd className="font-semibold text-amber-700">
+                        {s.jobsByStatus.pending + s.jobsByStatus.processing}
+                      </dd>
+                    </div>
+                  </dl>
                 </div>
               </div>
             </li>

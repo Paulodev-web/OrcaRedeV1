@@ -131,9 +131,9 @@ export default function BatchDropzoneManager({
   );
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <h2 className="mb-2 text-base font-semibold text-gray-900">Importar PDFs em lote</h2>
-      <p className="text-sm text-gray-500 mb-4">
+    <div className="rounded-2xl border border-[#64ABDE]/40 bg-white p-6 shadow-md">
+      <h2 className="mb-2 text-base font-semibold text-[#1D3140]">Importar PDFs em lote</h2>
+      <p className="mb-4 text-sm text-slate-500">
         Até {MAX_FILES} arquivos. O processamento roda em segundo plano; acompanhe o status abaixo.
       </p>
 
@@ -150,7 +150,7 @@ export default function BatchDropzoneManager({
           disabled
             ? 'cursor-not-allowed border-gray-200 bg-gray-50 opacity-60'
             : dragOver
-              ? 'border-blue-500 bg-blue-50'
+              ? 'border-[#64ABDE] bg-[#64ABDE]/10'
               : 'border-gray-300 bg-gray-50 hover:border-gray-400',
         ].join(' ')}
         onDragOver={(e) => {
@@ -178,7 +178,7 @@ export default function BatchDropzoneManager({
           }}
         />
         {uploading ? (
-          <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+          <Loader2 className="h-10 w-10 animate-spin text-[#64ABDE]" />
         ) : (
           <Upload className="h-10 w-10 text-gray-400" />
         )}

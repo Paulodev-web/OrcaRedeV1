@@ -44,7 +44,7 @@ type LinkedItem = SupplierQuoteItemWithMaterial & {
 function StatusBadge({ item }: { item: SupplierQuoteItemWithMaterial }) {
   if (item.match_status === 'automatico' && item.match_method === 'exact_memory') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700 border border-blue-200">
+      <span className="inline-flex items-center gap-1 rounded-full border border-[#64ABDE]/40 bg-[#64ABDE]/15 px-2 py-0.5 text-xs text-[#1D3140]">
         <Database className="h-3 w-3" /> Memória
       </span>
     );
@@ -226,7 +226,7 @@ export default function ConciliationCurationModal({ sessionId, open, onOpenChang
           </DialogDescription>
           <div className="flex flex-wrap items-center gap-3 pt-2 text-xs">
             <span className="text-gray-600">
-              <span className="font-medium text-gray-900">{totalApproved}</span> validados
+              <span className="font-medium text-[#1D3140]">{totalApproved}</span> validados
             </span>
             {totalIaSuggested > 0 && (
               <span className="text-amber-600">
@@ -250,7 +250,7 @@ export default function ConciliationCurationModal({ sessionId, open, onOpenChang
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm placeholder:text-gray-400 focus:border-[#64ABDE] focus:outline-none"
               placeholder="Buscar material ou item…"
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
@@ -298,7 +298,7 @@ export default function ConciliationCurationModal({ sessionId, open, onOpenChang
                     {supplierColumnOrder.map((name) => (
                       <th
                         key={name}
-                        className="sticky top-0 z-20 border-r border-gray-100 bg-white px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-900 shadow-[0_1px_0_0_#e5e7eb] last:border-r-0 align-bottom"
+                        className="sticky top-0 z-20 border-r border-gray-100 bg-white px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[#1D3140] shadow-[0_1px_0_0_#e5e7eb] last:border-r-0 align-bottom"
                         title={name}
                       >
                         <span className="line-clamp-4 break-words font-semibold normal-case tracking-normal">
@@ -313,7 +313,7 @@ export default function ConciliationCurationModal({ sessionId, open, onOpenChang
                     <tr key={mat.material_id} className="hover:bg-gray-50/50 transition-colors">
                       {/* Sticky material column */}
                       <td className="sticky left-0 z-10 border-r border-gray-200 bg-white px-4 py-3 align-top shadow-[1px_0_0_0_#e5e7eb]">
-                        <p className="break-words text-sm font-semibold leading-snug text-gray-900">
+                        <p className="break-words text-sm font-semibold leading-snug text-[#1D3140]">
                           {mat.material_name}
                         </p>
                         <p className="text-xs text-gray-400 mt-0.5">
