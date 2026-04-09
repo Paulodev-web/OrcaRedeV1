@@ -4,20 +4,11 @@ import { Calculator, Package, Edit2, Check, X, FileSpreadsheet, Download, Users 
 import { BudgetDetails } from '@/types';
 import { useApp } from '@/contexts/AppContext';
 import { exportToExcel, exportToCSV, exportToExcelForSuppliers, exportToCSVForSuppliers, MaterialExport, ExportOptions } from '@/services/exportService';
+import { consolidateMaterialsFromBudgetDetails } from '@/services/budgetMaterialAggregation';
 
 interface PainelConsolidadoProps {
   budgetDetails: BudgetDetails | null;
   orcamentoNome: string;
-}
-
-interface MaterialConsolidado {
-  materialId: string;
-  codigo: string;
-  nome: string;
-  unidade: string;
-  precoUnit: number;
-  quantidade: number;
-  subtotal: number;
 }
 
 export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsolidadoProps) {
@@ -25,82 +16,8 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
   const [editingMaterialId, setEditingMaterialId] = useState<string | null>(null);
   const [editingPrice, setEditingPrice] = useState<string>('');
   const [isUpdating, setIsUpdating] = useState(false);
-  
-  const consolidarMateriais = (): MaterialConsolidado[] => {
-    if (!budgetDetails || !budgetDetails.posts || budgetDetails.posts.length === 0) {
-      return [];
-    }
 
-    const materiaisMap = new Map<string, MaterialConsolidado>();
-
-    // Percorrer todos os postes
-    budgetDetails.posts.forEach(post => {
-      // Percorrer todos os grupos do poste
-      post.post_item_groups.forEach(group => {
-        // Percorrer todos os materiais do grupo
-        group.post_item_group_materials.forEach(material => {
-          const materialId = material.material_id;
-          const materialData = material.materials;
-
-          if (materiaisMap.has(materialId)) {
-            // Material já existe, somar quantidade
-            const existingMaterial = materiaisMap.get(materialId)!;
-            existingMaterial.quantidade += material.quantity;
-            existingMaterial.subtotal = existingMaterial.quantidade * existingMaterial.precoUnit;
-          } else {
-            // Novo material, adicionar ao mapa
-            // Sempre priorizar price_at_addition se existir (significa que foi editado manualmente)
-            // Caso contrário, usar o preço do catálogo
-            const priceToUse = material.price_at_addition || materialData.price || 0;
-            
-            materiaisMap.set(materialId, {
-              materialId,
-              codigo: materialData.code || '',
-              nome: materialData.name || 'Material sem nome',
-              unidade: materialData.unit || '',
-              precoUnit: priceToUse,
-              quantidade: material.quantity,
-              subtotal: priceToUse * material.quantity,
-            });
-          }
-        });
-      });
-      
-      // Percorrer todos os materiais avulsos do poste (incluindo o próprio poste)
-      post.post_materials.forEach(material => {
-        const materialId = material.material_id;
-        const materialData = material.materials;
-
-        if (materiaisMap.has(materialId)) {
-          // Material já existe, somar quantidade
-          const existingMaterial = materiaisMap.get(materialId)!;
-          existingMaterial.quantidade += material.quantity;
-          existingMaterial.subtotal = existingMaterial.quantidade * existingMaterial.precoUnit;
-        } else {
-          // Novo material, adicionar ao mapa
-          const priceToUse = material.price_at_addition || 0;
-          
-          materiaisMap.set(materialId, {
-            materialId,
-            codigo: materialData.code || '',
-            nome: materialData.name || 'Material sem nome',
-            unidade: materialData.unit || '',
-            precoUnit: priceToUse,
-            quantidade: material.quantity,
-            subtotal: priceToUse * material.quantity,
-          });
-        }
-      });
-
-      // REMOVIDO: Lógica duplicada que somava post.post_types
-      // Agora os postes são automaticamente incluídos via post_materials
-    });
-
-    // Converter mapa para array e ordenar por nome
-    return Array.from(materiaisMap.values()).sort((a, b) => a.nome.localeCompare(b.nome));
-  };
-
-  const materiaisConsolidados = consolidarMateriais();
+  const materiaisConsolidados = consolidateMaterialsFromBudgetDetails(budgetDetails);
   const custoTotal = materiaisConsolidados.reduce((total, material) => total + material.subtotal, 0);
 
   const formatCurrency = (value: number) => {

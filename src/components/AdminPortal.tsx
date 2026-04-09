@@ -12,6 +12,7 @@ import {
   Shield,
   Hammer,
   Package,
+  Calculator,
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -69,6 +70,17 @@ const modules: Module[] = [
     bgColor: 'bg-[#64ABDE]/15',
     borderColor: 'border-[#64ABDE]/40',
   },
+  {
+    id: 'precificacao',
+    title: 'Módulo de Precificação',
+    description: 'Formação de preço de venda com custo direto, BDI e análise de lucro',
+    icon: Calculator,
+    status: 'active',
+    badge: 'Comercial',
+    color: 'text-[#1D3140]',
+    bgColor: 'bg-[#64ABDE]/15',
+    borderColor: 'border-[#64ABDE]/40',
+  },
 ];
 
 export function AdminPortal() {
@@ -83,6 +95,8 @@ export function AdminPortal() {
       setCurrentView('portal-engenheiro');
     } else if (moduleId === 'fornecedores') {
       router.push('/fornecedores');
+    } else if (moduleId === 'precificacao') {
+      router.push('/tools/precificacao');
     } else {
       setActiveModule(moduleId);
     }

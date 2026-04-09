@@ -46,23 +46,22 @@ Requisições autenticadas enviam o **JWT do usuário**. No Postgres, políticas
 - Em [`src/types/index.ts`](src/types/index.ts), `user_id` opcional aparece em tipos de catálogo (`Material`, `Concessionaria`, `PostType`).
 - [`src/actions/postTypes.ts`](src/actions/postTypes.ts) trata violações de unicidade com constraints `materials_code_user_id_key` e `post_types_code_user_id_key` — alinhado a **unicidade por (código, usuário)** no banco.
 
-### 3.2 O que não está versionado neste repositório
+### 3.2 Migrações versionadas no repositório
 
-**Não há** pasta `supabase/migrations` nem arquivos `.sql` dentro do OrcaRede. As políticas RLS não são a fonte de verdade no Git deste projeto.
+A pasta [`supabase/migrations/`](supabase/migrations/) é a fonte de verdade no Git para o **módulo de fornecedores / suprimentos** e recursos relacionados, incluindo:
 
-**Script de migração multi-tenant (catálogo)** — fora do repo, caminho típico ao lado deste projeto:
+- Tabelas `supplier_quotes`, `supplier_quote_items`, `supplier_material_mappings` (evolução inicial em [`20260404000000_supplier_module.sql`](supabase/migrations/20260404000000_supplier_module.sql)).
+- **`quotation_sessions`** e **`extraction_jobs`** (sessões com fila assíncrona, Realtime em `extraction_jobs`) — [`20260407120000_quotation_sessions_extraction_jobs.sql`](supabase/migrations/20260407120000_quotation_sessions_extraction_jobs.sql).
+- **`supplier_quotes`**: `budget_id` opcional, `session_id`, obrigatoriedade de orçamento **ou** sessão — mesma migration.
+- Metadados de match (`match_level`, `match_confidence`, `match_method`), sugestões semânticas (`semantic_match_suggestions`), `extraction_validated_at`, status `ia_suggested` — migrações `2026040910*` e `2026040916*`.
+- View **`supplier_price_history`** — preço normalizado para histórico (RF06) — [`20260409104000_create_supplier_price_history_view.sql`](supabase/migrations/20260409104000_create_supplier_price_history_view.sql) (atualizada quando o domínio de `match_status` evolui).
+- Bucket e políticas do Storage **`fornecedores_pdfs`** — [`20260404130000_storage_bucket_fornecedores_pdfs.sql`](supabase/migrations/20260404130000_storage_bucket_fornecedores_pdfs.sql), [`20260401120000_storage_fornecedores_pdfs_rls.sql`](supabase/migrations/20260401120000_storage_fornecedores_pdfs_rls.sql).
 
-`../Arquivos Sql/migracao_producao.sql`
-
-Esse script documenta, entre outros:
-
-- Colunas `user_id` com `DEFAULT auth.uid()` em `materials`, `utility_companies`, `item_group_templates`, `post_types`.
-- Políticas CRUD com `USING` / `WITH CHECK` baseados em `auth.uid() = user_id` para essas tabelas.
-- Funções `SECURITY DEFINER` `import_materials_ignore_duplicates` e `delete_all_materials` usando `auth.uid()` e escopo **por usuário**.
+**Scripts legados fora do repo** (catálogo multi-tenant mais antigo, dumps de produção) podem coexistir: por exemplo `../Arquivos Sql/migracao_producao.sql` para `materials`, `post_types`, RPCs `import_materials_ignore_duplicates` e `delete_all_materials`. O que não estiver em `supabase/migrations/` deve ser tratado como fonte externa.
 
 ### 3.3 Orçamentos, postes e pastas
 
-Um dump de referência (`backup_producao.sql` no mesmo diretório de arquivos SQL) contém `CREATE POLICY` para `budgets`, `budget_posts`, `budget_folders` e tabelas relacionadas, com isolamento por **propriedade** (`user_id` em orçamento/pasta) e regras do tipo “poste só se o orçamento for do usuário”. Para o detalhe exato de cada policy, use esse dump ou o painel Supabase — não listamos policies aqui.
+Um dump de referência (`backup_producao.sql` no mesmo diretório de arquivos SQL legados) pode conter `CREATE POLICY` para `budgets`, `budget_posts`, `budget_folders` e tabelas relacionadas. Para o detalhe exato de cada policy, use esse dump ou o painel Supabase — não duplicamos policies aqui.
 
 ### 3.4 Tabelas e recursos referenciados no código
 
@@ -70,9 +69,11 @@ Um dump de referência (`backup_producao.sql` no mesmo diretório de arquivos SQ
 
 **Orçamento e canvas** (principalmente `AppContext` + cliente Supabase): `budgets`, `budget_folders`, `budget_posts`, `post_item_groups`, `post_item_group_materials`, `post_materials`.
 
+**Suprimentos / fornecedores**: `quotation_sessions`, `extraction_jobs`, `supplier_quotes`, `supplier_quote_items`, `supplier_material_mappings`, `semantic_match_suggestions` (auditoria de match por IA).
+
 **Armazenamento**: bucket Supabase Storage `plans` — upload e URL pública em [`AppContext`](src/contexts/AppContext.tsx) (`supabase.storage.from('plans')`), coluna `plan_image_url` em `budgets`.
 
-**Importação de orçamentos de fornecedor (PDF)**: bucket Supabase Storage `fornecedores_pdfs` — o cliente faz upload do arquivo com o [`supabaseClient`](src/lib/supabaseClient.ts) (JWT no navegador); a Server Action [`extractSupplierDataAction`](src/actions/supplierIngestion.ts) usa [`createSupabaseServerClient`](src/lib/supabaseServer.ts) para **baixar** o mesmo objeto por `filePath` e processar no servidor. Esse desenho evita enviar o binário do PDF no corpo da Server Action (limites de payload do Next.js) e mantém o arquivo endereçável por caminho estável.
+**Importação de orçamentos de fornecedor (PDF)**: bucket Supabase Storage `fornecedores_pdfs` — o cliente faz upload com o [`supabaseClient`](src/lib/supabaseClient.ts) (JWT no navegador); o processamento no servidor usa **caminho estável** (`file_path`) — fila de jobs chama [`POST /api/process-pdfs`](src/app/api/process-pdfs/route.ts), que baixa o objeto e usa [`runExtractionJob`](src/services/suppliers/runExtractionJob.ts). A Server Action [`extractSupplierDataAction`](src/actions/supplierIngestion.ts) usa o mesmo padrão (download por `filePath`) para o fluxo **importação única** em [`SupplierPdfImporter`](src/components/SupplierPdfImporter.tsx).
 
 **Acompanhamento de obra (visualização pública)** — [`src/app/obra/[...slug]/page.tsx`](src/app/obra/[...slug]/page.tsx) normaliza o slug e renderiza [`PublicWorkView`](src/components/PublicWorkViewPremium.tsx) (importado como `PublicWorkView` na página). O componente consulta o cliente Supabase:
 
@@ -113,8 +114,11 @@ A maioria chama `createSupabaseServerClient()` e, em sucesso, `revalidatePath('/
 | [`utilityCompanies.ts`](src/actions/utilityCompanies.ts) | CRUD em `utility_companies`; bloqueio de exclusão se houver `budgets` referenciando a concessionária. |
 | [`postTypes.ts`](src/actions/postTypes.ts) | CRUD em `post_types` com criação/atualização do registro em `materials` vinculado (`material_id`). |
 | [`itemGroups.ts`](src/actions/itemGroups.ts) | CRUD em `item_group_templates` / `template_materials`; no update, sincronização de instâncias em `post_item_groups` / `post_item_group_materials`. |
-| [`supplierIngestion.ts`](src/actions/supplierIngestion.ts) | Importação de PDF de fornecedor: download do Storage `fornecedores_pdfs`, extração de texto com **pdf2json** (`PDFParser`), envio do texto bruto ao **Google Gemini** (`GEMINI_API_KEY`) para JSON estruturado de itens (`SupplierItem`). Não usa `revalidatePath` (fluxo isolado da home). |
-| [`supplierQuotes.ts`](src/actions/supplierQuotes.ts) | Módulo de suprimentos: criação de cotação e itens, auto-match (`supplier_material_mappings`), conciliação manual, listagem e cenários de compra. Usa `revalidatePath('/fornecedores')` onde aplicável. |
+| [`supplierIngestion.ts`](src/actions/supplierIngestion.ts) | Importação **single-PDF**: download do Storage `fornecedores_pdfs`, envio do **PDF binário** ao **Google Gemini** (multimodal, [`extractSupplierQuoteWithGemini`](src/services/ai/geminiSupplierQuote.ts)), retorno JSON de itens (`SupplierItem`). Não usa `revalidatePath` (fluxo isolado). |
+| [`supplierQuotes.ts`](src/actions/supplierQuotes.ts) | Cotações, auto-match (memória + semântica via serviços), conciliação por sessão, cenários A/B, curadoria. `revalidatePath` em `/fornecedores` e rotas de sessão quando aplicável. |
+| [`quotationSessions.ts`](src/actions/quotationSessions.ts) | CRUD de `quotation_sessions`, listagem com estatísticas, jobs de extração por sessão. |
+
+**Route Handler** [`src/app/api/process-pdfs/route.ts`](src/app/api/process-pdfs/route.ts): `POST` com `{ job_id }` — autentica o usuário, carrega o job em `extraction_jobs`, executa [`runExtractionJob`](src/services/suppliers/runExtractionJob.ts) (download PDF, Gemini, persistência da cotação, auto-match e match semântico opcional). Usa `createSupabaseServiceRoleClient` em fallbacks de erro e `after()` do Next para trabalho assíncrono quando necessário.
 
 ### 5.2 O que permanece no cliente (`AppContext` + `supabaseClient`)
 
@@ -132,15 +136,21 @@ A maioria chama `createSupabaseServerClient()` e, em sucesso, `revalidatePath('/
 - [`GerenciarConcessionarias.tsx`](src/components/GerenciarConcessionarias.tsx): ações de concessionárias.
 - [`GerenciarTiposPostes.tsx`](src/components/GerenciarTiposPostes.tsx): ações de tipos de poste.
 - [`EditorGrupo.tsx`](src/components/EditorGrupo.tsx), [`GerenciarGrupos.tsx`](src/components/GerenciarGrupos.tsx): ações de grupos de itens (`itemGroups`).
-- [`SupplierPdfImporter.tsx`](src/components/SupplierPdfImporter.tsx) (`"use client"`): upload para `fornecedores_pdfs`, `extractSupplierDataAction`, `createSupplierQuoteAction`, `runAutoMatchAction`; navegação para [`/fornecedores`](src/app/fornecedores/page.tsx) com query `tab=conciliar&quoteId=…`; `useTransition` / `startTransition` e estado de salvamento.
-- [`ConciliationTable.tsx`](src/components/suppliers/ConciliationTable.tsx), [`PurchaseScenariosPanel.tsx`](src/components/suppliers/PurchaseScenariosPanel.tsx): chamam actions de [`supplierQuotes.ts`](src/actions/supplierQuotes.ts) e atualizam a URL em `/fornecedores?…`.
+- [`SupplierPdfImporter.tsx`](src/components/SupplierPdfImporter.tsx) (`"use client"`): fluxo legado de **um PDF por vez** (upload → `extractSupplierDataAction` → `createSupplierQuoteAction` → `runAutoMatchAction`). Pode ser embutido em [`FornecedoresSuprimentosShell`](src/components/suppliers/FornecedoresSuprimentosShell.tsx) (componente **não** usado pela rota principal atual).
+- **Fluxo principal de suprimentos**: [`FornecedoresHub`](src/components/suppliers/FornecedoresHub.tsx) em [`/fornecedores`](src/app/fornecedores/page.tsx) (`createQuotationSessionAction`, lista de sessões); sessão em [`/fornecedores/sessao/[sessionId]`](src/app/fornecedores/sessao/[sessionId]/page.tsx) com [`SessionWorkspace`](src/components/suppliers/SessionWorkspace.tsx), [`BatchDropzoneManager`](src/components/suppliers/BatchDropzoneManager.tsx), [`SessionExtractionRealtime`](src/components/suppliers/SessionExtractionRealtime.tsx) e `POST /api/process-pdfs`; conciliação em [`ConciliationCurationModal`](src/components/suppliers/ConciliationCurationModal.tsx) (payload via `getConciliationPayloadBySessionAction`).
+- Cenários: [`/fornecedores/sessao/[sessionId]/cenarios`](src/app/fornecedores/sessao/[sessionId]/cenarios/page.tsx) com [`SessionScenariosView`](src/components/suppliers/SessionScenariosView.tsx) e `calculateScenariosAction` — exige `budget_id` na sessão; caso contrário redireciona para a página da sessão.
+- [`ConciliationTable.tsx`](src/components/suppliers/ConciliationTable.tsx), [`PurchaseScenariosPanel.tsx`](src/components/suppliers/PurchaseScenariosPanel.tsx): ainda referenciam URLs antigas do tipo `/fornecedores/trabalho?…` em alguns links; a navegação canônica do produto é por **sessão** (`/fornecedores/sessao/...`).
 
 ### 5.4 [`src/services/`](src/services/)
 
-- [`exportService.ts`](src/services/exportService.ts) — exportação (consumo pelo cliente conforme telas).
-- [`materialImportService.ts`](src/services/materialImportService.ts) — processamento de planilha e RPC de importação.
+- [`exportService.ts`](src/services/exportService.ts) — exportação (Excel/CSV) para fornecedores a partir do painel consolidado.
+- [`materialImportService.ts`](src/services/materialImportService.ts) — processamento de planilha e RPC `import_materials_ignore_duplicates` no cliente.
+- [`services/ai/geminiSupplierQuote.ts`](src/services/ai/geminiSupplierQuote.ts) — extração estruturada de propostas (PDF inline no Gemini, resposta JSON).
+- [`services/ai/semanticMatch.ts`](src/services/ai/semanticMatch.ts) — sugestões de match semântico (filas de extração).
+- [`services/suppliers/runExtractionJob.ts`](src/services/suppliers/runExtractionJob.ts) — pipeline de um job: download, Gemini, persistência, auto-match, IA semântica conforme confiança.
+- [`services/suppliers/persistSupplierQuoteFromExtraction.ts`](src/services/suppliers/persistSupplierQuoteFromExtraction.ts), [`services/suppliers/autoMatchQuoteItems.ts`](src/services/suppliers/autoMatchQuoteItems.ts) — persistência e cruzamento com `supplier_material_mappings`.
 
-Camada de serviço **não** substitui Server Actions; centraliza lógica reutilizável chamada a partir de componentes/`AppContext` no cliente.
+Camada de serviço **não** substitui Server Actions; centraliza lógica reutilizável chamada a partir de actions, API routes e, no cliente, onde já existia o padrão.
 
 ---
 
@@ -161,9 +171,10 @@ Inicialização depende de [`useAuth`](src/contexts/AuthContext.tsx): com `user`
 
 - **Estilo**: Tailwind CSS v4 (`tailwindcss`, `@tailwindcss/postcss`); [`clsx`](https://github.com/lukeed/clsx) + [`tailwind-merge`](https://github.com/dcastil/tailwind-merge) em [`src/lib/utils.ts`](src/lib/utils.ts) (`cn`).
 - **Ícones**: [`lucide-react`](https://lucide.dev).
-- **Componentes primitivos**: estilo alinhado a **Radix UI** — no repositório existem [`alert-dialog`](src/components/ui/alert-dialog.tsx), [`accordion`](src/components/ui/accordion.tsx) e [`tabs`](src/components/ui/tabs.tsx) (`@radix-ui/react-alert-dialog`, `@radix-ui/react-accordion`, `@radix-ui/react-tabs`). Não há catálogo completo “shadcn” instalado; onde útil, trate como padrão shadcn-like só nesses módulos.
+- **Componentes primitivos**: estilo alinhado a **Radix UI** — no repositório existem [`alert-dialog`](src/components/ui/alert-dialog.tsx), [`accordion`](src/components/ui/accordion.tsx), [`tabs`](src/components/ui/tabs.tsx), [`dialog`](src/components/ui/dialog.tsx), [`select`](src/components/ui/select.tsx). Não há catálogo completo “shadcn” instalado; trate como padrão shadcn-like nesses módulos.
+- **Toasts**: [`sonner`](https://github.com/emilkowalski/sonner) (ex.: conclusão da fila de extração em [`SessionExtractionRealtime`](src/components/suppliers/SessionExtractionRealtime.tsx)).
 - **Canvas / PDF (planta do orçamento)**: `react-pdf`, `pdfjs-dist`, `react-zoom-pan-pinch` em [`CanvasVisual`](src/components/CanvasVisual.tsx).
-- **PDF no servidor (texto de fornecedor)**: extração com o pacote [`pdf2json`](https://www.npmjs.com/package/pdf2json) dentro de [`supplierIngestion.ts`](src/actions/supplierIngestion.ts) — distinto do stack de visualização no canvas. **Não** se usa mais `pdf-parse` aqui: com Next.js / Turbopack, o `require` de módulos CommonJS em Server Actions costumava expor `default` em vez da função direta (`pdfParse is not a function`); além disso, `pdf-parse` puxava dependências de ambiente tipo Canvas no Node. O `pdf2json` opera por eventos (`pdfParser_dataError`, `pdfParser_dataReady`) e `parseBuffer`; a função auxiliar `extractTextFromBuffer` encapsula isso numa `Promise` e usa `new PDFParser(null, true)` (texto bruto) e `getRawTextContent()`.
+- **PDF no servidor (cotações de fornecedor)**: o binário é enviado ao **Gemini** como `inlineData` (`application/pdf`) em [`geminiSupplierQuote.ts`](src/services/ai/geminiSupplierQuote.ts) — leitura visual/tabela pelo modelo (`gemini-2.5-flash`), sem parser de texto separado no pipeline principal. **Não** há dependência de `pdf2json`/`pdf-parse` no [`package.json`](package.json) para esse fluxo.
 - **Server Actions na UI**: `useTransition` / `startTransition` envolve chamadas assíncronas às actions em telas como [`Dashboard`](src/components/Dashboard.tsx), [`CriarOrcamentoModal`](src/components/modals/CriarOrcamentoModal.tsx), [`GerenciarMateriais`](src/components/GerenciarMateriais.tsx), [`GerenciarConcessionarias`](src/components/GerenciarConcessionarias.tsx), [`GerenciarTiposPostes`](src/components/GerenciarTiposPostes.tsx), [`EditorGrupo`](src/components/EditorGrupo.tsx), [`GerenciarGrupos`](src/components/GerenciarGrupos.tsx), com estados `isPending` quando aplicável.
 
 ---
@@ -172,7 +183,7 @@ Inicialização depende de [`useAuth`](src/contexts/AuthContext.tsx): com `user`
 
 | Pasta | Conteúdo |
 |-------|----------|
-| `src/app/` | Rotas App Router (`layout`, `page`, `obra/[...slug]`, `fornecedores/page` — suprimentos em abas, …). |
+| `src/app/` | Rotas App Router: `layout`, `page`, `obra/[...slug]`, `fornecedores/page` (hub de sessões), `fornecedores/sessao/[sessionId]/page`, `fornecedores/sessao/[sessionId]/cenarios/page`, `api/process-pdfs/route`. |
 | `src/actions/` | Server Actions. |
 | `src/contexts/` | `AppContext`, `AuthContext`. |
 | `src/components/` | UI por feature, `modals/`, `ui/`. |
@@ -193,83 +204,71 @@ O workspace pode expor **ferramentas MCP** (por exemplo, Supabase MCP).
 
 ---
 
-## 10. Suprimentos: PDF de fornecedor, conciliação e cenários
+## 10. Suprimentos: sessões, PDF, conciliação e cenários
 
-Fluxo de leitura de orçamentos em PDF, persistência de cotações, conciliação com materiais do orçamento e comparação de cenários de compra.
+Fluxo principal: **sessões de cotação** agrupam várias propostas; upload em lote gera **jobs** assíncronos; extração via **Gemini multimodal** (PDF); conciliação em cascata (memória De/Para → sugestão IA → manual); cenários A/B quando a sessão tem **orçamento** vinculado.
 
-### 10.1 Rota única em abas e parâmetros de URL
+### 10.1 Rotas e superfície da UI
 
-A experiência concentra-se em **[`src/app/fornecedores/page.tsx`](src/app/fornecedores/page.tsx)** (Server Component), que carrega dados conforme a query string e delega a UI a **[`FornecedoresSuprimentosShell.tsx`](src/components/suppliers/FornecedoresSuprimentosShell.tsx)** (`"use client"`, Radix **Tabs**).
+| Rota | Papel |
+|------|--------|
+| [`/fornecedores`](src/app/fornecedores/page.tsx) | Hub: lista sessões (`listQuotationSessionsWithStatsAction`), orçamentos para o modal de criação; UI [`FornecedoresHub`](src/components/suppliers/FornecedoresHub.tsx). |
+| `/fornecedores/sessao/[sessionId]` | Página da sessão: [`SessionWorkspace`](src/components/suppliers/SessionWorkspace.tsx) — upload/fila ([`SessionExtractionRealtime`](src/components/suppliers/SessionExtractionRealtime.tsx), [`BatchDropzoneManager`](src/components/suppliers/BatchDropzoneManager.tsx)), CTA para conciliação ([`ConciliationCurationModal`](src/components/suppliers/ConciliationCurationModal.tsx)) e link para cenários se houver `budget_id`. |
+| `/fornecedores/sessao/[sessionId]/cenarios` | Cenários A/B: [`SessionScenariosView`](src/components/suppliers/SessionScenariosView.tsx); se a sessão não tem orçamento, **redirect** para a página da sessão. |
 
-| Parâmetro | Valores | Uso |
-|-----------|---------|-----|
-| `tab` | `importar` \| `conciliar` \| `cenarios` | Aba ativa (padrão: `importar`). |
-| `quoteId` | UUID | Cotação exibida na aba **Conciliar** (após salvar importação ou link direto). |
-| `budgetId` | UUID | Orçamento na aba **Cenários**; o servidor busca cenários quando `tab=cenarios` e `budgetId` estão definidos. |
+**Fluxo alternativo (legado)** — [`SupplierPdfImporter`](src/components/SupplierPdfImporter.tsx) + [`FornecedoresSuprimentosShell`](src/components/suppliers/FornecedoresSuprimentosShell.tsx): importação única por PDF, **não** é a rota principal do App Router hoje; útil como referência ou embed.
 
-**Redirecionamentos** (URLs antigas / favoritos): [`fornecedores/importar/page.tsx`](src/app/fornecedores/importar/page.tsx), [`fornecedores/cenarios/page.tsx`](src/app/fornecedores/cenarios/page.tsx) e [`fornecedores/[quoteId]/conciliar/page.tsx`](src/app/fornecedores/[quoteId]/conciliar/page.tsx) apenas fazem `redirect` para `/fornecedores` com os parâmetros equivalentes.
+**Acesso ao módulo**: no portal administrativo ([`AdminPortal`](src/components/AdminPortal.tsx)), o tile **Fornecedores** faz `router.push('/fornecedores')` (não passa pelo `AppShell` de catálogo/canvas).
 
-| Artefato | Papel |
-|----------|--------|
-| [`src/app/fornecedores/page.tsx`](src/app/fornecedores/page.tsx) | Lista `budgets`; se `quoteId`, carrega cotação + materiais do orçamento; se `tab=cenarios` e `budgetId`, carrega cenários e lista de cotações. |
-| [`FornecedoresSuprimentosShell.tsx`](src/components/suppliers/FornecedoresSuprimentosShell.tsx) | Abas e `router.replace` ao trocar de aba (preserva `quoteId` / `budgetId` quando presentes). |
-| [`SupplierPdfImporter.tsx`](src/components/SupplierPdfImporter.tsx) | Aba **Importar**: PDF, extração IA, salvamento da cotação. |
-| [`ConciliationTable.tsx`](src/components/suppliers/ConciliationTable.tsx) | Aba **Conciliar**: vínculo manual, memória De/Para, conclusão → aba Cenários. |
-| [`PurchaseScenariosPanel.tsx`](src/components/suppliers/PurchaseScenariosPanel.tsx) | Aba **Cenários**: seleção de orçamento, painéis cenário A/B. |
+### 10.2 Lote assíncrono (fila de extração)
 
-### 10.2 Fluxo ponta a ponta
-
-1. O usuário escolhe um `.pdf` e clica em **Processar PDF**.
-2. O cliente gera um caminho estável, por exemplo `fornecedores/<timestamp>_<nomeOriginal>.pdf`, e faz **upload** para o bucket `fornecedores_pdfs` com [`supabase.storage`](src/lib/supabaseClient.ts) (sessão do usuário no navegador).
-3. Com o `data.path` devolvido pelo Storage, o cliente chama **`extractSupplierDataAction({ filePath })`** — apenas o caminho (string), não o binário inteiro na action.
-4. No servidor, [`supplierIngestion.ts`](src/actions/supplierIngestion.ts) faz **download** do mesmo objeto com `createSupabaseServerClient()`, monta um `Buffer` e extrai texto com **pdf2json**.
-5. O texto bruto é enviado ao **Gemini** (`GEMINI_API_KEY` em variável de ambiente do servidor); a resposta deve ser JSON com a chave `items` alinhada ao tipo `SupplierItem`.
+1. O usuário cria ou abre uma sessão e envia um ou mais PDFs (dropzone). O cliente faz **upload** para `fornecedores_pdfs` e registra linhas em **`extraction_jobs`** (status `pending` / `processing` / `completed` / `error`).
+2. O cliente dispara **`POST /api/process-pdfs`** com `{ job_id }` — sem enviar o binário no JSON.
+3. O servidor autentica, carrega o job, executa [`runExtractionJob`](src/services/suppliers/runExtractionJob.ts): download do Storage, **`extractSupplierQuoteWithGemini`**, gravação em `supplier_quotes` / `supplier_quote_items`, `autoMatchQuoteItems`, depois match semântico (Gemini) quando aplicável; atualiza o job e associa `quote_id`.
+4. A UI assina **`extraction_jobs`** via **Supabase Realtime** na sessão (`SessionExtractionRealtime`); **Sonner** toasts quando a fila conclui.
 
 ```mermaid
 sequenceDiagram
-  participant UI as SupplierPdfImporter
+  participant UI as BatchDropzoneManager
   participant St as Storage fornecedores_pdfs
-  participant SA as extractSupplierDataAction
+  participant DB as extraction_jobs
+  participant API as POST /api/process-pdfs
   participant AI as Gemini
 
-  UI->>St: upload(buffer do File)
-  St-->>UI: data.path
-  UI->>SA: { filePath }
-  SA->>St: download(filePath)
-  St-->>SA: Blob
-  SA->>SA: pdf2json → texto
-  SA->>AI: prompt + texto
-  AI-->>SA: JSON items
-  SA-->>UI: ExtractResult
+  UI->>St: upload(file)
+  St-->>UI: path
+  UI->>DB: insert job(pending)
+  UI->>API: { job_id }
+  API->>St: download(path)
+  API->>AI: PDF inline + prompt
+  AI-->>API: JSON items
+  API->>DB: job(completed) + supplier_quotes
 ```
 
-### 10.3 Extração de texto (`pdf2json`)
+### 10.3 Importação única (Server Action)
 
-- Implementação encapsulada em `extractTextFromBuffer(buffer)` na própria action: instancia `PDFParser`, registra `pdfParser_dataError` / `pdfParser_dataReady`, chama `parseBuffer(buffer)` e, no sucesso, usa `getRawTextContent()`.
-- **Páginas**: o log de depuração usa `pdfData.Pages.length` após o parse para alinhar com o que antes era `numpages` de outras bibliotecas.
-- Se o texto após `trim()` for vazio, a action retorna erro amigável (PDF só-imagem ou ilegível para o parser).
+Para testes ou fluxo legado: **`extractSupplierDataAction({ filePath })`** em [`supplierIngestion.ts`](src/actions/supplierIngestion.ts) baixa o PDF e chama o mesmo [`extractSupplierQuoteWithGemini`](src/services/ai/geminiSupplierQuote.ts) usado no job.
 
-### 10.4 Depuração (logs)
+### 10.4 Conciliação e domínio de dados
 
-Para isolar falhas (upload vs download vs parse vs IA), o fluxo inclui logs explícitos:
-
-- **Cliente** (`SupplierPdfImporter`): nome e tamanho do arquivo antes do upload; `data.path` após upload (ou erro); objeto `result` completo retornado pela Server Action (útil no DevTools do navegador).
-- **Servidor** (`supplierIngestion`): `filePath`, resultado do download Supabase, `buffer.length`, trecho inicial do texto e contagem de páginas após pdf2json, avisos quando o texto vem vazio, e confirmação antes de chamar o Gemini.
-
-Os logs da Server Action aparecem no **terminal** do processo Node (ex.: `next dev` / deploy), não na aba Console do browser.
+- **Escopo da fonte da verdade**: `runExtractionJob` carrega materiais do orçamento (`post_item_group_materials` / `post_materials`) se `budget_id` da sessão estiver definido; senão, catálogo `materials` do usuário — ver [`loadSystemMaterials`](src/services/suppliers/runExtractionJob.ts).
+- **Match**: `supplier_material_mappings` (memória); colunas `match_level`, `match_method` (`exact_memory`, `semantic_ai`, `manual`) e `match_status` incluindo `ia_suggested`; tabela **`semantic_match_suggestions`** para auditoria.
+- **Histórico de preços**: view `supplier_price_history` (preço normalizado; exclui itens só em sugestão IA não validada — ver migrações).
 
 ### 10.5 Variáveis de ambiente
 
-- **`GEMINI_API_KEY`**: obrigatória no servidor para o passo de estruturação dos itens; sem ela a action retorna erro configurável.
+- **`GEMINI_API_KEY`**: obrigatória no servidor para extração de itens.
+- **`SUPABASE_SERVICE_ROLE_KEY`**: usada em [`createSupabaseServiceRoleClient`](src/lib/supabaseServer.ts) para rotas longas / marcação de erro em jobs quando o fluxo precisa contornar limitações de sessão.
 
-### 10.6 Políticas de Storage e RLS
+### 10.6 Storage e RLS
 
-O bucket `fornecedores_pdfs`, políticas de `INSERT`/`SELECT` para o cliente e para o papel usado pelo SSR ao baixar **não** estão detalhados neste repositório como migrations versionadas; conferir no painel Supabase ou em scripts SQL externos ao mesmo nível de §3.2.
+Políticas e bucket **`fornecedores_pdfs`** estão versionados em [`supabase/migrations/`](supabase/migrations/) (ver §3.2). Ajustes adicionais em produção podem existir no painel Supabase.
 
 ---
 
 ## 11. Checklist de manutenção deste documento
 
 - [ ] RPCs e tabelas citadas batem com `grep` no repositório.
+- [ ] Migrações em `supabase/migrations/` refletem o que o código assume para suprimentos.
 - [ ] Modelo híbrido (Server Actions vs cliente `AppContext`) permanece claro para novos contribuidores.
-- [ ] RLS: separar o que vem do **código** do que vem de **scripts SQL externos** ou do painel Supabase.
+- [ ] RLS: separar o que vem das **migrations** do que vem de **scripts SQL externos** ou do painel Supabase.
