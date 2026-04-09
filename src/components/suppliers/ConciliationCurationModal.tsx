@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Brain,
@@ -22,7 +22,6 @@ import {
 import {
   getConciliationPayloadBySessionAction,
   acceptAiSuggestionAction,
-  saveManualMatchAction,
   type SessionConciliationMaterialRow,
   type BudgetMaterialOption,
   type SupplierQuoteItemWithMaterial,
@@ -78,17 +77,19 @@ function StatusBadge({ item }: { item: SupplierQuoteItemWithMaterial }) {
   );
 }
 
-function MaterialRow({
-  row,
-  budgetMaterials,
-  onItemApproved,
+function SupplierCell({
+  items,
+  onApproved,
 }: {
-  row: SessionConciliationMaterialRow;
-  budgetMaterials: BudgetMaterialOption[];
-  onItemApproved: (itemId: string, newStatus: string) => void;
+  items: LinkedItem[];
+  onApproved: (itemId: string, newStatus: string) => void;
 }) {
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  if (items.length === 0) {
+    return <span className="text-xs text-gray-300 select-none">—</span>;
+  }
 
   const handleApprove = (item: LinkedItem) => {
     setApprovingId(item.id);
@@ -103,7 +104,7 @@ function MaterialRow({
           supplierMaterialName: item.descricao,
         });
         if (res.success) {
-          onItemApproved(item.id, 'automatico');
+          onApproved(item.id, 'automatico');
         }
       }
       setApprovingId(null);
@@ -111,59 +112,39 @@ function MaterialRow({
   };
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white">
-      <div className="grid grid-cols-2 gap-0 divide-x divide-gray-100">
-        {/* Left: material from source of truth */}
-        <div className="p-4">
-          <p className="text-sm font-semibold text-[#1D3140]">{row.material_name}</p>
-          <p className="text-xs text-gray-500 mt-0.5">
-            {row.material_code} &middot; {row.material_unit}
-          </p>
-        </div>
-
-        {/* Right: linked supplier items */}
-        <div className="p-4 space-y-3">
-          {row.linked_items.length === 0 && (
-            <p className="text-xs text-gray-400 italic">Nenhum item vinculado</p>
-          )}
-          {row.linked_items.map((item) => {
-            const needsApproval = item.match_status === 'ia_suggested';
-            const isApproving = approvingId === item.id && isPending;
-            return (
-              <div key={item.id} className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-gray-800 truncate">{item.descricao}</p>
-                  <p className="text-xs text-gray-500">
-                    {item.supplier_name} &middot; {fmtCurrency(item.preco_unit)} &middot;
-                    Fator: {item.conversion_factor}
-                  </p>
-                  {item.suggestion_rationale && (
-                    <p className="text-xs text-gray-400 mt-0.5 italic">{item.suggestion_rationale}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <StatusBadge item={item} />
-                  {needsApproval && (
-                    <button
-                      type="button"
-                      onClick={() => handleApprove(item)}
-                      disabled={isApproving}
-                      className="inline-flex items-center gap-1 rounded-md bg-green-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
-                    >
-                      {isApproving ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="h-3 w-3" />
-                      )}
-                      Aprovar
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+    <div className="space-y-2">
+      {items.map((item) => {
+        const needsApproval = item.match_status === 'ia_suggested';
+        const isApproving = approvingId === item.id && isPending;
+        return (
+          <div key={item.id} className="rounded-md border border-gray-100 bg-gray-50/50 p-2.5 text-xs">
+            <p className="text-gray-800 font-medium leading-tight mb-1">{item.descricao}</p>
+            <p className="text-gray-500 mb-1.5">
+              {fmtCurrency(item.preco_unit)}
+              {item.conversion_factor !== 1 && (
+                <span className="ml-1 text-gray-400">× {item.conversion_factor}</span>
+              )}
+            </p>
+            {item.suggestion_rationale && (
+              <p className="text-gray-400 italic mb-1.5 leading-tight">{item.suggestion_rationale}</p>
+            )}
+            <div className="flex items-center justify-between gap-1.5 flex-wrap">
+              <StatusBadge item={item} />
+              {needsApproval && (
+                <button
+                  type="button"
+                  onClick={() => handleApprove(item)}
+                  disabled={isApproving}
+                  className="inline-flex items-center gap-1 rounded bg-green-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+                >
+                  {isApproving ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                  Aprovar
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -173,6 +154,7 @@ export default function ConciliationCurationModal({ sessionId, open, onOpenChang
   const [materials, setMaterials] = useState<SessionConciliationMaterialRow[]>([]);
   const [unlinked, setUnlinked] = useState<(SupplierQuoteItemWithMaterial & { supplier_name: string })[]>([]);
   const [budgetMaterials, setBudgetMaterials] = useState<BudgetMaterialOption[]>([]);
+  const [supplierColumnOrder, setSupplierColumnOrder] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchFilter, setSearchFilter] = useState('');
@@ -187,6 +169,7 @@ export default function ConciliationCurationModal({ sessionId, open, onOpenChang
         setMaterials(res.data.materials);
         setUnlinked(res.data.unlinked_items);
         setBudgetMaterials(res.data.budgetMaterials);
+        setSupplierColumnOrder(res.data.supplier_column_order);
       } else {
         setError(res.error);
       }
@@ -198,23 +181,25 @@ export default function ConciliationCurationModal({ sessionId, open, onOpenChang
       prev.map((mat) => ({
         ...mat,
         linked_items: mat.linked_items.map((it) =>
-          it.id === itemId
-            ? { ...it, match_status: newStatus as typeof it.match_status }
-            : it,
+          it.id === itemId ? { ...it, match_status: newStatus as typeof it.match_status } : it,
         ),
       })),
     );
   };
 
   const needle = searchFilter.toLowerCase();
-  const filteredMaterials = searchFilter
-    ? materials.filter(
-        (m) =>
-          m.material_name.toLowerCase().includes(needle) ||
-          m.material_code.toLowerCase().includes(needle) ||
-          m.linked_items.some((it) => it.descricao.toLowerCase().includes(needle)),
-      )
-    : materials;
+  const filteredMaterials = useMemo(
+    () =>
+      searchFilter
+        ? materials.filter(
+            (m) =>
+              m.material_name.toLowerCase().includes(needle) ||
+              m.material_code.toLowerCase().includes(needle) ||
+              m.linked_items.some((it) => it.descricao.toLowerCase().includes(needle)),
+          )
+        : materials,
+    [materials, searchFilter, needle],
+  );
 
   const totalApproved = materials.reduce(
     (sum, m) =>
@@ -226,16 +211,18 @@ export default function ConciliationCurationModal({ sessionId, open, onOpenChang
     (sum, m) => sum + m.linked_items.filter((it) => it.match_status === 'ia_suggested').length,
     0,
   );
-  const totalLinked = materials.reduce((sum, m) => sum + m.linked_items.length, 0);
+
+  // Truncate long supplier names for the header
+  const truncate = (s: string, max = 22) => (s.length > max ? `${s.slice(0, max - 1)}…` : s);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl">
+      <DialogContent className="max-w-6xl">
         <DialogHeader>
           <DialogTitle>Curadoria de conciliação</DialogTitle>
           <DialogDescription>
-            Lado esquerdo: materiais do orçamento (fonte da verdade). Lado direito: itens de
-            fornecedores vinculados. Aprove sugestões da IA para salvar na memória.
+            Coluna esquerda: materiais do orçamento (fonte da verdade). Demais colunas: uma por
+            fornecedor, na ordem de importação. Aprove sugestões da IA para salvar na memória.
           </DialogDescription>
           <div className="flex flex-wrap items-center gap-3 pt-2 text-xs">
             <span className="text-gray-600">
@@ -249,6 +236,11 @@ export default function ConciliationCurationModal({ sessionId, open, onOpenChang
             {unlinked.length > 0 && (
               <span className="text-red-600">
                 <span className="font-medium">{unlinked.length}</span> sem vínculo
+              </span>
+            )}
+            {supplierColumnOrder.length > 0 && (
+              <span className="text-gray-400">
+                {supplierColumnOrder.length} fornecedor{supplierColumnOrder.length > 1 ? 'es' : ''}
               </span>
             )}
           </div>
@@ -266,7 +258,7 @@ export default function ConciliationCurationModal({ sessionId, open, onOpenChang
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto px-6 py-4 space-y-3">
+        <div className="flex-1 overflow-auto px-6 py-4">
           {loading && (
             <div className="flex items-center justify-center py-12 text-gray-500">
               <Loader2 className="h-5 w-5 animate-spin mr-2" />
@@ -286,37 +278,94 @@ export default function ConciliationCurationModal({ sessionId, open, onOpenChang
             </p>
           )}
 
-          {!loading &&
-            filteredMaterials.map((mat) => (
-              <MaterialRow
-                key={mat.material_id}
-                row={mat}
-                budgetMaterials={budgetMaterials}
-                onItemApproved={handleItemApproved}
-              />
-            ))}
+          {!loading && !error && (filteredMaterials.length > 0 || unlinked.length > 0) && (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="border-b-2 border-gray-200">
+                    {/* Sticky first column header */}
+                    <th
+                      className="sticky left-0 z-10 bg-white min-w-[220px] w-[220px] px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 border-r border-gray-200 shadow-[1px_0_0_0_#e5e7eb]"
+                    >
+                      Fonte da verdade
+                    </th>
+                    {supplierColumnOrder.map((name) => (
+                      <th
+                        key={name}
+                        className="min-w-[200px] w-[200px] px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[#1D3140] border-r border-gray-100 last:border-r-0"
+                        title={name}
+                      >
+                        {truncate(name)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredMaterials.map((mat) => (
+                    <tr key={mat.material_id} className="hover:bg-gray-50/50 transition-colors">
+                      {/* Sticky material column */}
+                      <td className="sticky left-0 z-10 bg-white px-4 py-3 align-top border-r border-gray-200 shadow-[1px_0_0_0_#e5e7eb]">
+                        <p className="text-sm font-semibold text-[#1D3140] leading-snug">
+                          {mat.material_name}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {mat.material_code}
+                          {mat.material_unit && (
+                            <span className="ml-1 text-gray-300">·</span>
+                          )}
+                          <span className="ml-1">{mat.material_unit}</span>
+                        </p>
+                      </td>
+                      {/* One cell per supplier */}
+                      {supplierColumnOrder.map((supplierName) => {
+                        const cellItems = mat.linked_items.filter(
+                          (it) => it.supplier_name === supplierName,
+                        ) as LinkedItem[];
+                        return (
+                          <td
+                            key={supplierName}
+                            className="px-4 py-3 align-top border-r border-gray-100 last:border-r-0"
+                          >
+                            <SupplierCell items={cellItems} onApproved={handleItemApproved} />
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
 
-          {!loading && unlinked.length > 0 && !searchFilter && (
-            <div className="mt-6">
-              <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                Itens sem vínculo ({unlinked.length})
-              </h3>
-              <div className="space-y-2">
-                {unlinked.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between rounded-lg border border-dashed border-gray-200 bg-gray-50/50 p-3"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm text-gray-800 truncate">{item.descricao}</p>
-                      <p className="text-xs text-gray-500">
-                        {item.supplier_name} &middot; {fmtCurrency(item.preco_unit)}
-                      </p>
-                    </div>
-                    <StatusBadge item={item} />
-                  </div>
-                ))}
-              </div>
+                  {/* Unlinked items row — shown below the main table body */}
+                  {!searchFilter && unlinked.length > 0 && (
+                    <tr>
+                      <td
+                        colSpan={1 + supplierColumnOrder.length}
+                        className="px-4 pt-6 pb-2"
+                      >
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
+                          Itens sem vínculo com material ({unlinked.length})
+                        </p>
+                        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                          {unlinked.map((item) => (
+                            <div
+                              key={item.id}
+                              className="flex items-start gap-2 rounded-lg border border-dashed border-gray-200 bg-gray-50/50 p-3"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-medium text-gray-800 truncate">
+                                  {item.descricao}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                  {item.supplier_name} · {fmtCurrency(item.preco_unit)}
+                                </p>
+                              </div>
+                              <StatusBadge item={item} />
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

@@ -966,6 +966,7 @@ export async function getConciliationPayloadBySessionAction(
   materials: SessionConciliationMaterialRow[];
   unlinked_items: (SupplierQuoteItemWithMaterial & { supplier_name: string })[];
   budgetMaterials: BudgetMaterialOption[];
+  supplier_column_order: string[];
 }>> {
   try {
     const supabase = await createSupabaseServerClient();
@@ -986,7 +987,18 @@ export async function getConciliationPayloadBySessionAction(
       .from('supplier_quotes')
       .select('id, supplier_name')
       .eq('session_id', sessionId)
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true });
+
+    // Stable column order: unique supplier names in import order
+    const supplier_column_order: string[] = [];
+    const seenSuppliers = new Set<string>();
+    for (const q of quotes ?? []) {
+      if (!seenSuppliers.has(q.supplier_name)) {
+        seenSuppliers.add(q.supplier_name);
+        supplier_column_order.push(q.supplier_name);
+      }
+    }
 
     if (!quotes || quotes.length === 0) {
       const mats = sessionRow.budget_id
@@ -998,6 +1010,7 @@ export async function getConciliationPayloadBySessionAction(
           materials: [],
           unlinked_items: [],
           budgetMaterials: mats.success ? mats.data.materials : [],
+          supplier_column_order: [],
         },
       };
     }
@@ -1088,6 +1101,7 @@ export async function getConciliationPayloadBySessionAction(
         materials: Array.from(materialMap.values()),
         unlinked_items: unlinked,
         budgetMaterials,
+        supplier_column_order,
       },
     };
   } catch (err: unknown) {
