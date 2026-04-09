@@ -245,7 +245,7 @@ export interface TrackedPostMaterial {
 // =============================================================================
 
 export type SupplierQuoteStatus = 'pendente' | 'conciliado' | 'aprovado';
-export type SupplierMatchStatus = 'sem_match' | 'automatico' | 'manual';
+export type SupplierMatchStatus = 'sem_match' | 'automatico' | 'manual' | 'ia_suggested';
 export type SupplierMatchMethod = 'exact_memory' | 'semantic_ai' | 'manual';
 export type SupplierMappingSource = 'manual' | 'ai';
 export type SemanticSuggestionStatus = 'suggested' | 'accepted' | 'rejected';
@@ -259,6 +259,7 @@ export interface SupplierQuote {
   pdf_path: string;
   status: SupplierQuoteStatus;
   observacoes_gerais?: string;
+  extraction_validated_at?: string | null;
   user_id: string;
   created_at: string;
   updated_at: string;

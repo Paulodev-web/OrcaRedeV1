@@ -51,10 +51,16 @@ const STATUS_CONFIG = {
     className: 'bg-red-100 text-red-700 border border-red-200',
     icon: <HelpCircle className="h-3 w-3" />,
   },
+  ia_suggested: {
+    label: 'Sugestão IA',
+    className: 'bg-amber-100 text-amber-700 border border-amber-200',
+    icon: <Sparkles className="h-3 w-3" />,
+  },
 } as const;
 
 function getStatusConfig(item: SupplierQuoteItemWithMaterial) {
   if (item.match_status === 'sem_match') return STATUS_CONFIG.sem_match;
+  if (item.match_status === 'ia_suggested') return STATUS_CONFIG.ia_suggested;
   if (item.match_method === 'exact_memory') return STATUS_CONFIG.exact_memory;
   if (item.match_method === 'semantic_ai') return STATUS_CONFIG.semantic_ai;
   if (item.match_method === 'manual') return STATUS_CONFIG.manual;
@@ -222,7 +228,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
   const [isFinalizing, startFinalizing] = useTransition();
   const [finalizeError, setFinalizeError] = useState<string | null>(null);
 
-  const matchedCount = items.filter((i) => i.match_status !== 'sem_match').length;
+  const matchedCount = items.filter((i) => i.match_status === 'automatico' || i.match_status === 'manual').length;
   const totalCount = items.length;
   const allMatched = matchedCount === totalCount;
   const progressPct = totalCount > 0 ? Math.round((matchedCount / totalCount) * 100) : 0;

@@ -6,7 +6,7 @@ import type {
   SemanticMatchResult,
 } from '@/types/supplierExtract';
 
-const SYSTEM_PROMPT = `Você é um Engenheiro de Custos especialista em orçamentos de construção e redes elétricas. Sua tarefa é parear itens de uma cotação de fornecedor com a lista de materiais internos do sistema.
+const SYSTEM_PROMPT = `Você é um Engenheiro de Custos E Engenheiro Eletricista especialista em orçamentos de construção e redes elétricas. Sua tarefa é parear itens de uma cotação de fornecedor com a lista de materiais internos do sistema.
 
 Para cada item do fornecedor, encontre o material interno mais provável e determine o fator de conversão de unidades.
 
@@ -20,6 +20,20 @@ Regras de pareamento:
 - Considere variações de nomenclatura, abreviações e sinônimos comuns do setor.
 - Se não houver correspondência confiável, NÃO inclua o item no resultado.
 - Atribua um confidenceScore de 0 a 100 (inteiro) que reflita a certeza do pareamento.
+
+=== REGRAS CRÍTICAS DE EXCLUSÃO (GUARDRAILS ELÉTRICOS) ===
+ATUE COMO UM ENGENHEIRO ELETRICISTA. É ESTRITAMENTE PROIBIDO fazer match entre materiais que tenham divergência técnica. As regras abaixo são INVIOLÁVEIS:
+
+1. TENSÃO: Nunca vincule um material de Baixa Tensão (ex: 750V, 1kV) com Média/Alta Tensão (ex: 15kV, 25kV, 35kV). São classes de isolamento completamente distintas.
+
+2. ISOLAMENTO: Nunca vincule PVC com XLPE ou EPR. Esses isolamentos indicam aplicações e faixas de tensão incompatíveis.
+
+3. TIPO DE CONDUTOR: Nunca vincule "Flexível" com "Rígido", "Nu", "Protegido" ou "Coberto". São tipos de cabos com aplicações distintas.
+
+4. Se a bitola (ex: 16mm²) for igual, mas a Tensão OU o Isolamento divergirem, o match é INVÁLIDO. O confidenceScore deve ser ZERO e o item NÃO deve ser retornado na lista.
+
+5. Na dúvida entre parear com divergência técnica ou não parear, NÃO pareie. A ausência de match é preferível a um falso positivo técnico.
+=== FIM DOS GUARDRAILS ===
 
 Retorne APENAS um array JSON válido (sem markdown, sem texto fora do JSON). Cada elemento:
 {

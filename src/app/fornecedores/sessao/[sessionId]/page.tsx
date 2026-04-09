@@ -41,6 +41,7 @@ export default async function QuotationSessionPage({ params }: Props) {
       status,
       budget_id,
       created_at,
+      extraction_validated_at,
       supplier_quote_items (id, match_status)
     `
     )
@@ -57,18 +58,22 @@ export default async function QuotationSessionPage({ params }: Props) {
       supplier_name: q.supplier_name,
       status: q.status,
       item_count: items.length,
-      matched_count: items.filter((i) => i.match_status !== 'sem_match').length,
+      matched_count: items.filter((i) => i.match_status === 'automatico' || i.match_status === 'manual').length,
       budget_id: q.budget_id ?? null,
       created_at: q.created_at,
     };
   });
 
-  const initialQuotes = conciliationQuotes.map((q) => ({
-    id: q.id,
-    supplier_name: q.supplier_name,
-    status: q.status,
-    created_at: q.created_at,
-  }));
+  const initialQuotes = conciliationQuotes.map((q) => {
+    const raw = conciliationQuotesRaw?.find((r) => r.id === q.id);
+    return {
+      id: q.id,
+      supplier_name: q.supplier_name,
+      status: q.status,
+      created_at: q.created_at,
+      extraction_validated_at: (raw as Record<string, unknown>)?.extraction_validated_at as string | null ?? null,
+    };
+  });
 
   return (
     <main className="min-h-screen bg-gray-50 p-6 lg:p-8">

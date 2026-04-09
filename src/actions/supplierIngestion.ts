@@ -1,7 +1,6 @@
 'use server';
 
 import { createSupabaseServerClient } from '@/lib/supabaseServer';
-import { extractTextFromPdfBuffer } from '@/services/pdf/extractPdfText';
 import { extractSupplierQuoteWithGemini } from '@/services/ai/geminiSupplierQuote';
 import type { SupplierExtractItem } from '@/types/supplierExtract';
 
@@ -25,11 +24,6 @@ export async function extractSupplierDataAction({
       .from('fornecedores_pdfs')
       .download(filePath);
 
-    console.log('[supplierIngestion] download Supabase:', {
-      downloadError: downloadError ?? null,
-      temBlob: Boolean(blob),
-    });
-
     if (downloadError || !blob) {
       return {
         success: false,
@@ -38,39 +32,17 @@ export async function extractSupplierDataAction({
     }
 
     const buffer = Buffer.from(await blob.arrayBuffer());
-    console.log('[supplierIngestion] buffer.length:', buffer.length);
 
-    let pdfText: string;
-    try {
-      const { text, numpages } = await extractTextFromPdfBuffer(buffer);
-      pdfText = text;
-      const preview = pdfText.slice(0, 200);
-      console.log('[supplierIngestion] pdf2json OK', {
-        numpages,
-        preview200: preview,
-      });
-    } catch (parseErr) {
-      console.error('[supplierIngestion] pdf2json lançou exceção:', parseErr);
+    if (buffer.length < 200) {
       return {
         success: false,
-        error:
-          'Não foi possível extrair o texto do PDF. Verifique se o arquivo não está protegido ou corrompido.',
+        error: 'O arquivo PDF parece estar vazio ou corrompido.',
       };
     }
 
-    if (!pdfText.trim()) {
-      console.error(
-        '[supplierIngestion] pdf2json retornou texto vazio (trim) antes de responder ao cliente'
-      );
-      return {
-        success: false,
-        error: 'O PDF não contém texto legível. O arquivo pode ser baseado em imagens.',
-      };
-    }
+    console.log('[supplierIngestion] buffer.length:', buffer.length, '— chamando Gemini multimodal…');
 
-    console.log('[supplierIngestion] Texto extraído com sucesso; chamando Gemini…');
-
-    const gemini = await extractSupplierQuoteWithGemini(pdfText);
+    const gemini = await extractSupplierQuoteWithGemini(buffer);
     if (!gemini.success) {
       return { success: false, error: gemini.error };
     }

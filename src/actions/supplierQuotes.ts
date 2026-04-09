@@ -143,7 +143,7 @@ export async function getQuoteWithItemsAction(
 
     const { data: quote, error: quoteError } = await supabase
       .from('supplier_quotes')
-      .select('id, budget_id, session_id, supplier_name, pdf_path, status, observacoes_gerais, user_id, created_at, updated_at')
+      .select('id, budget_id, session_id, supplier_name, pdf_path, status, observacoes_gerais, extraction_validated_at, user_id, created_at, updated_at')
       .eq('id', quoteId)
       .eq('user_id', userId)
       .single();
@@ -600,7 +600,7 @@ export async function listQuotesByBudgetAction(
         created_at: q.created_at,
         updated_at: q.updated_at,
         item_count: allItems.length,
-        matched_count: allItems.filter((i) => i.match_status !== 'sem_match').length,
+        matched_count: allItems.filter((i) => i.match_status === 'automatico' || i.match_status === 'manual').length,
       };
     });
 
@@ -680,7 +680,7 @@ export async function calculateScenariosAction(
       `)
       .eq('supplier_quotes.budget_id', budgetId)
       .eq('supplier_quotes.user_id', userId)
-      .neq('match_status', 'sem_match');
+      .in('match_status', ['automatico', 'manual']);
 
     if (sessionId) {
       query = query.eq('supplier_quotes.session_id', sessionId);
@@ -860,4 +860,238 @@ export async function getConciliationPayloadByQuoteAction(
       budgetMaterials: mats.data.materials,
     },
   };
+}
+
+// ---------------------------------------------------------------------------
+// validateExtractionAction
+// Marca a extração como validada pelo usuário (curadoria humana).
+// ---------------------------------------------------------------------------
+export async function validateExtractionAction(
+  quoteId: string
+): Promise<ActionResult<void>> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const { error } = await supabase
+      .from('supplier_quotes')
+      .update({ extraction_validated_at: new Date().toISOString() })
+      .eq('id', quoteId)
+      .eq('user_id', userId);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    const { data: quoteRow } = await supabase
+      .from('supplier_quotes')
+      .select('session_id')
+      .eq('id', quoteId)
+      .eq('user_id', userId)
+      .single();
+
+    if (quoteRow?.session_id) {
+      revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}`);
+    }
+    revalidatePath('/fornecedores');
+    return { success: true, data: undefined };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao validar extração.';
+    return { success: false, error: message };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// updateExtractionItemAction
+// Atualiza campos editáveis de um item extraído (curadoria de extração).
+// ---------------------------------------------------------------------------
+export interface UpdateExtractionItemInput {
+  itemId: string;
+  descricao?: string;
+  unidade?: string;
+  quantidade?: number;
+  preco_unit?: number;
+  total_item?: number;
+}
+
+export async function updateExtractionItemAction(
+  input: UpdateExtractionItemInput
+): Promise<ActionResult<void>> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    await requireAuthUserId(supabase);
+
+    const updates: Record<string, unknown> = {};
+    if (input.descricao !== undefined) updates.descricao = input.descricao;
+    if (input.unidade !== undefined) updates.unidade = input.unidade;
+    if (input.quantidade !== undefined) updates.quantidade = input.quantidade;
+    if (input.preco_unit !== undefined) updates.preco_unit = input.preco_unit;
+    if (input.total_item !== undefined) updates.total_item = input.total_item;
+
+    if (Object.keys(updates).length === 0) {
+      return { success: true, data: undefined };
+    }
+
+    const { error } = await supabase
+      .from('supplier_quote_items')
+      .update(updates)
+      .eq('id', input.itemId);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, data: undefined };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao atualizar item.';
+    return { success: false, error: message };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// getConciliationPayloadBySessionAction
+// Agrupa itens de TODAS as cotações da sessão por material (fonte da verdade).
+// ---------------------------------------------------------------------------
+export interface SessionConciliationMaterialRow {
+  material_id: string;
+  material_name: string;
+  material_code: string;
+  material_unit: string;
+  linked_items: (SupplierQuoteItemWithMaterial & { supplier_name: string; suggestion_id?: string | null })[];
+}
+
+export async function getConciliationPayloadBySessionAction(
+  sessionId: string
+): Promise<ActionResult<{
+  materials: SessionConciliationMaterialRow[];
+  unlinked_items: (SupplierQuoteItemWithMaterial & { supplier_name: string })[];
+  budgetMaterials: BudgetMaterialOption[];
+}>> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const { data: sessionRow } = await supabase
+      .from('quotation_sessions')
+      .select('id, budget_id')
+      .eq('id', sessionId)
+      .eq('user_id', userId)
+      .single();
+
+    if (!sessionRow) {
+      return { success: false, error: 'Sessão não encontrada.' };
+    }
+
+    const { data: quotes } = await supabase
+      .from('supplier_quotes')
+      .select('id, supplier_name')
+      .eq('session_id', sessionId)
+      .eq('user_id', userId);
+
+    if (!quotes || quotes.length === 0) {
+      const mats = sessionRow.budget_id
+        ? await getBudgetMaterialsAction(sessionRow.budget_id)
+        : await getCatalogMaterialsAction();
+      return {
+        success: true,
+        data: {
+          materials: [],
+          unlinked_items: [],
+          budgetMaterials: mats.success ? mats.data.materials : [],
+        },
+      };
+    }
+
+    const quoteIds = quotes.map((q) => q.id);
+    const quoteNameMap = new Map(quotes.map((q) => [q.id, q.supplier_name]));
+
+    const { data: rawItems } = await supabase
+      .from('supplier_quote_items')
+      .select(`
+        id, quote_id, descricao, unidade, quantidade, preco_unit, total_item,
+        ipi_percent, st_incluso, alerta, matched_material_id, conversion_factor,
+        match_status, match_level, match_confidence, match_method, created_at,
+        materials (code, name, unit),
+        semantic_match_suggestions (id, rationale, status)
+      `)
+      .in('quote_id', quoteIds)
+      .order('created_at', { ascending: true });
+
+    const mats = sessionRow.budget_id
+      ? await getBudgetMaterialsAction(sessionRow.budget_id)
+      : await getCatalogMaterialsAction();
+
+    const budgetMaterials = mats.success ? mats.data.materials : [];
+    const materialMap = new Map<string, SessionConciliationMaterialRow>();
+    const unlinked: (SupplierQuoteItemWithMaterial & { supplier_name: string })[] = [];
+
+    for (const bm of budgetMaterials) {
+      materialMap.set(bm.id, {
+        material_id: bm.id,
+        material_name: bm.name,
+        material_code: bm.code,
+        material_unit: bm.unit,
+        linked_items: [],
+      });
+    }
+
+    for (const row of rawItems ?? []) {
+      const materialRow = Array.isArray(row.materials) ? row.materials[0] : row.materials;
+      const suggestions = (row.semantic_match_suggestions ?? []) as { id: string; rationale?: string; status: string }[];
+      const suggestion = suggestions.find((s) => s.status === 'suggested') ?? suggestions[0];
+
+      const item: SupplierQuoteItemWithMaterial & { supplier_name: string; suggestion_id?: string | null } = {
+        id: row.id,
+        quote_id: row.quote_id,
+        descricao: row.descricao,
+        unidade: row.unidade,
+        quantidade: row.quantidade,
+        preco_unit: row.preco_unit,
+        total_item: row.total_item,
+        ipi_percent: row.ipi_percent,
+        st_incluso: row.st_incluso,
+        alerta: row.alerta,
+        matched_material_id: row.matched_material_id ?? null,
+        conversion_factor: row.conversion_factor,
+        match_status: row.match_status,
+        match_level: row.match_level ?? null,
+        match_confidence: row.match_confidence ?? null,
+        match_method: (row.match_method as SupplierMatchMethod) ?? null,
+        created_at: row.created_at,
+        material_name: materialRow?.name ?? null,
+        material_code: materialRow?.code ?? null,
+        material_unit: materialRow?.unit ?? null,
+        suggestion_rationale: suggestion?.rationale ?? null,
+        supplier_name: quoteNameMap.get(row.quote_id) ?? '',
+        suggestion_id: suggestion?.id ?? null,
+      };
+
+      if (row.matched_material_id && materialMap.has(row.matched_material_id)) {
+        materialMap.get(row.matched_material_id)!.linked_items.push(item);
+      } else if (row.matched_material_id) {
+        const matEntry: SessionConciliationMaterialRow = {
+          material_id: row.matched_material_id,
+          material_name: materialRow?.name ?? '(material desconhecido)',
+          material_code: materialRow?.code ?? '',
+          material_unit: materialRow?.unit ?? '',
+          linked_items: [item],
+        };
+        materialMap.set(row.matched_material_id, matEntry);
+      } else {
+        unlinked.push(item);
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        materials: Array.from(materialMap.values()),
+        unlinked_items: unlinked,
+        budgetMaterials,
+      },
+    };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao carregar conciliação da sessão.';
+    return { success: false, error: message };
+  }
 }

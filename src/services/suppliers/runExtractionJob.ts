@@ -1,6 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseServiceRoleClient } from '@/lib/supabaseServer';
-import { extractTextFromPdfBuffer } from '@/services/pdf/extractPdfText';
 import { extractSupplierQuoteWithGemini } from '@/services/ai/geminiSupplierQuote';
 import { persistSupplierQuoteFromExtraction } from '@/services/suppliers/persistSupplierQuoteFromExtraction';
 import { autoMatchQuoteItems } from '@/services/suppliers/autoMatchQuoteItems';
@@ -128,10 +127,7 @@ async function runSemanticMatchLevel2(
       suggested_conversion_factor: suggestion.conversionFactor,
       confidence_score: suggestion.confidenceScore,
       rationale: suggestion.rationale ?? null,
-      status:
-        suggestion.confidenceScore >= CONFIDENCE_AUTO_APPLY_THRESHOLD
-          ? 'accepted'
-          : 'suggested',
+      status: 'suggested',
       model: 'gemini-2.5-flash',
     });
 
@@ -141,7 +137,7 @@ async function runSemanticMatchLevel2(
         .update({
           matched_material_id: suggestion.materialId,
           conversion_factor: suggestion.conversionFactor,
-          match_status: 'automatico',
+          match_status: 'ia_suggested',
           match_level: 2,
           match_method: 'semantic_ai',
           match_confidence: suggestion.confidenceScore,
@@ -150,31 +146,6 @@ async function runSemanticMatchLevel2(
 
       if (!updateError) {
         matchedCount++;
-
-        const item = pendingItems.find((it) => it.id === suggestion.supplierItemId);
-        if (item) {
-          await supabase
-            .from('supplier_material_mappings')
-            .upsert(
-              {
-                user_id: userId,
-                supplier_name: supplierName,
-                supplier_material_name: item.descricao,
-                internal_material_id: suggestion.materialId,
-                conversion_factor: suggestion.conversionFactor,
-                source: 'ai',
-                confidence_snapshot: suggestion.confidenceScore,
-                last_seen_at: new Date().toISOString(),
-                times_used: 1,
-              },
-              { onConflict: 'user_id,supplier_name,supplier_material_name' }
-            )
-            .then(({ error }) => {
-              if (error) {
-                console.warn('[runExtractionJob] Falha ao persistir mapping IA:', error.message);
-              }
-            });
-        }
       }
     }
   }
@@ -259,7 +230,7 @@ export async function runExtractionJob(jobId: string): Promise<void> {
 
     const userId = job.user_id as string;
 
-    // === Passo 1: Download e extração de texto do PDF ===
+    // === Passo 1: Download do PDF como Buffer ===
     const { data: blob, error: downloadError } = await supabase.storage
       .from('fornecedores_pdfs')
       .download(job.file_path);
@@ -272,36 +243,16 @@ export async function runExtractionJob(jobId: string): Promise<void> {
 
     const buffer = Buffer.from(await blob.arrayBuffer());
 
-    let pdfText: string;
-    let numpages: number;
-    try {
-      const extracted = await extractTextFromPdfBuffer(buffer);
-      pdfText = extracted.text;
-      numpages = extracted.numpages;
-    } catch (parseErr) {
-      console.error('[runExtractionJob] pdf2json', parseErr);
-      await markJobError(
-        supabase,
-        jobId,
-        'Não foi possível extrair o texto do PDF. Verifique se o arquivo não está protegido ou corrompido.'
-      );
+    if (buffer.length < 200) {
+      await markJobError(supabase, jobId, 'O arquivo PDF parece estar vazio ou corrompido.');
       return;
     }
 
-    if (!pdfText.trim()) {
-      await markJobError(
-        supabase,
-        jobId,
-        'O PDF não contém texto legível. O arquivo pode ser baseado em imagens.'
-      );
-      return;
-    }
-
-    const estimatedSeconds = Math.max(15, numpages * 8);
+    const estimatedSeconds = Math.max(20, Math.round(buffer.length / 50_000));
     await supabase.from('extraction_jobs').update({ estimated_time: estimatedSeconds }).eq('id', jobId);
 
-    // === Passo 2: Extração estruturada via Gemini ===
-    const gemini = await extractSupplierQuoteWithGemini(pdfText);
+    // === Passo 2: Extração multimodal via Gemini (PDF nativo) ===
+    const gemini = await extractSupplierQuoteWithGemini(buffer);
     if (!gemini.success) {
       await markJobError(supabase, jobId, gemini.error);
       return;

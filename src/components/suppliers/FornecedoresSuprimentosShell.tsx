@@ -102,7 +102,7 @@ export default function FornecedoresSuprimentosShell({
   };
 
   const matchedCount =
-    conciliation?.items.filter((i) => i.match_status !== 'sem_match').length ?? 0;
+    conciliation?.items.filter((i) => i.match_status === 'automatico' || i.match_status === 'manual').length ?? 0;
   const hasConciliationQuotes = conciliationQuotes.length > 0;
 
   const onConciliationCardToggle = (nextQuoteId: string) => {
