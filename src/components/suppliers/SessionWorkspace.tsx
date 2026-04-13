@@ -1,10 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, BarChart3, GitMerge } from 'lucide-react';
 import SessionExtractionRealtime from '@/components/suppliers/SessionExtractionRealtime';
-import ConciliationCurationModal from '@/components/suppliers/ConciliationCurationModal';
 import type { ExtractionJobRow } from '@/actions/quotationSessions';
 import { onPortalPrimaryButtonSmClass } from '@/lib/branding';
 
@@ -41,8 +39,6 @@ export default function SessionWorkspace({
   initialQuotes,
   conciliationQuotes,
 }: Props) {
-  const [conciliationOpen, setConciliationOpen] = useState(false);
-
   const hasQuotes = conciliationQuotes.length > 0;
   const totalItems = conciliationQuotes.reduce((s, q) => s + q.item_count, 0);
   const totalMatched = conciliationQuotes.reduce((s, q) => s + q.matched_count, 0);
@@ -79,14 +75,13 @@ export default function SessionWorkspace({
             </div>
 
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setConciliationOpen(true)}
+              <Link
+                href={`/fornecedores/sessao/${sessionId}/conciliacao`}
                 className={`inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm ${onPortalPrimaryButtonSmClass}`}
               >
                 <GitMerge className="h-4 w-4" />
                 Abrir conciliação
-              </button>
+              </Link>
 
               {budgetId && (
                 <Link
@@ -102,13 +97,6 @@ export default function SessionWorkspace({
           </div>
         </section>
       )}
-
-      {/* Conciliation curation modal */}
-      <ConciliationCurationModal
-        sessionId={sessionId}
-        open={conciliationOpen}
-        onOpenChange={setConciliationOpen}
-      />
     </div>
   );
 }

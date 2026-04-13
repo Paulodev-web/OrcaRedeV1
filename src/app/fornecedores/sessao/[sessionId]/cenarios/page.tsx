@@ -37,7 +37,7 @@ export default async function SessionCenariosPage({ params }: Props) {
       <div className="mx-auto max-w-7xl space-y-6">
         <div className="flex items-center gap-4">
           <Link
-            href={`/fornecedores/sessao/${sessionId}?tab=conciliar`}
+            href={`/fornecedores/sessao/${sessionId}/conciliacao`}
             className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -70,7 +70,7 @@ export default async function SessionCenariosPage({ params }: Props) {
               Volte à sessão e concilie pelo menos uma proposta para gerar cenários.
             </p>
             <Link
-              href={`/fornecedores/sessao/${sessionId}?tab=conciliar`}
+              href={`/fornecedores/sessao/${sessionId}/conciliacao`}
               className="mt-4 inline-block text-sm font-medium text-[#64ABDE] transition-colors hover:text-[#1D3140] hover:underline"
             >
               ← Voltar para conciliação

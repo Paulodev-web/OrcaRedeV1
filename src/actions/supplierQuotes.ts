@@ -408,6 +408,7 @@ export async function saveManualMatchAction(
 
       if (quoteRow?.session_id) {
         revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}`);
+        revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/conciliacao`);
         revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/cenarios`);
       }
     }
@@ -495,6 +496,7 @@ export async function acceptAiSuggestionAction(
 
       if (quoteRow?.session_id) {
         revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}`);
+        revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/conciliacao`);
         revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/cenarios`);
       }
     }
@@ -536,6 +538,7 @@ export async function markQuoteConciliatedAction(
 
     if (quoteRow?.session_id) {
       revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}`);
+      revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/conciliacao`);
       revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/cenarios`);
     }
     revalidatePath('/fornecedores');
@@ -892,6 +895,7 @@ export async function validateExtractionAction(
 
     if (quoteRow?.session_id) {
       revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}`);
+      revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/conciliacao`);
     }
     revalidatePath('/fornecedores');
     return { success: true, data: undefined };
@@ -960,6 +964,15 @@ export interface SessionConciliationMaterialRow {
   linked_items: (SupplierQuoteItemWithMaterial & { supplier_name: string; suggestion_id?: string | null })[];
 }
 
+/** Resumo por cotação (sessão) para finalizar conciliação e UI. */
+export interface SessionConciliationQuoteSummary {
+  id: string;
+  supplier_name: string;
+  status: string;
+  item_count: number;
+  matched_count: number;
+}
+
 export async function getConciliationPayloadBySessionAction(
   sessionId: string
 ): Promise<ActionResult<{
@@ -967,6 +980,7 @@ export async function getConciliationPayloadBySessionAction(
   unlinked_items: (SupplierQuoteItemWithMaterial & { supplier_name: string })[];
   budgetMaterials: BudgetMaterialOption[];
   supplier_column_order: string[];
+  quotes_summary: SessionConciliationQuoteSummary[];
 }>> {
   try {
     const supabase = await createSupabaseServerClient();
@@ -985,7 +999,7 @@ export async function getConciliationPayloadBySessionAction(
 
     const { data: quotes } = await supabase
       .from('supplier_quotes')
-      .select('id, supplier_name')
+      .select('id, supplier_name, status')
       .eq('session_id', sessionId)
       .eq('user_id', userId)
       .order('created_at', { ascending: true });
@@ -1011,6 +1025,7 @@ export async function getConciliationPayloadBySessionAction(
           unlinked_items: [],
           budgetMaterials: mats.success ? mats.data.materials : [],
           supplier_column_order: [],
+          quotes_summary: [],
         },
       };
     }
@@ -1095,6 +1110,30 @@ export async function getConciliationPayloadBySessionAction(
       }
     }
 
+    const quoteStats = new Map<string, { total: number; matched: number }>();
+    for (const q of quotes ?? []) {
+      quoteStats.set(q.id, { total: 0, matched: 0 });
+    }
+    for (const row of rawItems ?? []) {
+      const st = quoteStats.get(row.quote_id);
+      if (!st) continue;
+      st.total += 1;
+      if (row.match_status === 'automatico' || row.match_status === 'manual') {
+        st.matched += 1;
+      }
+    }
+
+    const quotes_summary: SessionConciliationQuoteSummary[] = (quotes ?? []).map((q) => {
+      const st = quoteStats.get(q.id) ?? { total: 0, matched: 0 };
+      return {
+        id: q.id,
+        supplier_name: q.supplier_name,
+        status: q.status,
+        item_count: st.total,
+        matched_count: st.matched,
+      };
+    });
+
     return {
       success: true,
       data: {
@@ -1102,6 +1141,7 @@ export async function getConciliationPayloadBySessionAction(
         unlinked_items: unlinked,
         budgetMaterials,
         supplier_column_order,
+        quotes_summary,
       },
     };
   } catch (err: unknown) {

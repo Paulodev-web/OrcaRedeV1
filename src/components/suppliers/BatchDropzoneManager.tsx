@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Loader2, Upload } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -55,6 +55,12 @@ export default function BatchDropzoneManager({
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(null), 10000);
+    return () => clearTimeout(t);
+  }, [error]);
 
   const processFiles = useCallback(
     async (files: FileList | File[]) => {

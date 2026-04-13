@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import React, { useRef, useState, useTransition } from 'react';
+import React, { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
@@ -56,6 +56,12 @@ export default function SupplierPdfImporter({ budgets, embedded = false }: Props
   const [observacoes, setObservacoes] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(null), 12000);
+    return () => clearTimeout(t);
+  }, [error]);
 
   // Salvamento final
   const [isSaving, setIsSaving] = useState(false);

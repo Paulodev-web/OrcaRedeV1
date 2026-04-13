@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { CheckCircle2, Clock, Eye, FileText, Loader2, XCircle } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AlertTriangle, CheckCircle2, Clock, Eye, FileText, Loader2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabaseClient';
 import type { ExtractionJobRow } from '@/actions/quotationSessions';
@@ -58,8 +58,45 @@ export default function SessionExtractionRealtime({
 
   const hadProcessingRef = useRef(false);
   const toastFiredRef = useRef(false);
+  /** Evita duplicar banner/toast para o mesmo job (carga inicial + realtime). */
+  const notifiedErrorJobIdsRef = useRef<Set<string>>(new Set());
+  const transientErrorTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const disabled = sessionStatus === 'completed';
+
+  type TransientProcessingError = { id: string; label: string; message: string };
+
+  const [transientProcessingErrors, setTransientProcessingErrors] = useState<TransientProcessingError[]>(
+    [],
+  );
+
+  const pushTransientProcessingError = useCallback((id: string, label: string, message: string) => {
+    setTransientProcessingErrors((prev) => {
+      if (prev.some((e) => e.id === id)) return prev;
+      return [...prev, { id, label, message }];
+    });
+    const existing = transientErrorTimersRef.current.get(id);
+    if (existing) clearTimeout(existing);
+    const t = setTimeout(() => {
+      setTransientProcessingErrors((prev) => prev.filter((e) => e.id !== id));
+      transientErrorTimersRef.current.delete(id);
+    }, 12000);
+    transientErrorTimersRef.current.set(id, t);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      transientErrorTimersRef.current.forEach((timer) => clearTimeout(timer));
+      transientErrorTimersRef.current.clear();
+    };
+  }, []);
+
+  const dismissTransientError = useCallback((id: string) => {
+    const timer = transientErrorTimersRef.current.get(id);
+    if (timer) clearTimeout(timer);
+    transientErrorTimersRef.current.delete(id);
+    setTransientProcessingErrors((prev) => prev.filter((e) => e.id !== id));
+  }, []);
 
   useEffect(() => {
     setJobs(initialJobs);
@@ -68,6 +105,20 @@ export default function SessionExtractionRealtime({
   useEffect(() => {
     setQuotes(initialQuotes);
   }, [initialQuotes]);
+
+  // Erros já persistidos no servidor: banner temporário ao abrir a aba
+  useEffect(() => {
+    initialJobs.forEach((j) => {
+      if (j.status !== 'error') return;
+      if (notifiedErrorJobIdsRef.current.has(j.id)) return;
+      notifiedErrorJobIdsRef.current.add(j.id);
+      pushTransientProcessingError(
+        j.id,
+        fileLabel(j.file_path),
+        j.error_message ?? 'Erro ao processar o PDF.',
+      );
+    });
+  }, [initialJobs, pushTransientProcessingError]);
 
   // Track whether any job was ever processing in this mount cycle
   useEffect(() => {
@@ -119,6 +170,16 @@ export default function SessionExtractionRealtime({
             );
           });
 
+          if (row.status === 'error') {
+            if (!notifiedErrorJobIdsRef.current.has(row.id)) {
+              notifiedErrorJobIdsRef.current.add(row.id);
+              const label = fileLabel(row.file_path);
+              const msg = row.error_message ?? 'Erro ao processar o PDF.';
+              pushTransientProcessingError(row.id, label, msg);
+              toast.error(`${label}: ${msg}`, { duration: 10000 });
+            }
+          }
+
           if (row.status === 'completed' && row.quote_id) {
             void supabase
               .from('supplier_quotes')
@@ -149,7 +210,7 @@ export default function SessionExtractionRealtime({
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [sessionId]);
+  }, [sessionId, pushTransientProcessingError]);
 
   const openCuration = (q: QuoteRow) => {
     setCurationQuoteId(q.id);
@@ -169,7 +230,6 @@ export default function SessionExtractionRealtime({
   };
 
   const activeJobs = jobs.filter((j) => j.status === 'pending' || j.status === 'processing');
-  const finishedJobs = jobs.filter((j) => j.status === 'completed' || j.status === 'error');
 
   return (
     <div className="space-y-8">
@@ -178,6 +238,42 @@ export default function SessionExtractionRealtime({
         disabled={disabled}
         onJobsCreated={() => {}}
       />
+
+      {transientProcessingErrors.length > 0 && (
+        <div
+          role="status"
+          className="rounded-xl border border-red-200 bg-red-50/90 p-4 text-sm shadow-sm"
+        >
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 font-semibold text-red-900">
+              <AlertTriangle className="h-5 w-5 shrink-0" />
+              Erro ao processar PDF
+              {transientProcessingErrors.length > 1 ? 's' : ''}
+            </div>
+            <span className="text-xs text-red-700/80">Desaparece em ~12s</span>
+          </div>
+          <ul className="space-y-2">
+            {transientProcessingErrors.map((e) => (
+              <li
+                key={e.id}
+                className="flex flex-wrap items-start justify-between gap-2 rounded-lg border border-red-100 bg-white/80 px-3 py-2"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-gray-900">{e.label}</p>
+                  <p className="mt-0.5 text-xs text-red-700">{e.message}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => dismissTransientError(e.id)}
+                  className="shrink-0 rounded px-2 py-1 text-xs text-red-600 hover:bg-red-100"
+                >
+                  Fechar
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Active processing queue (only shown while there are active jobs) */}
       {activeJobs.length > 0 && (
@@ -201,31 +297,6 @@ export default function SessionExtractionRealtime({
                 )}
               </li>
             ))}
-          </ul>
-        </section>
-      )}
-
-      {/* Finished jobs with errors */}
-      {finishedJobs.some((j) => j.status === 'error') && (
-        <section>
-          <h2 className="text-base font-semibold text-red-700 mb-3">Erros de processamento</h2>
-          <ul className="space-y-2">
-            {finishedJobs
-              .filter((j) => j.status === 'error')
-              .map((j) => (
-                <li
-                  key={j.id}
-                  className="flex flex-wrap items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm"
-                >
-                  <XCircle className="h-4 w-4 text-red-500" />
-                  <span className="flex-1 min-w-0 font-medium text-gray-800 truncate">
-                    {fileLabel(j.file_path)}
-                  </span>
-                  {j.error_message && (
-                    <span className="w-full text-xs text-red-600">{j.error_message}</span>
-                  )}
-                </li>
-              ))}
           </ul>
         </section>
       )}

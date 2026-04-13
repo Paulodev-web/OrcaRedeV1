@@ -3,7 +3,6 @@
 import React, { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  AlertTriangle,
   ArrowRight,
   Brain,
   CheckCircle2,
@@ -11,13 +10,10 @@ import {
   Database,
   HelpCircle,
   Loader2,
-  Search,
   Sparkles,
 } from 'lucide-react';
-import {
-  saveManualMatchAction,
-  markQuoteConciliatedAction,
-} from '@/actions/supplierQuotes';
+import { markQuoteConciliatedAction } from '@/actions/supplierQuotes';
+import ManualMatchPanel from '@/components/suppliers/conciliation/ManualMatchPanel';
 import type { SupplierQuote } from '@/types';
 import type {
   SupplierQuoteItemWithMaterial,
@@ -67,150 +63,6 @@ function getStatusConfig(item: SupplierQuoteItemWithMaterial) {
   if (item.match_method === 'manual') return STATUS_CONFIG.manual;
   if (item.match_status === 'automatico') return STATUS_CONFIG.exact_memory;
   return STATUS_CONFIG.manual;
-}
-
-// ---------------------------------------------------------------------------
-// Sub-component: linha expandida para vinculação manual
-// ---------------------------------------------------------------------------
-interface MatchRowProps {
-  item: SupplierQuoteItemWithMaterial;
-  budgetMaterials: BudgetMaterialOption[];
-  supplierName: string;
-  onSaved: (itemId: string, materialId: string, factor: number, matName: string, matCode: string, matUnit: string) => void;
-}
-
-function MatchRow({ item, budgetMaterials, supplierName, onSaved }: MatchRowProps) {
-  const [search, setSearch] = useState('');
-  const [selectedMaterialId, setSelectedMaterialId] = useState(item.matched_material_id ?? '');
-  const [conversionFactor, setConversionFactor] = useState(String(item.conversion_factor ?? 1));
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-
-  const filtered = budgetMaterials.filter(
-    (m) =>
-      m.name.toLowerCase().includes(search.toLowerCase()) ||
-      m.code.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const selectedMat = budgetMaterials.find((m) => m.id === selectedMaterialId);
-  const factorNum = parseFloat(conversionFactor) || 1;
-  const canSave = selectedMaterialId !== '' && factorNum > 0;
-
-  const handleSave = () => {
-    if (!canSave) return;
-    setError(null);
-
-    startTransition(async () => {
-      const result = await saveManualMatchAction({
-        itemId: item.id,
-        materialId: selectedMaterialId,
-        conversionFactor: factorNum,
-        supplierName,
-        supplierMaterialName: item.descricao,
-      });
-
-      if (!result.success) {
-        setError(result.error);
-        return;
-      }
-
-      const mat = budgetMaterials.find((m) => m.id === selectedMaterialId)!;
-      onSaved(item.id, selectedMaterialId, factorNum, mat.name, mat.code, mat.unit);
-    });
-  };
-
-  return (
-    <div className="space-y-3 rounded-lg border border-[#64ABDE]/40 bg-[#64ABDE]/10 p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-[#1D3140]">
-        Vincular: <span className="font-normal normal-case text-[#64ABDE]">{item.descricao}</span>
-      </p>
-
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar material do orçamento..."
-          className="w-full rounded-md border border-gray-300 bg-white py-2 pl-8 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
-        />
-      </div>
-
-      <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-md bg-white divide-y divide-gray-100">
-        {filtered.length === 0 ? (
-          <p className="p-3 text-sm text-gray-400 text-center">Nenhum material encontrado.</p>
-        ) : (
-          filtered.map((mat) => (
-            <button
-              key={mat.id}
-              type="button"
-              onClick={() => setSelectedMaterialId(mat.id)}
-              className={`w-full px-3 py-2 text-left text-sm transition-colors hover:bg-[#64ABDE]/10 ${
-                selectedMaterialId === mat.id ? 'bg-[#64ABDE]/20 font-medium text-[#1D3140]' : 'text-gray-700'
-              }`}
-            >
-              <span className="font-mono text-xs text-gray-400 mr-2">{mat.code}</span>
-              {mat.name}
-              <span className="ml-1 text-xs text-gray-400">({mat.unit})</span>
-            </button>
-          ))
-        )}
-      </div>
-
-      {selectedMat && (
-        <div className="flex items-end gap-4 pt-1">
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Fator de conversão
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min="0.0001"
-                step="any"
-                value={conversionFactor}
-                onChange={(e) => setConversionFactor(e.target.value)}
-                className="w-28 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
-              />
-              <p className="text-xs text-gray-500">
-                Fornecedor vende em{' '}
-                <span className="font-medium">{item.unidade}</span>
-                {factorNum !== 1 && (
-                  <>
-                    {' '}→ 1 {item.unidade} ={' '}
-                    <span className="font-medium">{formatNumber(factorNum)}</span>{' '}
-                    {selectedMat.unit}
-                  </>
-                )}
-              </p>
-            </div>
-            <p className="text-xs text-gray-400 mt-1">
-              Preço normalizado:{' '}
-              <span className="font-semibold text-gray-700">
-                {formatCurrency(item.preco_unit / factorNum)} / {selectedMat.unit}
-              </span>
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={!canSave || isPending}
-            className={`flex items-center gap-1.5 rounded-md px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 ${onPortalPrimaryButtonSmClass}`}
-          >
-            {isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <CheckCircle2 className="h-3.5 w-3.5" />
-            )}
-            Confirmar
-          </button>
-        </div>
-      )}
-
-      {error && <p className="text-xs text-red-600">{error}</p>}
-    </div>
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -438,7 +290,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
                   {isExpanded && (
                     <tr>
                       <td colSpan={5} className="px-4 pb-4 pt-0 bg-white">
-                        <MatchRow
+                        <ManualMatchPanel
                           item={item}
                           budgetMaterials={budgetMaterials}
                           supplierName={quote.supplier_name}
