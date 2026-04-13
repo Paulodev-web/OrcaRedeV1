@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Clock, Eye, FileText, Loader2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabaseClient';
@@ -80,7 +80,7 @@ export default function SessionExtractionRealtime({
     const t = setTimeout(() => {
       setTransientProcessingErrors((prev) => prev.filter((e) => e.id !== id));
       transientErrorTimersRef.current.delete(id);
-    }, 12000);
+    }, 10000);
     transientErrorTimersRef.current.set(id, t);
   }, []);
 
@@ -106,19 +106,13 @@ export default function SessionExtractionRealtime({
     setQuotes(initialQuotes);
   }, [initialQuotes]);
 
-  // Erros já persistidos no servidor: banner temporário ao abrir a aba
-  useEffect(() => {
+  // Jobs que já estavam em erro no servidor: não mostrar banner ao abrir a página;
+  // só avisar quando um job passar a erro em tempo real (após esta marcação).
+  useLayoutEffect(() => {
     initialJobs.forEach((j) => {
-      if (j.status !== 'error') return;
-      if (notifiedErrorJobIdsRef.current.has(j.id)) return;
-      notifiedErrorJobIdsRef.current.add(j.id);
-      pushTransientProcessingError(
-        j.id,
-        fileLabel(j.file_path),
-        j.error_message ?? 'Erro ao processar o PDF.',
-      );
+      if (j.status === 'error') notifiedErrorJobIdsRef.current.add(j.id);
     });
-  }, [initialJobs, pushTransientProcessingError]);
+  }, [initialJobs]);
 
   // Track whether any job was ever processing in this mount cycle
   useEffect(() => {
@@ -250,7 +244,7 @@ export default function SessionExtractionRealtime({
               Erro ao processar PDF
               {transientProcessingErrors.length > 1 ? 's' : ''}
             </div>
-            <span className="text-xs text-red-700/80">Desaparece em ~12s</span>
+            <span className="text-xs text-red-700/80">Desaparece em ~10s</span>
           </div>
           <ul className="space-y-2">
             {transientProcessingErrors.map((e) => (
