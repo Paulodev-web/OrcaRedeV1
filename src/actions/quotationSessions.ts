@@ -342,6 +342,55 @@ export async function listExtractionJobsBySessionAction(
   }
 }
 
+export async function retryExtractionJobsAction(
+  sessionId: string
+): Promise<ActionResult<{ jobIds: string[] }>> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const { data: erroredJobs, error: listError } = await supabase
+      .from('extraction_jobs')
+      .select('id')
+      .eq('session_id', sessionId)
+      .eq('user_id', userId)
+      .eq('status', 'error');
+
+    if (listError) {
+      return { success: false, error: listError.message };
+    }
+
+    const jobIds = (erroredJobs ?? []).map((job) => job.id);
+    if (jobIds.length === 0) {
+      return { success: true, data: { jobIds: [] } };
+    }
+
+    const { error: updateError } = await supabase
+      .from('extraction_jobs')
+      .update({
+        status: 'pending',
+        error_message: null,
+        started_at: null,
+        finished_at: null,
+        estimated_time: null,
+      })
+      .in('id', jobIds)
+      .eq('user_id', userId);
+
+    if (updateError) {
+      return { success: false, error: updateError.message };
+    }
+
+    revalidatePath('/fornecedores');
+    revalidatePath(`/fornecedores/sessao/${sessionId}`);
+    revalidatePath(`/fornecedores/sessao/${sessionId}/conciliacao`);
+    return { success: true, data: { jobIds } };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao reenfileirar jobs.';
+    return { success: false, error: message };
+  }
+}
+
 export async function listQuotesBySessionAction(
   sessionId: string
 ): Promise<ActionResult<{ quotes: { id: string; supplier_name: string; status: string; created_at: string }[] }>> {

@@ -170,6 +170,8 @@ export default function ConciliationCurationView({
     () => initialPayload?.supplier_column_order ?? [],
   );
   const [loadError, setLoadError] = useState<string | null>(() => initialError);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
   const [searchFilter, setSearchFilter] = useState('');
 
   useEffect(() => {
@@ -195,17 +197,30 @@ export default function ConciliationCurationView({
   };
 
   const handleRefresh = () => {
-    void getConciliationPayloadBySessionAction(sessionId).then((res) => {
-      if (res.success) {
-        setMaterials(res.data.materials);
-        setUnlinked(res.data.unlinked_items);
-        setSupplierColumnOrder(res.data.supplier_column_order);
-        setLoadError(null);
-      } else {
-        setLoadError(res.error);
-      }
-      router.refresh();
-    });
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    void getConciliationPayloadBySessionAction(sessionId)
+      .then((res) => {
+        if (res.success) {
+          setMaterials(res.data.materials);
+          setUnlinked(res.data.unlinked_items);
+          setSupplierColumnOrder(res.data.supplier_column_order);
+          setLoadError(null);
+          setLastRefreshedAt(
+            new Intl.DateTimeFormat('pt-BR', {
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+            }).format(new Date()),
+          );
+        } else {
+          setLoadError(res.error);
+        }
+        router.refresh();
+      })
+      .finally(() => {
+        setIsRefreshing(false);
+      });
   };
 
   const needle = searchFilter.toLowerCase();
@@ -273,9 +288,11 @@ export default function ConciliationCurationView({
             <button
               type="button"
               onClick={handleRefresh}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              disabled={isRefreshing}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
             >
-              Atualizar
+              {isRefreshing && <Loader2 className="h-4 w-4 animate-spin" />}
+              {isRefreshing ? 'Atualizando...' : 'Atualizar'}
             </button>
             {budgetId && (
               <Link
@@ -287,6 +304,9 @@ export default function ConciliationCurationView({
             )}
           </div>
         </div>
+        {lastRefreshedAt && (
+          <p className="mt-2 text-xs text-gray-400">Atualizado as {lastRefreshedAt}</p>
+        )}
 
         <div className="relative mt-4">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />

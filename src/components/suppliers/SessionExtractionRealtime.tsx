@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Clock, Eye, FileText, Loader2, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Clock, Eye, FileText, Loader2, RotateCcw, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { retryExtractionJobsAction } from '@/actions/quotationSessions';
 import { supabase } from '@/lib/supabaseClient';
 import type { ExtractionJobRow } from '@/actions/quotationSessions';
 import BatchDropzoneManager from '@/components/suppliers/BatchDropzoneManager';
@@ -22,6 +23,7 @@ interface Props {
   initialJobs: ExtractionJobRow[];
   initialQuotes: QuoteRow[];
   onAllProcessed?: () => void;
+  onJobsChange?: (jobs: ExtractionJobRow[]) => void;
 }
 
 function fileLabel(path: string): string {
@@ -50,11 +52,13 @@ export default function SessionExtractionRealtime({
   initialJobs,
   initialQuotes,
   onAllProcessed,
+  onJobsChange,
 }: Props) {
   const [jobs, setJobs] = useState<ExtractionJobRow[]>(initialJobs);
   const [quotes, setQuotes] = useState<QuoteRow[]>(initialQuotes);
   const [curationQuoteId, setCurationQuoteId] = useState<string | null>(null);
   const [curationSupplier, setCurationSupplier] = useState('');
+  const [retryingErrors, setRetryingErrors] = useState(false);
 
   const hadProcessingRef = useRef(false);
   const toastFiredRef = useRef(false);
@@ -105,6 +109,10 @@ export default function SessionExtractionRealtime({
   useEffect(() => {
     setQuotes(initialQuotes);
   }, [initialQuotes]);
+
+  useEffect(() => {
+    onJobsChange?.(jobs);
+  }, [jobs, onJobsChange]);
 
   // Jobs que já estavam em erro no servidor: não mostrar banner ao abrir a página;
   // só avisar quando um job passar a erro em tempo real (após esta marcação).
@@ -223,7 +231,45 @@ export default function SessionExtractionRealtime({
     toast.success('Extração validada com sucesso.');
   };
 
+  const enqueueJob = async (jobId: string) => {
+    const res = await fetch('/api/process-pdfs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ job_id: jobId }),
+    });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new Error(body.error ?? `Falha ao enfileirar job (${res.status}).`);
+    }
+  };
+
+  const handleRetryErroredJobs = async () => {
+    const erroredIds = jobs.filter((j) => j.status === 'error').map((j) => j.id);
+    if (erroredIds.length === 0 || retryingErrors) return;
+
+    setRetryingErrors(true);
+    try {
+      const result = await retryExtractionJobsAction(sessionId);
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      await Promise.all(result.data.jobIds.map((jobId) => enqueueJob(jobId)));
+      toast.success(
+        result.data.jobIds.length === 1
+          ? 'Job reenfileirado com sucesso.'
+          : `${result.data.jobIds.length} jobs reenfileirados com sucesso.`,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro ao reenfileirar jobs.';
+      toast.error(message);
+    } finally {
+      setRetryingErrors(false);
+    }
+  };
+
   const activeJobs = jobs.filter((j) => j.status === 'pending' || j.status === 'processing');
+  const erroredJobs = jobs.filter((j) => j.status === 'error');
 
   return (
     <div className="space-y-8">
@@ -288,6 +334,48 @@ export default function SessionExtractionRealtime({
                 <span className="text-xs uppercase text-gray-500">{j.status}</span>
                 {j.estimated_time != null && j.status === 'processing' && (
                   <span className="text-xs text-gray-400">~{j.estimated_time}s</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {erroredJobs.length > 0 && (
+        <section>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-base font-semibold text-[#1D3140]">
+              Falhas no processamento ({erroredJobs.length})
+            </h2>
+            {!disabled && (
+              <button
+                type="button"
+                onClick={() => void handleRetryErroredJobs()}
+                disabled={retryingErrors}
+                className="inline-flex items-center gap-2 rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50"
+              >
+                {retryingErrors ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-4 w-4" />
+                )}
+                Tentar processar novamente
+              </button>
+            )}
+          </div>
+          <ul className="space-y-2">
+            {erroredJobs.map((j) => (
+              <li
+                key={j.id}
+                className="flex flex-wrap items-center gap-3 rounded-lg border border-red-200 bg-red-50/60 px-4 py-3 text-sm"
+              >
+                <JobStatusIcon status={j.status} />
+                <span className="flex-1 min-w-0 font-medium text-gray-800 truncate">
+                  {fileLabel(j.file_path)}
+                </span>
+                <span className="text-xs uppercase text-red-700">erro</span>
+                {j.error_message && (
+                  <span className="w-full text-xs text-red-700/90">{j.error_message}</span>
                 )}
               </li>
             ))}
