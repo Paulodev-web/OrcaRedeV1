@@ -1,5 +1,6 @@
 "use client";
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   LogOut,
   ChevronRight,
@@ -22,6 +23,8 @@ interface Module {
   description: string;
   icon: React.ComponentType<{ className?: string; size?: number }>;
   status: 'active' | 'soon';
+  /** When set, clicking the card navigates here instead of in-app module state */
+  href?: string;
   badge?: string;
   color: string;
   bgColor: string;
@@ -60,25 +63,30 @@ const modules: Module[] = [
 ];
 
 export function AdminPortal() {
+  const router = useRouter();
   const { setActiveModule, setCurrentView } = useApp();
   const { signOut, user } = useAuth();
   const [loadingModule, setLoadingModule] = useState<string | null>(null);
+  const activeModuleCount = modules.filter((m) => m.status === 'active').length;
 
   const handleOpenModule = async (moduleId: string) => {
+    const mod = modules.find((m) => m.id === moduleId);
+    if (mod?.href) {
+      router.push(mod.href);
+      return;
+    }
     setLoadingModule(moduleId);
     await new Promise((r) => setTimeout(r, 350));
-    
-    // Se for o OrçaRede, redireciona para o sistema de orçamentos
+
     if (moduleId === 'orca-rede') {
       setActiveModule('orcamentos');
     } else if (moduleId === 'portal-engenheiro') {
-      // Para o portal do engenheiro
       setActiveModule('portal-engenheiro');
       setCurrentView('portal-engenheiro');
     } else {
       setActiveModule(moduleId);
     }
-    
+
     setLoadingModule(null);
   };
 
@@ -217,7 +225,7 @@ export function AdminPortal() {
           </div>
           <div className="flex items-center space-x-2 px-3 py-1.5 rounded-full text-sm font-medium border" style={{ backgroundColor: `${ON_COLORS.blue}15`, color: ON_COLORS.navy, borderColor: `${ON_COLORS.blue}40` }}>
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ON_COLORS.blue }}></span>
-            <span>3 ativos</span>
+            <span>{activeModuleCount} ativos</span>
           </div>
         </div>
 
