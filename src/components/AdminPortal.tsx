@@ -13,6 +13,7 @@ import {
   Hammer,
   Package,
   Calculator,
+  HardHat,
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -81,12 +82,25 @@ const modules: Module[] = [
     bgColor: 'bg-[#64ABDE]/15',
     borderColor: 'border-[#64ABDE]/40',
   },
+  {
+    id: 'andamento-obra',
+    title: 'Andamento de Obra',
+    description: 'Acompanhamento de cronograma e evolução física das obras em campo',
+    icon: HardHat,
+    status: 'active',
+    href: '/andamento-obra',
+    badge: 'Obras',
+    color: 'text-[#1D3140]',
+    bgColor: 'bg-[#64ABDE]/15',
+    borderColor: 'border-[#64ABDE]/40',
+  },
 ];
 
 export function AdminPortal() {
   const router = useRouter();
   const { setActiveModule, setCurrentView } = useApp();
   const { signOut, user } = useAuth();
+  const activeModuleCount = modules.filter((m) => m.status === 'active').length;
   const handleOpenModule = (moduleId: string) => {
     if (moduleId === 'orca-rede') {
       setActiveModule('orcamentos');
@@ -224,7 +238,7 @@ export function AdminPortal() {
           </div>
           <div className="flex items-center space-x-2 px-3 py-1.5 rounded-full text-sm font-medium border" style={{ backgroundColor: `${ON_COLORS.blue}15`, color: ON_COLORS.navy, borderColor: `${ON_COLORS.blue}40` }}>
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ON_COLORS.blue }}></span>
-            <span>3 ativos</span>
+            <span>{activeModuleCount} ativos</span>
           </div>
         </div>
 
