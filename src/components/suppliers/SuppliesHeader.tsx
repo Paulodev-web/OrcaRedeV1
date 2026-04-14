@@ -7,6 +7,8 @@ interface SuppliesHeaderProps {
   sessionId?: string;
   sessionTitle?: string;
   activeStep?: HeaderStep;
+  /** Quando há sessão mas não há orçamento vinculado, o passo Cenários fica desabilitado. */
+  hasBudget?: boolean;
   title?: string;
   description?: string;
 }
@@ -25,15 +27,17 @@ export default function SuppliesHeader({
   sessionId,
   sessionTitle,
   activeStep,
+  hasBudget,
   title = 'Suprimentos e Cotações',
   description = 'Navegue entre cotações, conciliação e cenários do módulo de suprimentos.',
 }: SuppliesHeaderProps) {
   const cotacoesHref = sessionId ? `/fornecedores/sessao/${sessionId}` : '/fornecedores';
   const conciliacaoHref = sessionId ? `/fornecedores/sessao/${sessionId}/conciliacao` : '';
   const cenariosHref = sessionId ? `/fornecedores/sessao/${sessionId}/cenarios` : '';
+  const showCenariosLink = Boolean(sessionId && hasBudget);
 
   return (
-    <div className="rounded-2xl border border-[#64ABDE]/30 bg-white p-5 shadow-sm sm:p-6">
+    <div className="sticky top-0 z-20 rounded-2xl border border-[#64ABDE]/30 bg-white/95 p-5 shadow-sm backdrop-blur-sm sm:p-6">
       <div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-400">
         <Link href="/" className="inline-flex items-center gap-1 transition-colors hover:text-[#64ABDE]">
           <LayoutGrid className="h-3.5 w-3.5" />
@@ -77,13 +81,20 @@ export default function SuppliesHeader({
             Conciliação
           </span>
         )}
-        {sessionId ? (
+        {showCenariosLink ? (
           <Link href={cenariosHref} className={stepClass(activeStep === 'cenarios')}>
             <BarChart3 className="h-3.5 w-3.5" />
             Cenários
           </Link>
         ) : (
-          <span className={stepClass(false, true)}>
+          <span
+            className={stepClass(false, true)}
+            title={
+              sessionId && !hasBudget
+                ? 'Vincule um orçamento à sessão para comparar cenários de compra.'
+                : undefined
+            }
+          >
             <BarChart3 className="h-3.5 w-3.5" />
             Cenários
           </span>

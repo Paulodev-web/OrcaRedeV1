@@ -1,9 +1,9 @@
 import { notFound } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabaseServer';
 import {
-  getQuotationSessionByIdAction,
-  listExtractionJobsBySessionAction,
-} from '@/actions/quotationSessions';
+  getQuotationSessionByIdCached,
+  listExtractionJobsBySessionCached,
+} from '@/lib/quotationSessionReads';
 import SessionWorkspace from '@/components/suppliers/SessionWorkspace';
 import CompleteSessionButton from '@/components/suppliers/CompleteSessionButton';
 import SuppliesHeader from '@/components/suppliers/SuppliesHeader';
@@ -15,7 +15,7 @@ interface Props {
 export default async function QuotationSessionPage({ params }: Props) {
   const { sessionId } = await params;
 
-  const sessionRes = await getQuotationSessionByIdAction(sessionId);
+  const sessionRes = await getQuotationSessionByIdCached(sessionId);
   if (!sessionRes.success) notFound();
   const session = sessionRes.data;
 
@@ -29,7 +29,7 @@ export default async function QuotationSessionPage({ params }: Props) {
         .single()
     : { data: null };
 
-  const jobsRes = await listExtractionJobsBySessionAction(sessionId);
+  const jobsRes = await listExtractionJobsBySessionCached(sessionId);
   const initialJobs = jobsRes.success ? jobsRes.data.jobs : [];
 
   const { data: conciliationQuotesRaw } = await supabase
@@ -76,41 +76,40 @@ export default async function QuotationSessionPage({ params }: Props) {
   });
 
   return (
-    <main className="min-h-screen bg-slate-100 p-6 lg:p-8">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <SuppliesHeader
-          sessionId={sessionId}
-          sessionTitle={session.title}
-          activeStep="cotacoes"
-          title={session.title}
-          description={
-            session.budget_id
-              ? `Escopo: orçamento ${budgetRow?.project_name ?? '—'}`
-              : 'Escopo: global (catálogo de materiais)'
-          }
-        />
+    <div className="mx-auto max-w-5xl space-y-6">
+      <SuppliesHeader
+        sessionId={sessionId}
+        sessionTitle={session.title}
+        activeStep="cotacoes"
+        hasBudget={!!session.budget_id}
+        title={session.title}
+        description={
+          session.budget_id
+            ? `Escopo: orçamento ${budgetRow?.project_name ?? '—'}`
+            : 'Escopo: global (catálogo de materiais)'
+        }
+      />
 
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-gray-400">
-            Status:{' '}
-            <span className="font-medium text-gray-600">
-              {session.status === 'active' ? 'Ativa' : 'Encerrada'}
-            </span>
-          </p>
-          {session.status === 'active' && (
-            <CompleteSessionButton sessionId={sessionId} />
-          )}
-        </div>
-
-        <SessionWorkspace
-          sessionId={sessionId}
-          sessionStatus={session.status}
-          budgetId={session.budget_id}
-          initialJobs={initialJobs}
-          initialQuotes={initialQuotes}
-          conciliationQuotes={conciliationQuotes}
-        />
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-gray-400">
+          Status:{' '}
+          <span className="font-medium text-gray-600">
+            {session.status === 'active' ? 'Ativa' : 'Encerrada'}
+          </span>
+        </p>
+        {session.status === 'active' && (
+          <CompleteSessionButton sessionId={sessionId} />
+        )}
       </div>
-    </main>
+
+      <SessionWorkspace
+        sessionId={sessionId}
+        sessionStatus={session.status}
+        budgetId={session.budget_id}
+        initialJobs={initialJobs}
+        initialQuotes={initialQuotes}
+        conciliationQuotes={conciliationQuotes}
+      />
+    </div>
   );
 }

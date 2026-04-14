@@ -236,6 +236,7 @@ export default function FornecedoresHub({
             <li key={s.id}>
               <div className="relative flex h-full flex-col rounded-2xl border border-[#64ABDE]/40 bg-white shadow-md transition-shadow hover:shadow-lg">
                 <Link
+                  prefetch
                   href={`/fornecedores/sessao/${s.id}`}
                   className="absolute inset-0 z-0 rounded-2xl outline-none ring-2 ring-transparent ring-offset-2 focus-visible:ring-[#64ABDE]"
                   aria-label={`Abrir sessão: ${s.title}`}

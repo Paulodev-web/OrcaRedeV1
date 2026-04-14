@@ -1,5 +1,5 @@
 "use client";
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   LogOut,
   ChevronRight,
@@ -24,6 +24,8 @@ interface Module {
   description: string;
   icon: React.ComponentType<{ className?: string; size?: number }>;
   status: 'active' | 'soon';
+  /** Quando definido, o cartão navega com `Link` (prefetch do App Router). */
+  href?: string;
   badge?: string;
   color: string;
   bgColor: string;
@@ -65,6 +67,7 @@ const modules: Module[] = [
     description: 'Importação de PDFs de fornecedores, conciliação de itens e cenários de compra',
     icon: Package,
     status: 'active',
+    href: '/fornecedores',
     badge: 'Compras',
     color: 'text-[#1D3140]',
     bgColor: 'bg-[#64ABDE]/15',
@@ -76,6 +79,7 @@ const modules: Module[] = [
     description: 'Formação de preço de venda com custo direto, BDI e análise de lucro',
     icon: Calculator,
     status: 'active',
+    href: '/tools/precificacao',
     badge: 'Comercial',
     color: 'text-[#1D3140]',
     bgColor: 'bg-[#64ABDE]/15',
@@ -84,7 +88,6 @@ const modules: Module[] = [
 ];
 
 export function AdminPortal() {
-  const router = useRouter();
   const { setActiveModule, setCurrentView } = useApp();
   const { signOut, user } = useAuth();
   const handleOpenModule = (moduleId: string) => {
@@ -93,10 +96,6 @@ export function AdminPortal() {
     } else if (moduleId === 'portal-engenheiro') {
       setActiveModule('portal-engenheiro');
       setCurrentView('portal-engenheiro');
-    } else if (moduleId === 'fornecedores') {
-      router.push('/fornecedores');
-    } else if (moduleId === 'precificacao') {
-      router.push('/tools/precificacao');
     } else {
       setActiveModule(moduleId);
     }
@@ -233,19 +232,16 @@ export function AdminPortal() {
           {modules.map((mod) => {
             const Icon = mod.icon;
             const isActive = mod.status === 'active';
-            return (
-              <div
-                key={mod.id}
-                className={`
-                  relative bg-white rounded-2xl border transition-all duration-200 overflow-hidden
+            const cardClass = `
+                  relative block bg-white rounded-2xl border transition-all duration-200 overflow-hidden
                   ${isActive
-                    ? 'border-[#64ABDE]/40 shadow-md hover:shadow-xl hover:-translate-y-1 cursor-pointer'
+                    ? 'border-[#64ABDE]/40 shadow-md hover:shadow-xl hover:-translate-y-1 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#64ABDE]'
                     : 'border-slate-200 shadow-sm opacity-70 cursor-not-allowed'
                   }
-                `}
-                onClick={() => isActive && handleOpenModule(mod.id)}
-              >
-                {/* Active indicator strip */}
+                `;
+
+            const cardBody = (
+              <>
                 {isActive && (
                   <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl" style={{ background: `linear-gradient(90deg, ${ON_COLORS.navy} 0%, ${ON_COLORS.blue} 100%)` }}></div>
                 )}
@@ -271,14 +267,13 @@ export function AdminPortal() {
                   <p className="text-sm text-slate-500 leading-relaxed mb-4">{mod.description}</p>
 
                   {isActive ? (
-                    <button
-                      type="button"
-                      className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl text-white text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md"
+                    <span
+                      className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl text-white text-sm font-semibold transition-all duration-200 shadow-sm group-hover:shadow-md"
                       style={{ background: `linear-gradient(135deg, ${ON_COLORS.navy} 0%, ${ON_COLORS.blue} 100%)` }}
                     >
                       <span>Acessar módulo</span>
                       <ArrowRight className="w-4 h-4" />
-                    </button>
+                    </span>
                   ) : (
                     <div className="w-full flex items-center justify-center py-2.5 px-4 rounded-xl bg-slate-100 text-sm font-medium text-slate-500 border border-slate-200">
                       <Clock className="w-4 h-4 mr-2" />
@@ -286,6 +281,33 @@ export function AdminPortal() {
                     </div>
                   )}
                 </div>
+              </>
+            );
+
+            if (isActive && mod.href) {
+              return (
+                <Link key={mod.id} href={mod.href} prefetch className={`group ${cardClass}`}>
+                  {cardBody}
+                </Link>
+              );
+            }
+
+            return (
+              <div
+                key={mod.id}
+                className={cardClass}
+                role={isActive ? 'button' : undefined}
+                tabIndex={isActive ? 0 : undefined}
+                onClick={() => isActive && handleOpenModule(mod.id)}
+                onKeyDown={(e) => {
+                  if (!isActive) return;
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleOpenModule(mod.id);
+                  }
+                }}
+              >
+                {cardBody}
               </div>
             );
           })}
