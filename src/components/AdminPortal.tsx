@@ -25,6 +25,8 @@ interface Module {
   description: string;
   icon: React.ComponentType<{ className?: string; size?: number }>;
   status: 'active' | 'soon';
+  /** When set, clicking the card navigates here instead of in-app module state */
+  href?: string;
   badge?: string;
   color: string;
   bgColor: string;
@@ -102,6 +104,11 @@ export function AdminPortal() {
   const { signOut, user } = useAuth();
   const activeModuleCount = modules.filter((m) => m.status === 'active').length;
   const handleOpenModule = (moduleId: string) => {
+    const mod = modules.find((m) => m.id === moduleId);
+    if (mod?.href) {
+      router.push(mod.href);
+      return;
+    }
     if (moduleId === 'orca-rede') {
       setActiveModule('orcamentos');
     } else if (moduleId === 'portal-engenheiro') {
