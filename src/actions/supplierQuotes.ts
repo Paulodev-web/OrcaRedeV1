@@ -509,6 +509,71 @@ export async function acceptAiSuggestionAction(
 }
 
 // ---------------------------------------------------------------------------
+// rejectAiSuggestionAction
+// Recusa uma sugestão da IA: limpa o vínculo do item e marca a sugestão como rejected.
+// ---------------------------------------------------------------------------
+export interface RejectAiSuggestionInput {
+  itemId: string;
+  suggestionId: string;
+}
+
+export async function rejectAiSuggestionAction(
+  input: RejectAiSuggestionInput
+): Promise<ActionResult<void>> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const { error: itemError } = await supabase
+      .from('supplier_quote_items')
+      .update({
+        matched_material_id: null,
+        conversion_factor: 1,
+        match_status: 'sem_match',
+        match_method: null,
+        match_level: null,
+        match_confidence: null,
+      })
+      .eq('id', input.itemId);
+
+    if (itemError) {
+      return { success: false, error: `Erro ao recusar sugestão: ${itemError.message}` };
+    }
+
+    await supabase
+      .from('semantic_match_suggestions')
+      .update({ status: 'rejected', reviewed_at: new Date().toISOString() })
+      .eq('id', input.suggestionId);
+
+    const { data: itemRow } = await supabase
+      .from('supplier_quote_items')
+      .select('quote_id')
+      .eq('id', input.itemId)
+      .single();
+
+    if (itemRow?.quote_id) {
+      const { data: quoteRow } = await supabase
+        .from('supplier_quotes')
+        .select('session_id')
+        .eq('id', itemRow.quote_id)
+        .eq('user_id', userId)
+        .single();
+
+      if (quoteRow?.session_id) {
+        revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}`);
+        revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/conciliacao`);
+        revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/cenarios`);
+      }
+    }
+    revalidatePath('/fornecedores');
+    return { success: true, data: undefined };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao recusar sugestão IA.';
+    return { success: false, error: message };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // markQuoteConciliatedAction
 // Atualiza o status da cotação para 'conciliado' quando todos os itens têm match.
 // ---------------------------------------------------------------------------
@@ -618,12 +683,15 @@ export async function listQuotesByBudgetAction(
 // calculateScenariosAction
 // Calcula Cenário A (pacote por fornecedor) e Cenário B (melhor preço por item).
 // Todos os preços são normalizados: preco_normalizado = preco_unit / conversion_factor.
+// Quantidade usada é net_qty = max(required_qty - stock_qty, 0).
 // ---------------------------------------------------------------------------
 export interface ScenarioItem {
   material_id: string;
   material_name: string;
   material_code: string;
-  quantidade: number;
+  required_qty: number;
+  stock_qty: number;
+  net_qty: number;
   best_supplier: string;
   best_price_normalized: number;
   best_total: number;
@@ -662,7 +730,6 @@ export async function calculateScenariosAction(
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
 
-    // Busca todos os itens com match de todas as cotações do orçamento
     let query = supabase
       .from('supplier_quote_items')
       .select(`
@@ -678,7 +745,8 @@ export async function calculateScenariosAction(
           id,
           supplier_name,
           budget_id,
-          user_id
+          user_id,
+          session_id
         )
       `)
       .eq('supplier_quotes.budget_id', budgetId)
@@ -695,6 +763,19 @@ export async function calculateScenariosAction(
       return { success: false, error: error.message };
     }
 
+    // Build stock map from session inputs (if session provided)
+    const stockMap = new Map<string, number>();
+    if (sessionId) {
+      const { data: stockRows } = await supabase
+        .from('session_material_stock_inputs')
+        .select('material_id, stock_qty')
+        .eq('session_id', sessionId)
+        .eq('user_id', userId);
+      for (const r of stockRows ?? []) {
+        stockMap.set(r.material_id, Number(r.stock_qty));
+      }
+    }
+
     if (!rawItems || rawItems.length === 0) {
       return {
         success: true,
@@ -706,17 +787,19 @@ export async function calculateScenariosAction(
       };
     }
 
-    // Agrupa ofertas por material_id
     type Offer = {
       supplier_name: string;
       quote_id: string;
       preco_unit: number;
       conversion_factor: number;
       preco_normalizado: number;
-      total_normalizado: number;
       quantidade: number;
     };
-    const materialOffers = new Map<string, { material: { id: string; code: string; name: string }; quantidade: number; offers: Offer[] }>();
+    const materialOffers = new Map<string, {
+      material: { id: string; code: string; name: string };
+      required_qty: number;
+      offers: Offer[];
+    }>();
 
     for (const row of rawItems) {
       const mat = row.materials as unknown as { id: string; code: string; name: string; unit: string } | null;
@@ -727,33 +810,38 @@ export async function calculateScenariosAction(
         ? row.preco_unit / row.conversion_factor
         : row.preco_unit;
 
-      const existing = materialOffers.get(mat.id);
       const offer: Offer = {
         supplier_name: quote.supplier_name,
         quote_id: row.quote_id,
         preco_unit: row.preco_unit,
         conversion_factor: row.conversion_factor,
         preco_normalizado,
-        total_normalizado: preco_normalizado * row.quantidade,
         quantidade: row.quantidade,
       };
 
+      const existing = materialOffers.get(mat.id);
       if (existing) {
         existing.offers.push(offer);
+        if (row.quantidade > existing.required_qty) {
+          existing.required_qty = row.quantidade;
+        }
       } else {
         materialOffers.set(mat.id, {
           material: mat,
-          quantidade: row.quantidade,
+          required_qty: row.quantidade,
           offers: [offer],
         });
       }
     }
 
-    // Cenário B — melhor preço por item
+    // Cenário B — melhor preço por item (using net_qty)
     const scenarioBItems: ScenarioItem[] = [];
     let scenarioBTotal = 0;
 
     for (const [, entry] of materialOffers) {
+      const stock = stockMap.get(entry.material.id) ?? 0;
+      const net_qty = Math.max(entry.required_qty - stock, 0);
+
       const best = entry.offers.reduce((a, b) =>
         a.preco_normalizado < b.preco_normalizado ? a : b
       );
@@ -762,51 +850,58 @@ export async function calculateScenariosAction(
         material_id: entry.material.id,
         material_name: entry.material.name,
         material_code: entry.material.code,
-        quantidade: entry.quantidade,
+        required_qty: entry.required_qty,
+        stock_qty: stock,
+        net_qty,
         best_supplier: best.supplier_name,
         best_price_normalized: best.preco_normalizado,
-        best_total: best.total_normalizado,
+        best_total: best.preco_normalizado * net_qty,
         all_offers: entry.offers.map((o) => ({
           supplier_name: o.supplier_name,
           preco_unit: o.preco_unit,
           conversion_factor: o.conversion_factor,
           preco_normalizado: o.preco_normalizado,
-          total_normalizado: o.total_normalizado,
+          total_normalizado: o.preco_normalizado * net_qty,
         })),
       };
 
       scenarioBItems.push(item);
-      scenarioBTotal += best.total_normalizado;
-    }
-
-    // Cenário A — total por fornecedor
-    const supplierTotals = new Map<string, { quote_id: string; total: number; items_covered: number }>();
-    for (const row of rawItems) {
-      const quote = row.supplier_quotes as unknown as { id: string; supplier_name: string } | null;
-      if (!quote) continue;
-      const preco_normalizado = row.conversion_factor > 0
-        ? row.preco_unit / row.conversion_factor
-        : row.preco_unit;
-      const existing = supplierTotals.get(quote.supplier_name);
-      if (existing) {
-        existing.total += preco_normalizado * row.quantidade;
-        existing.items_covered += 1;
-      } else {
-        supplierTotals.set(quote.supplier_name, {
-          quote_id: row.quote_id,
-          total: preco_normalizado * row.quantidade,
-          items_covered: 1,
-        });
+      if (net_qty > 0) {
+        scenarioBTotal += item.best_total;
       }
     }
 
-    const totalItems = materialOffers.size;
+    // Cenário A — total por fornecedor (using net_qty)
+    const supplierTotals = new Map<string, { quote_id: string; total: number; items_covered: number }>();
+
+    for (const [, entry] of materialOffers) {
+      const stock = stockMap.get(entry.material.id) ?? 0;
+      const net_qty = Math.max(entry.required_qty - stock, 0);
+      if (net_qty === 0) continue;
+
+      for (const offer of entry.offers) {
+        const existing = supplierTotals.get(offer.supplier_name);
+        const offerTotal = offer.preco_normalizado * net_qty;
+        if (existing) {
+          existing.total += offerTotal;
+          existing.items_covered += 1;
+        } else {
+          supplierTotals.set(offer.supplier_name, {
+            quote_id: offer.quote_id,
+            total: offerTotal,
+            items_covered: 1,
+          });
+        }
+      }
+    }
+
+    const totalItemsWithDemand = scenarioBItems.filter((i) => i.net_qty > 0).length;
     const scenarioA: ScenarioSupplier[] = Array.from(supplierTotals.entries())
       .map(([supplier_name, data]) => ({
         supplier_name,
         quote_id: data.quote_id,
         items_covered: data.items_covered,
-        total_items: totalItems,
+        total_items: totalItemsWithDemand,
         total_normalizado: data.total,
       }))
       .sort((a, b) => a.total_normalizado - b.total_normalizado);
@@ -1040,7 +1135,7 @@ export async function getConciliationPayloadBySessionAction(
         ipi_percent, st_incluso, alerta, matched_material_id, conversion_factor,
         match_status, match_level, match_confidence, match_method, created_at,
         materials (code, name, unit),
-        semantic_match_suggestions (id, rationale, status)
+        semantic_match_suggestions (id, rationale, status, suggested_material_id, suggested_conversion_factor)
       `)
       .in('quote_id', quoteIds)
       .order('created_at', { ascending: true });
@@ -1065,8 +1160,12 @@ export async function getConciliationPayloadBySessionAction(
 
     for (const row of rawItems ?? []) {
       const materialRow = Array.isArray(row.materials) ? row.materials[0] : row.materials;
-      const suggestions = (row.semantic_match_suggestions ?? []) as { id: string; rationale?: string; status: string }[];
+      const suggestions = (row.semantic_match_suggestions ?? []) as {
+        id: string; rationale?: string; status: string;
+        suggested_material_id?: string; suggested_conversion_factor?: number;
+      }[];
       const suggestion = suggestions.find((s) => s.status === 'suggested') ?? suggestions[0];
+      const rejectedSuggestion = suggestions.find((s) => s.status === 'rejected');
 
       const item: SupplierQuoteItemWithMaterial & { supplier_name: string; suggestion_id?: string | null } = {
         id: row.id,
@@ -1105,6 +1204,11 @@ export async function getConciliationPayloadBySessionAction(
           linked_items: [item],
         };
         materialMap.set(row.matched_material_id, matEntry);
+      } else if (
+        rejectedSuggestion?.suggested_material_id &&
+        materialMap.has(rejectedSuggestion.suggested_material_id)
+      ) {
+        materialMap.get(rejectedSuggestion.suggested_material_id)!.linked_items.push(item);
       } else {
         unlinked.push(item);
       }
@@ -1146,6 +1250,78 @@ export async function getConciliationPayloadBySessionAction(
     };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao carregar conciliação da sessão.';
+    return { success: false, error: message };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// getSessionStockInputsAction
+// Busca estoque manual informado pelo usuário para uma sessão.
+// ---------------------------------------------------------------------------
+export interface SessionStockInput {
+  material_id: string;
+  stock_qty: number;
+}
+
+export async function getSessionStockInputsAction(
+  sessionId: string
+): Promise<ActionResult<SessionStockInput[]>> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const { data, error } = await supabase
+      .from('session_material_stock_inputs')
+      .select('material_id, stock_qty')
+      .eq('session_id', sessionId)
+      .eq('user_id', userId);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, data: (data ?? []).map((r) => ({ material_id: r.material_id, stock_qty: Number(r.stock_qty) })) };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao buscar estoque manual.';
+    return { success: false, error: message };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// saveSessionStockInputsAction
+// Salva/atualiza estoque manual em lote (upsert por session + material + user).
+// ---------------------------------------------------------------------------
+export async function saveSessionStockInputsAction(
+  sessionId: string,
+  inputs: { material_id: string; stock_qty: number }[]
+): Promise<ActionResult<void>> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    if (inputs.length === 0) {
+      return { success: true, data: undefined };
+    }
+
+    const rows = inputs.map((i) => ({
+      session_id: sessionId,
+      material_id: i.material_id,
+      user_id: userId,
+      stock_qty: Math.max(0, i.stock_qty),
+    }));
+
+    const { error } = await supabase
+      .from('session_material_stock_inputs')
+      .upsert(rows, { onConflict: 'session_id,material_id,user_id' });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath(`/fornecedores/sessao/${sessionId}/cenarios`);
+    return { success: true, data: undefined };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao salvar estoque manual.';
     return { success: false, error: message };
   }
 }

@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabaseServer';
 import {
@@ -7,6 +6,7 @@ import {
 } from '@/actions/quotationSessions';
 import SessionWorkspace from '@/components/suppliers/SessionWorkspace';
 import CompleteSessionButton from '@/components/suppliers/CompleteSessionButton';
+import SuppliesHeader from '@/components/suppliers/SuppliesHeader';
 
 interface Props {
   params: Promise<{ sessionId: string }>;
@@ -78,43 +78,29 @@ export default async function QuotationSessionPage({ params }: Props) {
   return (
     <main className="min-h-screen bg-slate-100 p-6 lg:p-8">
       <div className="mx-auto max-w-5xl space-y-6">
-        <div className="text-sm text-slate-500">
-          <Link
-            href="/fornecedores"
-            className="text-[#64ABDE] transition-colors hover:text-[#1D3140] hover:underline"
-          >
-            ← Hub de sessões
-          </Link>
-        </div>
+        <SuppliesHeader
+          sessionId={sessionId}
+          sessionTitle={session.title}
+          activeStep="cotacoes"
+          title={session.title}
+          description={
+            session.budget_id
+              ? `Escopo: orçamento ${budgetRow?.project_name ?? '—'}`
+              : 'Escopo: global (catálogo de materiais)'
+          }
+        />
 
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-[#1D3140]">
-              {session.title}
-            </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              {session.budget_id ? (
-                <>
-                  Escopo: orçamento{' '}
-                  <span className="font-medium text-gray-700">
-                    {budgetRow?.project_name ?? '—'}
-                  </span>
-                </>
-              ) : (
-                <>Escopo: global (catálogo de materiais)</>
-              )}
-            </p>
-            <p className="mt-1 text-xs text-gray-400">
-              Status:{' '}
-              <span className="font-medium text-gray-600">
-                {session.status === 'active' ? 'Ativa' : 'Encerrada'}
-              </span>
-            </p>
-          </div>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-gray-400">
+            Status:{' '}
+            <span className="font-medium text-gray-600">
+              {session.status === 'active' ? 'Ativa' : 'Encerrada'}
+            </span>
+          </p>
           {session.status === 'active' && (
             <CompleteSessionButton sessionId={sessionId} />
           )}
-        </header>
+        </div>
 
         <SessionWorkspace
           sessionId={sessionId}

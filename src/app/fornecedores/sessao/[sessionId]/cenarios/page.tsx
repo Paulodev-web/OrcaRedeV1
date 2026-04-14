@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { ArrowLeft, BarChart3 } from 'lucide-react';
 import { getQuotationSessionByIdAction } from '@/actions/quotationSessions';
 import {
   calculateScenariosAction,
   listQuotesByBudgetAction,
+  getSessionStockInputsAction,
 } from '@/actions/supplierQuotes';
 import SessionScenariosView from '@/components/suppliers/SessionScenariosView';
+import SuppliesHeader from '@/components/suppliers/SuppliesHeader';
 
 interface Props {
   params: Promise<{ sessionId: string }>;
@@ -24,42 +25,26 @@ export default async function SessionCenariosPage({ params }: Props) {
     redirect(`/fornecedores/sessao/${sessionId}`);
   }
 
-  const [scenariosResult, quotesResult] = await Promise.all([
+  const [scenariosResult, quotesResult, stockResult] = await Promise.all([
     calculateScenariosAction(session.budget_id, sessionId),
     listQuotesByBudgetAction(session.budget_id, sessionId),
+    getSessionStockInputsAction(sessionId),
   ]);
 
   const scenarios = scenariosResult.success ? scenariosResult.data : null;
   const quotes = quotesResult.success ? quotesResult.data.quotes : [];
+  const initialStock = stockResult.success ? stockResult.data : [];
 
   return (
     <main className="min-h-screen bg-slate-100 p-6 lg:p-8">
       <div className="mx-auto max-w-7xl space-y-6">
-        <div className="flex items-center gap-4">
-          <Link
-            href={`/fornecedores/sessao/${sessionId}/conciliacao`}
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Voltar para Conciliação
-          </Link>
-        </div>
-
-        <header className="flex items-start gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#64ABDE]/40 bg-[#64ABDE]/15">
-            <BarChart3 className="h-6 w-6 text-[#1D3140]" aria-hidden />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-[#1D3140]">
-              Análise de Cenários de Compra
-            </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Sessão: <span className="font-medium text-slate-700">{session.title}</span>
-              {' · '}
-              {quotes.length} fornecedor(es) cotado(s)
-            </p>
-          </div>
-        </header>
+        <SuppliesHeader
+          sessionId={sessionId}
+          sessionTitle={session.title}
+          activeStep="cenarios"
+          title="Análise de Cenários de Compra"
+          description={`Sessão com ${quotes.length} fornecedor(es) cotado(s).`}
+        />
 
         {!scenarios || scenarios.scenarioA.length === 0 ? (
           <div className="rounded-xl border border-dashed border-gray-200 bg-white p-12 text-center">
@@ -81,6 +66,8 @@ export default async function SessionCenariosPage({ params }: Props) {
             scenarios={scenarios}
             quotes={quotes}
             sessionId={sessionId}
+            budgetId={session.budget_id}
+            initialStock={initialStock}
           />
         )}
       </div>

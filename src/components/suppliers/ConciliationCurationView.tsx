@@ -6,20 +6,33 @@ import { useRouter } from 'next/navigation';
 import {
   Brain,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Database,
   HelpCircle,
   Loader2,
+  Plus,
   Search,
   Sparkles,
+  XCircle,
 } from 'lucide-react';
 import {
   getConciliationPayloadBySessionAction,
   acceptAiSuggestionAction,
+  rejectAiSuggestionAction,
+  saveManualMatchAction,
   type SessionConciliationMaterialRow,
   type SessionConciliationQuoteSummary,
   type BudgetMaterialOption,
   type SupplierQuoteItemWithMaterial,
 } from '@/actions/supplierQuotes';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { onPortalPrimaryButtonSmClass } from '@/lib/branding';
 
 const fmtCurrency = (v: number) =>
@@ -81,19 +94,137 @@ function StatusBadge({ item }: { item: SupplierQuoteItemWithMaterial }) {
   );
 }
 
-function SupplierCell({
-  items,
-  onApproved,
+function SupplierItemPickerDialog({
+  open,
+  onOpenChange,
+  candidateItems,
+  materialId,
+  materialName,
+  supplierName,
+  onLinked,
 }: {
-  items: LinkedItem[];
-  onApproved: (itemId: string, newStatus: string) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  candidateItems: LinkedItem[];
+  materialId: string;
+  materialName: string;
+  supplierName: string;
+  onLinked: (itemId: string) => void;
 }) {
-  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [savingId, setSavingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  if (items.length === 0) {
-    return <span className="text-xs text-gray-300 select-none">—</span>;
-  }
+  const needle = search.toLowerCase();
+  const filtered = candidateItems.filter(
+    (it) =>
+      it.descricao.toLowerCase().includes(needle) ||
+      it.unidade.toLowerCase().includes(needle),
+  );
+
+  const handlePick = (item: LinkedItem) => {
+    setSavingId(item.id);
+    startTransition(async () => {
+      const res = await saveManualMatchAction({
+        itemId: item.id,
+        materialId,
+        conversionFactor: 1,
+        supplierName: item.supplier_name,
+        supplierMaterialName: item.descricao,
+      });
+      if (res.success) {
+        onLinked(item.id);
+        onOpenChange(false);
+      }
+      setSavingId(null);
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Vincular item de {supplierName}</DialogTitle>
+          <DialogDescription>
+            Escolha um item da cotação para vincular ao material <strong>{materialName}</strong>.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="px-6 pb-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm placeholder:text-gray-400 focus:border-[#64ABDE] focus:outline-none"
+              placeholder="Buscar item do fornecedor…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              autoFocus
+            />
+          </div>
+        </div>
+        <div className="max-h-72 overflow-y-auto px-6 pb-6">
+          {filtered.length === 0 && (
+            <p className="py-6 text-center text-sm text-gray-400">Nenhum item encontrado.</p>
+          )}
+          <div className="space-y-1.5">
+            {filtered.map((item) => {
+              const isSaving = savingId === item.id && isPending;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  disabled={isSaving}
+                  onClick={() => handlePick(item)}
+                  className="flex w-full items-start gap-3 rounded-lg border border-gray-100 bg-white p-3 text-left transition-colors hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="break-words text-sm font-medium text-gray-800">{item.descricao}</p>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      {fmtCurrency(item.preco_unit)} · {item.unidade}
+                      {item.quantidade > 0 && <span className="ml-1">({item.quantidade})</span>}
+                    </p>
+                  </div>
+                  {isSaving ? (
+                    <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-gray-400" />
+                  ) : (
+                    <Plus className="mt-0.5 h-4 w-4 shrink-0 text-gray-300" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SupplierCell({
+  items,
+  materialId,
+  materialName,
+  supplierName,
+  candidateItems,
+  onApproved,
+  onRejected,
+  onLinked,
+}: {
+  items: LinkedItem[];
+  materialId: string;
+  materialName: string;
+  supplierName: string;
+  candidateItems: LinkedItem[];
+  onApproved: (itemId: string, newStatus: string) => void;
+  onRejected: (itemId: string) => void;
+  onLinked: (itemId: string, materialId: string, supplierName: string) => void;
+}) {
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const matchedItems = items.filter((it) => it.match_status !== 'sem_match');
+  const hasOnlyUnmatched = items.length > 0 && matchedItems.length === 0;
+  const showPicker = items.length === 0 || hasOnlyUnmatched;
 
   const handleApprove = (item: LinkedItem) => {
     setApprovingId(item.id);
@@ -115,11 +246,28 @@ function SupplierCell({
     });
   };
 
+  const handleReject = (item: LinkedItem) => {
+    setRejectingId(item.id);
+    startTransition(async () => {
+      if (item.suggestion_id) {
+        const res = await rejectAiSuggestionAction({
+          itemId: item.id,
+          suggestionId: item.suggestion_id,
+        });
+        if (res.success) {
+          onRejected(item.id);
+        }
+      }
+      setRejectingId(null);
+    });
+  };
+
   return (
     <div className="space-y-2">
-      {items.map((item) => {
+      {matchedItems.map((item) => {
         const needsApproval = item.match_status === 'ia_suggested';
         const isApproving = approvingId === item.id && isPending;
+        const isRejecting = rejectingId === item.id && isPending;
         return (
           <div key={item.id} className="rounded-md border border-gray-100 bg-gray-50/50 p-2.5 text-xs">
             <p className="mb-1 break-words font-medium leading-snug text-gray-800">{item.descricao}</p>
@@ -135,20 +283,53 @@ function SupplierCell({
             <div className="flex items-center justify-between gap-1.5 flex-wrap">
               <StatusBadge item={item} />
               {needsApproval && (
-                <button
-                  type="button"
-                  onClick={() => handleApprove(item)}
-                  disabled={isApproving}
-                  className="inline-flex items-center gap-1 rounded bg-green-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
-                >
-                  {isApproving ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
-                  Aprovar
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handleReject(item)}
+                    disabled={isRejecting || isApproving}
+                    className="inline-flex items-center gap-1 rounded bg-red-50 px-2 py-0.5 text-xs font-medium text-red-600 hover:bg-red-100 disabled:opacity-50 transition-colors border border-red-200"
+                  >
+                    {isRejecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
+                    Recusar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleApprove(item)}
+                    disabled={isApproving || isRejecting}
+                    className="inline-flex items-center gap-1 rounded bg-green-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+                  >
+                    {isApproving ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                    Aprovar
+                  </button>
+                </div>
               )}
             </div>
           </div>
         );
       })}
+
+      {showPicker && (
+        <>
+          <button
+            type="button"
+            onClick={() => setPickerOpen(true)}
+            className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-white px-3 py-3 text-xs text-gray-400 transition-colors hover:border-[#64ABDE] hover:text-[#64ABDE]"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Escolher item do fornecedor
+          </button>
+          <SupplierItemPickerDialog
+            open={pickerOpen}
+            onOpenChange={setPickerOpen}
+            candidateItems={candidateItems}
+            materialId={materialId}
+            materialName={materialName}
+            supplierName={supplierName}
+            onLinked={(itemId) => onLinked(itemId, materialId, supplierName)}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -173,6 +354,9 @@ export default function ConciliationCurationView({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
   const [searchFilter, setSearchFilter] = useState('');
+  const [activeSupplier, setActiveSupplier] = useState<string>(
+    () => initialPayload?.supplier_column_order[0] ?? '',
+  );
 
   useEffect(() => {
     if (initialPayload) {
@@ -180,6 +364,10 @@ export default function ConciliationCurationView({
       setUnlinked(initialPayload.unlinked_items);
       setSupplierColumnOrder(initialPayload.supplier_column_order);
       setLoadError(null);
+      setActiveSupplier((prev) => {
+        if (initialPayload.supplier_column_order.includes(prev)) return prev;
+        return initialPayload.supplier_column_order[0] ?? '';
+      });
     } else if (initialError) {
       setLoadError(initialError);
     }
@@ -194,6 +382,50 @@ export default function ConciliationCurationView({
         ),
       })),
     );
+  };
+
+  const handleItemRejected = (itemId: string) => {
+    setMaterials((prev) =>
+      prev.map((mat) => ({
+        ...mat,
+        linked_items: mat.linked_items.map((it) =>
+          it.id === itemId ? { ...it, match_status: 'sem_match' as typeof it.match_status, matched_material_id: null } : it,
+        ),
+      })),
+    );
+  };
+
+  const handleItemLinked = (itemId: string, materialId: string, supplierName: string) => {
+    const fromUnlinked = unlinked.find((it) => it.id === itemId) as LinkedItem | undefined;
+
+    setUnlinked((prev) => prev.filter((it) => it.id !== itemId));
+
+    setMaterials((prev) => {
+      let source: LinkedItem | undefined;
+
+      const withoutItem = prev.map((mat) => {
+        const found = mat.linked_items.find((it) => it.id === itemId);
+        if (found) source = found as LinkedItem;
+        return { ...mat, linked_items: mat.linked_items.filter((it) => it.id !== itemId) };
+      });
+
+      if (!source) source = fromUnlinked;
+      if (!source) return withoutItem;
+
+      const updated: LinkedItem = {
+        ...source,
+        matched_material_id: materialId,
+        match_status: 'manual',
+        match_method: 'manual',
+        supplier_name: supplierName,
+      };
+
+      return withoutItem.map((mat) =>
+        mat.material_id === materialId
+          ? { ...mat, linked_items: [...mat.linked_items, updated] }
+          : mat,
+      );
+    });
   };
 
   const handleRefresh = () => {
@@ -237,6 +469,45 @@ export default function ConciliationCurationView({
     [materials, searchFilter, needle],
   );
 
+  const candidatesBySupplier = useMemo(() => {
+    const map = new Map<string, LinkedItem[]>();
+    for (const mat of materials) {
+      for (const it of mat.linked_items) {
+        if (it.match_status === 'sem_match') {
+          const list = map.get(it.supplier_name) ?? [];
+          list.push(it as LinkedItem);
+          map.set(it.supplier_name, list);
+        }
+      }
+    }
+    for (const it of unlinked) {
+      const list = map.get(it.supplier_name) ?? [];
+      list.push(it as LinkedItem);
+      map.set(it.supplier_name, list);
+    }
+    return map;
+  }, [materials, unlinked]);
+
+  const activeSupplierIdx = supplierColumnOrder.indexOf(activeSupplier);
+  const canGoPrev = activeSupplierIdx > 0;
+  const canGoNext = activeSupplierIdx < supplierColumnOrder.length - 1;
+
+  const activeSupplierStats = useMemo(() => {
+    if (!activeSupplier) return { approved: 0, iaSuggested: 0, total: 0 };
+    let approved = 0;
+    let iaSuggested = 0;
+    let total = 0;
+    for (const mat of materials) {
+      for (const it of mat.linked_items) {
+        if (it.supplier_name !== activeSupplier) continue;
+        total++;
+        if (it.match_status === 'automatico' || it.match_status === 'manual') approved++;
+        if (it.match_status === 'ia_suggested') iaSuggested++;
+      }
+    }
+    return { approved, iaSuggested, total };
+  }, [materials, activeSupplier]);
+
   const totalApproved = materials.reduce(
     (sum, m) =>
       sum +
@@ -247,9 +518,6 @@ export default function ConciliationCurationView({
     (sum, m) => sum + m.linked_items.filter((it) => it.match_status === 'ia_suggested').length,
     0,
   );
-  const supplierColumnsCount = supplierColumnOrder.length;
-  const firstColumnWidthPct = supplierColumnsCount > 0 ? 30 : 100;
-  const supplierColumnWidthPct = supplierColumnsCount > 0 ? 70 / supplierColumnsCount : 0;
 
   const showEmpty = !loadError && filteredMaterials.length === 0 && unlinked.length === 0;
 
@@ -260,26 +528,61 @@ export default function ConciliationCurationView({
           <div>
             <h1 className="text-xl font-semibold text-[#1D3140]">Conciliação de materiais</h1>
             <p className="mt-1 text-sm text-slate-500">
-              Materiais do orçamento (fonte da verdade) e uma coluna por fornecedor, na ordem de importação.
-              Aprove sugestões da IA para salvar na memória.
+              Concilie fornecedor por fornecedor. Aprove sugestões da IA ou escolha manualmente.
             </p>
+            {supplierColumnOrder.length > 0 && (
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={!canGoPrev}
+                  onClick={() => setActiveSupplier(supplierColumnOrder[activeSupplierIdx - 1])}
+                  className="rounded-md border border-gray-200 p-1.5 text-gray-500 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <select
+                  value={activeSupplier}
+                  onChange={(e) => setActiveSupplier(e.target.value)}
+                  className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-[#1D3140] focus:border-[#64ABDE] focus:outline-none"
+                >
+                  {supplierColumnOrder.map((name, idx) => (
+                    <option key={name} value={name}>
+                      {idx + 1}. {name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={!canGoNext}
+                  onClick={() => setActiveSupplier(supplierColumnOrder[activeSupplierIdx + 1])}
+                  className="rounded-md border border-gray-200 p-1.5 text-gray-500 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+                <span className="ml-2 text-xs text-gray-400">
+                  {activeSupplierIdx + 1} de {supplierColumnOrder.length}
+                </span>
+              </div>
+            )}
             <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
               <span className="text-gray-600">
-                <span className="font-medium text-[#1D3140]">{totalApproved}</span> validados
+                <span className="font-medium text-[#1D3140]">{activeSupplierStats.approved}</span> validados
               </span>
-              {totalIaSuggested > 0 && (
+              {activeSupplierStats.iaSuggested > 0 && (
                 <span className="text-amber-600">
-                  <span className="font-medium">{totalIaSuggested}</span> aguardando aprovação
+                  <span className="font-medium">{activeSupplierStats.iaSuggested}</span> aguardando aprovação
                 </span>
               )}
+              <span className="text-gray-400">|</span>
+              <span className="text-gray-400">
+                Geral: <span className="font-medium text-[#1D3140]">{totalApproved}</span> validados
+                {totalIaSuggested > 0 && (
+                  <span className="ml-1 text-amber-600">{totalIaSuggested} pendentes</span>
+                )}
+              </span>
               {unlinked.length > 0 && (
                 <span className="text-red-600">
                   <span className="font-medium">{unlinked.length}</span> sem vínculo
-                </span>
-              )}
-              {supplierColumnOrder.length > 0 && (
-                <span className="text-gray-400">
-                  {supplierColumnOrder.length} fornecedor{supplierColumnOrder.length > 1 ? 'es' : ''}
                 </span>
               )}
             </div>
@@ -329,83 +632,81 @@ export default function ConciliationCurationView({
         </p>
       )}
 
-      {!loadError && (filteredMaterials.length > 0 || unlinked.length > 0) && (
+      {!loadError && (filteredMaterials.length > 0 || unlinked.length > 0) && activeSupplier && (
         <div className="min-w-0 overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-sm">
-          <table className="w-full min-w-[640px] table-fixed border-collapse text-sm">
+          <table className="w-full table-fixed border-collapse text-sm">
             <colgroup>
-              <col style={{ width: `${firstColumnWidthPct}%` }} />
-              {supplierColumnOrder.map((name) => (
-                <col key={name} style={{ width: `${supplierColumnWidthPct}%` }} />
-              ))}
+              <col style={{ width: '40%' }} />
+              <col style={{ width: '60%' }} />
             </colgroup>
             <thead>
               <tr className="border-b-2 border-gray-200">
                 <th className="sticky left-0 top-0 z-30 bg-white px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 shadow-[1px_0_0_0_#e5e7eb,0_1px_0_0_#e5e7eb]">
                   Fonte da verdade
                 </th>
-                {supplierColumnOrder.map((name) => (
-                  <th
-                    key={name}
-                    className="sticky top-0 z-20 border-r border-gray-100 bg-white px-4 py-3 text-left align-bottom text-xs font-semibold uppercase tracking-wide text-[#1D3140] shadow-[0_1px_0_0_#e5e7eb] last:border-r-0"
-                    title={name}
-                  >
-                    <span className="line-clamp-4 break-words font-semibold normal-case tracking-normal">
-                      {name}
-                    </span>
-                  </th>
-                ))}
+                <th className="sticky top-0 z-20 bg-white px-4 py-3 text-left align-bottom text-xs font-semibold uppercase tracking-wide text-[#1D3140] shadow-[0_1px_0_0_#e5e7eb]">
+                  <span className="break-words font-semibold normal-case tracking-normal">
+                    {activeSupplier}
+                  </span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredMaterials.map((mat) => (
-                <tr key={mat.material_id} className="transition-colors hover:bg-gray-50/50">
-                  <td className="sticky left-0 z-10 border-r border-gray-200 bg-white px-4 py-3 align-top shadow-[1px_0_0_0_#e5e7eb]">
-                    <p className="break-words text-sm font-semibold leading-snug text-[#1D3140]">
-                      {mat.material_name}
-                    </p>
-                    <p className="mt-0.5 text-xs text-gray-400">
-                      {mat.material_code}
-                      {mat.material_unit && <span className="ml-1 text-gray-300">·</span>}
-                      <span className="ml-1">{mat.material_unit}</span>
-                    </p>
-                  </td>
-                  {supplierColumnOrder.map((supplierName) => {
-                    const cellItems = mat.linked_items.filter(
-                      (it) => it.supplier_name === supplierName,
-                    ) as LinkedItem[];
-                    return (
-                      <td
-                        key={supplierName}
-                        className="min-w-0 border-r border-gray-100 px-4 py-3 align-top last:border-r-0"
-                      >
-                        <SupplierCell items={cellItems} onApproved={handleItemApproved} />
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+              {filteredMaterials.map((mat) => {
+                const cellItems = mat.linked_items.filter(
+                  (it) => it.supplier_name === activeSupplier,
+                ) as LinkedItem[];
+                return (
+                  <tr key={mat.material_id} className="transition-colors hover:bg-gray-50/50">
+                    <td className="sticky left-0 z-10 border-r border-gray-200 bg-white px-4 py-3 align-top shadow-[1px_0_0_0_#e5e7eb]">
+                      <p className="break-words text-sm font-semibold leading-snug text-[#1D3140]">
+                        {mat.material_name}
+                      </p>
+                      <p className="mt-0.5 text-xs text-gray-400">
+                        {mat.material_code}
+                        {mat.material_unit && <span className="ml-1 text-gray-300">·</span>}
+                        <span className="ml-1">{mat.material_unit}</span>
+                      </p>
+                    </td>
+                    <td className="min-w-0 px-4 py-3 align-top">
+                      <SupplierCell
+                        items={cellItems}
+                        materialId={mat.material_id}
+                        materialName={mat.material_name}
+                        supplierName={activeSupplier}
+                        candidateItems={candidatesBySupplier.get(activeSupplier) ?? []}
+                        onApproved={handleItemApproved}
+                        onRejected={handleItemRejected}
+                        onLinked={handleItemLinked}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
 
-              {!searchFilter && unlinked.length > 0 && (
+              {!searchFilter && unlinked.filter((it) => it.supplier_name === activeSupplier).length > 0 && (
                 <tr>
-                  <td colSpan={1 + supplierColumnOrder.length} className="max-w-full min-w-0 px-4 pb-4 pt-6">
+                  <td colSpan={2} className="max-w-full min-w-0 px-4 pb-4 pt-6">
                     <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      Itens sem vínculo com material ({unlinked.length})
+                      Itens sem vínculo — {activeSupplier} ({unlinked.filter((it) => it.supplier_name === activeSupplier).length})
                     </p>
                     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                      {unlinked.map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex items-start gap-2 rounded-lg border border-dashed border-gray-200 bg-gray-50/50 p-3"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <p className="break-words text-xs font-medium text-gray-800">{item.descricao}</p>
-                            <p className="mt-0.5 text-xs text-gray-500">
-                              {item.supplier_name} · {fmtCurrency(item.preco_unit)}
-                            </p>
+                      {unlinked
+                        .filter((it) => it.supplier_name === activeSupplier)
+                        .map((item) => (
+                          <div
+                            key={item.id}
+                            className="flex items-start gap-2 rounded-lg border border-dashed border-gray-200 bg-gray-50/50 p-3"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="break-words text-xs font-medium text-gray-800">{item.descricao}</p>
+                              <p className="mt-0.5 text-xs text-gray-500">
+                                {fmtCurrency(item.preco_unit)}
+                              </p>
+                            </div>
+                            <StatusBadge item={item} />
                           </div>
-                          <StatusBadge item={item} />
-                        </div>
-                      ))}
+                        ))}
                     </div>
                   </td>
                 </tr>

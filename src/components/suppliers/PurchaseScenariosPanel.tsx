@@ -237,7 +237,7 @@ function ScenarioBCard({ scenarios }: { scenarios: ScenariosResult }) {
                       <p className="text-sm font-medium text-[#1D3140]">{item.material_name}</p>
                       <p className="text-xs text-gray-400">
                         <span className="font-mono">{item.material_code}</span>
-                        {' · '}Qtd {formatNumber(item.quantidade)}
+                        {' · '}Qtd {formatNumber(item.net_qty)}
                       </p>
                     </td>
                     <td className="px-4 py-3">

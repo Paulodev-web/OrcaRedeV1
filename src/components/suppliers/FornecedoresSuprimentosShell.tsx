@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SupplierPdfImporter from '@/components/SupplierPdfImporter';
 import ConciliationTable from '@/components/suppliers/ConciliationTable';
 import PurchaseScenariosPanel from '@/components/suppliers/PurchaseScenariosPanel';
+import SuppliesHeader from '@/components/suppliers/SuppliesHeader';
 import type { BudgetOption, SupplierQuote } from '@/types';
 import type {
   BudgetMaterialOption,
@@ -14,12 +15,8 @@ import type {
 } from '@/actions/supplierQuotes';
 import Link from 'next/link';
 import {
-  ArrowLeft,
   BarChart3,
-  ChevronRight,
   GitMerge,
-  Grid3X3,
-  Package,
   Upload,
 } from 'lucide-react';
 
@@ -119,43 +116,10 @@ export default function FornecedoresSuprimentosShell({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="text-xs text-gray-400 flex items-center gap-1.5 flex-wrap">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 transition-colors hover:text-[#64ABDE]"
-        >
-          <Grid3X3 className="w-3.5 h-3.5 shrink-0" aria-hidden />
-          <span>Portal</span>
-        </Link>
-        <ChevronRight className="w-3 h-3 shrink-0 opacity-70" aria-hidden />
-        <Link
-          href="/fornecedores"
-          className="font-medium text-gray-600 transition-colors hover:text-[#64ABDE]"
-        >
-          Sessões
-        </Link>
-        <ChevronRight className="w-3 h-3 shrink-0 opacity-70" aria-hidden />
-        <span className="text-gray-600 font-medium">Modo clássico</span>
-      </div>
-
-      <div className="flex items-start gap-3 sm:gap-4">
-        <Link
-          href="/"
-          className="mt-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 shadow-sm transition-colors hover:bg-gray-50 hover:text-[#1D3140]"
-          aria-label="Voltar ao portal"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-        </Link>
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#64ABDE]/40 bg-[#64ABDE]/15">
-          <Package className="h-6 w-6 text-[#1D3140]" aria-hidden />
-        </div>
-        <div className="min-w-0 flex-1 pt-0.5">
-          <h1 className="text-2xl font-bold text-[#1D3140]">Suprimentos e Cotações</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Importe propostas em PDF, concilie materiais com o orçamento e compare cenários de compra.
-          </p>
-        </div>
-      </div>
+      <SuppliesHeader
+        title="Suprimentos e Cotações"
+        description="Fluxo clássico: importar PDFs, conciliar itens e analisar cenários."
+      />
 
       <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
         <TabsList className="flex w-full flex-wrap h-auto items-end gap-1 rounded-none border-0 border-b border-gray-200 bg-transparent p-0 shadow-none">

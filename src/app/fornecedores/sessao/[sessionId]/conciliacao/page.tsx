@@ -6,6 +6,7 @@ import {
 } from '@/actions/quotationSessions';
 import { getConciliationPayloadBySessionAction } from '@/actions/supplierQuotes';
 import ConciliationCurationView from '@/components/suppliers/ConciliationCurationView';
+import SuppliesHeader from '@/components/suppliers/SuppliesHeader';
 
 interface Props {
   params: Promise<{ sessionId: string }>;
@@ -27,14 +28,13 @@ export default async function SessionConciliacaoPage({ params }: Props) {
     return (
       <main className="min-h-screen bg-slate-100 p-6 lg:p-8">
         <div className="mx-auto max-w-3xl space-y-6">
-          <div className="text-sm text-slate-500">
-            <Link
-              href={`/fornecedores/sessao/${sessionId}`}
-              className="text-[#64ABDE] transition-colors hover:text-[#1D3140] hover:underline"
-            >
-              ← {session.title}
-            </Link>
-          </div>
+          <SuppliesHeader
+            sessionId={sessionId}
+            sessionTitle={session.title}
+            activeStep="conciliacao"
+            title="Conciliação de Materiais"
+            description="Valide os vínculos entre itens dos fornecedores e a fonte da verdade."
+          />
 
           <section className="rounded-2xl border border-amber-200 bg-white p-6 shadow-sm">
             <h1 className="text-xl font-semibold text-[#1D3140]">Conciliação ainda indisponível</h1>
@@ -63,14 +63,13 @@ export default async function SessionConciliacaoPage({ params }: Props) {
   return (
     <main className="min-h-screen bg-slate-100 p-6 lg:p-8">
       <div className="mx-auto max-w-7xl space-y-6">
-        <div className="text-sm text-slate-500">
-          <Link
-            href={`/fornecedores/sessao/${sessionId}`}
-            className="text-[#64ABDE] transition-colors hover:text-[#1D3140] hover:underline"
-          >
-            ← {session.title}
-          </Link>
-        </div>
+        <SuppliesHeader
+          sessionId={sessionId}
+          sessionTitle={session.title}
+          activeStep="conciliacao"
+          title="Conciliação de Materiais"
+          description="Valide os vínculos entre itens dos fornecedores e a fonte da verdade."
+        />
 
         <ConciliationCurationView
           sessionId={sessionId}
