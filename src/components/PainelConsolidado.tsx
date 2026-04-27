@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { Calculator, Package, Edit2, Check, X, FileSpreadsheet, Download, Users } from 'lucide-react';
-import { BudgetDetails } from '@/types';
+import { BudgetDetails, ExtraCostItem } from '@/types';
 import { useApp } from '@/contexts/AppContext';
 import { exportToExcel, exportToCSV, exportToExcelForSuppliers, exportToCSVForSuppliers, MaterialExport, ExportOptions } from '@/services/exportService';
 
@@ -21,10 +21,14 @@ interface MaterialConsolidado {
 }
 
 export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsolidadoProps) {
-  const { updateConsolidatedMaterialPrice } = useApp();
+  const { updateConsolidatedMaterialPrice, updateBudgetPricingSettings } = useApp();
   const [editingMaterialId, setEditingMaterialId] = useState<string | null>(null);
   const [editingPrice, setEditingPrice] = useState<string>('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [extraCostItems, setExtraCostItems] = useState<ExtraCostItem[]>(budgetDetails?.extra_cost_items || []);
+  const [profitMarginPercent, setProfitMarginPercent] = useState<number>(budgetDetails?.profit_margin_percent || 0);
+  const [newExtraDescription, setNewExtraDescription] = useState('');
+  const [newExtraAmount, setNewExtraAmount] = useState('');
   
   const consolidarMateriais = (): MaterialConsolidado[] => {
     if (!budgetDetails || !budgetDetails.posts || budgetDetails.posts.length === 0) {
@@ -101,7 +105,11 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
   };
 
   const materiaisConsolidados = consolidarMateriais();
-  const custoTotal = materiaisConsolidados.reduce((total, material) => total + material.subtotal, 0);
+  const custoMateriais = materiaisConsolidados.reduce((total, material) => total + material.subtotal, 0);
+  const custoExtras = extraCostItems.reduce((total, item) => total + item.amount, 0);
+  const custoBase = custoMateriais + custoExtras;
+  const valorMargem = custoBase * (profitMarginPercent / 100);
+  const precoFinal = custoBase + valorMargem;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -159,6 +167,65 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
     }
   };
 
+  React.useEffect(() => {
+    if (!budgetDetails) return;
+    setExtraCostItems(budgetDetails.extra_cost_items || []);
+    setProfitMarginPercent(budgetDetails.profit_margin_percent || 0);
+  }, [budgetDetails]);
+
+  const persistPricingSettings = async (nextExtras: ExtraCostItem[], nextMargin: number) => {
+    if (!budgetDetails) return;
+    await updateBudgetPricingSettings(budgetDetails.id, {
+      extra_cost_items: nextExtras,
+      profit_margin_percent: nextMargin,
+    });
+  };
+
+  const handleAddExtraCostItem = async () => {
+    const description = newExtraDescription.trim();
+    const amount = parseFloat(newExtraAmount);
+    if (!description) {
+      alert('Informe a descrição do item extra');
+      return;
+    }
+    if (isNaN(amount) || amount < 0) {
+      alert('Informe um valor válido para o item extra');
+      return;
+    }
+
+    const nextItems: ExtraCostItem[] = [
+      ...extraCostItems,
+      { id: `${Date.now()}-${Math.random()}`, description, amount },
+    ];
+    setExtraCostItems(nextItems);
+    setNewExtraDescription('');
+    setNewExtraAmount('');
+    await persistPricingSettings(nextItems, profitMarginPercent);
+  };
+
+  const handleRemoveExtraCostItem = async (itemId: string) => {
+    const nextItems = extraCostItems.filter(item => item.id !== itemId);
+    setExtraCostItems(nextItems);
+    await persistPricingSettings(nextItems, profitMarginPercent);
+  };
+
+  const handleUpdateExtraCostAmount = async (itemId: string, value: string) => {
+    const parsed = parseFloat(value);
+    if (isNaN(parsed) || parsed < 0) return;
+    const nextItems = extraCostItems.map(item =>
+      item.id === itemId ? { ...item, amount: parsed } : item
+    );
+    setExtraCostItems(nextItems);
+    await persistPricingSettings(nextItems, profitMarginPercent);
+  };
+
+  const handleUpdateProfitMargin = async (value: string) => {
+    const parsed = parseFloat(value);
+    const nextMargin = isNaN(parsed) || parsed < 0 ? 0 : parsed;
+    setProfitMarginPercent(nextMargin);
+    await persistPricingSettings(extraCostItems, nextMargin);
+  };
+
   const handleExportExcel = () => {
     if (materiaisConsolidados.length === 0) {
       alert('Não há materiais para exportar');
@@ -177,7 +244,12 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
 
     const exportOptions: ExportOptions = {
       budgetName: orcamentoNome,
-      totalCost: custoTotal,
+      totalCost: custoMateriais,
+      extrasTotal: custoExtras,
+      baseCost: custoBase,
+      profitMarginPercent,
+      profitAmount: valorMargem,
+      finalPrice: precoFinal,
       totalPosts: budgetDetails?.posts?.length || 0,
       totalUniqueMaterials: materiaisConsolidados.length,
       exportDate: new Date().toLocaleString('pt-BR'),
@@ -209,7 +281,12 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
 
     const exportOptions: ExportOptions = {
       budgetName: orcamentoNome,
-      totalCost: custoTotal,
+      totalCost: custoMateriais,
+      extrasTotal: custoExtras,
+      baseCost: custoBase,
+      profitMarginPercent,
+      profitAmount: valorMargem,
+      finalPrice: precoFinal,
       totalPosts: budgetDetails?.posts?.length || 0,
       totalUniqueMaterials: materiaisConsolidados.length,
       exportDate: new Date().toLocaleString('pt-BR'),
@@ -241,7 +318,12 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
 
     const exportOptions: ExportOptions = {
       budgetName: orcamentoNome,
-      totalCost: custoTotal,
+      totalCost: custoMateriais,
+      extrasTotal: custoExtras,
+      baseCost: custoBase,
+      profitMarginPercent,
+      profitAmount: valorMargem,
+      finalPrice: precoFinal,
       totalPosts: budgetDetails?.posts?.length || 0,
       totalUniqueMaterials: materiaisConsolidados.length,
       exportDate: new Date().toLocaleString('pt-BR'),
@@ -273,7 +355,12 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
 
     const exportOptions: ExportOptions = {
       budgetName: orcamentoNome,
-      totalCost: custoTotal,
+      totalCost: custoMateriais,
+      extrasTotal: custoExtras,
+      baseCost: custoBase,
+      profitMarginPercent,
+      profitAmount: valorMargem,
+      finalPrice: precoFinal,
       totalPosts: budgetDetails?.posts?.length || 0,
       totalUniqueMaterials: materiaisConsolidados.length,
       exportDate: new Date().toLocaleString('pt-BR'),
@@ -364,6 +451,77 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
       </div>
 
       <div className="flex-1 overflow-y-auto">
+        <div className="mb-4 bg-white border border-gray-200 rounded-lg p-4">
+          <h4 className="text-sm font-semibold text-gray-800 mb-3">Custos Extras do Orçamento</h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-3">
+            <input
+              type="text"
+              value={newExtraDescription}
+              onChange={(e) => setNewExtraDescription(e.target.value)}
+              placeholder="Descrição (ex: Frete, Mão de obra)"
+              className="md:col-span-2 px-3 py-2 border border-gray-300 rounded-md"
+            />
+            <div className="flex space-x-2">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={newExtraAmount}
+                onChange={(e) => setNewExtraAmount(e.target.value)}
+                placeholder="Valor"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+              <button
+                onClick={handleAddExtraCostItem}
+                className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                +
+              </button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {extraCostItems.map(item => (
+              <div key={item.id} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-md p-2">
+                <span className="text-sm text-gray-800">{item.description}</span>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={item.amount}
+                    onChange={(e) => handleUpdateExtraCostAmount(item.id, e.target.value)}
+                    className="w-28 px-2 py-1 border border-gray-300 rounded-md text-right"
+                  />
+                  <button
+                    onClick={() => handleRemoveExtraCostItem(item.id)}
+                    className="p-1 text-red-600 hover:text-red-800"
+                    title="Remover item"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-md p-3">
+              <span className="text-sm font-medium text-gray-700">Margem de lucro (%)</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={profitMarginPercent}
+                onChange={(e) => handleUpdateProfitMargin(e.target.value)}
+                className="w-24 px-2 py-1 border border-gray-300 rounded-md text-right"
+              />
+            </div>
+            <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-md p-3">
+              <span className="text-sm font-medium text-gray-700">Total extras</span>
+              <span className="text-sm font-semibold text-gray-900">{formatCurrency(custoExtras)}</span>
+            </div>
+          </div>
+        </div>
+
         {materiaisConsolidados.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full p-8 text-center">
             <Package className="h-12 w-12 text-gray-400 mb-4" />
@@ -494,7 +652,25 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
             <div className="flex justify-between items-center pt-2 border-t">
               <span className="text-sm font-medium text-gray-700">Custo Total:</span>
               <span className="text-lg font-bold text-green-600">
-                {formatCurrency(custoTotal)}
+                {formatCurrency(custoMateriais)}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-700">Total Extras:</span>
+              <span className="font-medium text-gray-900">{formatCurrency(custoExtras)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-700">Custo Base:</span>
+              <span className="font-medium text-gray-900">{formatCurrency(custoBase)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-700">Margem ({profitMarginPercent.toFixed(2)}%):</span>
+              <span className="font-medium text-gray-900">{formatCurrency(valorMargem)}</span>
+            </div>
+            <div className="flex justify-between items-center pt-2 border-t">
+              <span className="text-sm font-semibold text-gray-800">Preço Final:</span>
+              <span className="text-xl font-bold text-blue-600">
+                {formatCurrency(precoFinal)}
               </span>
             </div>
           </div>

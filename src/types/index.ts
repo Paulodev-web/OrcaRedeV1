@@ -150,8 +150,16 @@ export interface BudgetDetails {
   created_at?: string;
   updated_at?: string;
   plan_image_url?: string;
+  profit_margin_percent?: number;
+  extra_cost_items?: ExtraCostItem[];
   posts: BudgetPostDetail[];
   render_version?: number;
+}
+
+export interface ExtraCostItem {
+  id: string;
+  description: string;
+  amount: number;
 }
 
 export interface WorkTracking {

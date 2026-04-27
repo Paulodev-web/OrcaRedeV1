@@ -16,6 +16,11 @@ export interface ExportOptions {
   totalPosts: number;
   totalUniqueMaterials: number;
   exportDate: string;
+  extrasTotal?: number;
+  baseCost?: number;
+  profitMarginPercent?: number;
+  profitAmount?: number;
+  finalPrice?: number;
 }
 
 const formatarNumero = (numero: number, casasDecimais: number = 2): string => {
@@ -46,7 +51,12 @@ export const exportToExcel = (materiais: MaterialExport[], options: ExportOption
     ['Data de Exportação', options.exportDate],
     ['Total de Postes', options.totalPosts],
     ['Materiais Únicos', options.totalUniqueMaterials],
-    ['Custo Total', `R$ ${formatarNumero(options.totalCost)}`],
+    ['Custo Materiais', `R$ ${formatarNumero(options.totalCost)}`],
+    ['Total Extras', `R$ ${formatarNumero(options.extrasTotal || 0)}`],
+    ['Custo Base', `R$ ${formatarNumero(options.baseCost ?? options.totalCost)}`],
+    ['Margem (%)', formatarNumero(options.profitMarginPercent || 0)],
+    ['Valor da Margem', `R$ ${formatarNumero(options.profitAmount || 0)}`],
+    ['Preço Final', `R$ ${formatarNumero(options.finalPrice ?? options.totalCost)}`],
   ];
 
   const workbook = XLSX.utils.book_new();
@@ -82,7 +92,12 @@ export const exportToCSV = (materiais: MaterialExport[], options: ExportOptions)
   rows.push(['Data de Exportação', options.exportDate, '', '', '', '']);
   rows.push(['Total de Postes', options.totalPosts.toString(), '', '', '', '']);
   rows.push(['Materiais Únicos', options.totalUniqueMaterials.toString(), '', '', '', '']);
-  rows.push(['Custo Total', `R$ ${formatarNumero(options.totalCost)}`, '', '', '', '']);
+  rows.push(['Custo Materiais', `R$ ${formatarNumero(options.totalCost)}`, '', '', '', '']);
+  rows.push(['Total Extras', `R$ ${formatarNumero(options.extrasTotal || 0)}`, '', '', '', '']);
+  rows.push(['Custo Base', `R$ ${formatarNumero(options.baseCost ?? options.totalCost)}`, '', '', '', '']);
+  rows.push(['Margem (%)', formatarNumero(options.profitMarginPercent || 0), '', '', '', '']);
+  rows.push(['Valor da Margem', `R$ ${formatarNumero(options.profitAmount || 0)}`, '', '', '', '']);
+  rows.push(['Preço Final', `R$ ${formatarNumero(options.finalPrice ?? options.totalCost)}`, '', '', '', '']);
 
   const csvContent = [headers.join(','), ...rows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
   const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
