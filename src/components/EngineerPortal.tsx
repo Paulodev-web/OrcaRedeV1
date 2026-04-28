@@ -2080,6 +2080,8 @@ export function EngineerPortal() {
                   client_name: activeTracking.budget_data.client_name,
                   city: activeTracking.budget_data.city,
                   render_version: pdfRenderVersion,
+                  profit_margin_percent: 0,
+                  extra_cost_items: [],
                   posts: trackingPostsForCanvas,
                 }}
                 selectedPoste={null}

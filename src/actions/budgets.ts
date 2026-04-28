@@ -128,17 +128,30 @@ export async function duplicateBudgetAction(budgetId: string): Promise<ActionRes
     }
 
     // 2. Create the new budget
+    const ob = originalBudget as {
+      project_name: string;
+      client_name: string | null;
+      city: string | null;
+      company_id: string;
+      plan_image_url: string | null;
+      render_version: number | null;
+      profit_margin_percent?: number | null;
+      extra_cost_items?: unknown;
+    };
+
     const { data: newBudget, error: createError } = await supabase
       .from('budgets')
       .insert({
-        project_name: `${originalBudget.project_name} (Cópia)`,
-        client_name: originalBudget.client_name,
-        city: originalBudget.city,
-        company_id: originalBudget.company_id,
+        project_name: `${ob.project_name} (Cópia)`,
+        client_name: ob.client_name,
+        city: ob.city,
+        company_id: ob.company_id,
         status: 'Em Andamento',
-        plan_image_url: originalBudget.plan_image_url,
-        render_version: originalBudget.render_version || 1,
+        plan_image_url: ob.plan_image_url,
+        render_version: ob.render_version || 1,
         user_id: userId,
+        profit_margin_percent: ob.profit_margin_percent ?? 0,
+        extra_cost_items: Array.isArray(ob.extra_cost_items) ? ob.extra_cost_items : [],
       })
       .select()
       .single();

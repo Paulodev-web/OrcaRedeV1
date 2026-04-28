@@ -1,6 +1,6 @@
 ﻿"use client";
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
-import { Material, GrupoItem, Concessionaria, Orcamento, BudgetPostDetail, BudgetDetails, PostType, BudgetFolder, ExtraCostItem } from '@/types';
+import { Material, GrupoItem, Concessionaria, Orcamento, BudgetPostDetail, BudgetDetails, ExtraCostItem, PostType, BudgetFolder } from '@/types';
 import { gruposItens as initialGrupos, concessionarias, orcamentos as initialOrcamentos } from '@/data/mockData';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from './AuthContext';
@@ -74,7 +74,8 @@ interface AppContextType {
   
   // Função para atualizar preços consolidados
   updateConsolidatedMaterialPrice: (budgetId: string, materialId: string, newPrice: number) => Promise<void>;
-  updateBudgetPricingSettings: (budgetId: string, settings: { profit_margin_percent?: number; extra_cost_items?: ExtraCostItem[]; }) => Promise<void>;
+  updateBudgetMargin: (budgetId: string, margin: number) => Promise<void>;
+  updateBudgetExtras: (budgetId: string, extras: ExtraCostItem[]) => Promise<void>;
   
   // Funções para concessionárias e grupos
   fetchUtilityCompanies: () => Promise<void>;
@@ -94,47 +95,6 @@ interface AppContextType {
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
-
-const BUDGET_PRICING_STORAGE_KEY = 'orcaredes_budget_pricing_settings';
-
-function getStoredPricingSettings(): Record<string, { profit_margin_percent?: number; extra_cost_items?: ExtraCostItem[]; }> {
-  if (typeof window === 'undefined') return {};
-  try {
-    const raw = window.localStorage.getItem(BUDGET_PRICING_STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return {};
-    return parsed;
-  } catch {
-    return {};
-  }
-}
-
-function setStoredPricingSettings(next: Record<string, { profit_margin_percent?: number; extra_cost_items?: ExtraCostItem[]; }>) {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(BUDGET_PRICING_STORAGE_KEY, JSON.stringify(next));
-  } catch {
-    // noop
-  }
-}
-
-function readBudgetPricingFromStorage(budgetId: string): { profit_margin_percent?: number; extra_cost_items?: ExtraCostItem[]; } {
-  const stored = getStoredPricingSettings();
-  return stored[budgetId] || {};
-}
-
-function writeBudgetPricingToStorage(
-  budgetId: string,
-  settings: { profit_margin_percent?: number; extra_cost_items?: ExtraCostItem[]; }
-) {
-  const stored = getStoredPricingSettings();
-  stored[budgetId] = {
-    ...stored[budgetId],
-    ...settings,
-  };
-  setStoredPricingSettings(stored);
-}
 
 /**
  * ⚡ LIMITES DE PAGINAÇÃO OTIMIZADOS:
@@ -203,6 +163,27 @@ async function fetchAllRecords(
   }
 
   return allRecords;
+}
+
+function normalizeProfitMargin(raw: unknown): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return n;
+}
+
+function normalizeExtraCostItems(raw: unknown): ExtraCostItem[] {
+  if (!raw || !Array.isArray(raw)) return [];
+  return raw
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+      const o = item as Record<string, unknown>;
+      const id = typeof o.id === 'string' && o.id ? o.id : typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `extra_${Math.random().toString(36).slice(2)}`;
+      const description = typeof o.description === 'string' ? o.description : '';
+      const v = Number(o.value);
+      const value = Number.isFinite(v) && v >= 0 ? v : 0;
+      return { id, description, value };
+    })
+    .filter((x): x is ExtraCostItem => x !== null);
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -561,7 +542,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           created_at,
           updated_at,
           plan_image_url,
-          render_version
+          render_version,
+          profit_margin_percent,
+          extra_cost_items
         `)
         .eq('id', budgetId)
         .single();
@@ -708,17 +691,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         };
       }) || [];
 
-      const storagePricing = readBudgetPricingFromStorage(budgetData.id);
-      const dbMargin = (budgetData as any).profit_margin_percent;
-      const dbExtras = (budgetData as any).extra_cost_items;
-      const normalizedExtraItems: ExtraCostItem[] = Array.isArray(dbExtras)
-        ? dbExtras.map((item: any) => ({
-            id: item?.id || `${Date.now()}-${Math.random()}`,
-            description: item?.description || '',
-            amount: Math.max(0, Number(item?.amount) || 0),
-          }))
-        : (storagePricing.extra_cost_items || []);
-
       // Combinar dados do orçamento e postes em um objeto BudgetDetails
       const budgetDetails: BudgetDetails = {
         id: budgetData.id,
@@ -730,9 +702,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         created_at: budgetData.created_at || undefined,
         updated_at: budgetData.updated_at || undefined,
         plan_image_url: budgetData.plan_image_url || undefined,
-        profit_margin_percent: typeof dbMargin === 'number' ? dbMargin : (storagePricing.profit_margin_percent || 0),
-        extra_cost_items: normalizedExtraItems,
         render_version: budgetData.render_version || 1,
+        profit_margin_percent: normalizeProfitMargin((budgetData as { profit_margin_percent?: unknown }).profit_margin_percent),
+        extra_cost_items: normalizeExtraCostItems((budgetData as { extra_cost_items?: unknown }).extra_cost_items),
         posts: postsFormatted
       };
 
@@ -1557,6 +1529,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateBudgetMargin = async (budgetId: string, margin: number) => {
+    if (!Number.isFinite(margin) || margin < 0) {
+      throw new Error('Margem inválida');
+    }
+    const { error } = await supabase
+      .from('budgets')
+      .update({ profit_margin_percent: margin })
+      .eq('id', budgetId);
+    if (error) throw error;
+    setBudgetDetails((prev) => {
+      if (!prev || prev.id !== budgetId) return prev;
+      return { ...prev, profit_margin_percent: margin };
+    });
+  };
+
+  const updateBudgetExtras = async (budgetId: string, extras: ExtraCostItem[]) => {
+    for (const e of extras) {
+      if (!Number.isFinite(e.value) || e.value < 0) {
+        throw new Error('Valores de custos extras não podem ser negativos');
+      }
+    }
+    const { error } = await supabase.from('budgets').update({ extra_cost_items: extras }).eq('id', budgetId);
+    if (error) throw error;
+    setBudgetDetails((prev) => {
+      if (!prev || prev.id !== budgetId) return prev;
+      return { ...prev, extra_cost_items: extras };
+    });
+  };
+
   // Função para atualizar preços consolidados de um material em todo o orçamento
   const updateConsolidatedMaterialPrice = async (budgetId: string, materialId: string, newPrice: number) => {
     try {
@@ -1640,48 +1641,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       console.error('❌ Erro ao atualizar preço:', error);
       throw error;
     }
-  };
-
-  const updateBudgetPricingSettings = async (
-    budgetId: string,
-    settings: { profit_margin_percent?: number; extra_cost_items?: ExtraCostItem[]; }
-  ) => {
-    const sanitizedSettings: { profit_margin_percent?: number; extra_cost_items?: ExtraCostItem[]; } = {};
-
-    if (typeof settings.profit_margin_percent === 'number') {
-      sanitizedSettings.profit_margin_percent = Math.max(0, settings.profit_margin_percent);
-    }
-
-    if (Array.isArray(settings.extra_cost_items)) {
-      sanitizedSettings.extra_cost_items = settings.extra_cost_items
-        .map(item => ({
-          id: item.id,
-          description: item.description || '',
-          amount: Math.max(0, Number(item.amount) || 0),
-        }))
-        .filter(item => item.description.trim().length > 0 || item.amount > 0);
-    }
-
-    try {
-      const { error } = await supabase
-        .from('budgets')
-        .update(sanitizedSettings as any)
-        .eq('id', budgetId);
-
-      if (error) {
-        writeBudgetPricingToStorage(budgetId, sanitizedSettings);
-      }
-    } catch {
-      writeBudgetPricingToStorage(budgetId, sanitizedSettings);
-    }
-
-    setBudgetDetails(prev => {
-      if (!prev || prev.id !== budgetId) return prev;
-      return {
-        ...prev,
-        ...sanitizedSettings,
-      };
-    });
   };
 
   // Funções para concessionárias
@@ -1974,7 +1933,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       
       // Função para atualizar preços consolidados
       updateConsolidatedMaterialPrice,
-      updateBudgetPricingSettings,
+      updateBudgetMargin,
+      updateBudgetExtras,
       
       // Funções para concessionárias e grupos
       fetchUtilityCompanies,

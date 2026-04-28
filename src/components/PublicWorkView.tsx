@@ -711,6 +711,8 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
                     client_name: workData.budget_data.client_name,
                     city: workData.budget_data.city,
                     render_version: workData.render_version || 2,
+                    profit_margin_percent: 0,
+                    extra_cost_items: [],
                     posts: workData.tracked_posts
                       .filter(p => p.x_coord != null && p.y_coord != null && p.x_coord !== 0 && p.y_coord !== 0)
                       .map(p => ({

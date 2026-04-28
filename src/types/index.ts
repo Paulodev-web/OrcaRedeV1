@@ -140,6 +140,12 @@ export interface PostMaterial {
   };
 }
 
+export interface ExtraCostItem {
+  id: string;
+  description: string;
+  value: number;
+}
+
 export interface BudgetDetails {
   id: string;
   name: string;
@@ -150,16 +156,12 @@ export interface BudgetDetails {
   created_at?: string;
   updated_at?: string;
   plan_image_url?: string;
-  profit_margin_percent?: number;
-  extra_cost_items?: ExtraCostItem[];
   posts: BudgetPostDetail[];
   render_version?: number;
-}
-
-export interface ExtraCostItem {
-  id: string;
-  description: string;
-  amount: number;
+  /** Margem de lucro em percentual (0–100+). */
+  profit_margin_percent: number;
+  /** Itens de custo manual (extras) somados ao custo base antes da margem. */
+  extra_cost_items: ExtraCostItem[];
 }
 
 export interface WorkTracking {
