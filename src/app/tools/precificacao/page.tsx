@@ -3,7 +3,7 @@ import { PrecificacaoCalculator } from '@/components/precificacao/PrecificacaoCa
 
 export const metadata: Metadata = {
   title: 'Módulo de Precificação — OrcaRede',
-  description: 'Calculadora de preço de venda com custo direto e BDI.',
+  description: 'Calculadora de Margem de Contribuição com receita, custos variáveis e imposto sobre MC.',
 };
 
 export default function PrecificacaoPage() {

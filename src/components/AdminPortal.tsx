@@ -89,7 +89,7 @@ const modules: Module[] = [
   {
     id: 'precificacao',
     title: 'Módulo de Precificação',
-    description: 'Formação de preço de venda com custo direto, BDI e análise de lucro',
+    description: 'Análise por Margem de Contribuição: receita, custos variáveis, imposto e lucro líquido',
     icon: Calculator,
     status: 'active',
     href: '/tools/precificacao',

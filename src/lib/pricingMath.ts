@@ -1,35 +1,8 @@
-export interface BdiRates {
-  df: number;
-  fi: number;
-  lucro: number;
-  impostos: number;
-}
-
-export interface PricingComposition {
-  materiais: number;
-  maoDeObra: number;
-  despesasFixas: number;
-  despesasFinanceiras: number;
-  impostos: number;
-  lucro: number;
-}
-
-export interface PricingCalculationResult {
-  custoDireto: number;
-  percentualBdi: number;
-  taxaBdi: number;
-  precoVenda: number | null;
-  lucroEstimado: number | null;
-  composicao: PricingComposition;
-  isTaxaInvalida: boolean;
-}
-
-export const DEFAULT_BDI_RATES: BdiRates = {
-  df: 5,
-  fi: 1.5,
-  lucro: 8,
-  impostos: 13.45,
-};
+import type {
+  ContributionMarginResult,
+  CostItem,
+  CostItemBreakdown,
+} from '@/components/precificacao/types';
 
 function toSafeNumber(value: number): number {
   if (!Number.isFinite(value)) {
@@ -39,60 +12,76 @@ function toSafeNumber(value: number): number {
   return value;
 }
 
-export function calculatePricing(
-  materiaisSubtotal: number,
-  laborSubtotal: number,
-  rates: BdiRates
-): PricingCalculationResult {
-  const materiais = toSafeNumber(materiaisSubtotal);
-  const maoDeObra = toSafeNumber(laborSubtotal);
-  const custoDireto = materiais + maoDeObra;
-
-  const df = toSafeNumber(rates.df);
-  const fi = toSafeNumber(rates.fi);
-  const lucroRate = toSafeNumber(rates.lucro);
-  const impostosRate = toSafeNumber(rates.impostos);
-
-  const percentualBdi = df + fi + lucroRate + impostosRate;
-  const taxaBdi = percentualBdi / 100;
-  const isTaxaInvalida = taxaBdi >= 1;
-
-  if (isTaxaInvalida) {
-    return {
-      custoDireto,
-      percentualBdi,
-      taxaBdi,
-      precoVenda: null,
-      lucroEstimado: null,
-      isTaxaInvalida,
-      composicao: {
-        materiais,
-        maoDeObra,
-        despesasFixas: 0,
-        despesasFinanceiras: 0,
-        impostos: 0,
-        lucro: 0,
-      },
-    };
+function clampPercent(value: number, { min, max }: { min: number; max: number }): number {
+  if (!Number.isFinite(value)) {
+    return 0;
   }
 
-  const precoVenda = custoDireto / (1 - taxaBdi);
-  const lucroEstimado = precoVenda * (lucroRate / 100);
+  if (value < min) {
+    return min;
+  }
+
+  if (value > max) {
+    return max;
+  }
+
+  return value;
+}
+
+/**
+ * Calcula Margem de Contribuição, imposto sobre MC e Lucro Líquido
+ * a partir da Receita Bruta, lista de custos variáveis e percentual de imposto.
+ *
+ * Regras:
+ * - Receita Bruta (RB) é o valor consolidado de materiais (orçamento) ou inserido manualmente.
+ * - Custos variáveis são livres (descrição + valor) e cada um expõe o seu % sobre a RB.
+ * - Margem de Contribuição (MC) = RB - Σ custos variáveis.
+ * - Imposto incide SOBRE A MC (não sobre RB).
+ * - Lucro Líquido = MC - imposto.
+ */
+export function calculateContributionMargin(
+  receitaBruta: number,
+  custos: CostItem[],
+  impostoPercent: number
+): ContributionMarginResult {
+  const rb = Math.max(toSafeNumber(receitaBruta), 0);
+  const safeImpostoPercent = clampPercent(impostoPercent, { min: 0, max: 100 });
+
+  const breakdown: CostItemBreakdown[] = custos.map((custo) => {
+    const valor = toSafeNumber(custo.valor);
+    const percentualReceita = rb > 0 ? (valor / rb) * 100 : 0;
+
+    return {
+      id: custo.id,
+      descricao: custo.descricao,
+      valor,
+      percentualReceita,
+    };
+  });
+
+  const totalCustos = breakdown.reduce((acc, item) => acc + item.valor, 0);
+  const totalCustosPercent = rb > 0 ? (totalCustos / rb) * 100 : 0;
+
+  const margemContribuicao = rb - totalCustos;
+  const margemContribuicaoPercent = rb > 0 ? (margemContribuicao / rb) * 100 : 0;
+
+  const impostoValor = margemContribuicao * (safeImpostoPercent / 100);
+  const impostoSobreReceitaPercent = rb > 0 ? (impostoValor / rb) * 100 : 0;
+
+  const lucroLiquido = margemContribuicao - impostoValor;
+  const lucroLiquidoPercent = rb > 0 ? (lucroLiquido / rb) * 100 : 0;
 
   return {
-    custoDireto,
-    percentualBdi,
-    taxaBdi,
-    precoVenda,
-    lucroEstimado,
-    isTaxaInvalida,
-    composicao: {
-      materiais,
-      maoDeObra,
-      despesasFixas: precoVenda * (df / 100),
-      despesasFinanceiras: precoVenda * (fi / 100),
-      impostos: precoVenda * (impostosRate / 100),
-      lucro: lucroEstimado,
-    },
+    receitaBruta: rb,
+    totalCustos,
+    totalCustosPercent,
+    margemContribuicao,
+    margemContribuicaoPercent,
+    impostoPercent: safeImpostoPercent,
+    impostoValor,
+    impostoSobreReceitaPercent,
+    lucroLiquido,
+    lucroLiquidoPercent,
+    custos: breakdown,
   };
 }
