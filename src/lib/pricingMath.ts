@@ -1,7 +1,7 @@
 import type {
-  ContributionMarginResult,
   CostItem,
-  CostItemBreakdown,
+  CostItemWithPercent,
+  ServicePricingResult,
 } from '@/components/precificacao/types';
 
 function toSafeNumber(value: number): number {
@@ -29,59 +29,116 @@ function clampPercent(value: number, { min, max }: { min: number; max: number })
 }
 
 /**
- * Calcula Margem de Contribuição, imposto sobre MC e Lucro Líquido
- * a partir da Receita Bruta, lista de custos variáveis e percentual de imposto.
+ * Calcula a precificação do serviço.
  *
- * Regras:
- * - Receita Bruta (RB) é o valor consolidado de materiais (orçamento) ou inserido manualmente.
- * - Custos variáveis são livres (descrição + valor) e cada um expõe o seu % sobre a RB.
- * - Margem de Contribuição (MC) = RB - Σ custos variáveis.
- * - Imposto incide SOBRE A MC (não sobre RB).
- * - Lucro Líquido = MC - imposto.
+ * Modelo:
+ * - Valor do Serviço (VS) é o preço cobrado pelo serviço (digitado ou calculado via lucro%).
+ * - Custos do Serviço: N linhas livres (mão de obra, diária, etc.), cada uma com % sobre VS.
+ * - Lucro Bruto = VS - Σ custos.
+ * - Imposto incide SOBRE O VS (não sobre materiais nem sobre lucro).
+ * - Lucro Líquido = Lucro Bruto - Imposto.
+ * - Materiais passam por fora (informativos) e somam no Total ao Cliente.
+ * - Preço Total ao Cliente = Materiais + VS.
  */
-export function calculateContributionMargin(
-  receitaBruta: number,
+export function calculateServicePricing(
+  valorServico: number,
   custos: CostItem[],
-  impostoPercent: number
-): ContributionMarginResult {
-  const rb = Math.max(toSafeNumber(receitaBruta), 0);
+  impostoPercent: number,
+  valorMateriais: number
+): ServicePricingResult {
+  const vs = Math.max(toSafeNumber(valorServico), 0);
   const safeImpostoPercent = clampPercent(impostoPercent, { min: 0, max: 100 });
+  const materiais = Math.max(toSafeNumber(valorMateriais), 0);
 
-  const breakdown: CostItemBreakdown[] = custos.map((custo) => {
+  const custosDetalhados: CostItemWithPercent[] = custos.map((custo) => {
     const valor = toSafeNumber(custo.valor);
-    const percentualReceita = rb > 0 ? (valor / rb) * 100 : 0;
+    const percentualDoVS = vs > 0 ? (valor / vs) * 100 : 0;
 
     return {
       id: custo.id,
       descricao: custo.descricao,
       valor,
-      percentualReceita,
+      percentualDoVS,
     };
   });
 
-  const totalCustos = breakdown.reduce((acc, item) => acc + item.valor, 0);
-  const totalCustosPercent = rb > 0 ? (totalCustos / rb) * 100 : 0;
+  const totalCustos = custosDetalhados.reduce((acc, item) => acc + item.valor, 0);
+  const totalCustosPercent = vs > 0 ? (totalCustos / vs) * 100 : 0;
 
-  const margemContribuicao = rb - totalCustos;
-  const margemContribuicaoPercent = rb > 0 ? (margemContribuicao / rb) * 100 : 0;
+  const lucroBruto = vs - totalCustos;
+  const lucroBrutoPercent = vs > 0 ? (lucroBruto / vs) * 100 : 0;
 
-  const impostoValor = margemContribuicao * (safeImpostoPercent / 100);
-  const impostoSobreReceitaPercent = rb > 0 ? (impostoValor / rb) * 100 : 0;
+  const impostoValor = vs * (safeImpostoPercent / 100);
 
-  const lucroLiquido = margemContribuicao - impostoValor;
-  const lucroLiquidoPercent = rb > 0 ? (lucroLiquido / rb) * 100 : 0;
+  const lucroLiquido = lucroBruto - impostoValor;
+  const lucroLiquidoPercent = vs > 0 ? (lucroLiquido / vs) * 100 : 0;
+
+  const precoTotalCliente = materiais + vs;
 
   return {
-    receitaBruta: rb,
+    valorServico: vs,
     totalCustos,
     totalCustosPercent,
-    margemContribuicao,
-    margemContribuicaoPercent,
+    custosDetalhados,
+    lucroBruto,
+    lucroBrutoPercent,
     impostoPercent: safeImpostoPercent,
     impostoValor,
-    impostoSobreReceitaPercent,
     lucroLiquido,
     lucroLiquidoPercent,
-    custos: breakdown,
+    valorMateriais: materiais,
+    precoTotalCliente,
   };
+}
+
+/**
+ * Calcula o Valor do Serviço a partir do total de custos e do percentual de lucro desejado.
+ *
+ * Fórmula: VS = totalCustos / (1 - lucroPercent/100)
+ *
+ * Retorna `null` se lucroPercent >= 100 (inválido, pois resultaria em divisão por zero ou negativo).
+ * Retorna 0 se totalCustos <= 0.
+ */
+export function calcularValorServicoPorLucro(
+  totalCustos: number,
+  lucroPercentDesejado: number
+): number | null {
+  const custos = toSafeNumber(totalCustos);
+  const lucroPercent = toSafeNumber(lucroPercentDesejado);
+
+  if (lucroPercent >= 100) {
+    return null;
+  }
+
+  if (custos <= 0) {
+    return 0;
+  }
+
+  const divisor = 1 - lucroPercent / 100;
+  if (divisor <= 0) {
+    return null;
+  }
+
+  return custos / divisor;
+}
+
+/**
+ * Calcula o percentual de lucro bruto a partir do Valor do Serviço e total de custos.
+ *
+ * Fórmula: lucroPercent = ((VS - totalCustos) / VS) * 100
+ *
+ * Retorna 0 se VS <= 0.
+ */
+export function calcularLucroPorValorServico(
+  valorServico: number,
+  totalCustos: number
+): number {
+  const vs = toSafeNumber(valorServico);
+  const custos = toSafeNumber(totalCustos);
+
+  if (vs <= 0) {
+    return 0;
+  }
+
+  return ((vs - custos) / vs) * 100;
 }

@@ -4,13 +4,18 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { calculateContributionMargin } from '@/lib/pricingMath';
+import {
+  calculateServicePricing,
+  calcularValorServicoPorLucro,
+  calcularLucroPorValorServico,
+} from '@/lib/pricingMath';
 import { consolidateMaterialsFromBudgetDetails } from '@/services/budgetMaterialAggregation';
 import { BudgetImportSelect } from './BudgetImportSelect';
-import { ContributionSummary } from './ContributionSummary';
 import { CostItemsTable } from './CostItemsTable';
+import { ServicePricingSummary } from './ServicePricingSummary';
+import { ServiceValueInput } from './ServiceValueInput';
 import { TaxInput } from './TaxInput';
-import type { CostItem, RevenueSource } from './types';
+import type { CostItem, PricingInputMode } from './types';
 
 function parseNonNegativeNumber(value: string): number {
   const parsed = Number.parseFloat(value);
@@ -28,7 +33,6 @@ function parsePercent(value: string): number {
   }
 
   if (parsed < 0) return 0;
-  if (parsed > 100) return 100;
   return parsed;
 }
 
@@ -54,7 +58,9 @@ export function PrecificacaoCalculator() {
   } = useApp();
 
   const [selectedBudgetId, setSelectedBudgetId] = useState('');
-  const [manualReceita, setManualReceita] = useState(0);
+  const [valorServicoInput, setValorServicoInput] = useState(0);
+  const [lucroPercentInput, setLucroPercentInput] = useState(0);
+  const [pricingInputMode, setPricingInputMode] = useState<PricingInputMode>('valor');
   const [costItems, setCostItems] = useState<CostItem[]>([]);
   const [impostoPercent, setImpostoPercent] = useState(0);
 
@@ -75,22 +81,36 @@ export function PrecificacaoCalculator() {
     fetchBudgetDetails(selectedBudgetId);
   }, [fetchBudgetDetails, selectedBudgetId]);
 
-  const importedReceita = useMemo(() => {
+  const valorMateriais = useMemo(() => {
     if (!selectedBudgetId || !budgetDetails || budgetDetails.id !== selectedBudgetId) {
-      return null;
+      return 0;
     }
 
     const consolidatedMaterials = consolidateMaterialsFromBudgetDetails(budgetDetails);
     return consolidatedMaterials.reduce((acc, m) => acc + m.subtotal, 0);
   }, [budgetDetails, selectedBudgetId]);
 
-  const isImported = selectedBudgetId !== '' && importedReceita !== null;
-  const revenueSource: RevenueSource = isImported ? 'budget' : 'manual';
-  const receitaBruta = isImported ? importedReceita ?? 0 : manualReceita;
+  const totalCustos = useMemo(
+    () => costItems.reduce((acc, item) => acc + item.valor, 0),
+    [costItems]
+  );
+
+  const { valorServico, lucroPercent } = useMemo(() => {
+    if (pricingInputMode === 'valor') {
+      const derivedLucro = calcularLucroPorValorServico(valorServicoInput, totalCustos);
+      return { valorServico: valorServicoInput, lucroPercent: derivedLucro };
+    }
+
+    const derivedVS = calcularValorServicoPorLucro(totalCustos, lucroPercentInput);
+    return {
+      valorServico: derivedVS ?? 0,
+      lucroPercent: lucroPercentInput,
+    };
+  }, [pricingInputMode, valorServicoInput, lucroPercentInput, totalCustos]);
 
   const pricingResult = useMemo(
-    () => calculateContributionMargin(receitaBruta, costItems, impostoPercent),
-    [receitaBruta, costItems, impostoPercent]
+    () => calculateServicePricing(valorServico, costItems, impostoPercent, valorMateriais),
+    [valorServico, costItems, impostoPercent, valorMateriais]
   );
 
   const selectedBudgetName = useMemo(
@@ -98,12 +118,16 @@ export function PrecificacaoCalculator() {
     [budgets, selectedBudgetId]
   );
 
-  const handleReceitaBrutaChange = (value: string) => {
-    if (revenueSource === 'budget') {
-      return;
-    }
+  const handleValorServicoChange = (value: string) => {
+    const novoValor = parseNonNegativeNumber(value);
+    setValorServicoInput(novoValor);
+    setPricingInputMode('valor');
+  };
 
-    setManualReceita(parseNonNegativeNumber(value));
+  const handleLucroPercentChange = (value: string) => {
+    const novoLucro = parsePercent(value);
+    setLucroPercentInput(novoLucro);
+    setPricingInputMode('lucro');
   };
 
   const handleAddCostItem = () => {
@@ -161,12 +185,12 @@ export function PrecificacaoCalculator() {
         </p>
         <h1 className="mt-1 text-2xl font-bold text-[#1D3140]">Módulo de Precificação</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Cálculo por Margem de Contribuição: Receita Bruta menos custos variáveis, com imposto incidindo sobre a MC.
+          Precificação de serviços: defina o valor ou lucro desejado, adicione custos e calcule o total ao cliente.
           {selectedBudgetName ? ` Orçamento selecionado: ${selectedBudgetName}.` : ''}
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
         <section className="space-y-4">
           <BudgetImportSelect
             budgets={budgets}
@@ -176,10 +200,17 @@ export function PrecificacaoCalculator() {
             onBudgetChange={setSelectedBudgetId}
           />
 
+          <ServiceValueInput
+            totalCustos={totalCustos}
+            valorServico={valorServico}
+            lucroPercent={lucroPercent}
+            inputMode={pricingInputMode}
+            onValorServicoChange={handleValorServicoChange}
+            onLucroPercentChange={handleLucroPercentChange}
+          />
+
           <CostItemsTable
-            receitaBruta={receitaBruta}
-            revenueSource={revenueSource}
-            onReceitaBrutaChange={handleReceitaBrutaChange}
+            valorServico={valorServico}
             costItems={costItems}
             onAddCostItem={handleAddCostItem}
             onUpdateCostItem={handleUpdateCostItem}
@@ -193,7 +224,7 @@ export function PrecificacaoCalculator() {
           <TaxInput impostoPercent={impostoPercent} onChange={handleImpostoChange} />
         </section>
 
-        <ContributionSummary result={pricingResult} />
+        <ServicePricingSummary result={pricingResult} />
       </div>
     </div>
   );

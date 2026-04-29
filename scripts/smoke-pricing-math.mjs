@@ -1,5 +1,6 @@
-// Smoke test do motor calculateContributionMargin (réplica isolada para evitar bundler).
+// Smoke test do motor calculateServicePricing e calcularValorServicoPorLucro
 // Mantenha em sync com src/lib/pricingMath.ts ao alterar o motor.
+
 function toSafeNumber(v) {
   return Number.isFinite(v) ? v : 0;
 }
@@ -11,114 +12,169 @@ function clampPercent(v, { min, max }) {
   return v;
 }
 
-function calculateContributionMargin(receitaBruta, custos, impostoPercent) {
-  const rb = Math.max(toSafeNumber(receitaBruta), 0);
+function calculateServicePricing(valorServico, custos, impostoPercent, valorMateriais) {
+  const vs = Math.max(toSafeNumber(valorServico), 0);
   const ip = clampPercent(impostoPercent, { min: 0, max: 100 });
-  const breakdown = custos.map((c) => {
+  const materiais = Math.max(toSafeNumber(valorMateriais), 0);
+
+  const custosDetalhados = custos.map((c) => {
     const valor = toSafeNumber(c.valor);
-    return { ...c, valor, percentualReceita: rb > 0 ? (valor / rb) * 100 : 0 };
+    return { ...c, valor, percentualDoVS: vs > 0 ? (valor / vs) * 100 : 0 };
   });
-  const totalCustos = breakdown.reduce((a, b) => a + b.valor, 0);
-  const totalCustosPercent = rb > 0 ? (totalCustos / rb) * 100 : 0;
-  const mc = rb - totalCustos;
-  const mcPercent = rb > 0 ? (mc / rb) * 100 : 0;
-  const impostoValor = mc * (ip / 100);
-  const impostoSobreReceitaPercent = rb > 0 ? (impostoValor / rb) * 100 : 0;
-  const lucroLiquido = mc - impostoValor;
-  const lucroLiquidoPercent = rb > 0 ? (lucroLiquido / rb) * 100 : 0;
+
+  const totalCustos = custosDetalhados.reduce((a, b) => a + b.valor, 0);
+  const totalCustosPercent = vs > 0 ? (totalCustos / vs) * 100 : 0;
+
+  const lucroBruto = vs - totalCustos;
+  const lucroBrutoPercent = vs > 0 ? (lucroBruto / vs) * 100 : 0;
+
+  const impostoValor = vs * (ip / 100);
+
+  const lucroLiquido = lucroBruto - impostoValor;
+  const lucroLiquidoPercent = vs > 0 ? (lucroLiquido / vs) * 100 : 0;
+
+  const precoTotalCliente = materiais + vs;
+
   return {
-    receitaBruta: rb,
+    valorServico: vs,
     totalCustos,
     totalCustosPercent,
-    margemContribuicao: mc,
-    margemContribuicaoPercent: mcPercent,
+    custosDetalhados,
+    lucroBruto,
+    lucroBrutoPercent,
     impostoPercent: ip,
     impostoValor,
-    impostoSobreReceitaPercent,
     lucroLiquido,
     lucroLiquidoPercent,
-    custos: breakdown,
+    valorMateriais: materiais,
+    precoTotalCliente,
   };
+}
+
+function calcularValorServicoPorLucro(totalCustos, lucroPercentDesejado) {
+  const custos = toSafeNumber(totalCustos);
+  const lucroPercent = toSafeNumber(lucroPercentDesejado);
+
+  if (lucroPercent >= 100) {
+    return null;
+  }
+
+  if (custos <= 0) {
+    return 0;
+  }
+
+  const divisor = 1 - lucroPercent / 100;
+  if (divisor <= 0) {
+    return null;
+  }
+
+  return custos / divisor;
 }
 
 function approxEq(a, b, eps = 1e-6) {
   return Math.abs(a - b) <= eps;
 }
 
+// Casos obrigatórios do plano:
+// 1. VS = 40k, custos = 22k, imposto 13% → validar cada campo
+// 2. VS = 0 → todos percentuais = 0, sem NaN
+// 3. lucroPercent = 50%, custos = 20k → VS = 40k
+// 4. lucroPercent = 100% → retornar null
+// 5. custos > VS → lucro negativo, sem erro
+// 6. imposto = 0% → impostoValor = 0
+
 const cases = [
   {
-    name: 'zero custos, sem imposto',
-    rb: 1000,
-    custos: [],
-    imp: 0,
-    expect: { mc: 1000, imposto: 0, lucro: 1000, mcPct: 100, lucroPct: 100 },
+    name: 'VS=40k, custos=22k, imposto=13%',
+    vs: 40000,
+    custos: [{ id: 'a', descricao: 'Mão de obra', valor: 22000 }],
+    imp: 13,
+    materiais: 10000,
+    expect: {
+      lucroBruto: 18000,
+      lucroBrutoPercent: 45,
+      impostoValor: 5200,
+      lucroLiquido: 12800,
+      lucroLiquidoPercent: 32,
+      precoTotalCliente: 50000,
+    },
   },
   {
-    name: 'zero custos, imposto 10% incide na MC',
-    rb: 1000,
-    custos: [],
-    imp: 10,
-    expect: { mc: 1000, imposto: 100, lucro: 900, mcPct: 100, lucroPct: 90 },
-  },
-  {
-    name: 'custos > receita -> MC negativa, imposto sobre MC negativa',
-    rb: 1000,
-    custos: [{ id: 'a', descricao: 'Gasto', valor: 1500 }],
-    imp: 0,
-    expect: { mc: -500, imposto: 0, lucro: -500, mcPct: -50, lucroPct: -50 },
-  },
-  {
-    name: 'imposto 100% zera o lucro',
-    rb: 1000,
-    custos: [{ id: 'a', descricao: 'X', valor: 200 }],
-    imp: 100,
-    expect: { mc: 800, imposto: 800, lucro: 0, mcPct: 80, lucroPct: 0 },
-  },
-  {
-    name: 'caso real: 3 custos + 5% imposto',
-    rb: 10000,
-    custos: [
-      { id: 'a', descricao: 'Mão de obra', valor: 3000 },
-      { id: 'b', descricao: 'Diária', valor: 500 },
-      { id: 'c', descricao: 'Alimentação', valor: 300 },
-    ],
-    imp: 5,
-    expect: { mc: 6200, imposto: 310, lucro: 5890, mcPct: 62, lucroPct: 58.9 },
-  },
-  {
-    name: 'RB zero -> percentuais devem ser 0 sem NaN',
-    rb: 0,
+    name: 'VS=0 → percentuais = 0, sem NaN',
+    vs: 0,
     custos: [{ id: 'a', descricao: 'X', valor: 100 }],
     imp: 10,
-    expect: { mc: -100, imposto: -10, lucro: -90, mcPct: 0, lucroPct: 0 },
+    materiais: 5000,
+    expect: {
+      lucroBruto: -100,
+      lucroBrutoPercent: 0,
+      impostoValor: 0,
+      lucroLiquido: -100,
+      lucroLiquidoPercent: 0,
+      precoTotalCliente: 5000,
+    },
   },
   {
-    name: 'imposto fora da faixa (300) deve clampar para 100',
-    rb: 1000,
-    custos: [],
-    imp: 300,
-    expect: { mc: 1000, imposto: 1000, lucro: 0, mcPct: 100, lucroPct: 0 },
+    name: 'custos > VS → lucro negativo',
+    vs: 10000,
+    custos: [{ id: 'a', descricao: 'Excesso', valor: 15000 }],
+    imp: 0,
+    materiais: 0,
+    expect: {
+      lucroBruto: -5000,
+      lucroBrutoPercent: -50,
+      impostoValor: 0,
+      lucroLiquido: -5000,
+      lucroLiquidoPercent: -50,
+      precoTotalCliente: 10000,
+    },
   },
   {
-    name: 'imposto negativo deve clampar para 0',
-    rb: 1000,
-    custos: [],
-    imp: -50,
-    expect: { mc: 1000, imposto: 0, lucro: 1000, mcPct: 100, lucroPct: 100 },
+    name: 'imposto=0% → impostoValor=0',
+    vs: 20000,
+    custos: [{ id: 'a', descricao: 'Custo', valor: 8000 }],
+    imp: 0,
+    materiais: 3000,
+    expect: {
+      lucroBruto: 12000,
+      lucroBrutoPercent: 60,
+      impostoValor: 0,
+      lucroLiquido: 12000,
+      lucroLiquidoPercent: 60,
+      precoTotalCliente: 23000,
+    },
+  },
+  {
+    name: 'imposto=100% sobre VS (não sobre lucro)',
+    vs: 10000,
+    custos: [{ id: 'a', descricao: 'Custo', valor: 3000 }],
+    imp: 100,
+    materiais: 0,
+    expect: {
+      lucroBruto: 7000,
+      lucroBrutoPercent: 70,
+      impostoValor: 10000,
+      lucroLiquido: -3000,
+      lucroLiquidoPercent: -30,
+      precoTotalCliente: 10000,
+    },
   },
 ];
 
 let pass = 0;
 let fail = 0;
 
+console.log('=== Testes de calculateServicePricing ===\n');
+
 for (const c of cases) {
-  const r = calculateContributionMargin(c.rb, c.custos, c.imp);
+  const r = calculateServicePricing(c.vs, c.custos, c.imp, c.materiais);
   const ok =
-    approxEq(r.margemContribuicao, c.expect.mc) &&
-    approxEq(r.impostoValor, c.expect.imposto) &&
-    approxEq(r.lucroLiquido, c.expect.lucro) &&
-    approxEq(r.margemContribuicaoPercent, c.expect.mcPct) &&
-    approxEq(r.lucroLiquidoPercent, c.expect.lucroPct);
+    approxEq(r.lucroBruto, c.expect.lucroBruto) &&
+    approxEq(r.lucroBrutoPercent, c.expect.lucroBrutoPercent) &&
+    approxEq(r.impostoValor, c.expect.impostoValor) &&
+    approxEq(r.lucroLiquido, c.expect.lucroLiquido) &&
+    approxEq(r.lucroLiquidoPercent, c.expect.lucroLiquidoPercent) &&
+    approxEq(r.precoTotalCliente, c.expect.precoTotalCliente);
 
   const tag = ok ? 'PASS' : 'FAIL';
   if (ok) pass++;
@@ -126,12 +182,59 @@ for (const c of cases) {
 
   console.log(`[${tag}] ${c.name}`);
   console.log(
-    `       MC=${r.margemContribuicao} (${r.margemContribuicaoPercent.toFixed(2)}%) | imposto=${r.impostoValor} | lucro=${r.lucroLiquido} (${r.lucroLiquidoPercent.toFixed(2)}%)`
+    `       LucroBruto=${r.lucroBruto} (${r.lucroBrutoPercent.toFixed(2)}%) | Imposto=${r.impostoValor} | LucroLiq=${r.lucroLiquido} (${r.lucroLiquidoPercent.toFixed(2)}%) | Total=${r.precoTotalCliente}`
   );
   if (!ok) {
-    console.log(`       expected: mc=${c.expect.mc} imposto=${c.expect.imposto} lucro=${c.expect.lucro}`);
+    console.log(`       expected: lucroBruto=${c.expect.lucroBruto} imposto=${c.expect.impostoValor} lucroLiq=${c.expect.lucroLiquido} total=${c.expect.precoTotalCliente}`);
   }
 }
 
-console.log(`\nResumo: ${pass} pass / ${fail} fail`);
+console.log('\n=== Testes de calcularValorServicoPorLucro ===\n');
+
+const lucroCases = [
+  {
+    name: 'lucro%=50, custos=20k → VS=40k',
+    custos: 20000,
+    lucroPercent: 50,
+    expect: 40000,
+  },
+  {
+    name: 'lucro%=100 → null (inválido)',
+    custos: 20000,
+    lucroPercent: 100,
+    expect: null,
+  },
+  {
+    name: 'lucro%=0, custos=10k → VS=10k',
+    custos: 10000,
+    lucroPercent: 0,
+    expect: 10000,
+  },
+  {
+    name: 'custos=0 → VS=0',
+    custos: 0,
+    lucroPercent: 30,
+    expect: 0,
+  },
+  {
+    name: 'lucro%=25, custos=15k → VS=20k',
+    custos: 15000,
+    lucroPercent: 25,
+    expect: 20000,
+  },
+];
+
+for (const c of lucroCases) {
+  const r = calcularValorServicoPorLucro(c.custos, c.lucroPercent);
+  const ok = c.expect === null ? r === null : approxEq(r, c.expect);
+
+  const tag = ok ? 'PASS' : 'FAIL';
+  if (ok) pass++;
+  else fail++;
+
+  console.log(`[${tag}] ${c.name}`);
+  console.log(`       VS calculado=${r} | esperado=${c.expect}`);
+}
+
+console.log(`\n=== Resumo: ${pass} pass / ${fail} fail ===`);
 process.exit(fail === 0 ? 0 : 1);

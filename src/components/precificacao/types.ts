@@ -1,29 +1,30 @@
-/** Origem da Receita Bruta no fluxo de precificação. */
-export type RevenueSource = 'budget' | 'manual';
-
-/** Linha de custo variável adicionada livremente pelo usuário (mão de obra, diária, alimentação etc.). */
+/** Linha de custo do serviço adicionada livremente pelo usuário (mão de obra, diária, alimentação etc.). */
 export interface CostItem {
   id: string;
   descricao: string;
   valor: number;
 }
 
-/** Custo variável enriquecido com seu percentual sobre a Receita Bruta. */
-export interface CostItemBreakdown extends CostItem {
-  percentualReceita: number;
+/** Custo enriquecido com seu percentual sobre o Valor do Serviço. */
+export interface CostItemWithPercent extends CostItem {
+  percentualDoVS: number;
 }
 
-/** Resultado do cálculo de Margem de Contribuição. */
-export interface ContributionMarginResult {
-  receitaBruta: number;
+/** Modo de entrada da precificação: usuário digita valor do serviço diretamente ou percentual de lucro desejado. */
+export type PricingInputMode = 'valor' | 'lucro';
+
+/** Resultado do cálculo de precificação de serviço. */
+export interface ServicePricingResult {
+  valorServico: number;
   totalCustos: number;
   totalCustosPercent: number;
-  margemContribuicao: number;
-  margemContribuicaoPercent: number;
+  custosDetalhados: CostItemWithPercent[];
+  lucroBruto: number;
+  lucroBrutoPercent: number;
   impostoPercent: number;
   impostoValor: number;
-  impostoSobreReceitaPercent: number;
   lucroLiquido: number;
   lucroLiquidoPercent: number;
-  custos: CostItemBreakdown[];
+  valorMateriais: number;
+  precoTotalCliente: number;
 }

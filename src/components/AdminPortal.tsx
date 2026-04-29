@@ -89,7 +89,7 @@ const modules: Module[] = [
   {
     id: 'precificacao',
     title: 'Módulo de Precificação',
-    description: 'Análise por Margem de Contribuição: receita, custos variáveis, imposto e lucro líquido',
+    description: 'Precificação de serviços: custos, lucro, imposto sobre VS e materiais faturados por fora',
     icon: Calculator,
     status: 'active',
     href: '/tools/precificacao',

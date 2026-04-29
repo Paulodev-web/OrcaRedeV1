@@ -3,7 +3,7 @@ import { PrecificacaoCalculator } from '@/components/precificacao/PrecificacaoCa
 
 export const metadata: Metadata = {
   title: 'Módulo de Precificação — OrcaRede',
-  description: 'Calculadora de Margem de Contribuição com receita, custos variáveis e imposto sobre MC.',
+  description: 'Precificação de serviços com custos variáveis, imposto sobre VS e materiais faturados separadamente.',
 };
 
 export default function PrecificacaoPage() {
