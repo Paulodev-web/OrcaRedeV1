@@ -141,6 +141,28 @@ export async function getQuoteWithItemsAction(
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
 
+    // Primeiro verifica se a cotação existe (sem filtrar por user_id para diagnóstico)
+    const { data: quoteCheck, error: checkError } = await supabase
+      .from('supplier_quotes')
+      .select('id, user_id')
+      .eq('id', quoteId)
+      .single();
+
+    if (checkError || !quoteCheck) {
+      console.error('[getQuoteWithItemsAction] Cotação não encontrada no banco:', quoteId, checkError?.message);
+      return { success: false, error: 'Cotação não encontrada no sistema.' };
+    }
+
+    // Verifica ownership
+    if (quoteCheck.user_id !== userId) {
+      console.error('[getQuoteWithItemsAction] Ownership mismatch:', {
+        quoteId,
+        quoteUserId: quoteCheck.user_id,
+        requestingUserId: userId,
+      });
+      return { success: false, error: 'Você não tem permissão para acessar esta cotação.' };
+    }
+
     const { data: quote, error: quoteError } = await supabase
       .from('supplier_quotes')
       .select('id, budget_id, session_id, supplier_name, pdf_path, display_name, status, observacoes_gerais, extraction_validated_at, user_id, created_at, updated_at')
@@ -149,7 +171,8 @@ export async function getQuoteWithItemsAction(
       .single();
 
     if (quoteError || !quote) {
-      return { success: false, error: 'Cotação não encontrada.' };
+      console.error('[getQuoteWithItemsAction] Falha ao carregar cotação após verificação:', quoteError?.message);
+      return { success: false, error: 'Erro ao carregar dados da cotação.' };
     }
 
     const { data: rawItems, error: itemsError } = await supabase
@@ -981,6 +1004,27 @@ export async function validateExtractionAction(
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
 
+    // Verifica ownership antes de atualizar
+    const { data: existing, error: existingError } = await supabase
+      .from('supplier_quotes')
+      .select('id, user_id, session_id')
+      .eq('id', quoteId)
+      .single();
+
+    if (existingError || !existing) {
+      console.error('[validateExtractionAction] Cotação não encontrada:', quoteId, existingError?.message);
+      return { success: false, error: 'Cotação não encontrada.' };
+    }
+
+    if (existing.user_id !== userId) {
+      console.error('[validateExtractionAction] Ownership mismatch:', {
+        quoteId,
+        quoteUserId: existing.user_id,
+        requestingUserId: userId,
+      });
+      return { success: false, error: 'Você não tem permissão para validar esta cotação.' };
+    }
+
     const updates: Record<string, unknown> = {
       extraction_validated_at: new Date().toISOString(),
     };
@@ -991,27 +1035,23 @@ export async function validateExtractionAction(
       updates.display_name = trimmed || null;
     }
 
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from('supplier_quotes')
       .update(updates)
       .eq('id', quoteId)
-      .eq('user_id', userId);
-
-    if (error) {
-      return { success: false, error: error.message };
-    }
-
-    const { data: quoteRow } = await supabase
-      .from('supplier_quotes')
-      .select('session_id')
-      .eq('id', quoteId)
       .eq('user_id', userId)
+      .select('id')
       .single();
 
-    if (quoteRow?.session_id) {
-      revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}`);
-      revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/conciliacao`);
-      revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/cenarios`);
+    if (error || !updated) {
+      console.error('[validateExtractionAction] Falha ao atualizar:', error?.message);
+      return { success: false, error: error?.message ?? 'Falha ao validar extração.' };
+    }
+
+    if (existing.session_id) {
+      revalidatePath(`/fornecedores/sessao/${existing.session_id}`);
+      revalidatePath(`/fornecedores/sessao/${existing.session_id}/conciliacao`);
+      revalidatePath(`/fornecedores/sessao/${existing.session_id}/cenarios`);
     }
     revalidatePath('/fornecedores');
     return { success: true, data: undefined };

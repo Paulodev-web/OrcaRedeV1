@@ -24,6 +24,8 @@ import {
   type SessionStockInput,
 } from '@/actions/supplierQuotes';
 import ScenarioFiltersPanel from './ScenarioFiltersPanel';
+import ScenarioComparisonTable from './ScenarioComparisonTable';
+import MaterialDetailModal from './MaterialDetailModal';
 import {
   deriveFilteredScenarios,
   defaultFilterState,
@@ -742,6 +744,15 @@ export default function SessionScenariosView({
   const [filterState, setFilterState] = useState<ScenarioFilterState>(defaultFilterState);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
 
+  // Material detail modal state
+  const [selectedMaterial, setSelectedMaterial] = useState<ScenarioItem | null>(null);
+  const [materialModalOpen, setMaterialModalOpen] = useState(false);
+
+  const handleMaterialClick = useCallback((item: ScenarioItem) => {
+    setSelectedMaterial(item);
+    setMaterialModalOpen(true);
+  }, []);
+
   // Derived filtered scenarios (client-side only — visual totals, não substitui cálculo canônico)
   const filteredScenarios = useMemo(
     () => deriveFilteredScenarios(scenarios, filterState),
@@ -833,7 +844,7 @@ export default function SessionScenariosView({
       <div className="overflow-hidden rounded-xl border border-[#64ABDE]/40 bg-white shadow-md">
         <div className="flex border-b border-gray-200 bg-white/80">
           <button type="button" onClick={() => setActiveTab('tabelona')} className={tabBtnClass(activeTab === 'tabelona')}>
-            <Table2 className="h-4 w-4" /> Tabelona de Comparação
+            <Table2 className="h-4 w-4" /> Tabela de Avaliação
           </button>
           <button type="button" onClick={() => setActiveTab('ranking')} className={tabBtnClass(activeTab === 'ranking')}>
             <Trophy className="h-4 w-4" /> Ranking (Cenários A e B)
@@ -841,15 +852,24 @@ export default function SessionScenariosView({
         </div>
         <div className="p-5">
           {activeTab === 'tabelona' && (
-            <TabelonaView
-              scenarios={filteredScenarios}
-              groupBySupplier={filterState.groupBySupplier}
+            <ScenarioComparisonTable
+              items={filteredScenarios.filteredItems}
               quotes={conciliadoQuotes}
+              enabledQuoteIds={filterState.enabledQuoteIds}
+              onMaterialClick={handleMaterialClick}
             />
           )}
           {activeTab === 'ranking' && <RankingView scenarios={filteredScenarios} />}
         </div>
       </div>
+
+      <MaterialDetailModal
+        item={selectedMaterial}
+        quotes={conciliadoQuotes}
+        enabledQuoteIds={filterState.enabledQuoteIds}
+        open={materialModalOpen}
+        onOpenChange={setMaterialModalOpen}
+      />
     </div>
   );
 }

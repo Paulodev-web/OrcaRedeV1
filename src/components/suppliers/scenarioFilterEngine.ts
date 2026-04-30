@@ -5,12 +5,13 @@
 
 import type { ScenariosResult, ScenarioItem, ScenarioSupplier } from '@/actions/supplierQuotes';
 
-export type SortOption = 'price' | 'name' | 'supplier';
+export type SortOption = 'price' | 'name' | 'supplier' | 'economy';
 
 export interface ScenarioFilterState {
   enabledQuoteIds: Set<string>;
   searchTerm: string;
   showOnlyUncovered: boolean;
+  showOnlyDivergent: boolean;
   sortBy: SortOption;
   priceMin: number | null;
   priceMax: number | null;
@@ -22,6 +23,7 @@ export const defaultFilterState: ScenarioFilterState = {
   enabledQuoteIds: new Set(),
   searchTerm: '',
   showOnlyUncovered: false,
+  showOnlyDivergent: false,
   sortBy: 'name',
   priceMin: null,
   priceMax: null,
@@ -29,9 +31,142 @@ export const defaultFilterState: ScenarioFilterState = {
   showOnlyDifferences: false,
 };
 
+export interface ItemEvaluationMetrics {
+  minPrice: number | null;
+  maxPrice: number | null;
+  priceSpread: number;
+  winnerQuoteId: string | null;
+  hasDivergence: boolean;
+  hasNoCoverage: boolean;
+  percentVsBest: Map<string, number>;
+}
+
 export interface FilteredScenariosResult extends ScenariosResult {
   filteredItems: ScenarioItem[];
   isFiltered: boolean;
+}
+
+export interface ColumnTotal {
+  quoteId: string;
+  totalValue: number;
+  itemsCovered: number;
+  winsCount: number;
+}
+
+/**
+ * Calcula métricas de avaliação para um item (material) considerando apenas offers visíveis.
+ */
+export function computeItemMetrics(
+  item: ScenarioItem,
+  enabledQuoteIds: Set<string>
+): ItemEvaluationMetrics {
+  const visibleOffers = enabledQuoteIds.size === 0
+    ? item.all_offers
+    : item.all_offers.filter((o) => enabledQuoteIds.has(o.quote_id));
+
+  if (visibleOffers.length === 0) {
+    return {
+      minPrice: null,
+      maxPrice: null,
+      priceSpread: 0,
+      winnerQuoteId: null,
+      hasDivergence: false,
+      hasNoCoverage: true,
+      percentVsBest: new Map(),
+    };
+  }
+
+  const prices = visibleOffers.map((o) => o.preco_normalizado);
+  const minPrice = Math.min(...prices);
+  const maxPrice = Math.max(...prices);
+  const priceSpread = maxPrice - minPrice;
+  const hasDivergence = visibleOffers.length >= 2;
+
+  const winner = visibleOffers.find((o) => o.preco_normalizado === minPrice);
+  const winnerQuoteId = winner?.quote_id ?? null;
+
+  const percentVsBest = new Map<string, number>();
+  for (const offer of visibleOffers) {
+    if (minPrice > 0) {
+      const pct = ((offer.preco_normalizado - minPrice) / minPrice) * 100;
+      percentVsBest.set(offer.quote_id, pct);
+    } else {
+      percentVsBest.set(offer.quote_id, 0);
+    }
+  }
+
+  return {
+    minPrice,
+    maxPrice,
+    priceSpread,
+    winnerQuoteId,
+    hasDivergence,
+    hasNoCoverage: false,
+    percentVsBest,
+  };
+}
+
+/**
+ * Calcula totais por coluna (orçamento) e o total mínimo combinado.
+ */
+export function computeColumnTotals(
+  items: ScenarioItem[],
+  enabledQuoteIds: Set<string>
+): { columnTotals: ColumnTotal[]; grandMinTotal: number } {
+  const totalsMap = new Map<string, { total: number; covered: number; wins: number }>();
+  let grandMinTotal = 0;
+
+  // Collect all unique quote IDs from items
+  const allQuoteIds = new Set<string>();
+  for (const item of items) {
+    for (const offer of item.all_offers) {
+      if (enabledQuoteIds.size === 0 || enabledQuoteIds.has(offer.quote_id)) {
+        allQuoteIds.add(offer.quote_id);
+      }
+    }
+  }
+
+  // Initialize
+  for (const qid of allQuoteIds) {
+    totalsMap.set(qid, { total: 0, covered: 0, wins: 0 });
+  }
+
+  for (const item of items) {
+    if (item.net_qty === 0) continue;
+
+    const metrics = computeItemMetrics(item, enabledQuoteIds);
+    const visibleOffers = enabledQuoteIds.size === 0
+      ? item.all_offers
+      : item.all_offers.filter((o) => enabledQuoteIds.has(o.quote_id));
+
+    for (const offer of visibleOffers) {
+      const col = totalsMap.get(offer.quote_id);
+      if (col) {
+        col.total += offer.preco_normalizado * item.net_qty;
+        col.covered += 1;
+      }
+    }
+
+    if (metrics.winnerQuoteId) {
+      const winnerCol = totalsMap.get(metrics.winnerQuoteId);
+      if (winnerCol) {
+        winnerCol.wins += 1;
+      }
+    }
+
+    if (metrics.minPrice !== null) {
+      grandMinTotal += metrics.minPrice * item.net_qty;
+    }
+  }
+
+  const columnTotals: ColumnTotal[] = Array.from(totalsMap.entries()).map(([quoteId, data]) => ({
+    quoteId,
+    totalValue: data.total,
+    itemsCovered: data.covered,
+    winsCount: data.wins,
+  }));
+
+  return { columnTotals, grandMinTotal };
 }
 
 /**
@@ -42,19 +177,20 @@ export function deriveFilteredScenarios(
   base: ScenariosResult,
   filterState: ScenarioFilterState
 ): FilteredScenariosResult {
-  const { enabledQuoteIds, searchTerm, showOnlyUncovered, sortBy, priceMin, priceMax, showOnlyDifferences } = filterState;
+  const { enabledQuoteIds, searchTerm, showOnlyUncovered, showOnlyDivergent, sortBy, priceMin, priceMax, showOnlyDifferences } = filterState;
 
   const hasActiveFilters =
     enabledQuoteIds.size > 0 ||
     searchTerm.trim() !== '' ||
     showOnlyUncovered ||
+    showOnlyDivergent ||
     priceMin !== null ||
     priceMax !== null ||
     showOnlyDifferences;
 
   // Se não há filtros ativos, retorna os dados originais
   if (!hasActiveFilters) {
-    const sorted = sortItems(base.scenarioB.items, sortBy);
+    const sorted = sortItems(base.scenarioB.items, sortBy, enabledQuoteIds);
     return {
       ...base,
       filteredItems: sorted,
@@ -77,6 +213,7 @@ export function deriveFilteredScenarios(
 
     // Se não sobrou nenhuma oferta após filtro de quotes, item pode ser considerado "não coberto"
     const hasCoverage = offers.length > 0;
+    const hasDivergence = offers.length >= 2;
 
     // Filtro por busca (nome ou código do material)
     if (searchLower) {
@@ -88,6 +225,9 @@ export function deriveFilteredScenarios(
 
     // Filtro "só não cobertos"
     if (showOnlyUncovered && hasCoverage) continue;
+
+    // Filtro "só divergentes" (2+ preços válidos)
+    if (showOnlyDivergent && !hasDivergence) continue;
 
     // Recalcula best offer com as ofertas filtradas
     let bestSupplier = item.best_supplier;
@@ -170,7 +310,7 @@ export function deriveFilteredScenarios(
   }
 
   // Ordena
-  const sortedItems = sortItems(finalItems, sortBy);
+  const sortedItems = sortItems(finalItems, sortBy, enabledQuoteIds);
 
   return {
     scenarioA,
@@ -185,7 +325,7 @@ export function deriveFilteredScenarios(
   };
 }
 
-function sortItems(items: ScenarioItem[], sortBy: SortOption): ScenarioItem[] {
+function sortItems(items: ScenarioItem[], sortBy: SortOption, enabledQuoteIds: Set<string>): ScenarioItem[] {
   const sorted = [...items];
   switch (sortBy) {
     case 'price':
@@ -196,6 +336,14 @@ function sortItems(items: ScenarioItem[], sortBy: SortOption): ScenarioItem[] {
       break;
     case 'supplier':
       sorted.sort((a, b) => a.best_supplier.localeCompare(b.best_supplier, 'pt-BR'));
+      break;
+    case 'economy':
+      // Ordena por economia potencial (diferença entre maior e menor preço) - maior primeiro
+      sorted.sort((a, b) => {
+        const metricsA = computeItemMetrics(a, enabledQuoteIds);
+        const metricsB = computeItemMetrics(b, enabledQuoteIds);
+        return metricsB.priceSpread - metricsA.priceSpread;
+      });
       break;
   }
   return sorted;

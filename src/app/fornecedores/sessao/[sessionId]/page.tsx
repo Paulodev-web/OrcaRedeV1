@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { createSupabaseServerClient } from '@/lib/supabaseServer';
+import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
 import {
   getQuotationSessionByIdCached,
   listExtractionJobsBySessionCached,
@@ -20,6 +20,7 @@ export default async function QuotationSessionPage({ params }: Props) {
   const session = sessionRes.data;
 
   const supabase = await createSupabaseServerClient();
+  const userId = await requireAuthUserId(supabase);
 
   const { data: budgetRow } = session.budget_id
     ? await supabase
@@ -32,6 +33,7 @@ export default async function QuotationSessionPage({ params }: Props) {
   const jobsRes = await listExtractionJobsBySessionCached(sessionId);
   const initialJobs = jobsRes.success ? jobsRes.data.jobs : [];
 
+  // Filtro explícito por user_id para garantir consistência com server actions
   const { data: conciliationQuotesRaw } = await supabase
     .from('supplier_quotes')
     .select(
@@ -46,6 +48,7 @@ export default async function QuotationSessionPage({ params }: Props) {
     `
     )
     .eq('session_id', sessionId)
+    .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
   const conciliationQuotes = (conciliationQuotesRaw ?? []).map((q) => {

@@ -67,6 +67,7 @@ export default function ScenarioFiltersPanel({
       enabledQuoteIds: new Set(),
       searchTerm: '',
       showOnlyUncovered: false,
+      showOnlyDivergent: false,
       sortBy: 'name',
       priceMin: null,
       priceMax: null,
@@ -187,6 +188,7 @@ export default function ScenarioFiltersPanel({
                 <option value="name">Nome do material</option>
                 <option value="price">Menor preço</option>
                 <option value="supplier">Fornecedor vencedor</option>
+                <option value="economy">Economia potencial</option>
               </select>
             </div>
 
@@ -251,7 +253,17 @@ export default function ScenarioFiltersPanel({
                 onChange={(e) => updateFilter('showOnlyUncovered', e.target.checked)}
                 className="rounded border-gray-300 text-[#64ABDE] focus:ring-[#64ABDE]/30"
               />
-              <span className="text-sm text-gray-700">Mostrar apenas itens não cobertos</span>
+              <span className="text-sm text-gray-700">Apenas sem cobertura</span>
+            </label>
+
+            <label className="inline-flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={filterState.showOnlyDivergent}
+                onChange={(e) => updateFilter('showOnlyDivergent', e.target.checked)}
+                className="rounded border-gray-300 text-[#64ABDE] focus:ring-[#64ABDE]/30"
+              />
+              <span className="text-sm text-gray-700">Apenas divergentes (2+ preços)</span>
             </label>
 
             <label className="inline-flex items-center gap-2 cursor-pointer">
@@ -261,7 +273,7 @@ export default function ScenarioFiltersPanel({
                 onChange={(e) => updateFilter('showOnlyDifferences', e.target.checked)}
                 className="rounded border-gray-300 text-[#64ABDE] focus:ring-[#64ABDE]/30"
               />
-              <span className="text-sm text-gray-700">Mostrar apenas onde B difere de A</span>
+              <span className="text-sm text-gray-700">Onde B difere de A</span>
             </label>
           </div>
 
@@ -288,6 +300,7 @@ function countActiveFilters(state: ScenarioFilterState, totalQuotes: number): nu
   if (state.enabledQuoteIds.size > 0 && state.enabledQuoteIds.size < totalQuotes) count++;
   if (state.searchTerm.trim()) count++;
   if (state.showOnlyUncovered) count++;
+  if (state.showOnlyDivergent) count++;
   if (state.sortBy !== 'name') count++;
   if (state.priceMin !== null) count++;
   if (state.priceMax !== null) count++;
