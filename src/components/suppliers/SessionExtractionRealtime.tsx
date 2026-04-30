@@ -228,7 +228,6 @@ export default function SessionExtractionRealtime({
           : q,
       ),
     );
-    toast.success('Extração validada com sucesso.');
   };
 
   const enqueueJob = async (jobId: string) => {

@@ -18,6 +18,7 @@ import {
 import type { SupplierQuoteItemWithMaterial } from '@/actions/supplierQuotes';
 import { onPortalPrimaryButtonSmClass } from '@/lib/branding';
 import { getQuoteLabel } from '@/lib/quoteDisplay';
+import { toast } from 'sonner';
 
 const fmt = (v: number) =>
   new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
@@ -55,12 +56,14 @@ export default function ExtractionCurationModal({
   const [isSaving, startSaving] = useTransition();
   const [isValidating, startValidating] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const [budgetName, setBudgetName] = useState('');
 
   useEffect(() => {
     if (!open) return;
     setLoading(true);
     setError(null);
+    setValidationError(null);
     setBudgetName('');
     void getQuoteWithItemsAction(quoteId).then((res) => {
       setLoading(false);
@@ -121,13 +124,24 @@ export default function ExtractionCurationModal({
   };
 
   const handleValidate = () => {
+    setValidationError(null);
     startValidating(async () => {
-      const res = await validateExtractionAction(quoteId, {
-        displayName: budgetName.trim() || null,
-      });
-      if (res.success) {
-        onValidated?.();
-        onOpenChange(false);
+      try {
+        const res = await validateExtractionAction(quoteId, {
+          displayName: budgetName.trim() || null,
+        });
+        if (res.success) {
+          toast.success('Extração validada com sucesso.');
+          onValidated?.();
+          onOpenChange(false);
+          return;
+        }
+        setValidationError(res.error);
+        toast.error(res.error);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Erro ao validar extração.';
+        setValidationError(message);
+        toast.error(message);
       }
     });
   };
@@ -174,6 +188,12 @@ export default function ExtractionCurationModal({
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
               {error}
+            </div>
+          )}
+
+          {!loading && !error && validationError && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {validationError}
             </div>
           )}
 
@@ -335,7 +355,7 @@ export default function ExtractionCurationModal({
           <button
             type="button"
             onClick={handleValidate}
-            disabled={isValidating || loading || items.length === 0}
+            disabled={isValidating || isSaving || loading || !!error || items.length === 0}
             className={`inline-flex items-center gap-2 rounded-xl px-5 py-2 text-sm shadow-sm disabled:opacity-50 ${onPortalPrimaryButtonSmClass}`}
           >
             {isValidating ? (

@@ -753,25 +753,6 @@ export default function SessionScenariosView({
     setMaterialModalOpen(true);
   }, []);
 
-  // ---------------------------------------------------------------------------
-  // Fluxos de dados — separação explícita para evitar regressão:
-  //
-  // rawData (`scenarios`):  vem direto de calculateScenariosAction.
-  //   ▶ Alimenta APENAS o Ranking (Cenários A e B). Não passa pelo engine de
-  //     filtros para que a aba Ranking nunca seja afetada por toggles do
-  //     ScenarioFiltersPanel.
-  //
-  // filteredData (`filteredScenarios`): rawData transformado por
-  //   deriveFilteredScenarios(scenarios, filterState).
-  //   ▶ Alimenta a Tabela de Avaliação e os cards de resumo. Os totais aqui
-  //     são visuais (client-side) e não substituem o cálculo canônico do
-  //     servidor.
-  // ---------------------------------------------------------------------------
-  const filteredScenarios = useMemo(
-    () => deriveFilteredScenarios(scenarios, filterState),
-    [scenarios, filterState]
-  );
-
   // Quotes que de fato possuem ofertas no payload de cenários (independente do
   // campo `status` da supplier_quote). Usado para renderizar colunas/labels da
   // Tabela de Avaliação e do MaterialDetailModal — o vínculo certo aqui é a
@@ -786,6 +767,44 @@ export default function SessionScenariosView({
     }
     return quotes.filter((q) => ids.has(q.id));
   }, [scenarios, quotes]);
+
+  const availableQuoteIds = useMemo(
+    () => new Set(quotesWithOffers.map((quote) => quote.id)),
+    [quotesWithOffers]
+  );
+
+  const sanitizedEnabledQuoteIds = useMemo(() => {
+    if (filterState.enabledQuoteIds.size === 0) return filterState.enabledQuoteIds;
+    const validEnabledIds = new Set(
+      Array.from(filterState.enabledQuoteIds).filter((id) => availableQuoteIds.has(id))
+    );
+    if (validEnabledIds.size === 0) return new Set<string>();
+    return validEnabledIds;
+  }, [filterState.enabledQuoteIds, availableQuoteIds]);
+
+  const effectiveFilterState = useMemo(
+    () => ({ ...filterState, enabledQuoteIds: sanitizedEnabledQuoteIds }),
+    [filterState, sanitizedEnabledQuoteIds]
+  );
+
+  // ---------------------------------------------------------------------------
+  // Fluxos de dados — separação explícita para evitar regressão:
+  //
+  // rawData (`scenarios`):  vem direto de calculateScenariosAction.
+  //   ▶ Alimenta APENAS o Ranking (Cenários A e B). Não passa pelo engine de
+  //     filtros para que a aba Ranking nunca seja afetada por toggles do
+  //     ScenarioFiltersPanel.
+  //
+  // filteredData (`filteredScenarios`): rawData transformado por
+  //   deriveFilteredScenarios(scenarios, effectiveFilterState).
+  //   ▶ Alimenta a Tabela de Avaliação e os cards de resumo. Os totais aqui
+  //     são visuais (client-side) e não substituem o cálculo canônico do
+  //     servidor.
+  // ---------------------------------------------------------------------------
+  const filteredScenarios = useMemo(
+    () => deriveFilteredScenarios(scenarios, effectiveFilterState),
+    [scenarios, effectiveFilterState]
+  );
 
   const [stockMap, setStockMap] = useState<Map<string, number>>(() => {
     const m = new Map<string, number>();
@@ -862,7 +881,7 @@ export default function SessionScenariosView({
 
       <ScenarioFiltersPanel
         quotes={quotesWithOffers}
-        filterState={filterState}
+        filterState={effectiveFilterState}
         onFilterChange={setFilterState}
         isExpanded={filtersExpanded}
         onExpandedChange={setFiltersExpanded}
@@ -883,7 +902,7 @@ export default function SessionScenariosView({
             <ScenarioComparisonTable
               items={filteredScenarios.filteredItems}
               quotes={quotesWithOffers}
-              enabledQuoteIds={filterState.enabledQuoteIds}
+              enabledQuoteIds={effectiveFilterState.enabledQuoteIds}
               onMaterialClick={handleMaterialClick}
             />
           )}
@@ -897,7 +916,7 @@ export default function SessionScenariosView({
       <MaterialDetailModal
         item={selectedMaterial}
         quotes={quotesWithOffers}
-        enabledQuoteIds={filterState.enabledQuoteIds}
+        enabledQuoteIds={effectiveFilterState.enabledQuoteIds}
         open={materialModalOpen}
         onOpenChange={setMaterialModalOpen}
       />

@@ -51,12 +51,23 @@ export default function ScenarioComparisonTable({
   onMaterialClick,
 }: Props) {
   const quoteMap = useMemo(() => new Map(quotes.map((q) => [q.id, q])), [quotes]);
+  const availableQuoteIds = useMemo(() => new Set(quotes.map((q) => q.id)), [quotes]);
+
+  // Remove IDs that no longer exist in current dataset.
+  const validEnabledQuoteIds = useMemo(() => {
+    if (enabledQuoteIds.size === 0) return enabledQuoteIds;
+    const validIds = new Set(
+      Array.from(enabledQuoteIds).filter((quoteId) => availableQuoteIds.has(quoteId))
+    );
+    // Empty set means "all visible" in this screen.
+    return validIds.size === 0 ? new Set<string>() : validIds;
+  }, [enabledQuoteIds, availableQuoteIds]);
 
   // Filter quotes to only show enabled ones
   const visibleQuotes = useMemo(() => {
-    if (enabledQuoteIds.size === 0) return quotes;
-    return quotes.filter((q) => enabledQuoteIds.has(q.id));
-  }, [quotes, enabledQuoteIds]);
+    if (validEnabledQuoteIds.size === 0) return quotes;
+    return quotes.filter((q) => validEnabledQuoteIds.has(q.id));
+  }, [quotes, validEnabledQuoteIds]);
 
   // Build evaluation data for each row
   const { rows, columnTotals, grandMinTotal } = useMemo(() => {
@@ -72,9 +83,9 @@ export default function ScenarioComparisonTable({
 
     for (const item of items) {
       // Filter offers to only visible quotes
-      const visibleOffers = enabledQuoteIds.size === 0
+      const visibleOffers = validEnabledQuoteIds.size === 0
         ? item.all_offers
-        : item.all_offers.filter((o) => enabledQuoteIds.has(o.quote_id));
+        : item.all_offers.filter((o) => validEnabledQuoteIds.has(o.quote_id));
 
       const hasNoCoverage = visibleOffers.length === 0;
       const hasDivergence = visibleOffers.length >= 2;
@@ -146,7 +157,7 @@ export default function ScenarioComparisonTable({
     });
 
     return { rows: rowsData, columnTotals: colTotals, grandMinTotal: grandMin };
-  }, [items, visibleQuotes, enabledQuoteIds, quoteMap]);
+  }, [items, visibleQuotes, validEnabledQuoteIds, quoteMap]);
 
   if (items.length === 0) {
     return (
@@ -158,12 +169,12 @@ export default function ScenarioComparisonTable({
     );
   }
 
-  if (visibleQuotes.length === 0) {
+  if (quotes.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-40 text-sm text-gray-400 border border-dashed border-gray-200 rounded-lg">
         <AlertCircle className="h-8 w-8 mb-2 text-gray-300" />
-        <p>Nenhum orçamento selecionado.</p>
-        <p className="text-xs mt-1">Selecione pelo menos um orçamento para comparar.</p>
+        <p>Nenhum orçamento disponível para comparação.</p>
+        <p className="text-xs mt-1">Concilie ao menos uma cotação para montar a tabela.</p>
       </div>
     );
   }
