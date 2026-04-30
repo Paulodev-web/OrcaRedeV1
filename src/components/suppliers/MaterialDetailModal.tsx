@@ -93,8 +93,6 @@ export default function MaterialDetailModal({
           </DialogTitle>
           <DialogDescription>
             <span className="font-mono text-xs">{item.material_code}</span>
-            {' • '}
-            Unidade: {item.unit}
           </DialogDescription>
         </DialogHeader>
 
