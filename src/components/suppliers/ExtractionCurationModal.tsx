@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
-import { CheckCircle2, Loader2, Pencil, Save, X } from 'lucide-react';
+import { CheckCircle2, FileText, Loader2, Pencil, Save, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,7 @@ import {
 } from '@/actions/supplierQuotes';
 import type { SupplierQuoteItemWithMaterial } from '@/actions/supplierQuotes';
 import { onPortalPrimaryButtonSmClass } from '@/lib/branding';
+import { getQuoteLabel } from '@/lib/quoteDisplay';
 
 const fmt = (v: number) =>
   new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
@@ -54,15 +55,18 @@ export default function ExtractionCurationModal({
   const [isSaving, startSaving] = useTransition();
   const [isValidating, startValidating] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [budgetName, setBudgetName] = useState('');
 
   useEffect(() => {
     if (!open) return;
     setLoading(true);
     setError(null);
+    setBudgetName('');
     void getQuoteWithItemsAction(quoteId).then((res) => {
       setLoading(false);
       if (res.success) {
         setItems(res.data.items);
+        setBudgetName(getQuoteLabel(res.data.quote));
       } else {
         setError(res.error);
       }
@@ -118,7 +122,9 @@ export default function ExtractionCurationModal({
 
   const handleValidate = () => {
     startValidating(async () => {
-      const res = await validateExtractionAction(quoteId);
+      const res = await validateExtractionAction(quoteId, {
+        displayName: budgetName.trim() || null,
+      });
       if (res.success) {
         onValidated?.();
         onOpenChange(false);
@@ -137,6 +143,25 @@ export default function ExtractionCurationModal({
             Revise os itens extraídos do PDF. Edite se necessário e valide a extração.
           </DialogDescription>
         </DialogHeader>
+
+        <div className="px-6 pt-4 pb-2">
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            <span className="flex items-center gap-1.5">
+              <FileText className="h-4 w-4 text-gray-400" />
+              Nome do orçamento
+            </span>
+          </label>
+          <input
+            type="text"
+            value={budgetName}
+            onChange={(e) => setBudgetName(e.target.value)}
+            placeholder="Ex: Cotação Fornecedor ABC - Abril 2026"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]/30"
+          />
+          <p className="mt-1 text-xs text-gray-400">
+            Esse nome será usado para identificar o orçamento na análise de cenários.
+          </p>
+        </div>
 
         <div className="flex-1 overflow-auto px-6 py-4">
           {loading && (

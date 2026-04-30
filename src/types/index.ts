@@ -257,6 +257,8 @@ export interface SupplierQuote {
   session_id?: string | null;
   supplier_name: string;
   pdf_path: string;
+  /** Nome customizado do orçamento definido pelo usuário. Se vazio, usar fallback para nome do arquivo PDF. */
+  display_name?: string | null;
   status: SupplierQuoteStatus;
   observacoes_gerais?: string;
   extraction_validated_at?: string | null;

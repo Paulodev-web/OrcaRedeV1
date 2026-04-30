@@ -143,7 +143,7 @@ export async function getQuoteWithItemsAction(
 
     const { data: quote, error: quoteError } = await supabase
       .from('supplier_quotes')
-      .select('id, budget_id, session_id, supplier_name, pdf_path, status, observacoes_gerais, extraction_validated_at, user_id, created_at, updated_at')
+      .select('id, budget_id, session_id, supplier_name, pdf_path, display_name, status, observacoes_gerais, extraction_validated_at, user_id, created_at, updated_at')
       .eq('id', quoteId)
       .eq('user_id', userId)
       .single();
@@ -634,6 +634,7 @@ export async function listQuotesByBudgetAction(
         session_id,
         supplier_name,
         pdf_path,
+        display_name,
         status,
         observacoes_gerais,
         user_id,
@@ -662,6 +663,7 @@ export async function listQuotesByBudgetAction(
         budget_id: q.budget_id,
         supplier_name: q.supplier_name,
         pdf_path: q.pdf_path,
+        display_name: q.display_name ?? null,
         status: q.status,
         observacoes_gerais: q.observacoes_gerais,
         user_id: q.user_id,
@@ -696,6 +698,7 @@ export interface ScenarioItem {
   best_price_normalized: number;
   best_total: number;
   all_offers: {
+    quote_id: string;
     supplier_name: string;
     preco_unit: number;
     conversion_factor: number;
@@ -857,6 +860,7 @@ export async function calculateScenariosAction(
         best_price_normalized: best.preco_normalizado,
         best_total: best.preco_normalizado * net_qty,
         all_offers: entry.offers.map((o) => ({
+          quote_id: o.quote_id,
           supplier_name: o.supplier_name,
           preco_unit: o.preco_unit,
           conversion_factor: o.conversion_factor,
@@ -963,17 +967,33 @@ export async function getConciliationPayloadByQuoteAction(
 // ---------------------------------------------------------------------------
 // validateExtractionAction
 // Marca a extração como validada pelo usuário (curadoria humana).
+// Opcionalmente persiste um nome customizado (display_name) para o orçamento.
 // ---------------------------------------------------------------------------
+export interface ValidateExtractionOptions {
+  displayName?: string | null;
+}
+
 export async function validateExtractionAction(
-  quoteId: string
+  quoteId: string,
+  options?: ValidateExtractionOptions
 ): Promise<ActionResult<void>> {
   try {
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
 
+    const updates: Record<string, unknown> = {
+      extraction_validated_at: new Date().toISOString(),
+    };
+
+    // Persiste display_name se fornecido (string vazia → null)
+    if (options?.displayName !== undefined) {
+      const trimmed = options.displayName?.trim();
+      updates.display_name = trimmed || null;
+    }
+
     const { error } = await supabase
       .from('supplier_quotes')
-      .update({ extraction_validated_at: new Date().toISOString() })
+      .update(updates)
       .eq('id', quoteId)
       .eq('user_id', userId);
 
@@ -991,6 +1011,7 @@ export async function validateExtractionAction(
     if (quoteRow?.session_id) {
       revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}`);
       revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/conciliacao`);
+      revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/cenarios`);
     }
     revalidatePath('/fornecedores');
     return { success: true, data: undefined };

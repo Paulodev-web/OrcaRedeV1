@@ -23,6 +23,14 @@ import {
   type ScenarioItem,
   type SessionStockInput,
 } from '@/actions/supplierQuotes';
+import ScenarioFiltersPanel from './ScenarioFiltersPanel';
+import {
+  deriveFilteredScenarios,
+  defaultFilterState,
+  type ScenarioFilterState,
+  type FilteredScenariosResult,
+} from './scenarioFilterEngine';
+import { getQuoteLabel } from '@/lib/quoteDisplay';
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -33,6 +41,8 @@ const formatNumber = (v: number) =>
 type QuoteSummary = {
   id: string;
   supplier_name: string;
+  pdf_path?: string | null;
+  display_name?: string | null;
   status: string;
   item_count: number;
   matched_count: number;
@@ -225,7 +235,7 @@ function StockEditor({
 // ---------------------------------------------------------------------------
 // Summary cards
 // ---------------------------------------------------------------------------
-function ScenarioSummaryCards({ scenarios }: { scenarios: ScenariosResult }) {
+function ScenarioSummaryCards({ scenarios, isFiltered }: { scenarios: ScenariosResult; isFiltered?: boolean }) {
   const { scenarioA, scenarioB, budget_total_reference } = scenarios;
   const bestSupplier = scenarioA[0];
   const hasSaving = scenarioB.saving_vs_cheapest_a > 0;
@@ -233,68 +243,116 @@ function ScenarioSummaryCards({ scenarios }: { scenarios: ScenariosResult }) {
   const totalStock = scenarioB.items.reduce((s, i) => s + i.stock_qty, 0);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div className="rounded-xl border border-[#64ABDE]/40 bg-[#64ABDE]/10 p-5">
-        <div className="mb-2 flex items-center gap-2">
-          <Package className="h-5 w-5 text-[#1D3140]" />
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#64ABDE]">
-            Cenário A — Pacote Fechado
-          </p>
+    <div className="space-y-3">
+      {isFiltered && (
+        <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          <AlertTriangle className="h-4 w-4" />
+          <span>Totais abaixo refletem os filtros ativos (visualização apenas).</span>
         </div>
-        {bestSupplier ? (
-          <>
-            <p className="text-2xl font-bold text-[#1D3140]">{formatCurrency(bestSupplier.total_normalizado)}</p>
-            <p className="mt-1 text-sm text-[#64ABDE]">
-              Melhor: <span className="font-semibold text-[#1D3140]">{bestSupplier.supplier_name}</span>
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Cenário A */}
+        <div className="rounded-xl border-2 border-[#64ABDE]/40 bg-gradient-to-br from-[#64ABDE]/5 to-[#64ABDE]/15 p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-[#64ABDE]/20">
+                <Package className="h-4 w-4 text-[#64ABDE]" />
+              </div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#64ABDE]">
+                Cenário A
+              </p>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mb-1">Pacote Fechado</p>
+          {bestSupplier ? (
+            <>
+              <p className="text-3xl font-bold text-[#1D3140] tracking-tight">{formatCurrency(bestSupplier.total_normalizado)}</p>
+              <div className="mt-3 pt-3 border-t border-[#64ABDE]/20">
+                <p className="text-sm text-[#1D3140]">
+                  <span className="font-semibold">{bestSupplier.supplier_name}</span>
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {bestSupplier.items_covered}/{bestSupplier.total_items} itens cobertos
+                </p>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-gray-400 mt-2">Sem dados</p>
+          )}
+        </div>
+
+        {/* Cenário B */}
+        <div className="rounded-xl border-2 border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-slate-200">
+                <Shuffle className="h-4 w-4 text-slate-600" />
+              </div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                Cenário B
+              </p>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mb-1">Melhor por Item</p>
+          <p className="text-3xl font-bold text-[#1D3140] tracking-tight">{formatCurrency(scenarioB.total_normalizado)}</p>
+          <div className="mt-3 pt-3 border-t border-slate-200">
+            <p className="text-sm text-slate-600">{itemsWithDemand} materiais</p>
+            <p className="text-xs text-gray-500 mt-0.5">com necessidade de compra</p>
+          </div>
+        </div>
+
+        {/* Diferença / Economia */}
+        <div
+          className={`rounded-xl border-2 p-5 shadow-sm ${
+            hasSaving
+              ? 'border-green-200 bg-gradient-to-br from-green-50 to-green-100'
+              : 'border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100'
+          }`}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className={`p-2 rounded-lg ${hasSaving ? 'bg-green-200' : 'bg-gray-200'}`}>
+                <TrendingDown className={`h-4 w-4 ${hasSaving ? 'text-green-600' : 'text-gray-500'}`} />
+              </div>
+              <p className={`text-xs font-semibold uppercase tracking-wide ${hasSaving ? 'text-green-600' : 'text-gray-500'}`}>
+                {hasSaving ? 'Economia' : 'Diferença'}
+              </p>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mb-1">{hasSaving ? 'Potencial com Cenário B' : 'B vs. A'}</p>
+          <p className={`text-3xl font-bold tracking-tight ${hasSaving ? 'text-green-700' : 'text-gray-600'}`}>
+            {hasSaving ? '−' : '+'}{formatCurrency(Math.abs(scenarioB.saving_vs_cheapest_a))}
+          </p>
+          {budget_total_reference > 0 && (
+            <div className="mt-3 pt-3 border-t border-gray-200/50">
+              <p className="text-xs text-gray-500">
+                vs. {formatCurrency(budget_total_reference)} do melhor pacote
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Estoque */}
+        <div className="rounded-xl border-2 border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-gray-100">
+                <Warehouse className="h-4 w-4 text-gray-500" />
+              </div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Estoque
+              </p>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mb-1">Informado pelo usuário</p>
+          <p className="text-3xl font-bold text-[#1D3140] tracking-tight">{formatNumber(totalStock)}</p>
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <p className="text-sm text-gray-600">
+              {scenarioB.items.filter((i) => i.stock_qty > 0).length} materiais
             </p>
-            <p className="mt-0.5 text-xs text-slate-500">
-              {bestSupplier.items_covered}/{bestSupplier.total_items} itens cobertos
-            </p>
-          </>
-        ) : (
-          <p className="text-sm text-gray-400">Sem dados</p>
-        )}
-      </div>
-
-      <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-        <div className="mb-2 flex items-center gap-2">
-          <Shuffle className="h-5 w-5 text-[#1D3140]" />
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-            Cenário B — Melhor por Item
-          </p>
+            <p className="text-xs text-gray-500 mt-0.5">com estoque cadastrado</p>
+          </div>
         </div>
-        <p className="text-2xl font-bold text-[#1D3140]">{formatCurrency(scenarioB.total_normalizado)}</p>
-        <p className="mt-1 text-sm text-slate-600">{itemsWithDemand} materiais a comprar</p>
-      </div>
-
-      <div
-        className={`rounded-xl border p-5 ${
-          hasSaving ? 'border-green-100 bg-green-50' : 'border-gray-100 bg-gray-50'
-        }`}
-      >
-        <div className="flex items-center gap-2 mb-2">
-          <TrendingDown className={`h-5 w-5 ${hasSaving ? 'text-green-600' : 'text-gray-500'}`} />
-          <p className={`text-xs font-semibold uppercase tracking-wide ${hasSaving ? 'text-green-600' : 'text-gray-500'}`}>
-            {hasSaving ? 'Economia potencial' : 'Diferença B vs. A'}
-          </p>
-        </div>
-        <p className={`text-2xl font-bold ${hasSaving ? 'text-green-700' : 'text-gray-600'}`}>
-          {hasSaving ? '−' : '+'}{formatCurrency(Math.abs(scenarioB.saving_vs_cheapest_a))}
-        </p>
-        {budget_total_reference > 0 && (
-          <p className="text-xs text-gray-400 mt-1">vs. {formatCurrency(budget_total_reference)} do melhor pacote</p>
-        )}
-      </div>
-
-      <div className="rounded-xl border border-gray-200 bg-white p-5">
-        <div className="flex items-center gap-2 mb-2">
-          <Warehouse className="h-5 w-5 text-[#1D3140]" />
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Estoque informado</p>
-        </div>
-        <p className="text-2xl font-bold text-[#1D3140]">{formatNumber(totalStock)}</p>
-        <p className="mt-1 text-sm text-gray-500">
-          {scenarioB.items.filter((i) => i.stock_qty > 0).length} materiais com estoque
-        </p>
       </div>
     </div>
   );
@@ -303,21 +361,63 @@ function ScenarioSummaryCards({ scenarios }: { scenarios: ScenariosResult }) {
 // ---------------------------------------------------------------------------
 // Tabelona with net_qty
 // ---------------------------------------------------------------------------
-function TabelonaView({ scenarios }: { scenarios: ScenariosResult }) {
-  const { scenarioB } = scenarios;
+interface TabelonaQuoteInfo {
+  id: string;
+  supplier_name: string;
+  pdf_path?: string | null;
+  display_name?: string | null;
+}
 
-  const supplierSet = new Set<string>();
-  for (const item of scenarioB.items) {
-    for (const offer of item.all_offers) {
-      supplierSet.add(offer.supplier_name);
+interface TabelonaProps {
+  scenarios: ScenariosResult & { filteredItems?: ScenarioItem[] };
+  groupBySupplier?: boolean;
+  quotes: TabelonaQuoteInfo[];
+}
+
+function TabelonaView({ scenarios, groupBySupplier = true, quotes }: TabelonaProps) {
+  // Use filteredItems if available, otherwise fall back to scenarioB.items
+  const items = (scenarios as { filteredItems?: ScenarioItem[] }).filteredItems ?? scenarios.scenarioB.items;
+
+  // Build quote map for labels
+  const quoteMap = useMemo(() => new Map(quotes.map((q) => [q.id, q])), [quotes]);
+
+  // Build column model based on groupBySupplier mode
+  const columns = useMemo(() => {
+    if (groupBySupplier) {
+      // Group by supplier_name
+      const supplierSet = new Set<string>();
+      for (const item of items) {
+        for (const offer of item.all_offers) {
+          supplierSet.add(offer.supplier_name);
+        }
+      }
+      return Array.from(supplierSet)
+        .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+        .map((name) => ({ key: name, label: name, isSupplier: true }));
+    } else {
+      // Group by quote_id
+      const quoteSet = new Set<string>();
+      for (const item of items) {
+        for (const offer of item.all_offers) {
+          quoteSet.add(offer.quote_id);
+        }
+      }
+      return Array.from(quoteSet).map((qid) => {
+        const q = quoteMap.get(qid);
+        return {
+          key: qid,
+          label: q ? getQuoteLabel(q) : qid,
+          isSupplier: false,
+        };
+      });
     }
-  }
-  const suppliers = Array.from(supplierSet).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [items, groupBySupplier, quoteMap]);
 
-  if (scenarioB.items.length === 0) {
+  if (items.length === 0) {
     return (
-      <div className="flex items-center justify-center h-32 text-sm text-gray-400">
-        Nenhum dado disponível. Concilie as cotações primeiro.
+      <div className="flex flex-col items-center justify-center h-32 text-sm text-gray-400">
+        <p>Nenhum dado disponível.</p>
+        <p className="text-xs mt-1">Ajuste os filtros ou concilie as cotações primeiro.</p>
       </div>
     );
   }
@@ -327,33 +427,42 @@ function TabelonaView({ scenarios }: { scenarios: ScenariosResult }) {
       <p className="text-xs text-gray-500">
         Preços normalizados (preço ÷ fator). Totais calculados sobre a necessidade líquida (necessidade − estoque).
       </p>
-      <div className="overflow-x-auto border border-gray-200 rounded-lg">
+      <div className="overflow-x-auto border border-gray-200 rounded-lg max-h-[600px]">
         <table className="min-w-full divide-y divide-gray-200 text-sm">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 sticky top-0 z-20">
             <tr>
-              <th className="sticky left-0 z-10 bg-gray-50 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">
+              <th className="sticky left-0 z-30 bg-gray-50 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
                 Material
               </th>
-              <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Nec.</th>
-              <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Est.</th>
-              <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Compra</th>
-              {suppliers.map((s) => (
-                <th key={s} className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">
-                  {s}
+              <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-20 bg-gray-50">Nec.</th>
+              <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-20 bg-gray-50">Est.</th>
+              <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-20 bg-gray-50">Compra</th>
+              {columns.map((col) => (
+                <th key={col.key} className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px] bg-gray-50">
+                  {col.label}
                 </th>
               ))}
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">Melhor</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36 bg-gray-50">Melhor</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-100">
-            {scenarioB.items.map((item) => {
-              const offerMap = new Map(item.all_offers.map((o) => [o.supplier_name, o]));
-              const bestPrice = Math.min(...item.all_offers.map((o) => o.preco_normalizado));
+            {items.map((item, idx) => {
+              // Build offer map based on grouping mode
+              const offerMap = groupBySupplier
+                ? new Map(item.all_offers.map((o) => [o.supplier_name, o]))
+                : new Map(item.all_offers.map((o) => [o.quote_id, o]));
+              const bestPrice = item.all_offers.length > 0
+                ? Math.min(...item.all_offers.map((o) => o.preco_normalizado))
+                : 0;
               const isFullyStocked = item.net_qty === 0;
+              const isEvenRow = idx % 2 === 0;
 
               return (
-                <tr key={item.material_id} className={`hover:bg-gray-50 ${isFullyStocked ? 'opacity-50' : ''}`}>
-                  <td className="sticky left-0 z-10 bg-white px-4 py-3">
+                <tr
+                  key={item.material_id}
+                  className={`hover:bg-[#64ABDE]/5 transition-colors ${isFullyStocked ? 'opacity-50' : ''} ${isEvenRow ? 'bg-white' : 'bg-gray-50/50'}`}
+                >
+                  <td className={`sticky left-0 z-10 px-4 py-3 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] ${isEvenRow ? 'bg-white' : 'bg-gray-50/50'}`}>
                     <p className="max-w-[240px] truncate font-medium text-[#1D3140]">{item.material_name}</p>
                     <p className="text-xs text-gray-400 font-mono">{item.material_code}</p>
                   </td>
@@ -362,14 +471,14 @@ function TabelonaView({ scenarios }: { scenarios: ScenariosResult }) {
                   <td className={`px-3 py-3 text-right font-medium ${isFullyStocked ? 'text-green-600' : 'text-[#1D3140]'}`}>
                     {isFullyStocked ? '✓' : formatNumber(item.net_qty)}
                   </td>
-                  {suppliers.map((s) => {
-                    const offer = offerMap.get(s);
+                  {columns.map((col) => {
+                    const offer = offerMap.get(col.key);
                     if (!offer) {
-                      return <td key={s} className="px-4 py-3 text-right text-gray-300">—</td>;
+                      return <td key={col.key} className="px-4 py-3 text-right text-gray-300">—</td>;
                     }
                     const isBest = offer.preco_normalizado === bestPrice;
                     return (
-                      <td key={s} className={`px-4 py-3 text-right ${isBest ? 'bg-green-50 font-bold text-green-700' : 'text-gray-700'}`}>
+                      <td key={col.key} className={`px-4 py-3 text-right ${isBest ? 'bg-green-50 font-bold text-green-700' : 'text-gray-700'}`}>
                         <p>{formatCurrency(offer.preco_normalizado)}</p>
                         {offer.conversion_factor !== 1 && (
                           <p className="text-xs text-gray-400 font-normal">÷{formatNumber(offer.conversion_factor)}</p>
@@ -378,7 +487,7 @@ function TabelonaView({ scenarios }: { scenarios: ScenariosResult }) {
                     );
                   })}
                   <td className="px-4 py-3">
-                    {!isFullyStocked && (
+                    {!isFullyStocked && item.best_supplier && (
                       <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-full">
                         <Award className="h-3 w-3" />
                         {item.best_supplier}
@@ -430,7 +539,12 @@ function RankingView({ scenarios }: { scenarios: ScenariosResult }) {
 function ScenarioAView({ scenarios }: { scenarios: ScenariosResult }) {
   const { scenarioA } = scenarios;
   if (scenarioA.length === 0) {
-    return <div className="flex items-center justify-center h-32 text-sm text-gray-400">Nenhum dado disponível.</div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-32 text-sm text-gray-400">
+        <p>Nenhum dado disponível.</p>
+        <p className="text-xs mt-1">Ajuste os filtros ou concilie as cotações primeiro.</p>
+      </div>
+    );
   }
   const cheapest = scenarioA[0];
 
@@ -439,13 +553,13 @@ function ScenarioAView({ scenarios }: { scenarios: ScenariosResult }) {
       <p className="text-xs text-gray-500">
         Comprar tudo de um único fornecedor. Totais sobre necessidade líquida.
       </p>
-      <div className="overflow-x-auto border border-gray-200 rounded-lg">
+      <div className="overflow-x-auto border border-gray-200 rounded-lg max-h-[500px]">
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fornecedor</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Itens cobertos</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Total normalizado</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">Fornecedor</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32 bg-gray-50">Itens cobertos</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-40 bg-gray-50">Total normalizado</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-100">
@@ -453,8 +567,12 @@ function ScenarioAView({ scenarios }: { scenarios: ScenariosResult }) {
               const isBest = idx === 0;
               const diff = supplier.total_normalizado - cheapest.total_normalizado;
               const pctDiff = cheapest.total_normalizado > 0 ? (diff / cheapest.total_normalizado) * 100 : 0;
+              const isEvenRow = idx % 2 === 0;
               return (
-                <tr key={supplier.quote_id} className={isBest ? 'bg-green-50' : 'hover:bg-gray-50 transition-colors'}>
+                <tr
+                  key={supplier.quote_id}
+                  className={`transition-colors ${isBest ? 'bg-green-50' : isEvenRow ? 'bg-white hover:bg-gray-50' : 'bg-gray-50/50 hover:bg-gray-100'}`}
+                >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       {isBest && (
@@ -492,13 +610,18 @@ function ScenarioAView({ scenarios }: { scenarios: ScenariosResult }) {
   );
 }
 
-function ScenarioBView({ scenarios }: { scenarios: ScenariosResult }) {
-  const { scenarioB } = scenarios;
+function ScenarioBView({ scenarios }: { scenarios: ScenariosResult & { filteredItems?: ScenarioItem[] } }) {
+  const items = scenarios.filteredItems ?? scenarios.scenarioB.items;
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const activeItems = scenarioB.items.filter((i) => i.net_qty > 0);
+  const activeItems = items.filter((i) => i.net_qty > 0);
 
   if (activeItems.length === 0) {
-    return <div className="flex items-center justify-center h-32 text-sm text-gray-400">Todos os materiais estão cobertos pelo estoque.</div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-32 text-sm text-gray-400">
+        <p>Todos os materiais estão cobertos pelo estoque.</p>
+        <p className="text-xs mt-1">Ou nenhum item corresponde aos filtros ativos.</p>
+      </div>
+    );
   }
 
   return (
@@ -506,34 +629,37 @@ function ScenarioBView({ scenarios }: { scenarios: ScenariosResult }) {
       <p className="text-xs text-gray-500">
         Fracionar a compra: cada item adquirido do fornecedor com menor preço normalizado. Apenas itens com necessidade líquida &gt; 0.
       </p>
-      <div className="overflow-x-auto border border-gray-200 rounded-lg">
+      <div className="overflow-x-auto border border-gray-200 rounded-lg max-h-[500px]">
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Material</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Compra</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">Melhor fornecedor</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Preço unit. norm.</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Total</th>
-              <th className="px-4 py-3 w-8" />
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">Material</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-20 bg-gray-50">Compra</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36 bg-gray-50">Melhor fornecedor</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32 bg-gray-50">Preço unit. norm.</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32 bg-gray-50">Total</th>
+              <th className="px-4 py-3 w-8 bg-gray-50" />
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-100">
-            {activeItems.map((item: ScenarioItem) => {
+            {activeItems.map((item: ScenarioItem, idx) => {
               const isExpanded = expandedId === item.material_id;
               const hasMultiple = item.all_offers.length > 1;
+              const isEvenRow = idx % 2 === 0;
               return (
                 <React.Fragment key={item.material_id}>
-                  <tr className={`hover:bg-gray-50 transition-colors ${isExpanded ? 'bg-[#64ABDE]/10' : ''}`}>
+                  <tr className={`transition-colors ${isExpanded ? 'bg-[#64ABDE]/10' : isEvenRow ? 'bg-white hover:bg-gray-50' : 'bg-gray-50/50 hover:bg-gray-100'}`}>
                     <td className="px-4 py-3">
                       <p className="text-sm font-medium text-[#1D3140]">{item.material_name}</p>
                       <p className="text-xs text-gray-400"><span className="font-mono">{item.material_code}</span></p>
                     </td>
                     <td className="px-4 py-3 text-right text-sm text-gray-600">{formatNumber(item.net_qty)}</td>
                     <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-full">
-                        <Award className="h-3 w-3" />{item.best_supplier}
-                      </span>
+                      {item.best_supplier && (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-full">
+                          <Award className="h-3 w-3" />{item.best_supplier}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right"><p className="text-sm font-bold text-[#1D3140]">{formatCurrency(item.best_price_normalized)}</p></td>
                     <td className="px-4 py-3 text-right"><p className="text-sm font-semibold text-[#64ABDE]">{formatCurrency(item.best_total)}</p></td>
@@ -561,7 +687,7 @@ function ScenarioBView({ scenarios }: { scenarios: ScenariosResult }) {
                             </thead>
                             <tbody className="divide-y divide-[#64ABDE]/10 bg-white">
                               {item.all_offers.slice().sort((a, b) => a.preco_normalizado - b.preco_normalizado).map((offer, i) => (
-                                <tr key={offer.supplier_name} className={i === 0 ? 'bg-green-50' : ''}>
+                                <tr key={offer.quote_id} className={i === 0 ? 'bg-green-50' : ''}>
                                   <td className="px-3 py-2 text-xs font-medium text-gray-800">
                                     {i === 0 && <Award className="inline h-3 w-3 text-green-600 mr-1" />}
                                     {offer.supplier_name}
@@ -584,10 +710,10 @@ function ScenarioBView({ scenarios }: { scenarios: ScenariosResult }) {
               );
             })}
           </tbody>
-          <tfoot className="bg-gray-50">
-            <tr>
+          <tfoot className="bg-gray-50 sticky bottom-0">
+            <tr className="border-t-2 border-gray-200">
               <td colSpan={4} className="px-4 py-3 text-sm font-semibold text-gray-700 text-right">Total Cenário B:</td>
-              <td className="px-4 py-3 text-right text-sm font-bold text-[#1D3140]">{formatCurrency(scenarioB.total_normalizado)}</td>
+              <td className="px-4 py-3 text-right text-sm font-bold text-[#1D3140]">{formatCurrency(scenarios.scenarioB.total_normalizado)}</td>
               <td />
             </tr>
           </tfoot>
@@ -611,6 +737,16 @@ export default function SessionScenariosView({
   const [scenarios, setScenarios] = useState(initialScenarios);
   const [activeTab, setActiveTab] = useState<'tabelona' | 'ranking'>('tabelona');
   const [isPending, startTransition] = useTransition();
+
+  // Filter state
+  const [filterState, setFilterState] = useState<ScenarioFilterState>(defaultFilterState);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
+
+  // Derived filtered scenarios (client-side only — visual totals, não substitui cálculo canônico)
+  const filteredScenarios = useMemo(
+    () => deriveFilteredScenarios(scenarios, filterState),
+    [scenarios, filterState]
+  );
 
   const [stockMap, setStockMap] = useState<Map<string, number>>(() => {
     const m = new Map<string, number>();
@@ -656,10 +792,11 @@ export default function SessionScenariosView({
   };
 
   const pendingQuotes = quotes.filter((q) => q.status !== 'conciliado');
+  const conciliadoQuotes = quotes.filter((q) => q.status === 'conciliado');
 
   return (
     <div className="space-y-6">
-      <ScenarioSummaryCards scenarios={scenarios} />
+      <ScenarioSummaryCards scenarios={filteredScenarios} isFiltered={filteredScenarios.isFiltered} />
 
       <SuggestionCards scenarios={scenarios} />
 
@@ -679,11 +816,19 @@ export default function SessionScenariosView({
             <p className="font-medium">{pendingQuotes.length} cotação(ões) ainda não conciliada(s)</p>
             <p className="text-amber-600 mt-0.5">
               Os cenários usam apenas as cotações conciliadas. Finalize:{' '}
-              {pendingQuotes.map((q) => q.supplier_name).join(', ')}.
+              {pendingQuotes.map((q) => getQuoteLabel(q)).join(', ')}.
             </p>
           </div>
         </div>
       )}
+
+      <ScenarioFiltersPanel
+        quotes={conciliadoQuotes}
+        filterState={filterState}
+        onFilterChange={setFilterState}
+        isExpanded={filtersExpanded}
+        onExpandedChange={setFiltersExpanded}
+      />
 
       <div className="overflow-hidden rounded-xl border border-[#64ABDE]/40 bg-white shadow-md">
         <div className="flex border-b border-gray-200 bg-white/80">
@@ -695,8 +840,14 @@ export default function SessionScenariosView({
           </button>
         </div>
         <div className="p-5">
-          {activeTab === 'tabelona' && <TabelonaView scenarios={scenarios} />}
-          {activeTab === 'ranking' && <RankingView scenarios={scenarios} />}
+          {activeTab === 'tabelona' && (
+            <TabelonaView
+              scenarios={filteredScenarios}
+              groupBySupplier={filterState.groupBySupplier}
+              quotes={conciliadoQuotes}
+            />
+          )}
+          {activeTab === 'ranking' && <RankingView scenarios={filteredScenarios} />}
         </div>
       </div>
     </div>
