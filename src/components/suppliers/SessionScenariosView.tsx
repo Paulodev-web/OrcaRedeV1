@@ -753,11 +753,39 @@ export default function SessionScenariosView({
     setMaterialModalOpen(true);
   }, []);
 
-  // Derived filtered scenarios (client-side only — visual totals, não substitui cálculo canônico)
+  // ---------------------------------------------------------------------------
+  // Fluxos de dados — separação explícita para evitar regressão:
+  //
+  // rawData (`scenarios`):  vem direto de calculateScenariosAction.
+  //   ▶ Alimenta APENAS o Ranking (Cenários A e B). Não passa pelo engine de
+  //     filtros para que a aba Ranking nunca seja afetada por toggles do
+  //     ScenarioFiltersPanel.
+  //
+  // filteredData (`filteredScenarios`): rawData transformado por
+  //   deriveFilteredScenarios(scenarios, filterState).
+  //   ▶ Alimenta a Tabela de Avaliação e os cards de resumo. Os totais aqui
+  //     são visuais (client-side) e não substituem o cálculo canônico do
+  //     servidor.
+  // ---------------------------------------------------------------------------
   const filteredScenarios = useMemo(
     () => deriveFilteredScenarios(scenarios, filterState),
     [scenarios, filterState]
   );
+
+  // Quotes que de fato possuem ofertas no payload de cenários (independente do
+  // campo `status` da supplier_quote). Usado para renderizar colunas/labels da
+  // Tabela de Avaliação e do MaterialDetailModal — o vínculo certo aqui é a
+  // presença de offers em `scenarioB.items`, e não o status `conciliado`, que
+  // só muda quando o usuário clica em "Concluir conciliação".
+  const quotesWithOffers = useMemo(() => {
+    const ids = new Set<string>();
+    for (const item of scenarios.scenarioB.items) {
+      for (const offer of item.all_offers) {
+        ids.add(offer.quote_id);
+      }
+    }
+    return quotes.filter((q) => ids.has(q.id));
+  }, [scenarios, quotes]);
 
   const [stockMap, setStockMap] = useState<Map<string, number>>(() => {
     const m = new Map<string, number>();
@@ -803,7 +831,6 @@ export default function SessionScenariosView({
   };
 
   const pendingQuotes = quotes.filter((q) => q.status !== 'conciliado');
-  const conciliadoQuotes = quotes.filter((q) => q.status === 'conciliado');
 
   return (
     <div className="space-y-6">
@@ -834,7 +861,7 @@ export default function SessionScenariosView({
       )}
 
       <ScenarioFiltersPanel
-        quotes={conciliadoQuotes}
+        quotes={quotesWithOffers}
         filterState={filterState}
         onFilterChange={setFilterState}
         isExpanded={filtersExpanded}
@@ -851,21 +878,25 @@ export default function SessionScenariosView({
           </button>
         </div>
         <div className="p-5">
+          {/* Tabela de Avaliação consome filteredData (passa pelo engine). */}
           {activeTab === 'tabelona' && (
             <ScenarioComparisonTable
               items={filteredScenarios.filteredItems}
-              quotes={conciliadoQuotes}
+              quotes={quotesWithOffers}
               enabledQuoteIds={filterState.enabledQuoteIds}
               onMaterialClick={handleMaterialClick}
             />
           )}
-          {activeTab === 'ranking' && <RankingView scenarios={filteredScenarios} />}
+          {/* Ranking consome rawData (`scenarios` direto da action) — nunca passa
+              pelo engine de filtros para evitar que toggles do painel afetem a
+              aba de Ranking. */}
+          {activeTab === 'ranking' && <RankingView scenarios={scenarios} />}
         </div>
       </div>
 
       <MaterialDetailModal
         item={selectedMaterial}
-        quotes={conciliadoQuotes}
+        quotes={quotesWithOffers}
         enabledQuoteIds={filterState.enabledQuoteIds}
         open={materialModalOpen}
         onOpenChange={setMaterialModalOpen}

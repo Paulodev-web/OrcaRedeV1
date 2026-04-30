@@ -163,12 +163,35 @@ export async function getQuoteWithItemsAction(
       return { success: false, error: 'Você não tem permissão para acessar esta cotação.' };
     }
 
-    const { data: quote, error: quoteError } = await supabase
+    const primaryQuoteColumns =
+      'id, budget_id, session_id, supplier_name, pdf_path, display_name, status, observacoes_gerais, extraction_validated_at, user_id, created_at, updated_at';
+    const legacyQuoteColumns =
+      'id, budget_id, session_id, supplier_name, pdf_path, status, observacoes_gerais, user_id, created_at, updated_at';
+
+    let { data: quote, error: quoteError } = await supabase
       .from('supplier_quotes')
-      .select('id, budget_id, session_id, supplier_name, pdf_path, display_name, status, observacoes_gerais, extraction_validated_at, user_id, created_at, updated_at')
+      .select(primaryQuoteColumns)
       .eq('id', quoteId)
       .eq('user_id', userId)
       .single();
+
+    const quoteErrorMsg = quoteError?.message ?? '';
+    const shouldRetryWithLegacyColumns =
+      quoteErrorMsg.includes('display_name') || quoteErrorMsg.includes('extraction_validated_at');
+
+    if ((quoteError || !quote) && shouldRetryWithLegacyColumns) {
+      const fallbackRes = await supabase
+        .from('supplier_quotes')
+        .select(legacyQuoteColumns)
+        .eq('id', quoteId)
+        .eq('user_id', userId)
+        .single();
+
+      quote = fallbackRes.data
+        ? { ...fallbackRes.data, display_name: null, extraction_validated_at: null }
+        : null;
+      quoteError = fallbackRes.error;
+    }
 
     if (quoteError || !quote) {
       console.error('[getQuoteWithItemsAction] Falha ao carregar cotação após verificação:', quoteError?.message);
