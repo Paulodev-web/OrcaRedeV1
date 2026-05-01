@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
 import { autoMatchQuoteItems } from '@/services/suppliers/autoMatchQuoteItems';
 import type { SupplierExtractItem } from '@/types/supplierExtract';
-import type { SupplierQuote, SupplierQuoteItem, SupplierMatchMethod } from '@/types';
+import type { SupplierQuote, SupplierQuoteItem, SupplierMatchMethod, SupplierQuoteStatus } from '@/types';
 
 // ---------------------------------------------------------------------------
 // Tipos de retorno padronizados (mesmo padrão das demais actions do projeto)
@@ -660,6 +660,22 @@ export async function markQuoteConciliatedAction(
   }
 }
 
+/** Linha retornada por listQuotesByBudgetAction (select com itens aninhados). Evita GenericStringError quando .select recebe string genérica. */
+type ListQuotesByBudgetRow = {
+  id: string;
+  budget_id: string | null;
+  session_id: string | null;
+  supplier_name: string;
+  pdf_path: string;
+  display_name?: string | null;
+  status: SupplierQuoteStatus;
+  observacoes_gerais: string | null;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  supplier_quote_items: { id: string; match_status: string }[] | null;
+};
+
 // ---------------------------------------------------------------------------
 // listQuotesByBudgetAction
 // Lista todas as cotações de um orçamento (para a tela de cenários).
@@ -715,13 +731,20 @@ export async function listQuotesByBudgetAction(
       return query;
     };
 
-    let { data: quotes, error } = await runQuotesQuery(primaryQuoteColumns);
+    type QuotesQueryPayload = {
+      data: ListQuotesByBudgetRow[] | null;
+      error: { message: string } | null;
+    };
+
+    let { data: quotes, error } = (await runQuotesQuery(
+      primaryQuoteColumns
+    )) as QuotesQueryPayload;
 
     const errorMsg = error?.message ?? '';
     const shouldRetryWithLegacyColumns = errorMsg.includes('display_name');
 
     if ((error || !quotes) && shouldRetryWithLegacyColumns) {
-      const fallbackRes = await runQuotesQuery(legacyQuoteColumns);
+      const fallbackRes = (await runQuotesQuery(legacyQuoteColumns)) as QuotesQueryPayload;
       quotes = fallbackRes.data?.map((quote) => ({ ...quote, display_name: null })) ?? null;
       error = fallbackRes.error;
     }
@@ -739,7 +762,7 @@ export async function listQuotesByBudgetAction(
         pdf_path: q.pdf_path,
         display_name: q.display_name ?? null,
         status: q.status,
-        observacoes_gerais: q.observacoes_gerais,
+        observacoes_gerais: q.observacoes_gerais ?? undefined,
         user_id: q.user_id,
         created_at: q.created_at,
         updated_at: q.updated_at,
