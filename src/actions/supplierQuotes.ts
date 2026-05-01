@@ -672,31 +672,59 @@ export async function listQuotesByBudgetAction(
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
 
-    let query = supabase
-      .from('supplier_quotes')
-      .select(`
-        id,
-        budget_id,
-        session_id,
-        supplier_name,
-        pdf_path,
-        display_name,
-        status,
-        observacoes_gerais,
-        user_id,
-        created_at,
-        updated_at,
-        supplier_quote_items (id, match_status)
-      `)
-      .eq('budget_id', budgetId)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+    const primaryQuoteColumns = `
+      id,
+      budget_id,
+      session_id,
+      supplier_name,
+      pdf_path,
+      display_name,
+      status,
+      observacoes_gerais,
+      user_id,
+      created_at,
+      updated_at,
+      supplier_quote_items (id, match_status)
+    `;
+    const legacyQuoteColumns = `
+      id,
+      budget_id,
+      session_id,
+      supplier_name,
+      pdf_path,
+      status,
+      observacoes_gerais,
+      user_id,
+      created_at,
+      updated_at,
+      supplier_quote_items (id, match_status)
+    `;
 
-    if (sessionId) {
-      query = query.eq('session_id', sessionId);
+    const runQuotesQuery = async (columns: string) => {
+      let query = supabase
+        .from('supplier_quotes')
+        .select(columns)
+        .eq('budget_id', budgetId)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (sessionId) {
+        query = query.eq('session_id', sessionId);
+      }
+
+      return query;
+    };
+
+    let { data: quotes, error } = await runQuotesQuery(primaryQuoteColumns);
+
+    const errorMsg = error?.message ?? '';
+    const shouldRetryWithLegacyColumns = errorMsg.includes('display_name');
+
+    if ((error || !quotes) && shouldRetryWithLegacyColumns) {
+      const fallbackRes = await runQuotesQuery(legacyQuoteColumns);
+      quotes = fallbackRes.data?.map((quote) => ({ ...quote, display_name: null })) ?? null;
+      error = fallbackRes.error;
     }
-
-    const { data: quotes, error } = await query;
 
     if (error) {
       return { success: false, error: error.message };
