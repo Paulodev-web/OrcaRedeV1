@@ -6,6 +6,7 @@ import { Pencil } from 'lucide-react';
 import { NewWorkDialog } from './NewWorkDialog';
 import { StatusDropdown } from './StatusDropdown';
 import { WorkKPIs } from './WorkKPIs';
+import { ImportedBudgetBadge } from './ImportedBudgetBadge';
 import type { ManagerRow } from '@/types/people';
 import type { WorkMilestone, WorkWithManager } from '@/types/works';
 
@@ -13,9 +14,10 @@ interface WorkHeaderProps {
   work: WorkWithManager;
   milestones: WorkMilestone[];
   managers: ManagerRow[];
+  postsPlanned?: number;
 }
 
-export function WorkHeader({ work, milestones, managers }: WorkHeaderProps) {
+export function WorkHeader({ work, milestones, managers, postsPlanned }: WorkHeaderProps) {
   const [editOpen, setEditOpen] = useState(false);
 
   return (
@@ -31,7 +33,10 @@ export function WorkHeader({ work, milestones, managers }: WorkHeaderProps) {
 
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-2xl font-bold text-[#1D3140]">{work.name}</h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold text-[#1D3140]">{work.name}</h1>
+              {work.budgetId && <ImportedBudgetBadge />}
+            </div>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
               {work.clientName && <span><strong className="font-medium text-gray-700">Cliente:</strong> {work.clientName}</span>}
               {work.utilityCompany && <span><strong className="font-medium text-gray-700">Concessionária:</strong> {work.utilityCompany}</span>}
@@ -40,6 +45,15 @@ export function WorkHeader({ work, milestones, managers }: WorkHeaderProps) {
                 <strong className="font-medium text-gray-700">Gerente:</strong>{' '}
                 {work.managerName ?? 'Não atribuído'}
               </span>
+              {work.budgetId && (
+                <Link
+                  href={`/?budgetId=${work.budgetId}`}
+                  className="text-[#64ABDE] hover:underline"
+                  title="Abrir o orçamento original no OrçaRede"
+                >
+                  Ver orçamento original
+                </Link>
+              )}
             </div>
           </div>
           <div className="flex flex-shrink-0 items-center gap-2">
@@ -56,7 +70,7 @@ export function WorkHeader({ work, milestones, managers }: WorkHeaderProps) {
         </div>
 
         <div className="mt-4">
-          <WorkKPIs work={work} milestones={milestones} />
+          <WorkKPIs work={work} milestones={milestones} postsPlanned={postsPlanned ?? 0} />
         </div>
       </div>
 

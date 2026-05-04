@@ -4,6 +4,8 @@ import type { WorkMilestone, WorkRow } from '@/types/works';
 interface WorkKPIsProps {
   work: WorkRow;
   milestones: WorkMilestone[];
+  /** Total de postes planejados no snapshot da obra (0 se não houver snapshot). */
+  postsPlanned: number;
 }
 
 function daysSince(startDate: string | null): number | null {
@@ -15,7 +17,7 @@ function daysSince(startDate: string | null): number | null {
   return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
 }
 
-export function WorkKPIs({ work, milestones }: WorkKPIsProps) {
+export function WorkKPIs({ work, milestones, postsPlanned }: WorkKPIsProps) {
   const totalMilestones = milestones.length;
   const approvedMilestones = milestones.filter((m) => m.status === 'approved').length;
   const progressPct = totalMilestones === 0 ? 0 : Math.round((approvedMilestones / totalMilestones) * 100);
@@ -32,7 +34,7 @@ export function WorkKPIs({ work, milestones }: WorkKPIsProps) {
       icon: HardHat,
       label: 'Postes instalados',
       value: '0',
-      hint: '0 planejados',
+      hint: `${postsPlanned} planejado${postsPlanned === 1 ? '' : 's'}`,
     },
     {
       icon: CalendarDays,

@@ -140,3 +140,94 @@ export const MILESTONE_LABELS: Record<MilestoneCode, string> = {
   energization: 'Energização',
   commissioning: 'Comissionamento',
 };
+
+// =============================================================================
+// Importação de orçamento (Fase 3)
+// =============================================================================
+
+/** Item da listagem de orçamentos importáveis em `BudgetPickerStep`. */
+export interface ImportableBudget {
+  id: string;
+  projectName: string;
+  clientName: string | null;
+  city: string | null;
+  finalizedAt: string;
+  postsCount: number;
+  /** Conexões persistidas via último `work_trackings` legado (pode ser 0). */
+  persistedConnectionsCount: number;
+  hasPdf: boolean;
+  /** Quantas obras "ativas" (não canceladas) já existem com este budget_id para o engineer. */
+  existingActiveWorksCount: number;
+}
+
+/** Material consolidado armazenado em `work_project_snapshot.materials_planned`. */
+export interface MaterialPlanned {
+  material_id: string;
+  code: string;
+  name: string;
+  unit: string;
+  quantity: number;
+}
+
+/**
+ * Metragem planejada armazenada em `work_project_snapshot.meters_planned`.
+ * Convenção: chaves sempre presentes com 0 quando o orçamento não tinha tracking
+ * legado (única fonte hoje). Documentado no plano da Fase 3.
+ */
+export interface MetersPlanned {
+  BT: number;
+  MT: number;
+  rede: number;
+}
+
+export interface WorkProjectSnapshot {
+  workId: string;
+  sourceBudgetId: string | null;
+  pdfStoragePath: string | null;
+  originalPdfPath: string | null;
+  renderVersion: number | null;
+  pdfNumPages: number | null;
+  materialsPlanned: MaterialPlanned[];
+  metersPlanned: MetersPlanned;
+  importedAt: string;
+  importedBy: string;
+}
+
+export interface WorkProjectPost {
+  id: string;
+  workId: string;
+  sourcePostId: string | null;
+  numbering: string | null;
+  postType: string | null;
+  xCoord: number;
+  yCoord: number;
+  metadata: Record<string, unknown>;
+}
+
+export interface WorkProjectConnection {
+  id: string;
+  workId: string;
+  sourceConnectionId: string | null;
+  fromPostId: string;
+  toPostId: string;
+  color: 'blue' | 'green' | null;
+  metadata: Record<string, unknown>;
+}
+
+export interface WorkProjectSnapshotBundle {
+  snapshot: WorkProjectSnapshot;
+  posts: WorkProjectPost[];
+  connections: WorkProjectConnection[];
+}
+
+export interface CreateWorkFromBudgetInput {
+  budgetId: string;
+  name?: string | null;
+  clientName?: string | null;
+  utilityCompany?: string | null;
+  address?: string | null;
+  managerId?: string | null;
+  startedAt?: string | null;
+  expectedEndAt?: string | null;
+  notes?: string | null;
+}

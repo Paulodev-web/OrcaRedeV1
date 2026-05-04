@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUserProfile } from '@/services/people/getCurrentUserProfile';
 import { getWorkById } from '@/services/works/getWorkById';
 import { getWorkMilestones } from '@/services/works/getWorkMilestones';
+import { getWorkProjectPostsCount } from '@/services/works/getWorkProjectPostsCount';
 import { getManagers } from '@/services/people/getManagers';
 import { WorkHeader } from '@/components/andamento-obra/works/WorkHeader';
 import { WorkTabsNav } from '@/components/andamento-obra/works/WorkTabsNav';
@@ -28,14 +29,15 @@ export default async function WorkDetailLayout({ children, params }: LayoutProps
   const work = await getWorkById(supabase, workId);
   if (!work) notFound();
 
-  const [milestones, managers] = await Promise.all([
+  const [milestones, managers, postsPlanned] = await Promise.all([
     getWorkMilestones(supabase, workId),
     getManagers(supabase, user.id),
+    getWorkProjectPostsCount(supabase, workId),
   ]);
 
   return (
     <div>
-      <WorkHeader work={work} milestones={milestones} managers={managers} />
+      <WorkHeader work={work} milestones={milestones} managers={managers} postsPlanned={postsPlanned} />
       <WorkTabsNav workId={workId} />
       <main className="p-6 lg:p-8">
         <div className="mx-auto max-w-7xl">{children}</div>

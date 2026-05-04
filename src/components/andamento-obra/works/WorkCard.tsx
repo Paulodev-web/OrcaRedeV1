@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { User, Calendar } from 'lucide-react';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { STATUS_LABELS, type WorkStatus, type WorkWithManager } from '@/types/works';
+import { ImportedBudgetBadge } from './ImportedBudgetBadge';
 
 interface WorkCardProps {
   work: WorkWithManager;
@@ -46,6 +47,11 @@ export function WorkCard({ work }: WorkCardProps) {
           <Calendar className="h-3.5 w-3.5 text-gray-400" />
           <span>Atualizada {formatRelativeTime(work.lastActivityAt)}</span>
         </div>
+        {work.budgetId && (
+          <div className="pt-0.5">
+            <ImportedBudgetBadge />
+          </div>
+        )}
       </div>
     </Link>
   );

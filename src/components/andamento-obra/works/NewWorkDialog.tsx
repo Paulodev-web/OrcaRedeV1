@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { ArrowLeft, FilePlus2, FileSearch } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -14,13 +15,17 @@ import {
 import { createWork, updateWork } from '@/actions/works';
 import { onPortalPrimaryButtonSmClass } from '@/lib/branding';
 import type { ManagerRow } from '@/types/people';
-import type { WorkWithManager } from '@/types/works';
+import type { ImportableBudget, WorkWithManager } from '@/types/works';
+import { BudgetPickerStep } from './BudgetPickerStep';
+import { ImportWorkForm } from './ImportWorkForm';
+
+type DialogStep = 'mode' | 'create' | 'pick-budget' | 'import-form';
 
 interface NewWorkDialogProps {
   open: boolean;
   onClose: () => void;
   managers: ManagerRow[];
-  /** Se fornecido, o dialog opera em modo edição. */
+  /** Se fornecido, o dialog opera em modo edição (segue fluxo do Bloco 2). */
   work?: WorkWithManager | null;
 }
 
@@ -29,12 +34,14 @@ export function NewWorkDialog({ open, onClose, managers, work }: NewWorkDialogPr
     if (!next) onClose();
   };
 
+  const isEdit = work !== null && work !== undefined;
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl">
         {open && (
-          <WorkForm
-            key={work?.id ?? 'new'}
+          <DialogBody
+            key={isEdit ? `edit-${work.id}` : 'new'}
             managers={managers}
             work={work ?? null}
             onClose={onClose}
@@ -45,13 +52,115 @@ export function NewWorkDialog({ open, onClose, managers, work }: NewWorkDialogPr
   );
 }
 
-interface WorkFormProps {
+interface DialogBodyProps {
   managers: ManagerRow[];
   work: WorkWithManager | null;
   onClose: () => void;
 }
 
-function WorkForm({ managers, work, onClose }: WorkFormProps) {
+function DialogBody({ managers, work, onClose }: DialogBodyProps) {
+  const isEdit = work !== null;
+  const [step, setStep] = useState<DialogStep>(isEdit ? 'create' : 'mode');
+  const [selectedBudget, setSelectedBudget] = useState<ImportableBudget | null>(null);
+
+  if (isEdit || step === 'create') {
+    return (
+      <WorkForm
+        managers={managers}
+        work={work}
+        onClose={onClose}
+        onBack={isEdit ? null : () => setStep('mode')}
+      />
+    );
+  }
+
+  if (step === 'pick-budget') {
+    return (
+      <BudgetPickerStep
+        onBack={() => setStep('mode')}
+        onSelect={(budget) => {
+          setSelectedBudget(budget);
+          setStep('import-form');
+        }}
+      />
+    );
+  }
+
+  if (step === 'import-form' && selectedBudget) {
+    return (
+      <ImportWorkForm
+        budget={selectedBudget}
+        managers={managers}
+        onBack={() => setStep('pick-budget')}
+        onClose={onClose}
+      />
+    );
+  }
+
+  return <ModeStep onPickCreate={() => setStep('create')} onPickImport={() => setStep('pick-budget')} />;
+}
+
+function ModeStep({
+  onPickCreate,
+  onPickImport,
+}: {
+  onPickCreate: () => void;
+  onPickImport: () => void;
+}) {
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>Nova obra</DialogTitle>
+        <DialogDescription>
+          Como você quer criar esta obra de Andamento?
+        </DialogDescription>
+      </DialogHeader>
+
+      <div className="grid gap-3 px-6 py-4 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={onPickCreate}
+          className="group flex flex-col items-start gap-2 rounded-xl border border-gray-200 bg-white p-4 text-left transition-all hover:border-[#64ABDE]/60 hover:shadow-md"
+        >
+          <span className="rounded-lg bg-[#64ABDE]/10 p-2 text-[#1D3140] group-hover:bg-[#64ABDE]/20">
+            <FilePlus2 className="h-5 w-5" />
+          </span>
+          <span className="text-sm font-semibold text-[#1D3140]">Criar do zero</span>
+          <span className="text-xs text-gray-500">
+            Cadastra uma obra sem vínculo com orçamento. Você adiciona postes e materiais
+            depois, manualmente.
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onPickImport}
+          className="group flex flex-col items-start gap-2 rounded-xl border border-gray-200 bg-white p-4 text-left transition-all hover:border-[#64ABDE]/60 hover:shadow-md"
+        >
+          <span className="rounded-lg bg-[#64ABDE]/10 p-2 text-[#1D3140] group-hover:bg-[#64ABDE]/20">
+            <FileSearch className="h-5 w-5" />
+          </span>
+          <span className="text-sm font-semibold text-[#1D3140]">Importar do OrçaRede</span>
+          <span className="text-xs text-gray-500">
+            Importa PDF, postes, materiais e metragem de um orçamento finalizado. Snapshot
+            fixo: alterações posteriores no orçamento não alteram a obra.
+          </span>
+        </button>
+      </div>
+
+      <DialogFooter />
+    </>
+  );
+}
+
+interface WorkFormProps {
+  managers: ManagerRow[];
+  work: WorkWithManager | null;
+  onClose: () => void;
+  onBack: (() => void) | null;
+}
+
+function WorkForm({ managers, work, onClose, onBack }: WorkFormProps) {
   const router = useRouter();
   const isEdit = work !== null;
 
@@ -128,7 +237,9 @@ function WorkForm({ managers, work, onClose }: WorkFormProps) {
   return (
     <form onSubmit={handleSubmit}>
       <DialogHeader>
-        <DialogTitle>{isEdit ? 'Editar obra' : 'Nova obra'}</DialogTitle>
+        <DialogTitle>
+          {isEdit ? 'Editar obra' : 'Nova obra — criar do zero'}
+        </DialogTitle>
         <DialogDescription>
           {isEdit
             ? 'Atualize os dados da obra. Mudanças de status são feitas pelo botão de status.'
@@ -268,6 +379,15 @@ function WorkForm({ managers, work, onClose }: WorkFormProps) {
       </div>
 
       <DialogFooter>
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="mr-auto inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Voltar
+          </button>
+        )}
         <button
           type="button"
           onClick={onClose}
