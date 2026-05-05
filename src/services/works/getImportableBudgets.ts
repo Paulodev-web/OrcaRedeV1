@@ -1,5 +1,6 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { isBudgetFinalizedForImport } from '@/lib/budgetStatus';
 import type { ImportableBudget } from '@/types/works';
 
 interface BudgetRow {
@@ -21,9 +22,9 @@ interface PostsCountRow {
  * Lista orçamentos finalizados do engineer logado, prontos para serem importados
  * como obras de Andamento. Retorno tipado, ordenado por finalização desc.
  *
- * - `Finalizado` (pt-BR) é o valor canônico definido pelo RPC `finalize_budget`.
- *   AppContext aceita também `finalized` / `Concluído`; aqui consideramos os três
- *   para tolerar dados legados.
+ * - Status "finalizado" usa a mesma normalização que o Dashboard (`isBudgetFinalizedForImport`):
+ *   comparação case-insensitive e variantes (Concluido sem acento, espaços).
+ * - Erros de query (ex.: RLS) são propagados — não confundir com "lista vazia".
  * - `finalizedAt` usa `updated_at` como proxy enquanto não houver coluna dedicada.
  * - `persistedConnectionsCount` vem do último `work_trackings` (mesmo algoritmo
  *   do import) -- pode ser 0; UI mostra aviso quando 0.
@@ -37,12 +38,22 @@ export async function getImportableBudgets(
     .from('budgets')
     .select('id, project_name, client_name, city, status, plan_image_url, updated_at')
     .eq('user_id', engineerId)
-    .in('status', ['Finalizado', 'finalized', 'Concluído'])
     .order('updated_at', { ascending: false });
 
-  if (error || !budgets || budgets.length === 0) return [];
+  if (error) {
+    console.error('[getImportableBudgets] falha ao ler budgets', {
+      message: error.message,
+      code: error.code,
+      engineerId,
+    });
+    throw new Error(
+      `Não foi possível carregar orçamentos para importação: ${error.message}`,
+    );
+  }
 
-  const rows = budgets as unknown as BudgetRow[];
+  const allRows = (budgets ?? []) as unknown as BudgetRow[];
+  const rows = allRows.filter((b) => isBudgetFinalizedForImport(b.status));
+  if (rows.length === 0) return [];
   const budgetIds = rows.map((b) => b.id);
 
   const [postsResult, trackingsResult, worksResult] = await Promise.all([

@@ -13,6 +13,7 @@ import {
   getImageNaturalDimensions,
 } from '@/lib/storage/publicUrl';
 import { computeRasterCoordTransform } from '@/lib/canvas/pdfRenderConfig';
+import { isBudgetFinalizedForImport } from '@/lib/budgetStatus';
 import { getImportableBudgets } from '@/services/works/getImportableBudgets';
 import { getBudgetForImport } from '@/services/works/getBudgetForImport';
 import type { BudgetPostDetail } from '@/types';
@@ -303,8 +304,7 @@ export async function createWorkFromBudget(
   if (!budget) {
     return { success: false, error: 'Orçamento não encontrado ou sem permissão.' };
   }
-  const status = (budget.status ?? '').trim();
-  if (!['Finalizado', 'finalized', 'Concluído'].includes(status)) {
+  if (!isBudgetFinalizedForImport(budget.status)) {
     return { success: false, error: 'Apenas orçamentos finalizados podem ser importados.' };
   }
 
