@@ -24,6 +24,7 @@ const ICONS: Record<NotificationKind, typeof Bell> = {
   work_created: HardHat,
   message_received: MessageSquare,
   daily_log_published: ClipboardCheck,
+  daily_log_approved: CheckCircle2,
   daily_log_rejected: AlertTriangle,
   checklist_completed: CheckCircle2,
   checklist_returned: AlertTriangle,

@@ -15,6 +15,7 @@ interface WorksHomeViewProps {
   notifications: NotificationRow[];
   managers: ManagerRow[];
   hasAnyWork: boolean;
+  unreadCountsByWorkId?: Record<string, number>;
 }
 
 export function WorksHomeView({
@@ -22,6 +23,7 @@ export function WorksHomeView({
   notifications,
   managers,
   hasAnyWork,
+  unreadCountsByWorkId,
 }: WorksHomeViewProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -46,7 +48,10 @@ export function WorksHomeView({
 
       {hasAnyWork ? (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
-          <AcompanhamentoCenter grouped={grouped} />
+          <AcompanhamentoCenter
+            grouped={grouped}
+            unreadCountsByWorkId={unreadCountsByWorkId}
+          />
           <NotificationsCenter initialItems={notifications} />
         </div>
       ) : (

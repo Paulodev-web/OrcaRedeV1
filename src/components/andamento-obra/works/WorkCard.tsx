@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { User, Calendar } from 'lucide-react';
+import { User, Calendar, MessageCircle } from 'lucide-react';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { STATUS_LABELS, type WorkStatus, type WorkWithManager } from '@/types/works';
 import { ImportedBudgetBadge } from './ImportedBudgetBadge';
 
 interface WorkCardProps {
   work: WorkWithManager;
+  unreadCount?: number;
 }
 
 const STATUS_BADGE: Record<WorkStatus, string> = {
@@ -18,11 +19,11 @@ const STATUS_BADGE: Record<WorkStatus, string> = {
   cancelled: 'bg-red-50 text-red-700 ring-red-200',
 };
 
-export function WorkCard({ work }: WorkCardProps) {
+export function WorkCard({ work, unreadCount = 0 }: WorkCardProps) {
   return (
     <Link
       href={`/tools/andamento-obra/obras/${work.id}`}
-      className="block rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:border-[#64ABDE]/50 hover:shadow-md"
+      className="relative block rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:border-[#64ABDE]/50 hover:shadow-md"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
@@ -47,12 +48,31 @@ export function WorkCard({ work }: WorkCardProps) {
           <Calendar className="h-3.5 w-3.5 text-gray-400" />
           <span>Atualizada {formatRelativeTime(work.lastActivityAt)}</span>
         </div>
+        {unreadCount > 0 && (
+          <div className="flex items-center gap-1.5 text-blue-700">
+            <MessageCircle className="h-3.5 w-3.5" />
+            <span className="font-medium">
+              {unreadCount === 1
+                ? '1 mensagem não lida'
+                : `${unreadCount > 99 ? '99+' : unreadCount} mensagens não lidas`}
+            </span>
+          </div>
+        )}
         {work.budgetId && (
           <div className="pt-0.5">
             <ImportedBudgetBadge />
           </div>
         )}
       </div>
+
+      {unreadCount > 0 && (
+        <span
+          aria-hidden
+          className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#64ABDE] px-1 text-[10px] font-bold text-white shadow-md"
+        >
+          {unreadCount > 99 ? '99+' : unreadCount}
+        </span>
+      )}
     </Link>
   );
 }

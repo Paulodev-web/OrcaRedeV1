@@ -7,6 +7,7 @@ import type { WorksGrouped, WorkWithManager } from '@/types/works';
 
 interface AcompanhamentoCenterProps {
   grouped: WorksGrouped;
+  unreadCountsByWorkId?: Record<string, number>;
 }
 
 interface GroupConfig {
@@ -48,7 +49,10 @@ const GROUPS: GroupConfig[] = [
   },
 ];
 
-export function AcompanhamentoCenter({ grouped }: AcompanhamentoCenterProps) {
+export function AcompanhamentoCenter({
+  grouped,
+  unreadCountsByWorkId,
+}: AcompanhamentoCenterProps) {
   const [openKey, setOpenKey] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(GROUPS.map((g) => [g.key, g.defaultOpen])),
   );
@@ -93,7 +97,11 @@ export function AcompanhamentoCenter({ grouped }: AcompanhamentoCenterProps) {
                 ) : (
                   <div className="grid gap-3 sm:grid-cols-2">
                     {items.map((work) => (
-                      <WorkCard key={work.id} work={work} />
+                      <WorkCard
+                        key={work.id}
+                        work={work}
+                        unreadCount={unreadCountsByWorkId?.[work.id] ?? 0}
+                      />
                     ))}
                   </div>
                 )}

@@ -1,25 +1,111 @@
+import Link from 'next/link';
+import { CalendarRange, ClipboardCheck, Images } from 'lucide-react';
 import { createSupabaseServerClient } from '@/lib/supabaseServer';
 import { getWorkProjectSnapshot } from '@/services/works/getWorkProjectSnapshot';
+import { getWorkPdfSignedUrl } from '@/services/works/getWorkPdfSignedUrl';
+import { getWorkById } from '@/services/works/getWorkById';
 import { ProjectOverviewSummary } from '@/components/andamento-obra/works/ProjectOverviewSummary';
-import { WorkTabPlaceholder } from '@/components/andamento-obra/works/WorkTabPlaceholder';
+import { WorkCanvas } from '@/components/andamento-obra/works/canvas/WorkCanvas';
+import { CanvasEmptyState } from '@/components/andamento-obra/works/canvas/CanvasEmptyState';
 
 interface VisaoGeralPageProps {
   params: Promise<{ workId: string }>;
 }
 
+/**
+ * Aba "Visao Geral" da obra.
+ *
+ * Layout em duas colunas (>=lg):
+ *   - Principal (~70%): WorkCanvas com PDF + camada de projeto
+ *   - Lateral (~30%): ProjectOverviewSummary compacto + atalhos
+ *
+ * Mobile (<lg): pilha vertical, canvas com altura controlada.
+ *
+ * Carregamento (Server Component):
+ *   - Snapshot completo via getWorkProjectSnapshot (RLS via cookies)
+ *   - URL assinada do PDF via getWorkPdfSignedUrl (service role, TTL 30min)
+ *
+ * O `[workId]/layout.tsx` ja carrega `getWorkProjectPostsCount` para o
+ * KPI do header. Mantemos os dois servicos separados:
+ *   - layout: contagem barata (head: true), usada em todas as abas
+ *   - aqui (Visao Geral): bundle completo, necessario apenas para esta aba
+ */
 export default async function VisaoGeralPage({ params }: VisaoGeralPageProps) {
   const { workId } = await params;
   const supabase = await createSupabaseServerClient();
-  const bundle = await getWorkProjectSnapshot(supabase, workId);
+
+  const [bundle, work] = await Promise.all([
+    getWorkProjectSnapshot(supabase, workId),
+    getWorkById(supabase, workId),
+  ]);
 
   if (!bundle) {
     return (
-      <WorkTabPlaceholder
-        title="Visão Geral"
-        description="Resumo executivo da obra com snapshot do projeto, marcos e equipe. Em construção."
+      <CanvasEmptyState
+        variant={
+          work?.budgetId === null
+            ? 'no-snapshot-from-zero'
+            : 'no-snapshot-with-budget'
+        }
       />
     );
   }
 
-  return <ProjectOverviewSummary bundle={bundle} />;
+  const pdfSignedUrl = bundle.snapshot.pdfStoragePath
+    ? await getWorkPdfSignedUrl(bundle.snapshot.pdfStoragePath)
+    : null;
+
+  return (
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+      <div className="min-w-0 flex-1 lg:basis-[68%]">
+        <div className="h-[70vh] min-h-[420px] lg:h-[78vh]">
+          <WorkCanvas
+            snapshot={bundle.snapshot}
+            posts={bundle.posts}
+            connections={bundle.connections}
+            pdfSignedUrl={pdfSignedUrl}
+          />
+        </div>
+      </div>
+
+      <aside className="flex w-full flex-col gap-3 lg:basis-[32%]">
+        <ProjectOverviewSummary bundle={bundle} compact />
+        <QuickLinks workId={workId} />
+      </aside>
+    </div>
+  );
+}
+
+function QuickLinks({ workId }: { workId: string }) {
+  const base = `/tools/andamento-obra/obras/${workId}`;
+  const items = [
+    { href: `${base}/galeria`, label: 'Ver galeria', icon: Images },
+    { href: `${base}/progresso`, label: 'Ver progresso', icon: CalendarRange },
+    {
+      href: `${base}/checklists`,
+      label: 'Ver checklists',
+      icon: ClipboardCheck,
+    },
+  ];
+  return (
+    <nav
+      aria-label="Atalhos para outras abas da obra"
+      className="rounded-2xl border border-gray-200 bg-white p-4"
+    >
+      <h2 className="text-sm font-semibold text-[#1D3140]">Atalhos</h2>
+      <ul className="mt-3 space-y-1.5">
+        {items.map(({ href, label, icon: Icon }) => (
+          <li key={href}>
+            <Link
+              href={href}
+              className="flex items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-xs font-medium text-[#1D3140] transition-colors hover:border-[#1D3140] hover:bg-gray-50"
+            >
+              <Icon className="h-3.5 w-3.5 text-gray-500" aria-hidden="true" />
+              {label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
 }

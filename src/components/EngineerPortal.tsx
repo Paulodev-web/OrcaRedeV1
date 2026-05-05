@@ -417,10 +417,10 @@ export function EngineerPortal() {
 
           // 3. Inserir/atualizar conexões (só upsert - nunca delete em massa; exclusão só no clique direito na linha)
           if (t.post_connections?.length > 0) {
-            const pairKey = (a: string, b: string) => [a, b].sort().join('|');
+            const pairKey = (a: string, b: string, type: string) => `${[a, b].sort().join('|')}|${type}`;
             const seenPairs = new Set<string>();
             const deduped = t.post_connections.filter(conn => {
-              const key = pairKey(conn.from_post_id, conn.to_post_id);
+              const key = pairKey(conn.from_post_id, conn.to_post_id, conn.connection_type ?? 'blue');
               if (seenPairs.has(key)) return false;
               seenPairs.add(key);
               return true;
@@ -567,13 +567,23 @@ export function EngineerPortal() {
   /** Adicionar poste no mapa: clique direito no canvas. */
   const handleCanvasRightClickAddPoste = (coords: { x: number; y: number }) => {
     if (!activeTracking) return;
-    const currentOnMap = activeTracking.tracked_posts?.length ?? 0;
+    // Calcular próximo número baseado no maior número já usado em "Poste N"
+    const postNumberRegex = /^Poste\s+(\d+)$/i;
+    let maxNumber = 0;
+    for (const p of activeTracking.tracked_posts || []) {
+      const match = postNumberRegex.exec(p.name || '');
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNumber) maxNumber = num;
+      }
+    }
+    const nextNumber = maxNumber + 1;
     const newId = `tracked-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const newPost: TrackedPost = {
       id: newId,
       tracking_id: activeTracking.id,
       original_post_id: newId,
-      name: `Poste ${currentOnMap + 1}`,
+      name: `Poste ${nextNumber}`,
       x_coord: coords.x,
       y_coord: coords.y,
       status: 'Pendente',
@@ -629,11 +639,12 @@ export function EngineerPortal() {
     if (!activeTracking) return;
     
     updateTracking(activeTracking.id, (tracking) => {
-      // Verificar se a conexão já existe
+      // Verificar se a conexão já existe (mesmo par E mesmo tipo)
       const exists = tracking.post_connections.some(
         (connection) =>
-          (connection.from_post_id === fromPostId && connection.to_post_id === toPostId) ||
-          (connection.from_post_id === toPostId && connection.to_post_id === fromPostId)
+          (connection.connection_type ?? 'blue') === connectionType &&
+          ((connection.from_post_id === fromPostId && connection.to_post_id === toPostId) ||
+           (connection.from_post_id === toPostId && connection.to_post_id === fromPostId))
       );
 
       if (exists) {
@@ -1156,10 +1167,10 @@ export function EngineerPortal() {
       }
 
       if (t.post_connections?.length > 0) {
-        const pairKey = (a: string, b: string) => [a, b].sort().join('|');
+        const pairKey = (a: string, b: string, type: string) => `${[a, b].sort().join('|')}|${type}`;
         const seenPairs = new Set<string>();
         const deduped = t.post_connections.filter((conn: any) => {
-          const key = pairKey(conn.from_post_id, conn.to_post_id);
+          const key = pairKey(conn.from_post_id, conn.to_post_id, conn.connection_type ?? 'blue');
           if (seenPairs.has(key)) return false;
           seenPairs.add(key);
           return true;
@@ -2216,7 +2227,7 @@ export function EngineerPortal() {
                 }}
               />
               <p className="text-xs text-gray-500 mt-2 px-1">
-                Clique direito no mapa para adicionar poste; clique direito no ícone do poste para excluir. Use os botões Rede Azul/Rede Verde e clique em dois postes para criar arcos de rede.
+                Clique direito no mapa para adicionar poste; clique direito no ícone para excluir poste; clique direito na linha de rede para excluir trecho. Use Rede Azul/Verde e clique em dois postes para criar arcos.
               </p>
             </div>
 
