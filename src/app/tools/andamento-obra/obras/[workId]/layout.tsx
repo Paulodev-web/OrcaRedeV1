@@ -31,7 +31,10 @@ export default async function WorkDetailLayout({ children, params }: LayoutProps
   if (!profile || profile.role !== 'engineer') redirect('/');
 
   const work = await getWorkById(supabase, workId);
-  if (!work) notFound();
+  if (!work) {
+    console.error(`[andamento-obra] work not found for id=${workId}, user=${user.id}`);
+    notFound();
+  }
 
   const [
     milestones,
