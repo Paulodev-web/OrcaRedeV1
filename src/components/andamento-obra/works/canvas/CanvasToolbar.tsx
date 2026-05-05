@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  ChevronLeft,
+  ChevronRight,
   Eye,
   EyeOff,
   Layers3,
@@ -17,12 +19,20 @@ interface CanvasToolbarProps {
   onTogglePdf: () => void;
   showProject: boolean;
   onToggleProject: () => void;
-  /** Se a obra tem PDF disponivel. Se false, o toggle PDF fica desabilitado. */
-  hasPdf: boolean;
+  /** Se a obra tem planta (PDF ou raster) disponivel. */
+  hasPlan: boolean;
   /** Se a obra tem postes/conexoes. Se false, o toggle de projeto fica desabilitado. */
   hasProject: boolean;
-  /** Indicador de carregamento do PDF (desabilita controles). */
+  /** Indicador de carregamento do PDF/imagem (desabilita controles). */
   isLoading?: boolean;
+  /** Label do toggle de planta (ex: "PDF" ou "Planta"). */
+  planLabel?: string;
+  /** Numero total de paginas (somente PDF multipagina). */
+  pdfNumPages?: number | null;
+  /** Pagina corrente (1-indexed). */
+  pdfPageNumber?: number;
+  /** Callback para mudar de pagina. */
+  onPageChange?: (page: number) => void;
 }
 
 /**
@@ -30,8 +40,9 @@ interface CanvasToolbarProps {
  *
  * Controles disponiveis:
  *   - Zoom out / Recentrar / Zoom in
- *   - Toggle "Mostrar PDF" (desabilitado se nao ha PDF)
+ *   - Toggle "Mostrar planta" (PDF ou imagem raster)
  *   - Toggle "Mostrar projeto" (desabilitado se nao ha postes/conexoes)
+ *   - Navegacao de paginas (somente quando PDF multipagina)
  *
  * Ausentes (vs CanvasVisual): upload, exclusao, modo conexao (azul/verde),
  * edicao de postes/conexoes. Todas operacoes destrutivas/edicao sao
@@ -47,10 +58,17 @@ export function CanvasToolbar({
   onTogglePdf,
   showProject,
   onToggleProject,
-  hasPdf,
+  hasPlan,
   hasProject,
   isLoading = false,
+  planLabel = 'PDF',
+  pdfNumPages,
+  pdfPageNumber = 1,
+  onPageChange,
 }: CanvasToolbarProps) {
+  const showPageNav =
+    pdfNumPages != null && pdfNumPages > 1 && onPageChange;
+
   return (
     <div
       className="flex flex-wrap items-center gap-2 border-b border-gray-200 bg-gray-50 px-3 py-2"
@@ -88,16 +106,16 @@ export function CanvasToolbar({
 
       <ToolbarToggle
         active={showPdf}
-        disabled={!hasPdf || isLoading}
+        disabled={!hasPlan || isLoading}
         onClick={onTogglePdf}
         title={
-          !hasPdf
-            ? 'Esta obra não tem PDF importado'
+          !hasPlan
+            ? 'Esta obra não tem planta importada'
             : showPdf
-              ? 'Ocultar PDF do projeto'
-              : 'Mostrar PDF do projeto'
+              ? `Ocultar ${planLabel} do projeto`
+              : `Mostrar ${planLabel} do projeto`
         }
-        ariaLabel={showPdf ? 'Ocultar PDF' : 'Mostrar PDF'}
+        ariaLabel={showPdf ? `Ocultar ${planLabel}` : `Mostrar ${planLabel}`}
         icon={
           showPdf ? (
             <EyeOff className="h-3.5 w-3.5" />
@@ -105,8 +123,34 @@ export function CanvasToolbar({
             <Eye className="h-3.5 w-3.5" />
           )
         }
-        label={showPdf ? 'Ocultar PDF' : 'Mostrar PDF'}
+        label={showPdf ? `Ocultar ${planLabel}` : `Mostrar ${planLabel}`}
       />
+
+      {showPageNav && (
+        <div className="flex items-center overflow-hidden rounded-md border border-gray-300 bg-white">
+          <ToolbarIconButton
+            aria-label="Página anterior"
+            title="Página anterior"
+            onClick={() => onPageChange(pdfPageNumber - 1)}
+            disabled={pdfPageNumber <= 1 || isLoading}
+            className="border-r border-gray-300"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </ToolbarIconButton>
+          <span className="min-w-[44px] px-1.5 text-center text-xs text-gray-600">
+            {pdfPageNumber}/{pdfNumPages}
+          </span>
+          <ToolbarIconButton
+            aria-label="Próxima página"
+            title="Próxima página"
+            onClick={() => onPageChange(pdfPageNumber + 1)}
+            disabled={pdfPageNumber >= pdfNumPages! || isLoading}
+            className="border-l border-gray-300"
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </ToolbarIconButton>
+        </div>
+      )}
 
       <ToolbarToggle
         active={showProject}

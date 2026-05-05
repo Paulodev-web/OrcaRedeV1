@@ -7,7 +7,12 @@ import { createSupabaseServiceRoleClient } from '@/lib/supabaseServer';
 import {
   parseSupabaseStoragePublicUrl,
   looksLikePdf,
+  looksLikeRasterImage,
+  inferImageContentType,
+  inferImageExtension,
+  getImageNaturalDimensions,
 } from '@/lib/storage/publicUrl';
+import { computeRasterCoordTransform } from '@/lib/canvas/pdfRenderConfig';
 import { getImportableBudgets } from '@/services/works/getImportableBudgets';
 import { getBudgetForImport } from '@/services/works/getBudgetForImport';
 import type { BudgetPostDetail } from '@/types';
@@ -249,8 +254,14 @@ export async function listImportableBudgets(): Promise<ActionResult<{ budgets: I
 
 interface ImportContext {
   workId: string | null;
-  pdfStoragePath: string | null;
-  pdfUploaded: boolean;
+  planStoragePath: string | null;
+  planUploaded: boolean;
+}
+
+interface CoordTransform {
+  scale: number;
+  offsetX: number;
+  offsetY: number;
 }
 
 /**
@@ -304,7 +315,7 @@ export async function createWorkFromBudget(
   }
 
   const serviceRole = createSupabaseServiceRoleClient();
-  const ctx: ImportContext = { workId: null, pdfStoragePath: null, pdfUploaded: false };
+  const ctx: ImportContext = { workId: null, planStoragePath: null, planUploaded: false };
 
   try {
     const insertBody: Record<string, unknown> = {
@@ -331,9 +342,11 @@ export async function createWorkFromBudget(
     }
     ctx.workId = (workInsert as { id: string }).id;
 
-    // Cópia da planta/PDF (opcional). Falhas tratam como "sem PDF" e seguem.
+    // Cópia da planta (PDF ou imagem raster). Falhas tratam como "sem planta" e seguem.
     const parsed = parseSupabaseStoragePublicUrl(budget.planImageUrl);
     let pdfNumPages: number | null = null;
+    let coordTransform: CoordTransform | undefined;
+
     if (parsed) {
       const downloadResult = await serviceRole.storage
         .from(parsed.bucket)
@@ -347,6 +360,7 @@ export async function createWorkFromBudget(
           contentType: blob.type ?? null,
           fileName: parsed.path,
         });
+
         if (isPdf) {
           const destPath = `${ctx.workId}/project/projeto.pdf`;
           const uploadResult = await serviceRole.storage
@@ -358,8 +372,39 @@ export async function createWorkFromBudget(
           if (uploadResult.error) {
             throw new Error(`Falha ao copiar PDF do projeto: ${uploadResult.error.message}`);
           }
-          ctx.pdfStoragePath = destPath;
-          ctx.pdfUploaded = true;
+          ctx.planStoragePath = destPath;
+          ctx.planUploaded = true;
+        } else if (
+          looksLikeRasterImage({
+            contentType: blob.type ?? null,
+            fileName: parsed.path,
+          })
+        ) {
+          const ext = inferImageExtension(blob.type ?? null, parsed.path);
+          const ct = inferImageContentType(parsed.path);
+          const destPath = `${ctx.workId}/project/planta.${ext}`;
+          const uploadResult = await serviceRole.storage
+            .from(ANDAMENTO_OBRA_BUCKET)
+            .upload(destPath, bytes, {
+              contentType: ct,
+              upsert: true,
+            });
+          if (uploadResult.error) {
+            throw new Error(`Falha ao copiar imagem do projeto: ${uploadResult.error.message}`);
+          }
+          ctx.planStoragePath = destPath;
+          ctx.planUploaded = true;
+
+          // Normalizar coordenadas: no CanvasVisual, postes de imagem raster
+          // vivem no espaço do display (max 1200x800). No WorkCanvas, tudo
+          // vive no quadro 6000x6000. Aplicar transformação uniforme.
+          const naturalDims = getImageNaturalDimensions(bytes);
+          if (naturalDims) {
+            coordTransform = computeRasterCoordTransform(
+              naturalDims.width,
+              naturalDims.height,
+            );
+          }
         }
       }
     }
@@ -369,7 +414,7 @@ export async function createWorkFromBudget(
     const { error: snapError } = await serviceRole.from('work_project_snapshot').insert({
       work_id: ctx.workId,
       source_budget_id: budget.budgetId,
-      pdf_storage_path: ctx.pdfStoragePath,
+      pdf_storage_path: ctx.planStoragePath,
       original_pdf_path: parsed ? parsed.path : null,
       render_version: renderVersion,
       pdf_num_pages: pdfNumPages,
@@ -388,7 +433,7 @@ export async function createWorkFromBudget(
         seenSourceIds.add(p.id);
         return true;
       })
-      .map((p) => buildPostRow(ctx.workId!, p));
+      .map((p) => buildPostRow(ctx.workId!, p, coordTransform));
 
     for (let i = 0; i < postRows.length; i += POSTS_INSERT_CHUNK) {
       const chunk = postRows.slice(i, i + POSTS_INSERT_CHUNK);
@@ -437,7 +482,11 @@ export async function createWorkFromBudget(
   }
 }
 
-function buildPostRow(workId: string, post: BudgetPostDetail) {
+function buildPostRow(
+  workId: string,
+  post: BudgetPostDetail,
+  transform?: CoordTransform,
+) {
   const numbering = normalizeNumbering(post);
   const postType = post.post_types?.name ?? null;
   const metadata: Record<string, unknown> = {
@@ -450,13 +499,19 @@ function buildPostRow(workId: string, post: BudgetPostDetail) {
     post_type_height_m: post.post_types?.height_m ?? null,
     post_type_shape: post.post_types?.shape ?? null,
   };
+  const x = transform
+    ? Math.round(post.x_coord * transform.scale + transform.offsetX)
+    : post.x_coord;
+  const y = transform
+    ? Math.round(post.y_coord * transform.scale + transform.offsetY)
+    : post.y_coord;
   return {
     work_id: workId,
     source_post_id: post.id,
     numbering,
     post_type: postType,
-    x_coord: post.x_coord,
-    y_coord: post.y_coord,
+    x_coord: x,
+    y_coord: y,
     metadata,
   };
 }
@@ -477,9 +532,9 @@ async function rollbackImport(
   serviceRole: SupabaseClient,
   ctx: ImportContext,
 ): Promise<void> {
-  if (ctx.pdfUploaded && ctx.pdfStoragePath) {
+  if (ctx.planUploaded && ctx.planStoragePath) {
     try {
-      await serviceRole.storage.from(ANDAMENTO_OBRA_BUCKET).remove([ctx.pdfStoragePath]);
+      await serviceRole.storage.from(ANDAMENTO_OBRA_BUCKET).remove([ctx.planStoragePath]);
     } catch {
       // ignore: best-effort cleanup; objeto pode ser limpado manualmente.
     }

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { ChevronRight, Grid3X3 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ManagersTable } from './ManagersTable';
 import { CrewTable } from './CrewTable';
@@ -19,16 +20,23 @@ export function PeoplePage({ initialManagers, initialCrew }: PeoplePageProps) {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs text-gray-400">
-          <Link href="/" className="hover:text-[#64ABDE]">
+        <p className="flex flex-wrap items-center gap-1 text-xs text-gray-400">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 transition-colors hover:text-[#64ABDE]"
+          >
+            <Grid3X3 className="h-3.5 w-3.5 shrink-0" />
             Portal
           </Link>
-          <span className="mx-1">/</span>
-          <Link href="/tools/andamento-obra" className="hover:text-[#64ABDE]">
-            Andamento de Obra
+          <ChevronRight className="h-3 w-3 shrink-0 text-gray-300" aria-hidden />
+          <Link
+            href="/tools/andamento-obra"
+            className="transition-colors hover:text-[#64ABDE]"
+          >
+            Andamento de obra
           </Link>
-          <span className="mx-1">/</span>
-          <span className="text-gray-600">Pessoas</span>
+          <ChevronRight className="h-3 w-3 shrink-0 text-gray-300" aria-hidden />
+          <span className="font-medium text-gray-600">Pessoas</span>
         </p>
         <h1 className="mt-1 text-2xl font-bold text-[#1D3140]">Pessoas</h1>
         <p className="mt-1 max-w-2xl text-sm text-gray-500">

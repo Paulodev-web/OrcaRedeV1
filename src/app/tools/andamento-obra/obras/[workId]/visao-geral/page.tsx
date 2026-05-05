@@ -66,7 +66,9 @@ export default async function VisaoGeralPage({ params }: VisaoGeralPageProps) {
     );
   }
 
-  const [pdfSignedUrl, installationSignedUrls, creatorNames] = await Promise.all([
+  const planKind = derivePlanKind(bundle.snapshot.pdfStoragePath);
+
+  const [planSignedUrl, installationSignedUrls, creatorNames] = await Promise.all([
     bundle.snapshot.pdfStoragePath
       ? getWorkPdfSignedUrl(bundle.snapshot.pdfStoragePath)
       : Promise.resolve(null),
@@ -86,7 +88,8 @@ export default async function VisaoGeralPage({ params }: VisaoGeralPageProps) {
             snapshot={bundle.snapshot}
             posts={bundle.posts}
             connections={bundle.connections}
-            pdfSignedUrl={pdfSignedUrl}
+            pdfSignedUrl={planSignedUrl}
+            planKind={planKind}
             initialInstallations={installations}
             initialInstallationSignedUrls={installationSignedUrls}
             initialCreatorNames={creatorNames}
@@ -121,6 +124,13 @@ async function loadCreatorNames(
     if (name.length > 0) map[row.id] = name;
   }
   return map;
+}
+
+function derivePlanKind(
+  storagePath: string | null,
+): 'pdf' | 'raster' | null {
+  if (!storagePath) return null;
+  return storagePath.toLowerCase().endsWith('.pdf') ? 'pdf' : 'raster';
 }
 
 function QuickLinks({ workId }: { workId: string }) {

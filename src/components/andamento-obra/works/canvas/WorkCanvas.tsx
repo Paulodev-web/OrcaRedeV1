@@ -35,6 +35,7 @@ import {
 } from '@/lib/canvas/canvasTokens';
 import {
   calculatePdfPageDimensions,
+  calculateRasterImageDimensions,
   configurePdfWorker,
   isHighResRender,
 } from '@/lib/canvas/pdfRenderConfig';
@@ -50,17 +51,15 @@ configurePdfWorker();
 
 interface WorkCanvasProps {
   workId: string;
-  /** Id do usuario logado, usado para mostrar acoes de manager no painel. */
   viewerUserId: string;
   snapshot: WorkProjectSnapshot;
   posts: WorkProjectPost[];
   connections: WorkProjectConnection[];
   pdfSignedUrl: string | null;
-  /** Instalacoes ativas (status='installed'). */
+  /** 'pdf' | 'raster' | null — tipo da planta armazenada no snapshot. */
+  planKind?: 'pdf' | 'raster' | null;
   initialInstallations: WorkPoleInstallation[];
-  /** URLs assinadas das midias (path -> url). */
   initialInstallationSignedUrls: Record<string, string>;
-  /** Nome do criador (perfil) por user_id; usado em tooltip e painel. */
   initialCreatorNames: Record<string, string>;
 }
 
@@ -69,12 +68,6 @@ type Selected =
   | { kind: 'installation'; installation: WorkPoleInstallation }
   | null;
 
-/**
- * Tipo do callback `onLoadSuccess` da `<Page>` do react-pdf.
- * O argumento e' um PDFPageProxy aumentado com width/height/originalWidth/
- * originalHeight (ja em pixels CSS). Inferimos o tipo direto do componente
- * Page para evitar `any` e mante-lo aderente a versao instalada.
- */
 type LoadedPdfPage = Parameters<
   NonNullable<ComponentProps<typeof Page>['onLoadSuccess']>
 >[0];
@@ -83,26 +76,13 @@ type LoadedPdfPage = Parameters<
  * Canvas read-only do Andamento de Obra.
  *
  * Renderiza tres camadas no quadro logico 6000x6000:
- *   1. PDF de fundo (se houver). Posicionado no centro do quadro,
- *      replicando offset (3000, 3000) com translate(-50%, -50%).
- *   2. Camada de projeto: SVG unico com todas as conexoes + marcadores
- *      de postes planejados (cinza, opacidade 0.7).
- *   3. Camada de execucao: pins de instalacao em campo (`WorkInstallationPin`),
- *      verdes, formato gota, posicionados em (x_coord, y_coord) recebidos do
- *      banco. Hidratados em tempo real via canal `work:{workId}:events`.
- *      Cores adicionais por status (amarelo/vermelho) ficam pro Bloco 8 quando
- *      alertas existirem.
+ *   1. Planta de fundo (PDF ou imagem raster). Centralizada em (3000, 3000).
+ *   2. Camada de projeto: SVG com conexoes + marcadores de postes planejados.
+ *   3. Camada de execucao: pins de instalacao em campo (WorkInstallationPin).
  *
- * Pan/zoom via react-zoom-pan-pinch (mesmo wrapper do CanvasVisual
- * legado). Estados visuais (toggle PDF/projeto, post selecionado) sao
- * volateis - nao persistem em URL/query.
- *
- * Edge cases:
- *   - PDF falha ao carregar -> banner de aviso + canvas branco preservado
- *   - Self-loop (from === to) -> conexao ignorada silenciosamente
- *   - Coordenadas fora de 0..6000 -> renderizadas como vieram (clamping
- *     visual e' opcional; o snapshot e' imutavel)
- *   - PDF multi-pagina -> primeira pagina renderizada, banner informativo
+ * PDFs multipagina possuem navegacao na toolbar. Imagens raster sao
+ * escalonadas para preencher o quadro com a mesma logica do import
+ * (calculateRasterImageDimensions).
  */
 export function WorkCanvas({
   workId,
@@ -111,6 +91,7 @@ export function WorkCanvas({
   posts,
   connections,
   pdfSignedUrl,
+  planKind = null,
   initialInstallations,
   initialInstallationSignedUrls,
   initialCreatorNames,
@@ -129,21 +110,62 @@ export function WorkCanvas({
   >(initialInstallationSignedUrls);
   const [creatorNames, setCreatorNames] =
     useState<Record<string, string>>(initialCreatorNames);
-  // Realtime status managed by useRealtimeChannel hook below.
 
   const installationsRef = useRef<WorkPoleInstallation[]>(initialInstallations);
   installationsRef.current = installations;
 
+  // ---------------------------------------------------------------------------
+  // PDF state
+  // ---------------------------------------------------------------------------
+  const isPdfPlan = planKind === 'pdf';
+  const isRasterPlan = planKind === 'raster';
+
   const [pdfNumPages, setPdfNumPages] = useState<number | null>(null);
+  const [pageNumber, setPageNumber] = useState(1);
   const [pdfLoadError, setPdfLoadError] = useState<string | null>(null);
-  const [pdfLoading, setPdfLoading] = useState<boolean>(!!pdfSignedUrl);
+  const [pdfLoading, setPdfLoading] = useState<boolean>(isPdfPlan && !!pdfSignedUrl);
   const [pdfPageDimensions, setPdfPageDimensions] = useState<{
     width: number;
     height: number;
   } | null>(null);
 
-  const hasPdf = pdfSignedUrl !== null && pdfLoadError === null;
+  // ---------------------------------------------------------------------------
+  // Raster image state
+  // ---------------------------------------------------------------------------
+  const [rasterDimensions, setRasterDimensions] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [rasterLoading, setRasterLoading] = useState(isRasterPlan && !!pdfSignedUrl);
+  const [rasterError, setRasterError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isRasterPlan || !pdfSignedUrl) return;
+    setRasterLoading(true);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const dims = calculateRasterImageDimensions(img.naturalWidth, img.naturalHeight);
+      setRasterDimensions(dims);
+      setRasterLoading(false);
+    };
+    img.onerror = () => {
+      setRasterError('Não foi possível carregar a imagem do projeto.');
+      setRasterLoading(false);
+    };
+    img.src = pdfSignedUrl;
+  }, [isRasterPlan, pdfSignedUrl]);
+
+  // ---------------------------------------------------------------------------
+  // Derived plan state
+  // ---------------------------------------------------------------------------
+  const hasPdf = isPdfPlan && pdfSignedUrl !== null && pdfLoadError === null;
+  const hasRaster = isRasterPlan && pdfSignedUrl !== null && rasterError === null;
+  const hasPlan = hasPdf || hasRaster;
+  const planLoading = pdfLoading || rasterLoading;
+  const planError = pdfLoadError ?? rasterError;
   const hasProject = posts.length > 0 || connections.length > 0;
+  const planLabel = isPdfPlan ? 'PDF' : 'Planta';
 
   const postsById = useMemo(() => {
     const map = new Map<string, WorkProjectPost>();
@@ -173,8 +195,6 @@ export function WorkCanvas({
   // -------------------------------------------------------------------------
   const hydrateInstallation = useCallback(
     async (installationId: string) => {
-      // Retry 3x para cobrir gap entre INSERT da instalacao e INSERT do batch
-      // de midia (mesmo padrao do DailyLogList do Bloco 6).
       for (let attempt = 0; attempt < 3; attempt += 1) {
         const result = await loadPoleInstallation(installationId);
         if (result.success && result.data) {
@@ -292,6 +312,9 @@ export function WorkCanvas({
   const handleZoomIn = () => transformRef.current?.zoomIn();
   const handleZoomOut = () => transformRef.current?.zoomOut();
 
+  // -------------------------------------------------------------------------
+  // PDF callbacks
+  // -------------------------------------------------------------------------
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setPdfNumPages(numPages);
     setPdfLoadError(null);
@@ -320,12 +343,12 @@ export function WorkCanvas({
     setPdfLoadError(err.message || 'Erro ao renderizar pagina do PDF');
   };
 
-  const showMultiPageBanner =
-    hasPdf && pdfNumPages !== null && pdfNumPages > 1;
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && pdfNumPages && page <= pdfNumPages) {
+      setPageNumber(page);
+    }
+  };
 
-  // Para o painel em modo "planejado": instalacoes proximas por proximidade
-  // visual (raio 100 unidades no espaco logico do canvas). Heuristica
-  // documentada no plano (Bloco 7): nao cria vinculo formal, e sugestao.
   const installationsNearSelected = useMemo(() => {
     if (!selected || selected.kind !== 'planned') return [];
     const post = selected.post;
@@ -346,25 +369,22 @@ export function WorkCanvas({
         onTogglePdf={() => setShowPdf((v) => !v)}
         showProject={showProject}
         onToggleProject={() => setShowProject((v) => !v)}
-        hasPdf={hasPdf}
+        hasPlan={hasPlan}
         hasProject={hasProject}
-        isLoading={pdfLoading}
+        isLoading={planLoading}
+        planLabel={planLabel}
+        pdfNumPages={isPdfPlan ? pdfNumPages : null}
+        pdfPageNumber={pageNumber}
+        onPageChange={handlePageChange}
       />
 
-      {(pdfLoadError || showMultiPageBanner || realtimeStatus === 'disconnected') && (
+      {(planError || realtimeStatus === 'disconnected') && (
         <div className="flex flex-col gap-1 border-b border-gray-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
-          {pdfLoadError && (
+          {planError && (
             <p className="flex items-center gap-1.5">
               <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
-              Não foi possível carregar o PDF do projeto. Continuando com o
+              Não foi possível carregar a planta do projeto. Continuando com o
               quadro em branco.
-            </p>
-          )}
-          {showMultiPageBanner && (
-            <p className="flex items-center gap-1.5">
-              <FileText className="h-3.5 w-3.5" aria-hidden="true" />
-              PDF tem {pdfNumPages} páginas. Apenas a primeira é exibida nesta
-              fase.
             </p>
           )}
           {realtimeStatus === 'disconnected' && (
@@ -378,11 +398,11 @@ export function WorkCanvas({
       )}
 
       <div className="relative min-h-[400px] flex-1 overflow-hidden bg-gray-100">
-        {pdfLoading && pdfSignedUrl && !pdfLoadError && (
+        {planLoading && pdfSignedUrl && !planError && (
           <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-white/70 backdrop-blur-[1px]">
             <div className="flex items-center gap-2 rounded-md bg-white px-3 py-2 text-xs text-gray-700 shadow">
               <Loader2 className="h-4 w-4 animate-spin text-[#1D3140]" />
-              Carregando PDF do projeto...
+              Carregando {planLabel.toLowerCase()} do projeto...
             </div>
           </div>
         )}
@@ -413,6 +433,7 @@ export function WorkCanvas({
                 border: '1px solid #e5e7eb',
               }}
             >
+              {/* Camada 1a — Fundo PDF */}
               {hasPdf && showPdf && pdfSignedUrl && (
                 <div
                   style={{
@@ -451,7 +472,12 @@ export function WorkCanvas({
                           <span className="text-lg">Carregando PDF...</span>
                         </div>
                       }
-                      error={null}
+                      error={
+                        <div className="rounded border-2 border-red-200 bg-red-50 p-8 text-center text-red-600">
+                          <p className="text-lg font-medium">Erro ao carregar PDF</p>
+                          <p className="mt-2 text-sm">Verifique se o arquivo é válido</p>
+                        </div>
+                      }
                     >
                       {pdfNumPages && (
                         <div
@@ -459,7 +485,7 @@ export function WorkCanvas({
                           style={{ pointerEvents: 'none' }}
                         >
                           <Page
-                            pageNumber={1}
+                            pageNumber={pageNumber}
                             renderTextLayer={false}
                             renderAnnotationLayer={false}
                             onLoadSuccess={onPageLoadSuccess}
@@ -479,6 +505,35 @@ export function WorkCanvas({
                 </div>
               )}
 
+              {/* Camada 1b — Fundo raster */}
+              {hasRaster && showPdf && pdfSignedUrl && rasterDimensions && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: `${CANVAS_CENTER}px`,
+                    left: `${CANVAS_CENTER}px`,
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 10,
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={pdfSignedUrl}
+                    alt="Planta do projeto"
+                    width={rasterDimensions.width}
+                    height={rasterDimensions.height}
+                    style={{
+                      width: `${rasterDimensions.width}px`,
+                      height: `${rasterDimensions.height}px`,
+                      pointerEvents: 'none',
+                      display: 'block',
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Camada 2 — Projeto (conexoes + postes planejados) */}
               {showProject && hasProject && (
                 <>
                   <svg
@@ -538,7 +593,7 @@ export function WorkCanvas({
                 </>
               )}
 
-              {/* Camada 3 - Execucao (Bloco 7): pins de instalacao em campo. */}
+              {/* Camada 3 — Execucao: pins de instalacao em campo */}
               <div
                 style={{
                   position: 'absolute',

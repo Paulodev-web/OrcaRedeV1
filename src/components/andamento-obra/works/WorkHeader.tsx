@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Pencil } from 'lucide-react';
+import { ChevronRight, Grid3X3, Pencil } from 'lucide-react';
 import { NewWorkDialog } from './NewWorkDialog';
 import { StatusDropdown } from './StatusDropdown';
 import { WorkKPIs } from './WorkKPIs';
@@ -30,12 +30,20 @@ export function WorkHeader({
   return (
     <header className="border-b border-gray-200 bg-white">
       <div className="mx-auto max-w-7xl px-6 py-4 lg:px-8">
-        <p className="text-xs text-gray-400">
-          <Link href="/tools/andamento-obra" className="hover:text-[#64ABDE]">
+        <p className="flex flex-wrap items-center gap-1 text-xs text-gray-400">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 transition-colors hover:text-[#64ABDE]"
+          >
+            <Grid3X3 className="h-3.5 w-3.5 shrink-0" />
+            Portal
+          </Link>
+          <ChevronRight className="h-3 w-3 shrink-0 text-gray-300" aria-hidden />
+          <Link href="/tools/andamento-obra" className="transition-colors hover:text-[#64ABDE]">
             Obras
           </Link>
-          <span className="mx-1">/</span>
-          <span className="text-gray-600">{work.name}</span>
+          <ChevronRight className="h-3 w-3 shrink-0 text-gray-300" aria-hidden />
+          <span className="font-medium text-gray-600">{work.name}</span>
         </p>
 
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
