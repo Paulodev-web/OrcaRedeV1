@@ -12,7 +12,7 @@ import {
   inferImageExtension,
   getImageNaturalDimensions,
 } from '@/lib/storage/publicUrl';
-import { computeRasterCoordTransform } from '@/lib/canvas/pdfRenderConfig';
+import { computeRasterCoordTransform } from '@/lib/canvas/rasterPlanGeometry';
 import { isBudgetFinalizedForImport } from '@/lib/budgetStatus';
 import { getImportableBudgets } from '@/services/works/getImportableBudgets';
 import { getBudgetForImport } from '@/services/works/getBudgetForImport';
@@ -241,10 +241,10 @@ export async function cancelWork(id: string): Promise<ActionResult<{ workId: str
 // =============================================================================
 
 export async function listImportableBudgets(): Promise<ActionResult<{ budgets: ImportableBudget[] }>> {
-  const gate = await ensureEngineer();
-  if (!gate.ok) return { success: false, error: gate.error };
-
   try {
+    const gate = await ensureEngineer();
+    if (!gate.ok) return { success: false, error: gate.error };
+
     const budgets = await getImportableBudgets(gate.supabase, gate.engineerId);
     return { success: true, data: { budgets } };
   } catch (err) {

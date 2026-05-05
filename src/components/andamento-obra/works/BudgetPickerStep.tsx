@@ -30,12 +30,21 @@ export function BudgetPickerStep({ onBack, onSelect }: BudgetPickerStepProps) {
       .then((result) => {
         if (cancelled) return;
         if (!result.success) {
-          setError(result.error);
+          setError(result.error ?? 'Não foi possível carregar os orçamentos.');
           setBudgets([]);
         } else {
           setBudgets(result.data?.budgets ?? []);
           setError(null);
         }
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        const msg =
+          e instanceof Error
+            ? e.message
+            : 'Falha ao comunicar com o servidor. Tente atualizar a página.';
+        setError(msg);
+        setBudgets([]);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
