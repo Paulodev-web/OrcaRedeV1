@@ -8,6 +8,7 @@ import { getWorkProjectPostsCount } from '@/services/works/getWorkProjectPostsCo
 import { getUnreadMessagesCount } from '@/services/works/getUnreadMessagesCount';
 import { getUnreadDailyLogsCount } from '@/services/works/getUnreadDailyLogsCount';
 import { getPendingMilestonesCount } from '@/services/works/getPendingMilestonesCount';
+import { getInstallationsCountByWork } from '@/services/works/getInstallationsCountByWork';
 import { getManagers } from '@/services/people/getManagers';
 import { WorkHeader } from '@/components/andamento-obra/works/WorkHeader';
 import { WorkTabsNav } from '@/components/andamento-obra/works/WorkTabsNav';
@@ -39,6 +40,7 @@ export default async function WorkDetailLayout({ children, params }: LayoutProps
     chatUnread,
     diarioPending,
     progressoPending,
+    installationsCounts,
   ] = await Promise.all([
     getWorkMilestones(supabase, workId),
     getManagers(supabase, user.id),
@@ -46,7 +48,10 @@ export default async function WorkDetailLayout({ children, params }: LayoutProps
     getUnreadMessagesCount(supabase, workId, 'engineer'),
     getUnreadDailyLogsCount(supabase, workId),
     getPendingMilestonesCount(supabase, workId),
+    getInstallationsCountByWork(supabase, [workId]),
   ]);
+
+  const postsInstalled = installationsCounts[workId]?.installed ?? 0;
 
   return (
     <div>
@@ -55,6 +60,7 @@ export default async function WorkDetailLayout({ children, params }: LayoutProps
         milestones={milestones}
         managers={managers}
         postsPlanned={postsPlanned}
+        postsInstalled={postsInstalled}
       />
       <WorkTabsNav
         workId={workId}

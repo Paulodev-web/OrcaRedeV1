@@ -1,9 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertTriangle, User, WifiOff } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AlertTriangle, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase as supabaseBrowser } from '@/lib/supabaseClient';
+import { useRealtimeChannel, type RealtimeEventConfig } from '@/lib/hooks/useRealtimeChannel';
+import { RealtimeStatusBanner } from '../shared/RealtimeStatusBanner';
 import {
   type SendWorkMessageAttachmentInput,
   type WorkMessage,
@@ -31,8 +32,6 @@ interface ChatRoomProps {
   initialSignedUrls: Record<string, string>;
 }
 
-type RealtimeStatus = 'connecting' | 'connected' | 'disconnected';
-
 export function ChatRoom({
   workId,
   workName,
@@ -48,7 +47,6 @@ export function ChatRoom({
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>(initialSignedUrls);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [loadingOlder, setLoadingOlder] = useState(false);
-  const [realtimeStatus, setRealtimeStatus] = useState<RealtimeStatus>('connecting');
   const [pendingByMessageId, setPendingByMessageId] = useState<
     Record<string, 'pending' | 'error'>
   >({});
@@ -62,52 +60,6 @@ export function ChatRoom({
   // -------------------------------------------------------------------------
   useEffect(() => {
     void markMessagesAsRead(workId);
-  }, [workId]);
-
-  // -------------------------------------------------------------------------
-  // Subscription Realtime no canal work:{workId}:chat
-  // -------------------------------------------------------------------------
-  useEffect(() => {
-    let cancelled = false;
-    const subscribeTimeout = setTimeout(() => {
-      if (!cancelled && realtimeStatus !== 'connected') {
-        setRealtimeStatus('disconnected');
-      }
-    }, 10000);
-
-    const channel = supabaseBrowser
-      .channel(`work:${workId}:chat`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'work_messages',
-          filter: `work_id=eq.${workId}`,
-        },
-        (payload) => {
-          const row = payload.new as { id?: string; sender_id?: string };
-          if (!row?.id) return;
-          if (messagesRef.current.some((m) => m.id === row.id)) return;
-          void hydrateNewMessage(row.id);
-        },
-      )
-      .subscribe((status) => {
-        if (cancelled) return;
-        if (status === 'SUBSCRIBED') {
-          setRealtimeStatus('connected');
-          clearTimeout(subscribeTimeout);
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          setRealtimeStatus('disconnected');
-        }
-      });
-
-    return () => {
-      cancelled = true;
-      clearTimeout(subscribeTimeout);
-      void supabaseBrowser.removeChannel(channel);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workId]);
 
   // -------------------------------------------------------------------------
@@ -131,19 +83,47 @@ export function ChatRoom({
         return next;
       });
 
-      // Auto-scroll se estava no fim. Se nao, listRef.current?.isAtBottom() retorna false.
       const wasAtBottom = listRef.current?.isAtBottom() ?? true;
       if (wasAtBottom) {
         requestAnimationFrame(() => listRef.current?.scrollToBottom(true));
       }
 
-      // Se a mensagem veio do outro lado, marca como lida
       if (message.senderId !== viewerId) {
         void markMessagesAsRead(workId);
       }
     },
     [workId, viewerId],
   );
+
+  // -------------------------------------------------------------------------
+  // Realtime via useRealtimeChannel hook
+  // -------------------------------------------------------------------------
+  const handleRealtimeInsert = useCallback(
+    (payload: unknown) => {
+      const row = (payload as { new?: { id?: string } })?.new;
+      if (!row?.id) return;
+      if (messagesRef.current.some((m) => m.id === row.id)) return;
+      void hydrateNewMessage(row.id);
+    },
+    [hydrateNewMessage],
+  );
+
+  const realtimeEvents: RealtimeEventConfig[] = useMemo(
+    () => [
+      {
+        event: 'INSERT',
+        table: 'work_messages',
+        filter: `work_id=eq.${workId}`,
+        callback: handleRealtimeInsert,
+      },
+    ],
+    [workId, handleRealtimeInsert],
+  );
+
+  const { status: realtimeStatus } = useRealtimeChannel({
+    channelName: `work:${workId}:chat`,
+    events: realtimeEvents,
+  });
 
   // -------------------------------------------------------------------------
   // Carregar mensagens anteriores (paginacao reversa)
@@ -254,12 +234,7 @@ export function ChatRoom({
     <div className="flex h-[calc(100vh-220px)] min-h-[420px] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
       <ChatHeader managerName={managerName} workName={workName} workStatus={workStatus} />
 
-      {realtimeStatus === 'disconnected' && (
-        <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-800">
-          <WifiOff className="h-3.5 w-3.5" />
-          <span>Tempo real indisponível. Atualize a página para sincronizar.</span>
-        </div>
-      )}
+      <RealtimeStatusBanner status={realtimeStatus} />
 
       <ChatMessageList
         ref={listRef}

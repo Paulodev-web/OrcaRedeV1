@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { User, Calendar, MessageCircle } from 'lucide-react';
+import { User, Calendar, MessageCircle, AlertTriangle, ClipboardCheck } from 'lucide-react';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { STATUS_LABELS, type WorkStatus, type WorkWithManager } from '@/types/works';
 import { ImportedBudgetBadge } from './ImportedBudgetBadge';
@@ -9,6 +9,9 @@ import { ImportedBudgetBadge } from './ImportedBudgetBadge';
 interface WorkCardProps {
   work: WorkWithManager;
   unreadCount?: number;
+  criticalAlertsCount?: number;
+  totalActiveAlertsCount?: number;
+  checklistsAwaitingCount?: number;
 }
 
 const STATUS_BADGE: Record<WorkStatus, string> = {
@@ -19,7 +22,13 @@ const STATUS_BADGE: Record<WorkStatus, string> = {
   cancelled: 'bg-red-50 text-red-700 ring-red-200',
 };
 
-export function WorkCard({ work, unreadCount = 0 }: WorkCardProps) {
+export function WorkCard({
+  work,
+  unreadCount = 0,
+  criticalAlertsCount = 0,
+  totalActiveAlertsCount = 0,
+  checklistsAwaitingCount = 0,
+}: WorkCardProps) {
   return (
     <Link
       href={`/tools/andamento-obra/obras/${work.id}`}
@@ -55,6 +64,30 @@ export function WorkCard({ work, unreadCount = 0 }: WorkCardProps) {
               {unreadCount === 1
                 ? '1 mensagem não lida'
                 : `${unreadCount > 99 ? '99+' : unreadCount} mensagens não lidas`}
+            </span>
+          </div>
+        )}
+        {criticalAlertsCount > 0 && (
+          <div className="flex items-center gap-1.5 text-red-700">
+            <AlertTriangle className="h-3.5 w-3.5" />
+            <span className="font-medium">
+              {criticalAlertsCount} alerta{criticalAlertsCount > 1 ? 's' : ''} crítico{criticalAlertsCount > 1 ? 's' : ''}
+            </span>
+          </div>
+        )}
+        {totalActiveAlertsCount > 0 && criticalAlertsCount === 0 && (
+          <div className="flex items-center gap-1.5 text-orange-600">
+            <AlertTriangle className="h-3.5 w-3.5" />
+            <span className="font-medium">
+              {totalActiveAlertsCount} alerta{totalActiveAlertsCount > 1 ? 's' : ''} ativo{totalActiveAlertsCount > 1 ? 's' : ''}
+            </span>
+          </div>
+        )}
+        {checklistsAwaitingCount > 0 && (
+          <div className="flex items-center gap-1.5 text-amber-600">
+            <ClipboardCheck className="h-3.5 w-3.5" />
+            <span className="font-medium">
+              {checklistsAwaitingCount} checklist{checklistsAwaitingCount > 1 ? 's' : ''} pendente{checklistsAwaitingCount > 1 ? 's' : ''}
             </span>
           </div>
         )}

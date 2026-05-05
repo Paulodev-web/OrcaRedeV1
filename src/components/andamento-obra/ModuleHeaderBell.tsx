@@ -1,11 +1,12 @@
 import { createSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUserProfile } from '@/services/people/getCurrentUserProfile';
 import { getNotificationsForUser } from '@/services/notifications/getNotificationsForUser';
+import { NotificationsBellRealtimeProvider } from './works/NotificationsBellRealtimeProvider';
 import { WorkNotificationsBell } from './works/WorkNotificationsBell';
 
 /**
- * Server Component que busca as últimas notificações do engenheiro logado
- * e renderiza o sino. Mostrado apenas para perfis 'engineer'.
+ * Server Component que busca as últimas notificações do engenheiro logado,
+ * envolve o sino num provider Realtime e renderiza. Engineer only.
  */
 export async function ModuleHeaderBell() {
   const supabase = await createSupabaseServerClient();
@@ -19,5 +20,13 @@ export async function ModuleHeaderBell() {
 
   const { items, unreadCount } = await getNotificationsForUser(supabase, user.id, { limit: 10 });
 
-  return <WorkNotificationsBell initialItems={items} initialUnreadCount={unreadCount} />;
+  return (
+    <NotificationsBellRealtimeProvider
+      userId={user.id}
+      initialItems={items}
+      initialUnreadCount={unreadCount}
+    >
+      <WorkNotificationsBell />
+    </NotificationsBellRealtimeProvider>
+  );
 }

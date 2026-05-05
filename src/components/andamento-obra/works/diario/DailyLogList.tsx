@@ -2,14 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ClipboardList, WifiOff } from 'lucide-react';
-import { supabase as supabaseBrowser } from '@/lib/supabaseClient';
-import { loadDailyLogHistory } from '@/actions/workDailyLogs';
+import { ClipboardList } from 'lucide-react';
+import { useRealtimeChannel, type RealtimeEventConfig } from '@/lib/hooks/useRealtimeChannel';
+import { loadDailyLogHistory, getOlderDailyLogs } from '@/actions/workDailyLogs';
 import type {
   WorkDailyLog,
   WorkMemberRole,
   WorkStatus,
 } from '@/types/works';
+import { LoadMoreButton } from '../shared/LoadMoreButton';
+import { RealtimeStatusBanner } from '../shared/RealtimeStatusBanner';
 import { DailyLogCard } from './DailyLogCard';
 import {
   DailyLogFilters,
@@ -25,15 +27,6 @@ interface DailyLogListProps {
   initialSignedUrls: Record<string, string>;
 }
 
-type RealtimeStatus = 'connecting' | 'connected' | 'disconnected';
-
-/**
- * Lista de diarios da obra com:
- *  - filtros (status + mes)
- *  - subscription Realtime no canal work:{workId}:events
- *  - hidratacao sob demanda (retry 3x) para gap revisao -> midia
- *  - botao dev-only para simular publicacao via SQL
- */
 export function DailyLogList({
   workId,
   workStatus,
@@ -45,8 +38,8 @@ export function DailyLogList({
   const router = useRouter();
   const [items, setItems] = useState<WorkDailyLog[]>(initialItems);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>(initialSignedUrls);
-  const [hasMore] = useState(initialHasMore);
-  const [realtimeStatus, setRealtimeStatus] = useState<RealtimeStatus>('connecting');
+  const [hasMore, setHasMore] = useState(initialHasMore);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const [filters, setFilters] = useState<DailyLogFiltersValue>({
     status: 'all',
     month: null,
@@ -124,70 +117,45 @@ export function DailyLogList({
   );
 
   // -------------------------------------------------------------------------
-  // Realtime no canal work:{workId}:events
-  //   - INSERT em work_daily_log_revisions: hidrata o diario
-  //   - UPDATE em work_daily_logs: hidrata para refletir status/ponteiro
+  // Realtime via useRealtimeChannel hook
   // -------------------------------------------------------------------------
-  useEffect(() => {
-    let cancelled = false;
-    const subscribeTimeout = setTimeout(() => {
-      if (!cancelled && realtimeStatus !== 'connected') {
-        setRealtimeStatus('disconnected');
-      }
-    }, 10000);
+  const handleRevisionInsert = useCallback(
+    (payload: unknown) => {
+      const row = (payload as { new?: { daily_log_id?: string } })?.new;
+      if (row?.daily_log_id) void hydrateDailyLog(row.daily_log_id);
+    },
+    [hydrateDailyLog],
+  );
 
-    const channel = supabaseBrowser
-      .channel(`work:${workId}:events`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'work_daily_log_revisions',
-        },
-        (payload) => {
-          const row = payload.new as { daily_log_id?: string };
-          if (row?.daily_log_id) {
-            void hydrateDailyLog(row.daily_log_id);
-          }
-        },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'work_daily_logs',
-          filter: `work_id=eq.${workId}`,
-        },
-        (payload) => {
-          const row = payload.new as { id?: string };
-          if (row?.id) {
-            void hydrateDailyLog(row.id);
-          }
-        },
-      )
-      .subscribe((status) => {
-        if (cancelled) return;
-        if (status === 'SUBSCRIBED') {
-          setRealtimeStatus('connected');
-          clearTimeout(subscribeTimeout);
-        } else if (
-          status === 'CHANNEL_ERROR'
-          || status === 'TIMED_OUT'
-          || status === 'CLOSED'
-        ) {
-          setRealtimeStatus('disconnected');
-        }
-      });
+  const handleLogUpdate = useCallback(
+    (payload: unknown) => {
+      const row = (payload as { new?: { id?: string } })?.new;
+      if (row?.id) void hydrateDailyLog(row.id);
+    },
+    [hydrateDailyLog],
+  );
 
-    return () => {
-      cancelled = true;
-      clearTimeout(subscribeTimeout);
-      void supabaseBrowser.removeChannel(channel);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workId]);
+  const realtimeEvents: RealtimeEventConfig[] = useMemo(
+    () => [
+      {
+        event: 'INSERT',
+        table: 'work_daily_log_revisions',
+        callback: handleRevisionInsert,
+      },
+      {
+        event: 'UPDATE',
+        table: 'work_daily_logs',
+        filter: `work_id=eq.${workId}`,
+        callback: handleLogUpdate,
+      },
+    ],
+    [workId, handleRevisionInsert, handleLogUpdate],
+  );
+
+  const { status: realtimeStatus } = useRealtimeChannel({
+    channelName: `work:${workId}:events`,
+    events: realtimeEvents,
+  });
 
   // -------------------------------------------------------------------------
   // Aplicacao dos filtros (puro client; lista pequena por enquanto)
@@ -217,6 +185,30 @@ export function DailyLogList({
     });
   }, [items, filters]);
 
+  async function handleLoadOlder() {
+    if (loadingOlder || items.length === 0) return;
+    const oldest = items[items.length - 1];
+    setLoadingOlder(true);
+    try {
+      const result = await getOlderDailyLogs(workId, oldest.logDate);
+      if (result.success && result.data) {
+        const { items: olderItems, hasMore: more, signedUrls: urls } = result.data;
+        if (olderItems.length > 0) {
+          setItems((prev) => {
+            const ids = new Set(prev.map((i) => i.id));
+            return [...prev, ...olderItems.filter((i) => !ids.has(i.id))].sort(
+              (a, b) => b.logDate.localeCompare(a.logDate),
+            );
+          });
+          setSignedUrls((prev) => ({ ...prev, ...urls }));
+        }
+        setHasMore(more);
+      }
+    } finally {
+      setLoadingOlder(false);
+    }
+  }
+
   function onChanged() {
     // Apos approve/reject, recarrega o item via Realtime; tambem revalida
     // a rota para refletir o KPI/header. revalidatePath na action ja cuida
@@ -235,12 +227,7 @@ export function DailyLogList({
         </div>
       </header>
 
-      {realtimeStatus === 'disconnected' && (
-        <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-800">
-          <WifiOff className="h-3.5 w-3.5" />
-          <span>Tempo real indisponível. Atualize a página para sincronizar.</span>
-        </div>
-      )}
+      <RealtimeStatusBanner status={realtimeStatus} />
 
       <DailyLogFilters value={filters} onChange={setFilters} monthOptions={monthOptions} />
 
@@ -262,11 +249,12 @@ export function DailyLogList({
         </ol>
       )}
 
-      {hasMore && (
-        <p className="text-center text-xs text-gray-400">
-          Paginação completa virá em fase futura. Por enquanto últimos 20 diários.
-        </p>
-      )}
+      <LoadMoreButton
+        hasMore={hasMore}
+        loading={loadingOlder}
+        onLoadMore={() => void handleLoadOlder()}
+        label="Carregar diários anteriores"
+      />
 
       {process.env.NODE_ENV === 'development' && (
         <DevSimulationHint workId={workId} />

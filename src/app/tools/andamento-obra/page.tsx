@@ -45,9 +45,10 @@ export default async function AndamentoObraPage() {
   ]);
 
   // Categorizacao:
-  //  - red: diario pending_approval ha mais de PENDING_DAILY_LOG_RED_THRESHOLD_HOURS
-  //  - yellow: diario pending recente OU marco awaiting_approval
-  // Bloco 8 adicionara alertas criticos ao set red.
+  //  - red: diario pending >24h OU alertas critical em open/in_progress
+  //         OU resolved_in_field aguardando >12h
+  //  - yellow: diario pending <24h OU marco awaiting_approval
+  //            OU checklists awaiting/returned OU alertas nao-criticos ativos
   const redWorkIds = new Set<string>();
   const yellowWorkIds = new Set<string>();
 
@@ -59,7 +60,20 @@ export default async function AndamentoObraPage() {
     }
   }
   for (const item of pendingApprovals.pendingMilestones) {
-    // Se ja esta em vermelho, mantem; senao classifica como amarelo.
+    if (!redWorkIds.has(item.workId)) {
+      yellowWorkIds.add(item.workId);
+    }
+  }
+  for (const item of pendingApprovals.activeAlerts) {
+    const work = works.find((w) => w.id === item.workId);
+    if (work?.status === 'cancelled') continue;
+    if (item.criticalCount > 0) {
+      redWorkIds.add(item.workId);
+    } else if (item.totalActiveCount > 0) {
+      if (!redWorkIds.has(item.workId)) yellowWorkIds.add(item.workId);
+    }
+  }
+  for (const item of pendingApprovals.pendingChecklists) {
     if (!redWorkIds.has(item.workId)) {
       yellowWorkIds.add(item.workId);
     }

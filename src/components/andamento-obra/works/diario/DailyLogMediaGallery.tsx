@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ImageIcon, Video, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { WorkDailyLogMedia } from '@/types/works';
+import { MediaFallback } from '../shared/MediaFallback';
 import { ImageLightbox } from '../shared/ImageLightbox';
 
 interface DailyLogMediaGalleryProps {
@@ -11,14 +12,15 @@ interface DailyLogMediaGalleryProps {
   signedUrls: Record<string, string>;
 }
 
-/**
- * Galeria de midia anexada a uma revisao do diario. Imagens abrem em
- * lightbox; videos sao reproduzidos inline com controls.
- */
 export function DailyLogMediaGallery({ media, signedUrls }: DailyLogMediaGalleryProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [errorPaths, setErrorPaths] = useState<Set<string>>(new Set());
 
   if (media.length === 0) return null;
+
+  const markError = (path: string) => {
+    setErrorPaths((prev) => new Set(prev).add(path));
+  };
 
   const images = media.filter((m) => m.kind === 'image');
   const imageUrls = images
@@ -30,14 +32,15 @@ export function DailyLogMediaGallery({ media, signedUrls }: DailyLogMediaGallery
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
         {media.map((m) => {
           const url = signedUrls[m.storagePath];
-          if (!url) {
+          const hasError = errorPaths.has(m.storagePath);
+
+          if (!url || hasError) {
             return (
-              <div
+              <MediaFallback
                 key={m.id}
-                className="flex aspect-square items-center justify-center rounded-lg border border-dashed border-gray-200 bg-gray-50 text-[11px] text-gray-400"
-              >
-                Midia indisponivel
-              </div>
+                kind={m.kind}
+                className="aspect-square rounded-lg border border-dashed border-gray-200"
+              />
             );
           }
           if (m.kind === 'image') {
@@ -60,6 +63,7 @@ export function DailyLogMediaGallery({ media, signedUrls }: DailyLogMediaGallery
                   className="h-full w-full object-cover"
                   loading="lazy"
                   draggable={false}
+                  onError={() => markError(m.storagePath)}
                 />
                 <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition group-hover:bg-black/30 group-hover:opacity-100">
                   <Eye className="h-5 w-5" />
@@ -80,6 +84,7 @@ export function DailyLogMediaGallery({ media, signedUrls }: DailyLogMediaGallery
                 src={url}
                 className="h-full w-full object-cover"
                 preload="metadata"
+                onError={() => markError(m.storagePath)}
               />
               <span className="pointer-events-none absolute left-1 top-1 inline-flex items-center gap-1 rounded-full bg-black/50 px-1.5 py-0.5 text-[9px] text-white">
                 <Video className="h-2.5 w-2.5" />

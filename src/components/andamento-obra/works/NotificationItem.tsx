@@ -26,14 +26,18 @@ const ICONS: Record<NotificationKind, typeof Bell> = {
   daily_log_published: ClipboardCheck,
   daily_log_approved: CheckCircle2,
   daily_log_rejected: AlertTriangle,
+  checklist_assigned: ClipboardCheck,
   checklist_completed: CheckCircle2,
+  checklist_validated: CheckCircle2,
   checklist_returned: AlertTriangle,
   milestone_reported: Flag,
   milestone_approved: CheckCircle2,
   milestone_rejected: AlertTriangle,
   alert_opened: AlertTriangle,
+  alert_acknowledged: CheckCircle2,
   alert_resolved_in_field: CheckCircle2,
   alert_closed: CheckCircle2,
+  alert_reopened: AlertTriangle,
   pole_installed: HardHat,
 };
 

@@ -526,6 +526,34 @@ export async function rejectDailyLog(input: {
   return { success: true };
 }
 
+/**
+ * Carrega diarios mais antigos (paginacao reversa por log_date).
+ * Inclui signed URLs das midias.
+ */
+export async function getOlderDailyLogs(
+  workId: string,
+  cursor: string,
+): Promise<ActionResult<{ items: import('@/types/works').WorkDailyLog[]; hasMore: boolean; signedUrls: Record<string, string> }>> {
+  if (!workId) return { success: false, error: 'Obra invalida.' };
+
+  const supabase = await createSupabaseServerClient();
+  try {
+    await requireAuthUserId(supabase);
+  } catch {
+    return { success: false, error: 'Sessao expirada. Faca login novamente.' };
+  }
+
+  const { getWorkDailyLogs } = await import('@/services/works/getWorkDailyLogs');
+  const { items, hasMore } = await getWorkDailyLogs(supabase, workId, { cursor });
+
+  const paths = items.flatMap((log) =>
+    log.currentRevision ? log.currentRevision.media.map((m) => m.storagePath) : [],
+  );
+  const signedUrls = await getDailyLogSignedUrls(paths);
+
+  return { success: true, data: { items, hasMore, signedUrls } };
+}
+
 interface DailyLogWithHistoryWithUrls {
   history: WorkDailyLogWithHistory;
   signedUrls: Record<string, string>;

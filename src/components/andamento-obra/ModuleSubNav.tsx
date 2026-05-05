@@ -23,6 +23,21 @@ const items: NavItem[] = [
     label: 'Pessoas',
     matcher: (pathname) => pathname.startsWith('/tools/andamento-obra/pessoas'),
   },
+  {
+    href: '/tools/andamento-obra/checklists',
+    label: 'Modelos de Checklist',
+    matcher: (pathname) => pathname.startsWith('/tools/andamento-obra/checklists'),
+  },
+  {
+    href: '/tools/andamento-obra/notificacoes',
+    label: 'Notificações',
+    matcher: (pathname) => pathname.startsWith('/tools/andamento-obra/notificacoes'),
+  },
+  {
+    href: '/tools/andamento-obra/admin',
+    label: 'Admin',
+    matcher: (pathname) => pathname.startsWith('/tools/andamento-obra/admin'),
+  },
 ];
 
 export function ModuleSubNav() {

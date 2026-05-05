@@ -15,9 +15,16 @@ interface WorkHeaderProps {
   milestones: WorkMilestone[];
   managers: ManagerRow[];
   postsPlanned?: number;
+  postsInstalled?: number;
 }
 
-export function WorkHeader({ work, milestones, managers, postsPlanned }: WorkHeaderProps) {
+export function WorkHeader({
+  work,
+  milestones,
+  managers,
+  postsPlanned,
+  postsInstalled,
+}: WorkHeaderProps) {
   const [editOpen, setEditOpen] = useState(false);
 
   return (
@@ -70,7 +77,12 @@ export function WorkHeader({ work, milestones, managers, postsPlanned }: WorkHea
         </div>
 
         <div className="mt-4">
-          <WorkKPIs work={work} milestones={milestones} postsPlanned={postsPlanned ?? 0} />
+          <WorkKPIs
+            work={work}
+            milestones={milestones}
+            postsPlanned={postsPlanned ?? 0}
+            postsInstalled={postsInstalled ?? 0}
+          />
         </div>
       </div>
 

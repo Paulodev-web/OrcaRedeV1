@@ -1,9 +1,15 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { CalendarRange, ClipboardCheck, Images } from 'lucide-react';
-import { createSupabaseServerClient } from '@/lib/supabaseServer';
+import {
+  createSupabaseServerClient,
+  requireAuthUserId,
+} from '@/lib/supabaseServer';
 import { getWorkProjectSnapshot } from '@/services/works/getWorkProjectSnapshot';
 import { getWorkPdfSignedUrl } from '@/services/works/getWorkPdfSignedUrl';
 import { getWorkById } from '@/services/works/getWorkById';
+import { getPoleInstallations } from '@/services/works/getPoleInstallations';
+import { getPoleInstallationSignedUrls } from '@/services/works/getPoleInstallationSignedUrls';
 import { ProjectOverviewSummary } from '@/components/andamento-obra/works/ProjectOverviewSummary';
 import { WorkCanvas } from '@/components/andamento-obra/works/canvas/WorkCanvas';
 import { CanvasEmptyState } from '@/components/andamento-obra/works/canvas/CanvasEmptyState';
@@ -16,7 +22,8 @@ interface VisaoGeralPageProps {
  * Aba "Visao Geral" da obra.
  *
  * Layout em duas colunas (>=lg):
- *   - Principal (~70%): WorkCanvas com PDF + camada de projeto
+ *   - Principal (~70%): WorkCanvas com PDF + camada de projeto + camada de
+ *     execucao (Bloco 7) com pins de instalacoes em campo.
  *   - Lateral (~30%): ProjectOverviewSummary compacto + atalhos
  *
  * Mobile (<lg): pilha vertical, canvas com altura controlada.
@@ -24,19 +31,27 @@ interface VisaoGeralPageProps {
  * Carregamento (Server Component):
  *   - Snapshot completo via getWorkProjectSnapshot (RLS via cookies)
  *   - URL assinada do PDF via getWorkPdfSignedUrl (service role, TTL 30min)
+ *   - Instalacoes ativas + URLs assinadas (Bloco 7)
+ *   - Nomes dos gerentes que marcaram pra exibir tooltip/painel
  *
- * O `[workId]/layout.tsx` ja carrega `getWorkProjectPostsCount` para o
- * KPI do header. Mantemos os dois servicos separados:
- *   - layout: contagem barata (head: true), usada em todas as abas
- *   - aqui (Visao Geral): bundle completo, necessario apenas para esta aba
+ * O `[workId]/layout.tsx` ja carrega `getWorkProjectPostsCount` e
+ * `getInstallationsCountByWork` para os KPIs do header.
  */
 export default async function VisaoGeralPage({ params }: VisaoGeralPageProps) {
   const { workId } = await params;
   const supabase = await createSupabaseServerClient();
 
-  const [bundle, work] = await Promise.all([
+  let viewerUserId: string;
+  try {
+    viewerUserId = await requireAuthUserId(supabase);
+  } catch {
+    redirect('/');
+  }
+
+  const [bundle, work, installations] = await Promise.all([
     getWorkProjectSnapshot(supabase, workId),
     getWorkById(supabase, workId),
+    getPoleInstallations(supabase, workId),
   ]);
 
   if (!bundle) {
@@ -51,19 +66,30 @@ export default async function VisaoGeralPage({ params }: VisaoGeralPageProps) {
     );
   }
 
-  const pdfSignedUrl = bundle.snapshot.pdfStoragePath
-    ? await getWorkPdfSignedUrl(bundle.snapshot.pdfStoragePath)
-    : null;
+  const [pdfSignedUrl, installationSignedUrls, creatorNames] = await Promise.all([
+    bundle.snapshot.pdfStoragePath
+      ? getWorkPdfSignedUrl(bundle.snapshot.pdfStoragePath)
+      : Promise.resolve(null),
+    getPoleInstallationSignedUrls(
+      installations.flatMap((i) => i.media.map((m) => m.storagePath)),
+    ),
+    loadCreatorNames(supabase, installations.map((i) => i.createdBy)),
+  ]);
 
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
       <div className="min-w-0 flex-1 lg:basis-[68%]">
         <div className="h-[70vh] min-h-[420px] lg:h-[78vh]">
           <WorkCanvas
+            workId={workId}
+            viewerUserId={viewerUserId}
             snapshot={bundle.snapshot}
             posts={bundle.posts}
             connections={bundle.connections}
             pdfSignedUrl={pdfSignedUrl}
+            initialInstallations={installations}
+            initialInstallationSignedUrls={installationSignedUrls}
+            initialCreatorNames={creatorNames}
           />
         </div>
       </div>
@@ -74,6 +100,27 @@ export default async function VisaoGeralPage({ params }: VisaoGeralPageProps) {
       </aside>
     </div>
   );
+}
+
+async function loadCreatorNames(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  userIds: string[],
+): Promise<Record<string, string>> {
+  const map: Record<string, string> = {};
+  const unique = Array.from(new Set(userIds.filter((id) => !!id)));
+  if (unique.length === 0) return map;
+
+  const { data } = await supabase
+    .from('profiles')
+    .select('id, full_name')
+    .in('id', unique);
+
+  if (!data) return map;
+  for (const row of data as { id: string; full_name: string | null }[]) {
+    const name = (row.full_name ?? '').trim();
+    if (name.length > 0) map[row.id] = name;
+  }
+  return map;
 }
 
 function QuickLinks({ workId }: { workId: string }) {

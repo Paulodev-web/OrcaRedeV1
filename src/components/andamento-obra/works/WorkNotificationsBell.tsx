@@ -7,30 +7,20 @@ import * as Popover from '@radix-ui/react-popover';
 import { Bell } from 'lucide-react';
 import { markNotificationAsRead, markAllNotificationsAsRead } from '@/actions/notifications';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
+import { useNotificationsContext } from './NotificationsBellRealtimeProvider';
 import type { NotificationRow } from '@/types/works';
 
-interface WorkNotificationsBellProps {
-  initialItems: NotificationRow[];
-  initialUnreadCount: number;
-}
-
-export function WorkNotificationsBell({
-  initialItems,
-  initialUnreadCount,
-}: WorkNotificationsBellProps) {
+export function WorkNotificationsBell() {
   const router = useRouter();
-  const [items, setItems] = useState<NotificationRow[]>(initialItems);
-  const [unread, setUnread] = useState(initialUnreadCount);
+  const { items, unreadCount, markAsRead, markAllAsRead, pulse } =
+    useNotificationsContext();
   const [open, setOpen] = useState(false);
   const [, startTransition] = useTransition();
 
   const handleClickItem = (notification: NotificationRow) => {
     setOpen(false);
     if (!notification.isRead) {
-      setItems((prev) =>
-        prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n)),
-      );
-      setUnread((u) => Math.max(0, u - 1));
+      markAsRead(notification.id);
       startTransition(async () => {
         await markNotificationAsRead(notification.id);
       });
@@ -41,9 +31,8 @@ export function WorkNotificationsBell({
   };
 
   const handleMarkAll = () => {
-    if (unread === 0) return;
-    setItems((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    setUnread(0);
+    if (unreadCount === 0) return;
+    markAllAsRead();
     startTransition(async () => {
       await markAllNotificationsAsRead();
     });
@@ -54,13 +43,17 @@ export function WorkNotificationsBell({
       <Popover.Trigger asChild>
         <button
           type="button"
-          aria-label={`Notificações${unread > 0 ? ` (${unread} não lidas)` : ''}`}
+          aria-label={`Notificações${unreadCount > 0 ? ` (${unreadCount} não lidas)` : ''}`}
           className="relative inline-flex h-9 w-9 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-gray-100 hover:text-[#1D3140]"
         >
           <Bell className="h-4.5 w-4.5" />
-          {unread > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 inline-flex min-w-[1rem] items-center justify-center rounded-full bg-[#64ABDE] px-1 text-[9px] font-semibold text-white ring-2 ring-white">
-              {unread > 9 ? '9+' : unread}
+          {unreadCount > 0 && (
+            <span
+              className={`absolute -right-0.5 -top-0.5 inline-flex min-w-[1rem] items-center justify-center rounded-full bg-[#64ABDE] px-1 text-[9px] font-semibold text-white ring-2 ring-white${
+                pulse ? ' animate-pulse' : ''
+              }`}
+            >
+              {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
         </button>
@@ -76,7 +69,7 @@ export function WorkNotificationsBell({
             <button
               type="button"
               onClick={handleMarkAll}
-              disabled={unread === 0}
+              disabled={unreadCount === 0}
               className="text-xs font-medium text-[#64ABDE] hover:underline disabled:cursor-not-allowed disabled:opacity-40"
             >
               Marcar todas
@@ -127,7 +120,7 @@ export function WorkNotificationsBell({
           </div>
           <footer className="border-t border-gray-100 px-4 py-2 text-center">
             <Link
-              href="/tools/andamento-obra"
+              href="/tools/andamento-obra/notificacoes"
               onClick={() => setOpen(false)}
               className="text-xs font-medium text-[#64ABDE] hover:underline"
             >

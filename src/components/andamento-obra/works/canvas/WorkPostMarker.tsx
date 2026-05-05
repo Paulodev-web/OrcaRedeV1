@@ -25,9 +25,9 @@ interface WorkPostMarkerProps {
  * coordenadas do snapshot continuem batendo com as conexoes desenhadas
  * (que usam o mesmo offset interno via `POST_CENTER_OFFSET`).
  *
- * Camada de execucao (Bloco 7): este marcador e' a "ancora visual" -
- * pins coloridos por status serao posicionados no mesmo (x, y) ou com
- * pequeno offset, sobrepostos a este marcador.
+ * Camada de execucao (Bloco 7): pins de instalacao sao renderizados em uma
+ * camada separada (`WorkInstallationPin`), com cor verde, formato gota e
+ * tamanho maior. Postes planejados continuam cinzas/inalterados aqui.
  */
 export const WorkPostMarker = memo(function WorkPostMarker({
   post,
@@ -67,8 +67,6 @@ export const WorkPostMarker = memo(function WorkPostMarker({
         style={{ width: '10px', height: '10px' }}
         aria-hidden="true"
       />
-      {/* Espaco reservado para a camada de execucao (Bloco 7).
-          Quando houver work_pole_installations, um pin colorido sera renderizado aqui. */}
     </button>
   );
 });

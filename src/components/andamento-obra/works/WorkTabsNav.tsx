@@ -9,6 +9,8 @@ interface WorkTabsNavProps {
   chatUnreadCount?: number;
   diarioPendingCount?: number;
   progressoPendingCount?: number;
+  checklistsPendingCount?: number;
+  alertsActiveCount?: number;
 }
 
 const tabs = [
@@ -28,6 +30,8 @@ export function WorkTabsNav({
   chatUnreadCount = 0,
   diarioPendingCount = 0,
   progressoPendingCount = 0,
+  checklistsPendingCount = 0,
+  alertsActiveCount = 0,
 }: WorkTabsNavProps) {
   const pathname = usePathname();
   const base = `/tools/andamento-obra/obras/${workId}`;
@@ -42,6 +46,8 @@ export function WorkTabsNav({
           if (tab.slug === 'chat') badgeCount = chatUnreadCount;
           else if (tab.slug === 'diario') badgeCount = diarioPendingCount;
           else if (tab.slug === 'progresso') badgeCount = progressoPendingCount;
+          else if (tab.slug === 'checklists') badgeCount = checklistsPendingCount;
+          else if (tab.slug === 'alertas') badgeCount = alertsActiveCount;
 
           return (
             <Link

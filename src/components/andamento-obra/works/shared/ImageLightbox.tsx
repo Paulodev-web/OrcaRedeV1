@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ImageOff, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ImageLightboxProps {
@@ -76,6 +76,11 @@ function LightboxBody({
   }, [next, prev]);
 
   const current = images[Math.max(0, Math.min(index, images.length - 1))];
+  const [errored, setErrored] = useState(false);
+
+  useEffect(() => {
+    setErrored(false);
+  }, [current]);
 
   return (
     <>
@@ -116,13 +121,21 @@ function LightboxBody({
         </>
       )}
 
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={current}
-        alt={alt}
-        className="max-h-[90vh] max-w-[90vw] select-none object-contain"
-        draggable={false}
-      />
+      {errored ? (
+        <div className="flex flex-col items-center gap-2 text-white/60">
+          <ImageOff className="h-10 w-10" />
+          <span className="text-sm">Mídia indisponível</span>
+        </div>
+      ) : (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={current}
+          alt={alt}
+          className="max-h-[90vh] max-w-[90vw] select-none object-contain"
+          draggable={false}
+          onError={() => setErrored(true)}
+        />
+      )}
     </>
   );
 }
