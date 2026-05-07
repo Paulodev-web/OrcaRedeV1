@@ -4,8 +4,17 @@ import { Plus, Search, Edit, Trash2, Upload, Loader2, ArrowUpDown, ArrowUp, Arro
 import { useApp } from '@/contexts/AppContext';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { AlertDialog } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Material } from '@/types';
 import { addMaterialAction, updateMaterialAction, deleteMaterialAction } from '@/actions/materials';
+
+const EMPTY_UNIDADE_VALUE = '__no_unidade__';
 
 type SortField = 'descricao' | 'codigo' | 'precoUnit';
 type SortOrder = 'asc' | 'desc';
@@ -544,16 +553,20 @@ export function GerenciarMateriais() {
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-gray-700">Itens por página:</span>
-                    <select
-                      value={itemsPerPage}
-                      onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
-                      className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    <Select
+                      value={String(itemsPerPage)}
+                      onValueChange={(value) => handleItemsPerPageChange(Number(value))}
                     >
-                      <option value={25}>25</option>
-                      <option value={50}>50</option>
-                      <option value={100}>100</option>
-                      <option value={200}>200</option>
-                    </select>
+                      <SelectTrigger className="w-[96px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="25">25</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                        <SelectItem value="200">200</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="text-sm text-gray-700">
                     Mostrando <span className="font-medium">{startIndex + 1}</span> a{' '}
@@ -738,20 +751,25 @@ function MaterialModal({ material, onClose, onSave, loading = false }: MaterialM
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Unidade *
             </label>
-            <select
-              value={formData.unidade}
-              onChange={(e) => setFormData({ ...formData, unidade: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
+            <Select
+              value={formData.unidade || EMPTY_UNIDADE_VALUE}
+              onValueChange={(value) =>
+                setFormData({ ...formData, unidade: value === EMPTY_UNIDADE_VALUE ? '' : value })
+              }
             >
-              <option value="">Selecione uma unidade</option>
-              <option value="UN">UN - Unidade</option>
-              <option value="M">M - Metro</option>
-              <option value="KG">KG - Quilograma</option>
-              <option value="L">L - Litro</option>
-              <option value="M²">M² - Metro Quadrado</option>
-              <option value="M³">M³ - Metro Cúbico</option>
-            </select>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecione uma unidade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={EMPTY_UNIDADE_VALUE}>Selecione uma unidade</SelectItem>
+                <SelectItem value="UN">UN - Unidade</SelectItem>
+                <SelectItem value="M">M - Metro</SelectItem>
+                <SelectItem value="KG">KG - Quilograma</SelectItem>
+                <SelectItem value="L">L - Litro</SelectItem>
+                <SelectItem value="M²">M² - Metro Quadrado</SelectItem>
+                <SelectItem value="M³">M³ - Metro Cúbico</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex justify-end space-x-3 mt-6">

@@ -4,8 +4,18 @@ import { Search, Plus, Minus, Save, Loader2, ArrowUpDown, ArrowUp, ArrowDown, X,
 import { useApp } from '@/contexts/AppContext';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { AlertDialog } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Material } from '@/types';
 import { addItemGroupAction, updateItemGroupAction } from '@/actions/itemGroups';
+
+const EMPTY_CLONE_GROUP_VALUE = '__no_clone_group__';
+const EMPTY_CLONE_COMPANY_VALUE = '__no_clone_company__';
 
 type SortField = 'descricao' | 'codigo' | 'precoUnit';
 type SortOrder = 'asc' | 'desc';
@@ -570,43 +580,64 @@ export function EditorGrupo() {
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Concessionária de origem
                   </label>
-                  <select
-                    value={cloneCompanyId}
-                    onChange={(e) => setCloneCompanyId(e.target.value)}
+                  <Select
+                    value={cloneCompanyId || EMPTY_CLONE_COMPANY_VALUE}
+                    onValueChange={(value) =>
+                      setCloneCompanyId(value === EMPTY_CLONE_COMPANY_VALUE ? '' : value)
+                    }
                     disabled={isPending || utilityCompanies.length === 0}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
                   >
-                    {utilityCompanies.length === 0 ? (
-                      <option value="">Nenhuma concessionária disponível</option>
-                    ) : (
-                      utilityCompanies.map((concessionaria) => (
-                        <option key={concessionaria.id} value={concessionaria.id}>
-                          {concessionaria.nome}
-                        </option>
-                      ))
-                    )}
-                  </select>
+                    <SelectTrigger className="w-full">
+                      <SelectValue
+                        placeholder={
+                          utilityCompanies.length === 0
+                            ? 'Nenhuma concessionária disponível'
+                            : 'Selecione uma concessionária'
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={EMPTY_CLONE_COMPANY_VALUE}>
+                        {utilityCompanies.length === 0
+                          ? 'Nenhuma concessionária disponível'
+                          : 'Selecione uma concessionária'}
+                      </SelectItem>
+                      {utilityCompanies.length === 0 ? (
+                        <></>
+                      ) : (
+                        utilityCompanies.map((concessionaria) => (
+                          <SelectItem key={concessionaria.id} value={concessionaria.id}>
+                            {concessionaria.nome}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Grupo base
                   </label>
-                  <select
-                    value={cloneGroupId}
-                    onChange={(e) => setCloneGroupId(e.target.value)}
+                  <Select
+                    value={cloneGroupId || EMPTY_CLONE_GROUP_VALUE}
+                    onValueChange={(value) => setCloneGroupId(value === EMPTY_CLONE_GROUP_VALUE ? '' : value)}
                     disabled={isPending || loadingGroups || !cloneCompanyId}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
                   >
-                    <option value="">
-                      {loadingGroups ? 'Carregando grupos...' : 'Selecione um grupo'}
-                    </option>
-                    {itemGroups.map((group) => (
-                      <option key={group.id} value={group.id}>
-                        {group.nome}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={loadingGroups ? 'Carregando grupos...' : 'Selecione um grupo'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={EMPTY_CLONE_GROUP_VALUE}>
+                        {loadingGroups ? 'Carregando grupos...' : 'Selecione um grupo'}
+                      </SelectItem>
+                      {itemGroups.map((group) => (
+                        <SelectItem key={group.id} value={group.id}>
+                          {group.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

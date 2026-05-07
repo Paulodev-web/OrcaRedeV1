@@ -249,3 +249,83 @@ export interface TrackedPostMaterial {
     unit: string;
   };
 }
+
+// =============================================================================
+// Módulo: Comparação de Fornecedores e Cenários de Compra
+// =============================================================================
+
+export type SupplierQuoteStatus = 'pendente' | 'conciliado' | 'aprovado';
+export type SupplierMatchStatus = 'sem_match' | 'automatico' | 'manual' | 'ia_suggested';
+export type SupplierMatchMethod = 'exact_memory' | 'semantic_ai' | 'manual';
+export type SupplierMappingSource = 'manual' | 'ai';
+export type SemanticSuggestionStatus = 'suggested' | 'accepted' | 'rejected';
+
+export interface SupplierQuote {
+  id: string;
+  /** Null em cotações de sessão global (conciliação com catálogo). */
+  budget_id: string | null;
+  session_id?: string | null;
+  supplier_name: string;
+  pdf_path: string;
+  /** Nome customizado do orçamento definido pelo usuário. Se vazio, usar fallback para nome do arquivo PDF. */
+  display_name?: string | null;
+  status: SupplierQuoteStatus;
+  observacoes_gerais?: string;
+  extraction_validated_at?: string | null;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupplierQuoteItem {
+  id: string;
+  quote_id: string;
+  descricao: string;
+  unidade: string;
+  quantidade: number;
+  preco_unit: number;
+  total_item: number;
+  ipi_percent: number;
+  st_incluso: boolean;
+  alerta: boolean;
+  matched_material_id?: string | null;
+  conversion_factor: number;
+  match_status: SupplierMatchStatus;
+  match_level?: number | null;
+  match_confidence?: number | null;
+  match_method?: SupplierMatchMethod | null;
+  created_at: string;
+}
+
+export interface SupplierMaterialMapping {
+  id: string;
+  user_id: string;
+  supplier_name: string;
+  supplier_material_name: string;
+  internal_material_id: string;
+  conversion_factor: number;
+  last_seen_at?: string;
+  times_used: number;
+  source: SupplierMappingSource;
+  confidence_snapshot?: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SemanticMatchSuggestion {
+  id: string;
+  supplier_quote_item_id: string;
+  suggested_material_id: string;
+  suggested_conversion_factor: number;
+  confidence_score: number;
+  rationale?: string | null;
+  status: SemanticSuggestionStatus;
+  model: string;
+  created_at: string;
+  reviewed_at?: string | null;
+}
+
+export interface BudgetOption {
+  id: string;
+  name: string;
+}
