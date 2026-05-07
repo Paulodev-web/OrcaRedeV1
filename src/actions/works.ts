@@ -30,6 +30,21 @@ const ANDAMENTO_OBRA_BUCKET = 'andamento-obra';
 const POSTS_INSERT_CHUNK = 300;
 const CONNECTIONS_INSERT_CHUNK = 300;
 
+/** Hosts Supabase cujo Storage público pode ser buscado via HTTP em createWorkFromBudget (fallback). */
+const ALLOWED_PDF_HOSTS = [
+  'qnmydwumaqoanorgspop.supabase.co',
+  'ubqyjbtjkzxlexbuxoum.supabase.co',
+];
+
+function isAllowedPdfHost(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return ALLOWED_PDF_HOSTS.includes(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
 const WORKS_PATH = '/tools/andamento-obra';
 
 const ALLOWED_TRANSITIONS: Record<WorkStatus, ReadonlyArray<WorkStatus>> = {
@@ -273,6 +288,9 @@ interface CoordTransform {
  *  - posts e connections em batch
  *
  * Em qualquer falha pós-criação, faz rollback manual (Storage primeiro, depois DELETE works).
+ *
+ * Se uma obra existente ficou sem PDF no snapshot (pdf_storage_path NULL) por importação
+ * anterior, ver [DEBT-014] em docs/known-debt.md — SQL opcional para apagar a obra e reimportar.
  */
 export async function createWorkFromBudget(
   input: CreateWorkFromBudgetInput,
@@ -348,10 +366,52 @@ export async function createWorkFromBudget(
     let coordTransform: CoordTransform | undefined;
 
     if (parsed) {
+      let blob: Blob | null = null;
+
       const downloadResult = await serviceRole.storage
         .from(parsed.bucket)
         .download(parsed.path);
-      const blob = downloadResult.data;
+      if (downloadResult.data) {
+        blob = downloadResult.data;
+      } else {
+        console.warn('[createWorkFromBudget] Storage download failed, trying HTTP fallback', {
+          budgetId: budget.budgetId,
+          bucket: parsed.bucket,
+          path: parsed.path,
+          error: downloadResult.error?.message,
+        });
+
+        const planUrl = budget.planImageUrl;
+        if (planUrl && isAllowedPdfHost(planUrl)) {
+          try {
+            const response = await fetch(planUrl);
+            if (response.ok) {
+              blob = await response.blob();
+              console.log('[createWorkFromBudget] HTTP fallback succeeded', {
+                budgetId: budget.budgetId,
+                host: new URL(planUrl).hostname,
+                sizeBytes: blob.size,
+              });
+            } else {
+              console.error('[createWorkFromBudget] HTTP fallback failed', {
+                budgetId: budget.budgetId,
+                status: response.status,
+              });
+            }
+          } catch (e) {
+            console.error('[createWorkFromBudget] HTTP fallback exception', {
+              budgetId: budget.budgetId,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
+        } else if (planUrl) {
+          console.error('[createWorkFromBudget] PDF URL host not in whitelist', {
+            budgetId: budget.budgetId,
+            url: planUrl,
+          });
+        }
+      }
+
       if (blob) {
         const arrayBuffer = await blob.arrayBuffer();
         const bytes = new Uint8Array(arrayBuffer);

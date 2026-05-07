@@ -1,6 +1,6 @@
 # Dívidas Técnicas Conhecidas
 
-Consolidação de dívidas técnicas registradas ao longo dos Blocos 1-8 do módulo Andamento de Obra. Cada entrada inclui localização, descrição, bloco de origem e sugestão de solução.
+Consolidação de dívidas técnicas registradas ao longo dos Blocos 1-9 do módulo Andamento de Obra. Cada entrada inclui localização, descrição, bloco de origem e sugestão de solução.
 
 ---
 
@@ -124,3 +124,53 @@ Consolidação de dívidas técnicas registradas ao longo dos Blocos 1-8 do mód
 **Prioridade**: Média
 **Descrição**: O canvas usa `react-zoom-pan-pinch` que funciona em touch, mas a experiência em telas pequenas (<768px) pode ser melhorada com controles de zoom dedicados para mobile.
 **Sugestão de solução**: Adicionar botões de zoom flutuantes (+/-) visíveis apenas em mobile, e verificar que gestos de pinch não conflitam com scroll da página.
+
+---
+
+## [DEBT-014] Cross-project Storage: orçamentos no dev apontam para prod
+
+**Arquivos**: `src/actions/works.ts` (`createWorkFromBudget`), `src/actions/budgets.ts` (`duplicateBudgetAction`)
+
+**Bloco onde registrado**: pós-Bloco 9 (descoberto em produção)
+
+**Prioridade**: Baixa (não bloqueia features; afeta principalmente ambiente dev)
+
+**Problema**:
+
+42 de 45 orçamentos em `budgets` no projeto Supabase dev (`ubqyjbtjkzxlexbuxoum`) têm `plan_image_url` com host absoluto apontando para o Supabase de prod do cliente (`qnmydwumaqoanorgspop`). Causa provável: `pg_dump` do prod restaurado no dev sem migrar os PDFs do bucket `plans`. Bucket `plans` do dev está vazio.
+
+Como consequência, `createWorkFromBudget` falhava silenciosamente ao tentar `storage.download('plans', path)` no dev. Mitigado em **[DEBT-014a]** via HTTP fetch fallback.
+
+**Mitigação aplicada (DEBT-014a)**:
+
+- `createWorkFromBudget` faz `fetch` HTTP da URL absoluta quando o download local falha
+- Whitelist de hosts permitidos (apenas Supabases conhecidos)
+- Logging estruturado de cada caminho (storage / HTTP / falha)
+
+**Resolução completa pendente**:
+
+- Backfill: copiar PDFs do bucket `plans` do prod (via fetch HTTP público) para o bucket `plans` do dev
+- Normalizar `budgets.plan_image_url` para apontar para o projeto local (relativo ou absoluto correto)
+- Atualizar `duplicateBudgetAction` para regravar `plan_image_url` ao duplicar entre ambientes
+- Quando produção real for usada pelo cliente, o problema desaparece naturalmente (mesmo projeto para dados e Storage)
+
+**Risco se não resolver**:
+
+- Se o Supabase prod do cliente for desligado ou restrito, orçamentos no dev podem perder o PDF visualizável
+- Não há risco de escrita cruzada (dev não escreve no prod)
+- PII do cliente em dev é assunto separado, fora deste DEBT
+
+**Sugestão de solução**:
+
+Script de backfill em `scripts/backfill-pdfs-to-dev.ts` que: (1) lista budgets com `plan_image_url` apontando para prod; (2) fetch HTTP público; (3) upload no bucket `plans` do dev; (4) atualiza `plan_image_url` para URL do dev; (5) execução one-shot.
+
+**Re-importação manual de obra existente** (ex.: obra criada antes da mitigação, `pdf_storage_path` NULL no snapshot):
+
+Rodar no SQL Editor **somente após** confirmar que o usuário pode reimportar pela UI (“+ Nova Obra”). **Não executar** automaticamente.
+
+```sql
+-- Opção A: remover a obra e importar de novo pelo fluxo da aplicação
+DELETE FROM public.works WHERE id = '87ac517d-2d6d-4d81-93c0-04de1d341e71';
+
+-- Opção B (feature futura): apagar só snapshot + fluxo dedicado de “reimportar planta” — não implementado
+```

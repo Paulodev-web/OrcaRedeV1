@@ -38,6 +38,7 @@ export async function getWorkPdfSignedUrl(
       .from('andamento-obra')
       .createSignedUrl(pdfStoragePath, WORK_PDF_SIGNED_URL_TTL_SECONDS);
 
+    // Manter logging estruturado para falhas de createSignedUrl (debug / DEBT-014).
     if (error || !data?.signedUrl) {
       console.error('[getWorkPdfSignedUrl] falha ao gerar URL assinada', {
         path: pdfStoragePath,
