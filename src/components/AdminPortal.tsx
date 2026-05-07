@@ -1,5 +1,6 @@
 "use client";
-import Link from 'next/link';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   LogOut,
   ChevronRight,
@@ -11,9 +12,6 @@ import {
   Grid3X3,
   Shield,
   Hammer,
-  Package,
-  Calculator,
-  ClipboardList,
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,7 +23,7 @@ interface Module {
   description: string;
   icon: React.ComponentType<{ className?: string; size?: number }>;
   status: 'active' | 'soon';
-  /** Quando definido, o cartão navega com `Link` (prefetch do App Router). */
+  /** When set, clicking the card navigates here instead of in-app module state */
   href?: string;
   badge?: string;
   color: string;
@@ -62,49 +60,24 @@ const modules: Module[] = [
     bgColor: 'bg-[#64ABDE]/15',
     borderColor: 'border-[#64ABDE]/40',
   },
-  {
-    id: 'andamento-obra',
-    title: 'Andamento de Obra',
-    description: 'Cronograma, marcos e status das obras em execução',
-    icon: ClipboardList,
-    status: 'active',
-    href: '/tools/andamento-obra',
-    badge: 'Obras',
-    color: 'text-[#1D3140]',
-    bgColor: 'bg-[#64ABDE]/15',
-    borderColor: 'border-[#64ABDE]/40',
-  },
-  {
-    id: 'fornecedores',
-    title: 'Suprimentos e Cotações',
-    description: 'Importação de PDFs de fornecedores, conciliação de itens e cenários de compra',
-    icon: Package,
-    status: 'active',
-    href: '/fornecedores',
-    badge: 'Compras',
-    color: 'text-[#1D3140]',
-    bgColor: 'bg-[#64ABDE]/15',
-    borderColor: 'border-[#64ABDE]/40',
-  },
-  {
-    id: 'precificacao',
-    title: 'Módulo de Precificação',
-    description: 'Precificação de serviços: custos, lucro, imposto sobre VS e materiais faturados por fora',
-    icon: Calculator,
-    status: 'active',
-    href: '/tools/precificacao',
-    badge: 'Comercial',
-    color: 'text-[#1D3140]',
-    bgColor: 'bg-[#64ABDE]/15',
-    borderColor: 'border-[#64ABDE]/40',
-  },
 ];
 
 export function AdminPortal() {
+  const router = useRouter();
   const { setActiveModule, setCurrentView } = useApp();
   const { signOut, user } = useAuth();
+  const [loadingModule, setLoadingModule] = useState<string | null>(null);
   const activeModuleCount = modules.filter((m) => m.status === 'active').length;
-  const handleOpenModule = (moduleId: string) => {
+
+  const handleOpenModule = async (moduleId: string) => {
+    const mod = modules.find((m) => m.id === moduleId);
+    if (mod?.href) {
+      router.push(mod.href);
+      return;
+    }
+    setLoadingModule(moduleId);
+    await new Promise((r) => setTimeout(r, 350));
+
     if (moduleId === 'orca-rede') {
       setActiveModule('orcamentos');
     } else if (moduleId === 'portal-engenheiro') {
@@ -113,6 +86,8 @@ export function AdminPortal() {
     } else {
       setActiveModule(moduleId);
     }
+
+    setLoadingModule(null);
   };
 
   const handleLogout = async () => {
@@ -225,6 +200,19 @@ export function AdminPortal() {
                   <span className="capitalize">{today}</span>
                 </div>
               </div>
+
+              <div className="hidden lg:flex items-center space-x-3">
+                <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Shield className="w-4 h-4 text-white/80" />
+                    <span className="text-white/90 text-xs font-medium">Status do Sistema</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
+                    <span className="text-white text-sm font-semibold">Operacional</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -246,16 +234,21 @@ export function AdminPortal() {
           {modules.map((mod) => {
             const Icon = mod.icon;
             const isActive = mod.status === 'active';
-            const cardClass = `
-                  relative block bg-white rounded-2xl border transition-all duration-200 overflow-hidden
+            const isLoading = loadingModule === mod.id;
+
+            return (
+              <div
+                key={mod.id}
+                className={`
+                  relative bg-white rounded-2xl border transition-all duration-200 overflow-hidden
                   ${isActive
-                    ? 'border-[#64ABDE]/40 shadow-md hover:shadow-xl hover:-translate-y-1 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#64ABDE]'
+                    ? 'border-[#64ABDE]/40 shadow-md hover:shadow-xl hover:-translate-y-1 cursor-pointer'
                     : 'border-slate-200 shadow-sm opacity-70 cursor-not-allowed'
                   }
-                `;
-
-            const cardBody = (
-              <>
+                `}
+                onClick={() => isActive && handleOpenModule(mod.id)}
+              >
+                {/* Active indicator strip */}
                 {isActive && (
                   <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl" style={{ background: `linear-gradient(90deg, ${ON_COLORS.navy} 0%, ${ON_COLORS.blue} 100%)` }}></div>
                 )}
@@ -281,13 +274,26 @@ export function AdminPortal() {
                   <p className="text-sm text-slate-500 leading-relaxed mb-4">{mod.description}</p>
 
                   {isActive ? (
-                    <span
-                      className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl text-white text-sm font-semibold transition-all duration-200 shadow-sm group-hover:shadow-md"
-                      style={{ background: `linear-gradient(135deg, ${ON_COLORS.navy} 0%, ${ON_COLORS.blue} 100%)` }}
+                    <button
+                      className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl text-white text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md disabled:cursor-wait disabled:opacity-80"
+                      style={{ background: isLoading ? ON_COLORS.blue : `linear-gradient(135deg, ${ON_COLORS.navy} 0%, ${ON_COLORS.blue} 100%)` }}
+                      disabled={isLoading}
                     >
-                      <span>Acessar módulo</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </span>
+                      {isLoading ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          <span>Abrindo...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Acessar módulo</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
                   ) : (
                     <div className="w-full flex items-center justify-center py-2.5 px-4 rounded-xl bg-slate-100 text-sm font-medium text-slate-500 border border-slate-200">
                       <Clock className="w-4 h-4 mr-2" />
@@ -295,33 +301,6 @@ export function AdminPortal() {
                     </div>
                   )}
                 </div>
-              </>
-            );
-
-            if (isActive && mod.href) {
-              return (
-                <Link key={mod.id} href={mod.href} prefetch className={`group ${cardClass}`}>
-                  {cardBody}
-                </Link>
-              );
-            }
-
-            return (
-              <div
-                key={mod.id}
-                className={cardClass}
-                role={isActive ? 'button' : undefined}
-                tabIndex={isActive ? 0 : undefined}
-                onClick={() => isActive && handleOpenModule(mod.id)}
-                onKeyDown={(e) => {
-                  if (!isActive) return;
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleOpenModule(mod.id);
-                  }
-                }}
-              >
-                {cardBody}
               </div>
             );
           })}

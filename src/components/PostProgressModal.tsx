@@ -15,13 +15,6 @@ import {
   User,
 } from 'lucide-react';
 import { TrackedPost } from '@/types';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 interface PostProgressModalProps {
   isOpen: boolean;
@@ -188,25 +181,19 @@ export function PostProgressModal({
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Status Atual
                     </label>
-                    <Select
+                    <select
                       value={localPost.status}
-                      onValueChange={(value) =>
-                        setLocalPost((prev) => ({
-                          ...prev,
-                          status: value as TrackedPost['status'],
-                        }))
-                      }
+                      onChange={(e) => setLocalPost(prev => ({
+                        ...prev, 
+                        status: e.target.value as TrackedPost['status']
+                      }))}
+                      className={`w-full px-3 py-2 border rounded-lg font-medium ${getStatusColor(localPost.status)}`}
                     >
-                      <SelectTrigger className={`w-full font-medium ${getStatusColor(localPost.status)}`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Pendente">Pendente</SelectItem>
-                        <SelectItem value="Em Andamento">Em Andamento</SelectItem>
-                        <SelectItem value="Concluído">Concluído</SelectItem>
-                        <SelectItem value="Problemas">Problemas</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <option value="Pendente">Pendente</option>
+                      <option value="Em Andamento">Em Andamento</option>
+                      <option value="Concluído">Concluído</option>
+                      <option value="Problemas">Problemas</option>
+                    </select>
                   </div>
 
                   <div>

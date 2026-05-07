@@ -11,6 +11,7 @@ import {
   CheckCircle,
   Play,
   Save,
+  Edit3,
   Target,
   TrendingUp,
   Eye,
@@ -26,7 +27,6 @@ import {
   ExternalLink,
   Copy,
   Link2,
-  MoreHorizontal,
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { supabase } from '@/lib/supabaseClient';
@@ -35,13 +35,6 @@ import { PostProgressModal } from './PostProgressModal';
 import { CanvasVisual } from './CanvasVisual';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { AlertDialog } from '@/components/ui/alert-dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { ON_ENGENHARIA_LOGO_SRC } from '@/lib/branding';
 import { deleteWorkTrackingAction } from '@/actions/workTrackings';
 
@@ -98,10 +91,7 @@ function calculateWeightedProgress(tracking: Partial<WorkTracking>): number {
 }
 
 // Carregar dados do Supabase
-const loadWorkTrackings = async (
-  budgets: Orcamento[] = [],
-  includeNetworkDetails: boolean = false
-): Promise<WorkTracking[]> => {
+const loadWorkTrackings = async (): Promise<WorkTracking[]> => {
   try {
     const { data: rows, error } = await supabase
       .from('work_trackings')
@@ -117,103 +107,79 @@ const loadWorkTrackings = async (
       return [];
     }
 
-    const filteredRows = rows.filter((row) => row.public_id !== DEMO_TRACKING_ID);
-    const trackingIds = filteredRows.map((row) => row.id);
-    const budgetById = new Map(budgets.map((budget) => [budget.id, budget]));
-    let postsByTracking = new Map<string, any[]>();
-    let connectionsByTracking = new Map<string, any[]>();
+    const workTrackings: WorkTracking[] = await Promise.all(
+      rows
+        .filter(row => row.public_id !== DEMO_TRACKING_ID) // Filtra demos
+        .map(async (row) => {
+          // Carregar postes e conexões em paralelo
+          const [postsResult, connectionsResult] = await Promise.all([
+            supabase.from('tracked_posts').select('*').eq('tracking_id', row.id).order('name'),
+            supabase.from('post_connections').select('*').eq('tracking_id', row.id),
+          ]);
 
-    if (includeNetworkDetails && trackingIds.length > 0) {
-      const [postsResult, connectionsResult] = await Promise.all([
-        supabase.from('tracked_posts').select('*').in('tracking_id', trackingIds).order('name'),
-        supabase.from('post_connections').select('*').in('tracking_id', trackingIds),
-      ]);
-
-      (postsResult.data || []).forEach((post) => {
-        const list = postsByTracking.get(post.tracking_id) || [];
-        list.push(post);
-        postsByTracking.set(post.tracking_id, list);
-      });
-      (connectionsResult.data || []).forEach((connection: any) => {
-        const list = connectionsByTracking.get(connection.tracking_id) || [];
-        list.push(connection);
-        connectionsByTracking.set(connection.tracking_id, list);
-      });
-    }
-
-    const workTrackings: WorkTracking[] = filteredRows.map((row) => {
-      const budget = budgetById.get(row.budget_id ?? '');
-      const postsData = includeNetworkDetails ? postsByTracking.get(row.id) || [] : [];
-      const connectionsData = includeNetworkDetails ? connectionsByTracking.get(row.id) || [] : [];
-
-      return {
-        id: row.public_id ?? row.id,
-        budget_id: row.budget_id ?? '',
-        name: row.name ?? '',
-        status: row.status ?? 'Planejado',
-        network_extension_km: row.network_extension_km ?? 0,
-        planned_network_meters: row.planned_network_meters ?? undefined,
-        planned_mt_meters: row.planned_mt_meters ?? undefined,
-        mt_extension_km: row.mt_extension_km ?? 0,
-        planned_bt_meters: row.planned_bt_meters ?? undefined,
-        bt_extension_km: row.bt_extension_km ?? 0,
-        planned_poles: row.planned_poles ?? undefined,
-        poles_installed: row.poles_installed ?? 0,
-        planned_equipment: row.planned_equipment ?? undefined,
-        equipment_installed: row.equipment_installed ?? 0,
-        planned_public_lighting: row.planned_public_lighting ?? undefined,
-        public_lighting_installed: row.public_lighting_installed ?? 0,
-        start_date: row.start_date ?? undefined,
-        estimated_completion: row.estimated_completion ?? undefined,
-        actual_completion: row.actual_completion ?? undefined,
-        progress_percentage: row.progress_percentage ?? 0,
-        render_version: (row.render_version ?? 2) as 1 | 2,
-        current_focus_title: row.current_focus_title ?? undefined,
-        current_focus_description: row.current_focus_description ?? undefined,
-        project_description: row.project_description ?? undefined,
-        responsible_person: row.responsible_person ?? undefined,
-        created_at: row.created_at ?? new Date().toISOString(),
-        updated_at: row.updated_at ?? new Date().toISOString(),
-        budget_data: {
-          project_name: budget?.nome ?? row.name ?? '',
-          plan_image_url: budget?.imagemPlanta ?? row.plan_image_url ?? undefined,
-          client_name: budget?.clientName ?? row.client_name ?? undefined,
-          city: budget?.city ?? row.city ?? undefined,
-          client_logo_url: row.client_logo_url ?? undefined,
-        },
-        tracked_posts: postsData.map((post) => ({
-          id: post.id,
-          tracking_id: row.public_id ?? row.id,
-          original_post_id: post.original_post_id || post.id,
-          name: post.name,
-          custom_name: post.custom_name || undefined,
-          x_coord: Number(post.x_coord),
-          y_coord: Number(post.y_coord),
-          status: post.status as TrackedPost['status'],
-          installation_date: post.installation_date || undefined,
-          completion_date: post.completion_date || undefined,
-          notes: post.notes || undefined,
-          photos: [],
-          materials: [],
-        })),
-        post_connections: connectionsData.map((connection: any) => {
-          const explicitType =
-            connection.connection_type === 'green'
-              ? 'green'
-              : connection.connection_type === 'blue'
-                ? 'blue'
-                : null;
-          const encoded = typeof connection.client_id === 'string' ? connection.client_id : '';
-          const parsedType = explicitType ?? (encoded.startsWith('green:') ? 'green' : 'blue');
           return {
-            id: connection.id,
-            from_post_id: connection.from_post_id,
-            to_post_id: connection.to_post_id,
-            connection_type: parsedType as 'blue' | 'green',
+            id: row.public_id ?? row.id,
+            budget_id: row.budget_id ?? '',
+            name: row.name ?? '',
+            status: row.status ?? 'Planejado',
+            network_extension_km: row.network_extension_km ?? 0,
+            planned_network_meters: row.planned_network_meters ?? undefined,
+            planned_mt_meters: row.planned_mt_meters ?? undefined,
+            mt_extension_km: row.mt_extension_km ?? 0,
+            planned_bt_meters: row.planned_bt_meters ?? undefined,
+            bt_extension_km: row.bt_extension_km ?? 0,
+            planned_poles: row.planned_poles ?? undefined,
+            poles_installed: row.poles_installed ?? 0,
+            planned_equipment: row.planned_equipment ?? undefined,
+            equipment_installed: row.equipment_installed ?? 0,
+            planned_public_lighting: row.planned_public_lighting ?? undefined,
+            public_lighting_installed: row.public_lighting_installed ?? 0,
+            start_date: row.start_date ?? undefined,
+            estimated_completion: row.estimated_completion ?? undefined,
+            actual_completion: row.actual_completion ?? undefined,
+            progress_percentage: row.progress_percentage ?? 0,
+            render_version: (row.render_version ?? 2) as 1 | 2,
+            current_focus_title: row.current_focus_title ?? undefined,
+            current_focus_description: row.current_focus_description ?? undefined,
+            project_description: row.project_description ?? undefined,
+            responsible_person: row.responsible_person ?? undefined,
+            created_at: row.created_at ?? new Date().toISOString(),
+            updated_at: row.updated_at ?? new Date().toISOString(),
+            budget_data: {
+              project_name: row.name ?? '',
+              plan_image_url: row.plan_image_url ?? undefined,
+              client_name: row.client_name ?? undefined,
+              city: row.city ?? undefined,
+              client_logo_url: row.client_logo_url ?? undefined,
+            },
+            tracked_posts: (postsResult.data || []).map((p) => ({
+              id: p.id,
+              tracking_id: p.tracking_id,
+              original_post_id: p.original_post_id || p.id,
+              name: p.name,
+              custom_name: p.custom_name || undefined,
+              x_coord: Number(p.x_coord),
+              y_coord: Number(p.y_coord),
+              status: p.status as any,
+              installation_date: p.installation_date || undefined,
+              completion_date: p.completion_date || undefined,
+              notes: p.notes || undefined,
+              photos: [],
+              materials: [],
+            })),
+            post_connections: (connectionsResult.data || []).map((c: any) => {
+              const et = c.connection_type === 'green' ? 'green' : c.connection_type === 'blue' ? 'blue' : null;
+              const enc = typeof c.client_id === 'string' ? c.client_id : '';
+              return {
+                id: c.id,
+                from_post_id: c.from_post_id,
+                to_post_id: c.to_post_id,
+                connection_type: (et ?? (enc.startsWith('green:') ? 'green' : 'blue')) as 'blue' | 'green'
+              };
+            }),
           };
-        }),
-      };
-    });
+        })
+    );
 
     return workTrackings;
   } catch (error) {
@@ -233,7 +199,6 @@ export function EngineerPortal() {
   const [workTrackings, setWorkTrackings] = useState<WorkTracking[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTrackingId, setActiveTrackingId] = useState<string | null>(null);
-  const [openTrackingMenuId, setOpenTrackingMenuId] = useState<string | null>(null);
   const [isCreatingTracking, setIsCreatingTracking] = useState(false);
   
   // Estados para entrada rápida (extensão de rede e postes)
@@ -292,49 +257,155 @@ export function EngineerPortal() {
   const [isSavingChanges, setIsSavingChanges] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [isLoadingInitial, setIsLoadingInitial] = useState(true);
-  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const hasBootstrappedRef = useRef(false);
-  const hydratedTrackingDetailsRef = useRef(new Set<string>());
+  const hasLoadedFromBudgetsRef = useRef(false);
 
   useEffect(() => {
-    if (hasBootstrappedRef.current) return;
-    hasBootstrappedRef.current = true;
+    fetchBudgets();
+    console.log('🎯 Portal do Engenheiro: Carregado com', workTrackings.length, 'obras');
+  }, [fetchBudgets]);
+
+  // Carregar todos os work_trackings do Supabase na inicialização
+  useEffect(() => {
     const loadInitialData = async () => {
-      console.time('EngineerPortal: initial boot');
-      setIsLoadingInitial(true);
-      await fetchBudgets();
-      const trackings = await loadWorkTrackings(budgets, false);
+      const trackings = await loadWorkTrackings();
       setWorkTrackings(trackings);
-      setIsLoadingInitial(false);
-      console.timeEnd('EngineerPortal: initial boot');
-      console.log('🎯 Portal do Engenheiro: carregado com', trackings.length, 'obras');
     };
-
+    
     loadInitialData();
-  }, [fetchBudgets, budgets]);
+  }, []);
 
+  // Carregar do Supabase apenas na carga inicial (quando budgets chega). Não reexecutar para evitar sobrescrever postes recém-adicionados antes do sync.
   useEffect(() => {
-    if (!budgets.length || !workTrackings.length) return;
-    const budgetById = new Map(budgets.map((budget) => [budget.id, budget]));
-    setWorkTrackings((prev) =>
-      prev.map((tracking) => {
-        const budget = budgetById.get(tracking.budget_id ?? '');
-        if (!budget) return tracking;
-        return {
-          ...tracking,
-          budget_data: {
-            ...tracking.budget_data,
-            project_name: budget.nome || tracking.budget_data?.project_name || tracking.name,
-            client_name: budget.clientName || tracking.budget_data?.client_name,
-            city: budget.city || tracking.budget_data?.city,
-            plan_image_url: budget.imagemPlanta || tracking.budget_data?.plan_image_url,
-          },
-        };
-      })
-    );
-  }, [budgets, workTrackings.length]);
+    if (!budgets?.length || hasLoadedFromBudgetsRef.current) return;
+    hasLoadedFromBudgetsRef.current = true;
+    const budgetIds = budgets.map((b) => b.id);
+    const loadFromSupabase = async () => {
+      const { data: rows, error } = await supabase
+        .from('work_trackings')
+        .select('*')
+        .in('budget_id', budgetIds);
+
+      if (error) {
+        console.warn('Erro ao carregar acompanhamentos do Supabase:', error);
+        return;
+      }
+      if (!rows?.length) return;
+
+      const trackingIds = rows.map((r) => r.id);
+
+      // Buscar postes e conexões de rede para cada tracking
+      const [postsResult, connectionsResult] = await Promise.all([
+        supabase.from('tracked_posts').select('*').in('tracking_id', trackingIds).order('name'),
+        supabase.from('post_connections').select('*').in('tracking_id', trackingIds),
+      ]);
+
+      const postsByTracking = new Map<string, typeof postsResult.data>();
+      (postsResult.data || []).forEach((p) => {
+        const list = postsByTracking.get(p.tracking_id) || [];
+        list.push(p);
+        postsByTracking.set(p.tracking_id, list);
+      });
+      const connectionsByTracking = new Map<string, typeof connectionsResult.data>();
+      (connectionsResult.data || []).forEach((c) => {
+        const list = connectionsByTracking.get(c.tracking_id) || [];
+        list.push(c);
+        connectionsByTracking.set(c.tracking_id, list);
+      });
+
+      setWorkTrackings((prev) => {
+        const list = [...prev];
+        for (const row of rows) {
+          const budget = budgets.find((b) => b.id === row.budget_id);
+          const postsData = postsByTracking.get(row.id) || [];
+          const connectionsData = connectionsByTracking.get(row.id) || [];
+
+          const trackedPosts = postsData.map((post) => ({
+            id: post.id,
+            tracking_id: row.public_id ?? row.id,
+            original_post_id: post.original_post_id || post.id,
+            name: post.name,
+            custom_name: post.custom_name || undefined,
+            x_coord: Number(post.x_coord),
+            y_coord: Number(post.y_coord),
+            status: post.status as TrackedPost['status'],
+            installation_date: post.installation_date || undefined,
+            completion_date: post.completion_date || undefined,
+            notes: post.notes || undefined,
+            photos: [],
+            materials: [],
+          }));
+          const postConnections = connectionsData.map((conn: any) => {
+            const explicitType = conn.connection_type === 'green' ? 'green' : conn.connection_type === 'blue' ? 'blue' : null;
+            const encoded = typeof conn.client_id === 'string' ? conn.client_id : '';
+            const parsedFromClientId = encoded.startsWith('green:') ? 'green' : 'blue';
+            const parsedType = explicitType ?? parsedFromClientId;
+            return {
+              id: conn.id,
+              from_post_id: conn.from_post_id,
+              to_post_id: conn.to_post_id,
+              connection_type: parsedType as 'blue' | 'green',
+            };
+          });
+
+          const work: WorkTracking = {
+            id: row.public_id ?? row.id,
+            budget_id: row.budget_id ?? '',
+            name: row.name ?? '',
+            status: (row.status as WorkTracking['status']) ?? 'Planejado',
+            network_extension_km: row.network_extension_km ?? 0,
+            planned_network_meters: row.planned_network_meters ?? undefined,
+            planned_mt_meters: row.planned_mt_meters ?? undefined,
+            mt_extension_km: row.mt_extension_km ?? 0,
+            planned_bt_meters: row.planned_bt_meters ?? undefined,
+            bt_extension_km: row.bt_extension_km ?? 0,
+            planned_poles: row.planned_poles ?? undefined,
+            poles_installed: row.poles_installed ?? 0,
+            planned_equipment: row.planned_equipment ?? undefined,
+            equipment_installed: row.equipment_installed ?? 0,
+            planned_public_lighting: row.planned_public_lighting ?? undefined,
+            public_lighting_installed: row.public_lighting_installed ?? 0,
+            start_date: row.start_date ?? undefined,
+            estimated_completion: row.estimated_completion ?? undefined,
+            actual_completion: row.actual_completion ?? undefined,
+            progress_percentage: row.progress_percentage ?? 0,
+            current_focus_title: row.current_focus_title ?? undefined,
+            current_focus_description: row.current_focus_description ?? undefined,
+            project_description: row.project_description ?? undefined,
+            responsible_person: row.responsible_person ?? undefined,
+            created_at: row.created_at ?? new Date().toISOString(),
+            updated_at: row.updated_at ?? new Date().toISOString(),
+            budget_data: {
+              project_name: budget?.nome ?? row.name ?? '',
+              client_name: budget?.clientName ?? row.client_name,
+              city: budget?.city ?? row.city,
+              plan_image_url: budget?.imagemPlanta ?? row.plan_image_url,
+              client_logo_url: row.client_logo_url ?? undefined,
+            },
+            tracked_posts: trackedPosts,
+            post_connections: postConnections,
+          };
+          const idx = list.findIndex((w) => w.id === work.id);
+          if (idx === -1) list.push(work);
+          else {
+            // Supabase é a fonte da verdade para postes/conexões (inclusive listas vazias após exclusão)
+            const existing = list[idx];
+            list[idx] = {
+              ...existing,
+              ...work,
+              tracked_posts: trackedPosts,
+              post_connections: postConnections,
+              budget_data: existing.budget_data ?? work.budget_data,
+            };
+          }
+
+          // Timeline e imagens já estão carregados do Supabase no objeto work
+        }
+        return list;
+      });
+    };
+    loadFromSupabase();
+  }, [budgets]);
 
   // Sincronizar obras, postes e conexões com Supabase (único ponto de persistência)
   // Debounce evita race: múltiplas alterações rápidas não disparam syncs paralelos que apagariam postes
@@ -417,10 +488,10 @@ export function EngineerPortal() {
 
           // 3. Inserir/atualizar conexões (só upsert - nunca delete em massa; exclusão só no clique direito na linha)
           if (t.post_connections?.length > 0) {
-            const pairKey = (a: string, b: string, type: string) => `${[a, b].sort().join('|')}|${type}`;
+            const pairKey = (a: string, b: string) => [a, b].sort().join('|');
             const seenPairs = new Set<string>();
             const deduped = t.post_connections.filter(conn => {
-              const key = pairKey(conn.from_post_id, conn.to_post_id, conn.connection_type ?? 'blue');
+              const key = pairKey(conn.from_post_id, conn.to_post_id);
               if (seenPairs.has(key)) return false;
               seenPairs.add(key);
               return true;
@@ -467,86 +538,6 @@ export function EngineerPortal() {
     [workTrackings, activeTrackingId]
   );
 
-  // Hidrata postes/conexões apenas quando o usuário abre o detalhe da obra.
-  useEffect(() => {
-    if (!activeTrackingId || currentView !== 'tracking-detail') return;
-    if (hydratedTrackingDetailsRef.current.has(activeTrackingId)) return;
-
-    const hydrateTrackingDetails = async () => {
-      setIsLoadingDetails(true);
-      console.time(`EngineerPortal: hydrate tracking ${activeTrackingId}`);
-      try {
-        const { data: trackingRow, error: trackingError } = await supabase
-          .from('work_trackings')
-          .select('id, public_id')
-          .or(`public_id.eq.${activeTrackingId},id.eq.${activeTrackingId}`)
-          .limit(1)
-          .single();
-
-        if (trackingError || !trackingRow) {
-          console.warn('Não foi possível resolver tracking para hidratação:', trackingError);
-          return;
-        }
-
-        const [postsResult, connectionsResult] = await Promise.all([
-          supabase.from('tracked_posts').select('*').eq('tracking_id', trackingRow.id).order('name'),
-          supabase.from('post_connections').select('*').eq('tracking_id', trackingRow.id),
-        ]);
-
-        const trackedPosts = (postsResult.data || []).map((post) => ({
-          id: post.id,
-          tracking_id: trackingRow.public_id ?? trackingRow.id,
-          original_post_id: post.original_post_id || post.id,
-          name: post.name,
-          custom_name: post.custom_name || undefined,
-          x_coord: Number(post.x_coord),
-          y_coord: Number(post.y_coord),
-          status: post.status as TrackedPost['status'],
-          installation_date: post.installation_date || undefined,
-          completion_date: post.completion_date || undefined,
-          notes: post.notes || undefined,
-          photos: [],
-          materials: [],
-        }));
-        const postConnections = (connectionsResult.data || []).map((connection: any) => {
-          const explicitType =
-            connection.connection_type === 'green'
-              ? 'green'
-              : connection.connection_type === 'blue'
-                ? 'blue'
-                : null;
-          const encoded = typeof connection.client_id === 'string' ? connection.client_id : '';
-          const parsedType = explicitType ?? (encoded.startsWith('green:') ? 'green' : 'blue');
-          return {
-            id: connection.id,
-            from_post_id: connection.from_post_id,
-            to_post_id: connection.to_post_id,
-            connection_type: parsedType as 'blue' | 'green',
-          };
-        });
-
-        setWorkTrackings((prev) =>
-          prev.map((tracking) =>
-            tracking.id === activeTrackingId
-              ? {
-                  ...tracking,
-                  tracked_posts: trackedPosts,
-                  post_connections: postConnections,
-                }
-              : tracking
-          )
-        );
-
-        hydratedTrackingDetailsRef.current.add(activeTrackingId);
-      } finally {
-        setIsLoadingDetails(false);
-        console.timeEnd(`EngineerPortal: hydrate tracking ${activeTrackingId}`);
-      }
-    };
-
-    hydrateTrackingDetails();
-  }, [activeTrackingId, currentView]);
-
   /** Postes no formato do CanvasVisual; exibe todos os postes do banco. */
   const trackingPostsForCanvas = useMemo((): (BudgetPostDetail & { status?: string })[] => {
     if (!activeTracking?.tracked_posts?.length) return [];
@@ -567,23 +558,13 @@ export function EngineerPortal() {
   /** Adicionar poste no mapa: clique direito no canvas. */
   const handleCanvasRightClickAddPoste = (coords: { x: number; y: number }) => {
     if (!activeTracking) return;
-    // Calcular próximo número baseado no maior número já usado em "Poste N"
-    const postNumberRegex = /^Poste\s+(\d+)$/i;
-    let maxNumber = 0;
-    for (const p of activeTracking.tracked_posts || []) {
-      const match = postNumberRegex.exec(p.name || '');
-      if (match) {
-        const num = parseInt(match[1], 10);
-        if (num > maxNumber) maxNumber = num;
-      }
-    }
-    const nextNumber = maxNumber + 1;
+    const currentOnMap = activeTracking.tracked_posts?.length ?? 0;
     const newId = `tracked-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const newPost: TrackedPost = {
       id: newId,
       tracking_id: activeTracking.id,
       original_post_id: newId,
-      name: `Poste ${nextNumber}`,
+      name: `Poste ${currentOnMap + 1}`,
       x_coord: coords.x,
       y_coord: coords.y,
       status: 'Pendente',
@@ -639,12 +620,11 @@ export function EngineerPortal() {
     if (!activeTracking) return;
     
     updateTracking(activeTracking.id, (tracking) => {
-      // Verificar se a conexão já existe (mesmo par E mesmo tipo)
+      // Verificar se a conexão já existe
       const exists = tracking.post_connections.some(
         (connection) =>
-          (connection.connection_type ?? 'blue') === connectionType &&
-          ((connection.from_post_id === fromPostId && connection.to_post_id === toPostId) ||
-           (connection.from_post_id === toPostId && connection.to_post_id === fromPostId))
+          (connection.from_post_id === fromPostId && connection.to_post_id === toPostId) ||
+          (connection.from_post_id === toPostId && connection.to_post_id === fromPostId)
       );
 
       if (exists) {
@@ -1167,10 +1147,10 @@ export function EngineerPortal() {
       }
 
       if (t.post_connections?.length > 0) {
-        const pairKey = (a: string, b: string, type: string) => `${[a, b].sort().join('|')}|${type}`;
+        const pairKey = (a: string, b: string) => [a, b].sort().join('|');
         const seenPairs = new Set<string>();
         const deduped = t.post_connections.filter((conn: any) => {
-          const key = pairKey(conn.from_post_id, conn.to_post_id, conn.connection_type ?? 'blue');
+          const key = pairKey(conn.from_post_id, conn.to_post_id);
           if (seenPairs.has(key)) return false;
           seenPairs.add(key);
           return true;
@@ -1500,56 +1480,56 @@ export function EngineerPortal() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+        <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl border border-slate-200 p-8 shadow-lg hover:shadow-xl transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600 mb-1">Obras Ativas</p>
-              <p className="text-2xl font-bold text-slate-900">{workTrackings.length}</p>
+              <p className="text-sm font-semibold text-gray-600 mb-2">Obras Ativas</p>
+              <p className="text-3xl font-bold text-gray-900">{workTrackings.length}</p>
             </div>
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center border border-slate-200 bg-slate-50">
-              <Target className="w-5 h-5 text-[#1D3140]" />
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300" style={{ background: `linear-gradient(135deg, ${ON_COLORS.navy} 0%, ${ON_COLORS.blue} 100%)` }}>
+              <Target className="w-7 h-7 text-white" />
             </div>
           </div>
         </div>
         
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+        <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl border border-slate-200 p-8 shadow-lg hover:shadow-xl transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600 mb-1">Em Andamento</p>
-              <p className="text-2xl font-bold text-[#1D3140]">{workTrackings.filter((t) => t.status === 'Em Andamento').length}</p>
+              <p className="text-sm font-semibold text-gray-600 mb-2">Em Andamento</p>
+              <p className="text-3xl font-bold text-[#1D3140]">{workTrackings.filter((t) => t.status === 'Em Andamento').length}</p>
             </div>
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center border border-slate-200 bg-slate-50">
-              <Play className="w-5 h-5 text-[#1D3140]" />
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300" style={{ background: `linear-gradient(135deg, ${ON_COLORS.navy} 0%, ${ON_COLORS.blue} 100%)` }}>
+              <Play className="w-7 h-7 text-white" />
             </div>
           </div>
         </div>
         
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+        <div className="bg-gradient-to-br from-white to-green-50 rounded-2xl border border-green-100 p-8 shadow-lg hover:shadow-xl transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600 mb-1">Concluídas</p>
-              <p className="text-2xl font-bold text-green-600">{workTrackings.filter((t) => t.status === 'Concluído').length}</p>
+              <p className="text-sm font-semibold text-gray-600 mb-2">Concluídas</p>
+              <p className="text-3xl font-bold text-green-600">{workTrackings.filter((t) => t.status === 'Concluído').length}</p>
             </div>
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center border border-green-200 bg-green-50">
-              <CheckCircle className="w-5 h-5 text-green-600" />
+            <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <CheckCircle className="w-7 h-7 text-white" />
             </div>
           </div>
         </div>
         
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+        <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl border border-slate-200 p-8 shadow-lg hover:shadow-xl transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600 mb-1">Progresso Médio</p>
-              <p className="text-2xl font-bold text-[#1D3140]">
+              <p className="text-sm font-semibold text-gray-600 mb-2">Progresso Médio</p>
+              <p className="text-3xl font-bold text-[#1D3140]">
                 {workTrackings.length > 0 
                   ? Math.round(workTrackings.reduce((acc, cur) => acc + calculateWeightedProgress(cur), 0) / workTrackings.length)
                   : 0
                 }%
               </p>
             </div>
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center border border-slate-200 bg-slate-50">
-              <TrendingUp className="w-5 h-5 text-[#1D3140]" />
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300" style={{ background: `linear-gradient(135deg, ${ON_COLORS.navy} 0%, ${ON_COLORS.blue} 100%)` }}>
+              <TrendingUp className="w-7 h-7 text-white" />
             </div>
           </div>
         </div>
@@ -1574,13 +1554,7 @@ export function EngineerPortal() {
         </div>
 
         <div className="divide-y divide-gray-200">
-          {isLoadingInitial ? (
-            <div className="p-12 text-center text-gray-600">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#1D3140] mx-auto mb-5"></div>
-              <h4 className="text-lg font-medium text-gray-900 mb-2">Carregando obras...</h4>
-              <p className="text-gray-500">Preparando sua dashboard do Portal do Engenheiro.</p>
-            </div>
-          ) : workTrackings.length === 0 ? (
+          {workTrackings.length === 0 ? (
             <div className="p-12 text-center text-gray-600">
               <Activity className="w-16 h-16 text-gray-400 mx-auto mb-6" />
               <h4 className="text-xl font-medium text-gray-900 mb-3">Nenhuma obra em acompanhamento</h4>
@@ -1600,25 +1574,9 @@ export function EngineerPortal() {
             workTrackings.map((tracking) => {
               const realProgress = calculateWeightedProgress(tracking);
               return (
-              <div
-                key={tracking.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => {
-                  setActiveTrackingId(tracking.id);
-                  setCurrentView('tracking-detail');
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    setActiveTrackingId(tracking.id);
-                    setCurrentView('tracking-detail');
-                  }
-                }}
-                className="p-6 hover:bg-gray-50 cursor-pointer transition-colors"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
+              <div key={tracking.id} className="p-6 hover:bg-gray-50">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3">
                       <h4 className="text-lg font-semibold text-gray-900">{tracking.name}</h4>
                       <span className={`px-3 py-1 text-xs rounded-full border ${getStatusColor(tracking.status)}`}>
@@ -1669,70 +1627,53 @@ export function EngineerPortal() {
                     </div>
                   </div>
 
-                  <div
-                    className="relative flex items-start shrink-0"
-                    onClick={(event) => event.stopPropagation()}
-                    onKeyDown={(event) => event.stopPropagation()}
-                  >
+                  <div className="ml-6 flex flex-col gap-2">
+                    <button
+                      onClick={() => {
+                        setActiveTrackingId(tracking.id);
+                        setCurrentView('tracking-detail');
+                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2 text-white rounded-lg text-sm font-medium"
+                      style={{ background: `linear-gradient(135deg, ${ON_COLORS.navy} 0%, ${ON_COLORS.blue} 100%)` }}
+                    >
+                      <Edit3 className="w-4 h-4" />
+                      Gerenciar
+                    </button>
+                    
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          const publicUrl = `${window.location.origin}/obra/${tracking.id}`;
+                          window.open(publicUrl, '_blank');
+                        }}
+                        className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-xs font-medium"
+                        title="Abrir página pública"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        Ver Público
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          const publicUrl = `${window.location.origin}/obra/${tracking.id}`;
+                          navigator.clipboard.writeText(publicUrl);
+                          alertDialog.showSuccess('Link Copiado!', 'URL pública copiada para compartilhar com o cliente.');
+                        }}
+                        className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-xs"
+                        title="Copiar link público"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </button>
+                    </div>
                     <button
                       type="button"
-                      aria-haspopup="menu"
-                      aria-expanded={openTrackingMenuId === tracking.id}
-                      aria-label="Abrir ações da obra"
-                      onClick={() => setOpenTrackingMenuId((prev) => (prev === tracking.id ? null : tracking.id))}
-                      className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-600 hover:text-[#1D3140] hover:bg-slate-100 transition-colors"
+                      onClick={() => handleDeleteWorkTracking(tracking)}
+                      className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 text-xs font-medium"
+                      title="Excluir obra permanentemente"
                     >
-                      <MoreHorizontal className="w-4 h-4" />
+                      <Trash2 className="w-3 h-3" />
+                      Excluir obra
                     </button>
-                    {openTrackingMenuId === tracking.id && (
-                      <div
-                        role="menu"
-                        className="absolute top-11 right-0 z-20 min-w-[180px] rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
-                      >
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => {
-                            const publicUrl = `${window.location.origin}/obra/${tracking.id}`;
-                            window.open(publicUrl, '_blank');
-                            setOpenTrackingMenuId(null);
-                          }}
-                          className="w-full inline-flex items-center gap-2 px-3 py-2 text-sm text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
-                          title="Abrir página pública"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                          Ver Público
-                        </button>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => {
-                            const publicUrl = `${window.location.origin}/obra/${tracking.id}`;
-                            navigator.clipboard.writeText(publicUrl);
-                            alertDialog.showSuccess('Link Copiado!', 'URL pública copiada para compartilhar com o cliente.');
-                            setOpenTrackingMenuId(null);
-                          }}
-                          className="w-full inline-flex items-center gap-2 px-3 py-2 text-sm text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
-                          title="Copiar link público"
-                        >
-                          <Copy className="w-4 h-4" />
-                          Copiar link público
-                        </button>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => {
-                            handleDeleteWorkTracking(tracking);
-                            setOpenTrackingMenuId(null);
-                          }}
-                          className="w-full inline-flex items-center gap-2 px-3 py-2 text-sm text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                          title="Excluir obra permanentemente"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Excluir
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -1745,23 +1686,6 @@ export function EngineerPortal() {
 
   const renderTrackingDetail = () => {
     if (!activeTracking) return null;
-    const mtInstalled = Math.round((activeTracking.mt_extension_km ?? 0) * 1000);
-    const btInstalled = Math.round((activeTracking.bt_extension_km ?? 0) * 1000);
-    const polesInstalled = activeTracking.poles_installed ?? 0;
-    const equipmentInstalled = activeTracking.equipment_installed ?? 0;
-    const lightingInstalled = activeTracking.public_lighting_installed ?? 0;
-
-    const mtGoal = activeTracking.planned_mt_meters ?? 0;
-    const btGoal = activeTracking.planned_bt_meters ?? 0;
-    const polesGoal = activeTracking.planned_poles ?? 0;
-    const equipmentGoal = activeTracking.planned_equipment ?? 0;
-    const lightingGoal = activeTracking.planned_public_lighting ?? 0;
-
-    const mtProgress = mtGoal > 0 ? Math.min(100, Math.round((mtInstalled / mtGoal) * 100)) : 0;
-    const btProgress = btGoal > 0 ? Math.min(100, Math.round((btInstalled / btGoal) * 100)) : 0;
-    const polesProgress = polesGoal > 0 ? Math.min(100, Math.round((polesInstalled / polesGoal) * 100)) : 0;
-    const equipmentProgress = equipmentGoal > 0 ? Math.min(100, Math.round((equipmentInstalled / equipmentGoal) * 100)) : 0;
-    const lightingProgress = lightingGoal > 0 ? Math.min(100, Math.round((lightingInstalled / lightingGoal) * 100)) : 0;
 
     return (
       <div className="space-y-6">
@@ -1771,9 +1695,6 @@ export function EngineerPortal() {
             <p className="text-gray-600 mt-1">
               Cliente: {activeTracking.budget_data.client_name} • {activeTracking.budget_data.city}
             </p>
-            {isLoadingDetails && (
-              <p className="text-xs text-gray-500 mt-1">Carregando postes e conexoes da obra...</p>
-            )}
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -1811,7 +1732,7 @@ export function EngineerPortal() {
         </div>
 
         {/* Abas de Navegação */}
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-lg xl:-mx-4 2xl:-mx-8">
+        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-lg">
           <div className="border-b border-gray-100">
             <nav className="flex">
               <button
@@ -1857,20 +1778,17 @@ export function EngineerPortal() {
           <div className="lg:col-span-2 space-y-6">
             {/* Resumo MT / BT / Postes / Equipamento / Iluminação - ambos instalado e meta editáveis */}
             {activeTracking && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                 {/* REDE MT */}
-                <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Rede MT</p>
-                    <span className="text-xs font-semibold text-[#1D3140]">{mtProgress}%</span>
-                  </div>
-                  <p className="text-xs text-slate-500 mb-2">Instalado vs meta total (m)</p>
-                  <div className="grid grid-cols-2 gap-2">
+                <div className="bg-[#1D3140] text-white rounded-xl px-4 py-3 shadow-md">
+                  <p className="text-xs font-medium text-white/80 uppercase tracking-wide">Rede MT</p>
+                  <p className="text-[10px] text-white/60 mb-1.5">instalado / meta total (m)</p>
+                  <div className="flex items-baseline gap-1 flex-wrap gap-y-1">
                     <input
                       type="number"
                       min={0}
                       step={1}
-                      value={mtInstalled}
+                      value={Math.round((activeTracking.mt_extension_km ?? 0) * 1000)}
                       onChange={(e) => {
                         if (e.target.value === '') return;
                         const v = Math.max(0, Math.floor(Number(e.target.value)));
@@ -1882,8 +1800,9 @@ export function EngineerPortal() {
                         updateTracking(activeTracking.id, (t) => ({ ...t, mt_extension_km: v / 1000, updated_at: new Date().toISOString() }));
                       }}
                       title="Instalado (m)"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#64ABDE]/40"
+                      className="w-14 bg-white/20 text-white rounded px-1 py-0.5 text-sm font-normal border border-white/30 focus:ring-1 focus:ring-white/50"
                     />
+                    <span className="text-white/70 font-normal text-sm">/</span>
                     <input
                       type="number"
                       min={0}
@@ -1900,28 +1819,21 @@ export function EngineerPortal() {
                       }}
                       title="Meta total (m)"
                       placeholder="Meta"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#64ABDE]/40"
+                      className="w-14 bg-white/20 text-white rounded px-1 py-0.5 text-sm font-normal border border-white/30 focus:ring-1 focus:ring-white/50"
                     />
-                  </div>
-                  <div className="mt-3">
-                    <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${mtProgress}%`, backgroundColor: ON_COLORS.blue }} />
-                    </div>
+                    <span className="text-white/70 font-normal text-sm">m</span>
                   </div>
                 </div>
                 {/* REDE BT */}
-                <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Rede BT</p>
-                    <span className="text-xs font-semibold text-[#1D3140]">{btProgress}%</span>
-                  </div>
-                  <p className="text-xs text-slate-500 mb-2">Instalado vs meta total (m)</p>
-                  <div className="grid grid-cols-2 gap-2">
+                <div className="bg-[#1D3140] text-white rounded-xl px-4 py-3 shadow-md">
+                  <p className="text-xs font-medium text-white/80 uppercase tracking-wide">Rede BT</p>
+                  <p className="text-[10px] text-white/60 mb-1.5">instalado / meta total (m)</p>
+                  <div className="flex items-baseline gap-1 flex-wrap gap-y-1">
                     <input
                       type="number"
                       min={0}
                       step={1}
-                      value={btInstalled}
+                      value={Math.round((activeTracking.bt_extension_km ?? 0) * 1000)}
                       onChange={(e) => {
                         if (e.target.value === '') return;
                         const v = Math.max(0, Math.floor(Number(e.target.value)));
@@ -1933,8 +1845,9 @@ export function EngineerPortal() {
                         updateTracking(activeTracking.id, (t) => ({ ...t, bt_extension_km: v / 1000, updated_at: new Date().toISOString() }));
                       }}
                       title="Instalado (m)"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#64ABDE]/40"
+                      className="w-14 bg-white/20 text-white rounded px-1 py-0.5 text-sm font-normal border border-white/30 focus:ring-1 focus:ring-white/50"
                     />
+                    <span className="text-white/70 font-normal text-sm">/</span>
                     <input
                       type="number"
                       min={0}
@@ -1951,28 +1864,21 @@ export function EngineerPortal() {
                       }}
                       title="Meta total (m)"
                       placeholder="Meta"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#64ABDE]/40"
+                      className="w-14 bg-white/20 text-white rounded px-1 py-0.5 text-sm font-normal border border-white/30 focus:ring-1 focus:ring-white/50"
                     />
-                  </div>
-                  <div className="mt-3">
-                    <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${btProgress}%`, backgroundColor: ON_COLORS.blue }} />
-                    </div>
+                    <span className="text-white/70 font-normal text-sm">m</span>
                   </div>
                 </div>
                 {/* POSTES */}
-                <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Postes</p>
-                    <span className="text-xs font-semibold text-[#1D3140]">{polesProgress}%</span>
-                  </div>
-                  <p className="text-xs text-slate-500 mb-2">Instalado vs meta total</p>
-                  <div className="grid grid-cols-2 gap-2">
+                <div className="bg-[#1D3140] text-white rounded-xl px-4 py-3 shadow-md">
+                  <p className="text-xs font-medium text-white/80 uppercase tracking-wide">Postes</p>
+                  <p className="text-[10px] text-white/60 mb-1.5">instalado / meta total</p>
+                  <div className="flex items-baseline gap-1 flex-wrap gap-y-1">
                     <input
                       type="number"
                       min={0}
                       step={1}
-                      value={polesInstalled}
+                      value={activeTracking.poles_installed ?? 0}
                       onChange={(e) => {
                         if (e.target.value === '') return;
                         const v = Math.max(0, Math.floor(Number(e.target.value)));
@@ -1984,8 +1890,9 @@ export function EngineerPortal() {
                         updateTracking(activeTracking.id, (t) => ({ ...t, poles_installed: v, updated_at: new Date().toISOString() }));
                       }}
                       title="Instalado"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#64ABDE]/40"
+                      className="w-12 bg-white/20 text-white rounded px-1 py-0.5 text-sm font-normal border border-white/30 focus:ring-1 focus:ring-white/50"
                     />
+                    <span className="text-white/70 font-normal text-sm">/</span>
                     <input
                       type="number"
                       min={0}
@@ -2002,28 +1909,20 @@ export function EngineerPortal() {
                       }}
                       title="Meta total"
                       placeholder="Meta"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#64ABDE]/40"
+                      className="w-12 bg-white/20 text-white rounded px-1 py-0.5 text-sm font-normal border border-white/30 focus:ring-1 focus:ring-white/50"
                     />
-                  </div>
-                  <div className="mt-3">
-                    <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${polesProgress}%`, backgroundColor: ON_COLORS.blue }} />
-                    </div>
                   </div>
                 </div>
                 {/* EQUIPAMENTO */}
-                <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Equipamento</p>
-                    <span className="text-xs font-semibold text-[#1D3140]">{equipmentProgress}%</span>
-                  </div>
-                  <p className="text-xs text-slate-500 mb-2">Instalado vs meta total</p>
-                  <div className="grid grid-cols-2 gap-2">
+                <div className="bg-[#1D3140] text-white rounded-xl px-4 py-3 shadow-md">
+                  <p className="text-xs font-medium text-white/80 uppercase tracking-wide">Equipamento</p>
+                  <p className="text-[10px] text-white/60 mb-1.5">instalado / meta total</p>
+                  <div className="flex items-baseline gap-1 flex-wrap gap-y-1">
                     <input
                       type="number"
                       min={0}
                       step={1}
-                      value={equipmentInstalled}
+                      value={activeTracking.equipment_installed ?? 0}
                       onChange={(e) => {
                         if (e.target.value === '') return;
                         const v = Math.max(0, Math.floor(Number(e.target.value)));
@@ -2035,8 +1934,9 @@ export function EngineerPortal() {
                         updateTracking(activeTracking.id, (t) => ({ ...t, equipment_installed: v, updated_at: new Date().toISOString() }));
                       }}
                       title="Instalado"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#64ABDE]/40"
+                      className="w-12 bg-white/20 text-white rounded px-1 py-0.5 text-sm font-normal border border-white/30 focus:ring-1 focus:ring-white/50"
                     />
+                    <span className="text-white/70 font-normal text-sm">/</span>
                     <input
                       type="number"
                       min={0}
@@ -2053,28 +1953,20 @@ export function EngineerPortal() {
                       }}
                       title="Meta total"
                       placeholder="Meta"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#64ABDE]/40"
+                      className="w-12 bg-white/20 text-white rounded px-1 py-0.5 text-sm font-normal border border-white/30 focus:ring-1 focus:ring-white/50"
                     />
-                  </div>
-                  <div className="mt-3">
-                    <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${equipmentProgress}%`, backgroundColor: ON_COLORS.blue }} />
-                    </div>
                   </div>
                 </div>
                 {/* ILUM. PÚBLICA */}
-                <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Ilum. Publica</p>
-                    <span className="text-xs font-semibold text-[#1D3140]">{lightingProgress}%</span>
-                  </div>
-                  <p className="text-xs text-slate-500 mb-2">Instalado vs meta total</p>
-                  <div className="grid grid-cols-2 gap-2">
+                <div className="bg-[#1D3140] text-white rounded-xl px-4 py-3 shadow-md">
+                  <p className="text-xs font-medium text-white/80 uppercase tracking-wide">Ilum. pública</p>
+                  <p className="text-[10px] text-white/60 mb-1.5">instalado / meta total</p>
+                  <div className="flex items-baseline gap-1 flex-wrap gap-y-1">
                     <input
                       type="number"
                       min={0}
                       step={1}
-                      value={lightingInstalled}
+                      value={activeTracking.public_lighting_installed ?? 0}
                       onChange={(e) => {
                         if (e.target.value === '') return;
                         const v = Math.max(0, Math.floor(Number(e.target.value)));
@@ -2086,8 +1978,9 @@ export function EngineerPortal() {
                         updateTracking(activeTracking.id, (t) => ({ ...t, public_lighting_installed: v, updated_at: new Date().toISOString() }));
                       }}
                       title="Instalado"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#64ABDE]/40"
+                      className="w-12 bg-white/20 text-white rounded px-1 py-0.5 text-sm font-normal border border-white/30 focus:ring-1 focus:ring-white/50"
                     />
+                    <span className="text-white/70 font-normal text-sm">/</span>
                     <input
                       type="number"
                       min={0}
@@ -2104,13 +1997,8 @@ export function EngineerPortal() {
                       }}
                       title="Meta total"
                       placeholder="Meta"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#64ABDE]/40"
+                      className="w-12 bg-white/20 text-white rounded px-1 py-0.5 text-sm font-normal border border-white/30 focus:ring-1 focus:ring-white/50"
                     />
-                  </div>
-                  <div className="mt-3">
-                    <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${lightingProgress}%`, backgroundColor: ON_COLORS.blue }} />
-                    </div>
                   </div>
                 </div>
               </div>
@@ -2229,7 +2117,7 @@ export function EngineerPortal() {
                 }}
               />
               <p className="text-xs text-gray-500 mt-2 px-1">
-                Clique direito no mapa para adicionar poste; clique direito no ícone para excluir poste; clique direito na linha de rede para excluir trecho. Use Rede Azul/Verde e clique em dois postes para criar arcos.
+                Clique direito no mapa para adicionar poste; clique direito no ícone do poste para excluir. Use os botões Rede Azul/Rede Verde e clique em dois postes para criar arcos de rede.
               </p>
             </div>
 
@@ -2270,22 +2158,16 @@ export function EngineerPortal() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Status da Obra</label>
-                <Select
+                <select 
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
                   value={activeTracking.status}
-                  onValueChange={(value) =>
-                    updateTracking(activeTracking.id, (t) => ({ ...t, status: value as WorkTracking['status'] }))
-                  }
+                  onChange={(e) => updateTracking(activeTracking.id, (t) => ({...t, status: e.target.value as WorkTracking['status']}))}
                 >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Planejado">Planejado</SelectItem>
-                    <SelectItem value="Em Andamento">Em Andamento</SelectItem>
-                    <SelectItem value="Pausado">Pausado</SelectItem>
-                    <SelectItem value="Concluído">Concluído</SelectItem>
-                  </SelectContent>
-                </Select>
+                  <option value="Planejado">Planejado</option>
+                  <option value="Em Andamento">Em Andamento</option>
+                  <option value="Pausado">Pausado</option>
+                  <option value="Concluído">Concluído</option>
+                </select>
               </div>
 
               <div>
@@ -2310,26 +2192,22 @@ export function EngineerPortal() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Qualidade PDF</label>
-                <Select
-                  value={String(pdfRenderVersion)}
-                  onValueChange={(value) => {
-                    const newVersion = Number(value) as 1 | 2;
+                <select
+                  value={pdfRenderVersion}
+                  onChange={(e) => {
+                    const newVersion = Number(e.target.value) as 1 | 2;
                     setPdfRenderVersion(newVersion);
                     updateTracking(activeTracking.id, (t) => ({
-                      ...t,
+                      ...t, 
                       render_version: newVersion,
                       updated_at: new Date().toISOString()
                     }));
                   }}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
                 >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">Padrão (Legado)</SelectItem>
-                    <SelectItem value="2">Alta Resolução</SelectItem>
-                  </SelectContent>
-                </Select>
+                  <option value={1}>Padrão (Legado)</option>
+                  <option value={2}>Alta Resolução</option>
+                </select>
               </div>
 
               {/* Logo da empresa - aparece na página do cliente */}
@@ -2780,7 +2658,7 @@ export function EngineerPortal() {
         </div>
       </header>
 
-      <div className={`${currentView === 'tracking-detail' ? 'max-w-[1600px]' : 'max-w-7xl'} mx-auto px-4 sm:px-6 lg:px-8 py-8`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {currentView === 'dashboard' && renderDashboard()}
         {currentView === 'select-budget' && renderSelectBudget()}
         {currentView === 'tracking-detail' && renderTrackingDetail()}

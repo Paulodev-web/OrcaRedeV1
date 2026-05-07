@@ -110,12 +110,11 @@ export function CanvasVisual({
   const handleCreateConnection = (fromPostId: string, toPostId: string) => {
     if (!onAddConnection || fromPostId === toPostId) return;
     
-    // Verificar se a conexão já existe (mesmo par E mesmo tipo)
+    // Verificar se a conexão já existe
     const exists = postConnections.some(
       (conn) => 
-        (conn.connection_type ?? 'blue') === connectionType &&
-        ((conn.from_post_id === fromPostId && conn.to_post_id === toPostId) ||
-         (conn.from_post_id === toPostId && conn.to_post_id === fromPostId))
+        (conn.from_post_id === fromPostId && conn.to_post_id === toPostId) ||
+        (conn.from_post_id === toPostId && conn.to_post_id === fromPostId)
     );
     
     if (!exists) {
@@ -441,9 +440,9 @@ export function CanvasVisual({
         <path
           d={pathD}
           stroke="transparent"
-          strokeWidth={28}
+          strokeWidth={18}
           fill="none"
-          style={{ pointerEvents: 'stroke', cursor: onDeleteConnection ? 'pointer' : 'default' }}
+          style={{ pointerEvents: 'stroke' }}
           onContextMenu={(e) => {
             e.preventDefault();
             e.stopPropagation();
