@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
-import { getCurrentUserProfile } from '@/services/people/getCurrentUserProfile';
+import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
 import { getWorkById } from '@/services/works/getWorkById';
 import { getWorkMessages } from '@/services/works/getWorkMessages';
 import { getAttachmentSignedUrls } from '@/services/works/getAttachmentSignedUrls';
@@ -23,7 +23,7 @@ export default async function ChatPage({ params }: ChatPageProps) {
     redirect('/');
   }
 
-  const profile = await getCurrentUserProfile(supabase, userId);
+  const profile = await ensureEngineerProfile(supabase, userId);
   if (!profile || profile.role !== 'engineer') {
     redirect('/');
   }

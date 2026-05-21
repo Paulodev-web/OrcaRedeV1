@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabaseServer';
-import { getCurrentUserProfile } from '@/services/people/getCurrentUserProfile';
+import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
 import { getWorksForEngineer } from '@/services/works/getWorksForEngineer';
 import { getNotificationsForUser } from '@/services/notifications/getNotificationsForUser';
 import { getUnreadCountsForWorks } from '@/services/works/getUnreadCountsForWorks';
@@ -26,7 +26,7 @@ export default async function AndamentoObraPage() {
     redirect('/');
   }
 
-  const profile = await getCurrentUserProfile(supabase, user.id);
+  const profile = await ensureEngineerProfile(supabase, user.id);
   if (!profile || profile.role !== 'engineer') {
     redirect('/');
   }

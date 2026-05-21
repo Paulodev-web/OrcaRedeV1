@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabaseServer';
-import { getCurrentUserProfile } from '@/services/people/getCurrentUserProfile';
+import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
 import { getNotificationsForUser } from '@/services/notifications/getNotificationsForUser';
 import { NotificationsFullList } from './NotificationsFullList';
 
@@ -18,7 +18,7 @@ export default async function NotificacoesPage() {
 
   if (!user) redirect('/');
 
-  const profile = await getCurrentUserProfile(supabase, user.id);
+  const profile = await ensureEngineerProfile(supabase, user.id);
   if (!profile || profile.role !== 'engineer') redirect('/');
 
   const { items, unreadCount } = await getNotificationsForUser(supabase, user.id, { limit: 30 });

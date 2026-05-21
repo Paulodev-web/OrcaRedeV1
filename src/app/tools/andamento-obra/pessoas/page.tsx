@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabaseServer';
-import { getCurrentUserProfile } from '@/services/people/getCurrentUserProfile';
+import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
 import { getManagers } from '@/services/people/getManagers';
 import { getCrewMembers } from '@/services/people/getCrewMembers';
 import { PeoplePage } from '@/components/andamento-obra/people/PeoplePage';
@@ -21,7 +21,7 @@ export default async function PessoasPage() {
     redirect('/');
   }
 
-  const profile = await getCurrentUserProfile(supabase, user.id);
+  const profile = await ensureEngineerProfile(supabase, user.id);
 
   if (!profile || profile.role !== 'engineer') {
     redirect('/');

@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { createSupabaseServerClient } from '@/lib/supabaseServer';
-import { getCurrentUserProfile } from '@/services/people/getCurrentUserProfile';
+import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
 import { getWorkById } from '@/services/works/getWorkById';
 import { getWorkMilestones } from '@/services/works/getWorkMilestones';
 import { getWorkProjectPostsCount } from '@/services/works/getWorkProjectPostsCount';
@@ -27,7 +27,7 @@ export default async function WorkDetailLayout({ children, params }: LayoutProps
   } = await supabase.auth.getUser();
   if (!user) redirect('/');
 
-  const profile = await getCurrentUserProfile(supabase, user.id);
+  const profile = await ensureEngineerProfile(supabase, user.id);
   if (!profile || profile.role !== 'engineer') redirect('/');
 
   const work = await getWorkById(supabase, workId);
