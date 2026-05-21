@@ -318,8 +318,9 @@ export default function ScenarioComparisonTable({
   return (
     <div className="space-y-3">
       <p className="text-xs text-gray-500">
-        Preços normalizados (÷ fator). Clique no preço unitário para o Cenário Ideal; use o lápis para negociar.
-        Clique na linha para detalhes do material.
+        Preços normalizados (÷ fator). Validação principal na aba Cenário Ideal (Ranking); aqui você pode
+        validar como atalho clicando no preço unitário. Destaque azul = fornecedor efetivo (validado ou menor
+        preço sugerido). Use o lápis para negociar. Clique na linha para detalhes do material.
       </p>
       <div className="overflow-x-auto border border-gray-200 rounded-lg">
         <div className="max-h-[600px] overflow-y-auto">

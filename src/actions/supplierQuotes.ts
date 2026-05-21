@@ -1733,6 +1733,64 @@ export async function saveIdealSelectionAction(
   }
 }
 
+export async function bulkSaveIdealSelectionsAction(
+  sessionId: string,
+  rows: IdealSelectionRow[]
+): Promise<ActionResult<{ saved: number }>> {
+  try {
+    if (rows.length === 0) {
+      return { success: true, data: { saved: 0 } };
+    }
+
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const quoteIds = [...new Set(rows.map((r) => r.quote_id))];
+    const { data: quotes, error: quotesError } = await supabase
+      .from('supplier_quotes')
+      .select('id, session_id')
+      .eq('user_id', userId)
+      .in('id', quoteIds);
+
+    if (quotesError) {
+      return { success: false, error: quotesError.message };
+    }
+
+    const quoteById = new Map((quotes ?? []).map((q) => [q.id, q]));
+    for (const row of rows) {
+      const quote = quoteById.get(row.quote_id);
+      if (!quote) {
+        return { success: false, error: 'Uma ou mais cotações não foram encontradas.' };
+      }
+      if (quote.session_id !== sessionId) {
+        return { success: false, error: 'Cotação não pertence a esta sessão.' };
+      }
+    }
+
+    const payload = rows.map((row) => ({
+      session_id: sessionId,
+      material_id: row.material_id,
+      quote_id: row.quote_id,
+      user_id: userId,
+    }));
+
+    const { error } = await supabase.from('scenario_ideal_selections').upsert(payload, {
+      onConflict: 'session_id,material_id,user_id',
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath(`/fornecedores/sessao/${sessionId}/cenarios`);
+    return { success: true, data: { saved: rows.length } };
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : 'Erro ao validar seleções do cenário ideal em lote.';
+    return { success: false, error: message };
+  }
+}
+
 export async function removeIdealSelectionAction(
   sessionId: string,
   materialId: string

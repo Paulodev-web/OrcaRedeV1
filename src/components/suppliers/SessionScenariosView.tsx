@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
   Award,
+  Check,
   ChevronDown,
   Download,
   Lightbulb,
@@ -25,15 +26,22 @@ import {
   calculateScenariosAction,
   updateNegotiatedPriceAction,
   saveIdealSelectionAction,
+  bulkSaveIdealSelectionsAction,
   type ScenariosResult,
   type ScenarioItem,
   type SessionStockInput,
   type IdealSelectionRow,
 } from '@/actions/supplierQuotes';
 import { negotiatedFromNormalized } from '@/lib/supplierPrice';
-import { computeIdealScenario } from '@/lib/scenarioIdealEngine';
+import {
+  buildEffectiveSelectionMap,
+  computeIdealScenario,
+  getEffectiveQuoteId,
+  getBestOfferQuoteId,
+} from '@/lib/scenarioIdealEngine';
 import ScenarioFiltersPanel from './ScenarioFiltersPanel';
 import ScenarioComparisonTable from './ScenarioComparisonTable';
+import ScenarioItemExpandableTable from './ScenarioItemExpandableTable';
 import MaterialDetailModal from './MaterialDetailModal';
 import {
   deriveFilteredScenarios,
@@ -531,31 +539,37 @@ function ScenarioIdealView({
   scenarios,
   idealSelections,
   sessionId,
+  onIdealSelect,
+  onValidateAll,
+  isValidatingAll,
 }: {
   scenarios: ScenariosResult;
   idealSelections: Map<string, string>;
   sessionId: string;
+  onIdealSelect: (materialId: string, quoteId: string) => void;
+  onValidateAll: () => void;
+  isValidatingAll: boolean;
 }) {
   const alertDialog = useAlertDialog();
   const [isExporting, setIsExporting] = useState(false);
+  const items = scenarios.scenarioB.items;
 
   const scenarioATotal = scenarios.scenarioA[0]?.total_normalizado ?? 0;
   const scenarioBTotal = scenarios.scenarioB.total_normalizado;
   const ideal = useMemo(
-    () =>
-      computeIdealScenario(
-        scenarios.scenarioB.items,
-        idealSelections,
-        scenarioATotal,
-        scenarioBTotal
-      ),
-    [scenarios, idealSelections, scenarioATotal, scenarioBTotal]
+    () => computeIdealScenario(items, idealSelections, scenarioATotal, scenarioBTotal),
+    [items, idealSelections, scenarioATotal, scenarioBTotal]
   );
 
-  const activeLines = ideal.lines.filter((l) => l.status !== 'no_demand');
-  const pendingLines = activeLines.filter((l) => l.status === 'pending');
-  const selectedLines = activeLines.filter((l) => l.status === 'selected');
-  const canExport = idealSelections.size > 0;
+  const validatedLines = ideal.lines.filter((l) => l.status === 'validated');
+  const suggestedLines = ideal.lines.filter((l) => l.status === 'suggested');
+  const canExport = items.some((i) => i.net_qty > 0);
+
+  const lineByMaterialId = useMemo(() => {
+    const m = new Map<string, (typeof ideal.lines)[number]>();
+    for (const line of ideal.lines) m.set(line.material_id, line);
+    return m;
+  }, [ideal.lines]);
 
   const runExport = useCallback(async () => {
     setIsExporting(true);
@@ -601,24 +615,53 @@ function ScenarioIdealView({
     if (!canExport || isExporting) return;
     if (ideal.pendingCount > 0) {
       alertDialog.showConfirm(
-        'Materiais pendentes',
-        `Existem ${ideal.pendingCount} materiais sem fornecedor selecionado. Eles não serão incluídos na exportação. Deseja continuar?`,
+        'Materiais sem cotação',
+        `Existem ${ideal.pendingCount} materiais sem oferta disponível. Eles não entrarão na exportação. Deseja continuar?`,
         runExport,
         { confirmText: 'Continuar' }
       );
-    } else {
-      void runExport();
+      return;
     }
-  }, [canExport, isExporting, ideal.pendingCount, alertDialog, runExport]);
+    if (ideal.unvalidatedCount > 0) {
+      alertDialog.showConfirm(
+        'Itens só sugeridos',
+        `${ideal.unvalidatedCount} item(ns) ainda não foram validados explicitamente. A exportação usará o menor preço para esses itens. Deseja continuar?`,
+        runExport,
+        { confirmText: 'Exportar' }
+      );
+      return;
+    }
+    void runExport();
+  }, [
+    canExport,
+    isExporting,
+    ideal.pendingCount,
+    ideal.unvalidatedCount,
+    alertDialog,
+    runExport,
+  ]);
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={onValidateAll}
+          disabled={isValidatingAll || ideal.unvalidatedCount === 0}
+          className="inline-flex items-center gap-2 rounded-lg bg-[#1D3140] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#1D3140]/90 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isValidatingAll ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Check className="h-4 w-4" />
+          )}
+          Validar todos (menor preço)
+        </button>
         <span
           title={
             canExport
-              ? undefined
-              : 'Selecione fornecedores no Cenário Ideal para exportar'
+              ? 'ZIP com um Excel por fornecedor; itens não validados usam menor preço'
+              : 'Nenhum material com necessidade de compra'
           }
           className="inline-flex"
         >
@@ -638,15 +681,26 @@ function ScenarioIdealView({
         </span>
       </div>
 
-      {ideal.pendingCount > 0 && (
+      {ideal.unvalidatedCount > 0 && (
         <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
           <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-amber-800">
             <p className="font-medium">
-              {ideal.pendingCount} material(is) sem fornecedor selecionado
+              {ideal.unvalidatedCount} item(ns) com sugestão automática (menor preço)
             </p>
             <p className="text-amber-600 mt-0.5">
-              Clique no preço unitário na Tabela de Avaliação para definir o Cenário Ideal.
+              Expanda a linha e clique em um fornecedor para validar, ou use &quot;Validar todos&quot;.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {ideal.pendingCount > 0 && (
+        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-red-800">
+            <p className="font-medium">
+              {ideal.pendingCount} material(is) sem cotação para compra
             </p>
           </div>
         </div>
@@ -656,11 +710,15 @@ function ScenarioIdealView({
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
           <p className="text-xs font-semibold uppercase text-blue-700">Total Cenário Ideal</p>
           <p className="text-2xl font-bold text-[#1D3140] mt-1">{formatCurrency(ideal.total)}</p>
-          <p className="text-xs text-gray-500 mt-1">{selectedLines.length} itens selecionados</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {validatedLines.length} validados · {suggestedLines.length} sugeridos
+          </p>
         </div>
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <p className="text-xs font-semibold uppercase text-gray-500">vs. Cenário A (pacote)</p>
-          <p className={`text-xl font-bold mt-1 ${ideal.diffVsA < 0 ? 'text-green-700' : ideal.diffVsA > 0 ? 'text-red-600' : 'text-gray-600'}`}>
+          <p
+            className={`text-xl font-bold mt-1 ${ideal.diffVsA < 0 ? 'text-green-700' : ideal.diffVsA > 0 ? 'text-red-600' : 'text-gray-600'}`}
+          >
             {ideal.diffVsA < 0 ? '−' : ideal.diffVsA > 0 ? '+' : ''}
             {formatCurrency(Math.abs(ideal.diffVsA))}
           </p>
@@ -668,7 +726,9 @@ function ScenarioIdealView({
         </div>
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <p className="text-xs font-semibold uppercase text-gray-500">vs. Cenário B (por item)</p>
-          <p className={`text-xl font-bold mt-1 ${ideal.diffVsB < 0 ? 'text-green-700' : ideal.diffVsB > 0 ? 'text-red-600' : 'text-gray-600'}`}>
+          <p
+            className={`text-xl font-bold mt-1 ${ideal.diffVsB < 0 ? 'text-green-700' : ideal.diffVsB > 0 ? 'text-red-600' : 'text-gray-600'}`}
+          >
             {ideal.diffVsB < 0 ? '−' : ideal.diffVsB > 0 ? '+' : ''}
             {formatCurrency(Math.abs(ideal.diffVsB))}
           </p>
@@ -676,64 +736,43 @@ function ScenarioIdealView({
         </div>
       </div>
 
-      <p className="text-xs text-gray-500">
-        Composição manual: fornecedor escolhido por material. Preços respeitam negociação quando informada.
-      </p>
-      <div className="overflow-x-auto border border-gray-200 rounded-lg max-h-[500px]">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50 sticky top-0 z-10">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase bg-gray-50">Material</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase w-20 bg-gray-50">Compra</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-40 bg-gray-50">Fornecedor</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase w-32 bg-gray-50">Preço norm.</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase w-32 bg-gray-50">Total</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-100">
-            {activeLines.map((line) => (
-              <tr
-                key={line.material_id}
-                className={line.status === 'pending' ? 'bg-amber-50' : ''}
-              >
-                <td className="px-4 py-3">
-                  <p className="text-sm font-medium text-[#1D3140]">{line.material_name}</p>
-                  <p className="text-xs text-gray-400 font-mono">{line.material_code}</p>
-                </td>
-                <td className="px-4 py-3 text-right text-sm text-gray-600">{formatNumber(line.net_qty)}</td>
-                <td className="px-4 py-3">
-                  {line.status === 'pending' ? (
-                    <span className="text-xs font-medium text-amber-700">Pendente — selecione na tabela</span>
-                  ) : (
-                    <span className="text-sm text-[#1D3140]">{line.supplier_name}</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-right text-sm text-gray-700">
-                  {line.status === 'selected' ? formatCurrency(line.preco_normalizado) : '—'}
-                </td>
-                <td className="px-4 py-3 text-right text-sm font-semibold text-[#64ABDE]">
-                  {line.status === 'selected' ? formatCurrency(line.line_total) : '—'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot className="bg-gray-50 sticky bottom-0 border-t-2 border-gray-200">
-            <tr>
-              <td colSpan={4} className="px-4 py-3 text-sm font-semibold text-gray-700 text-right">
-                Total Cenário Ideal
-                {pendingLines.length > 0 && (
-                  <span className="block text-xs font-normal text-amber-600">
-                    ({pendingLines.length} pendente(s) não incluídos)
-                  </span>
-                )}
-              </td>
-              <td className="px-4 py-3 text-right text-sm font-bold text-[#1D3140]">
-                {formatCurrency(ideal.total)}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+      <ScenarioItemExpandableTable
+        items={items}
+        description="Menor preço por item como sugestão. Expanda a linha para comparar fornecedores e validar a compra."
+        supplierColumnLabel="Fornecedor"
+        totalLabel="Total Cenário Ideal:"
+        totalValue={ideal.total}
+        getRowSummary={(item) => {
+          const line = lineByMaterialId.get(item.material_id);
+          return {
+            supplierLabel: line?.supplier_name ?? '',
+            unitPrice: line?.preco_normalizado ?? 0,
+            lineTotal: line?.line_total ?? 0,
+          };
+        }}
+        renderRowBadge={(item) => {
+          const line = lineByMaterialId.get(item.material_id);
+          if (!line || line.status === 'pending' || line.status === 'no_demand') return null;
+          if (line.status === 'validated') {
+            return (
+              <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-green-700 bg-green-100 border border-green-200 px-1.5 py-0.5 rounded-full">
+                <Check className="h-3 w-3" />
+                Validado
+              </span>
+            );
+          }
+          return (
+            <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded-full">
+              Sugestão — clique para validar
+            </span>
+          );
+        }}
+        highlightQuoteId={(materialId) => {
+          const item = items.find((i) => i.material_id === materialId);
+          return item ? getEffectiveQuoteId(item, idealSelections) : null;
+        }}
+        onOfferSelect={onIdealSelect}
+      />
 
       <AlertDialog {...alertDialog.dialogProps} />
     </div>
@@ -744,20 +783,26 @@ function RankingView({
   scenarios,
   idealSelections,
   sessionId,
+  onIdealSelect,
+  onValidateAll,
+  isValidatingAll,
 }: {
   scenarios: ScenariosResult;
   idealSelections: Map<string, string>;
   sessionId: string;
+  onIdealSelect: (materialId: string, quoteId: string) => void;
+  onValidateAll: () => void;
+  isValidatingAll: boolean;
 }) {
   const [rankingTab, setRankingTab] = useState<'A' | 'B' | 'Ideal'>('A');
-  const idealPending = useMemo(() => {
+  const idealUnvalidated = useMemo(() => {
     const result = computeIdealScenario(
       scenarios.scenarioB.items,
       idealSelections,
       scenarios.scenarioA[0]?.total_normalizado ?? 0,
       scenarios.scenarioB.total_normalizado
     );
-    return result.pendingCount;
+    return result.unvalidatedCount;
   }, [scenarios, idealSelections]);
 
   return (
@@ -780,9 +825,9 @@ function RankingView({
         <button type="button" onClick={() => setRankingTab('Ideal')} className={tabBtnClass(rankingTab === 'Ideal')}>
           <Target className="h-4 w-4" />
           Cenário Ideal
-          {idealPending > 0 && (
+          {idealUnvalidated > 0 && (
             <span className="ml-1 inline-flex items-center px-1.5 py-0.5 bg-amber-100 text-amber-800 text-xs rounded-full border border-amber-200">
-              {idealPending} pend.
+              {idealUnvalidated} sug.
             </span>
           )}
         </button>
@@ -795,6 +840,9 @@ function RankingView({
             scenarios={scenarios}
             idealSelections={idealSelections}
             sessionId={sessionId}
+            onIdealSelect={onIdealSelect}
+            onValidateAll={onValidateAll}
+            isValidatingAll={isValidatingAll}
           />
         )}
       </div>
@@ -878,114 +926,24 @@ function ScenarioAView({ scenarios }: { scenarios: ScenariosResult }) {
 
 function ScenarioBView({ scenarios }: { scenarios: ScenariosResult & { filteredItems?: ScenarioItem[] } }) {
   const items = scenarios.filteredItems ?? scenarios.scenarioB.items;
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const activeItems = items.filter((i) => i.net_qty > 0);
-
-  if (activeItems.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-32 text-sm text-gray-400">
-        <p>Todos os materiais estão cobertos pelo estoque.</p>
-        <p className="text-xs mt-1">Ou nenhum item corresponde aos filtros ativos.</p>
-      </div>
-    );
-  }
 
   return (
-    <div className="space-y-4">
-      <p className="text-xs text-gray-500">
-        Fracionar a compra: cada item adquirido do fornecedor com menor preço normalizado. Apenas itens com necessidade líquida &gt; 0.
-      </p>
-      <div className="overflow-x-auto border border-gray-200 rounded-lg max-h-[500px]">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50 sticky top-0 z-10">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">Material</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-20 bg-gray-50">Compra</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36 bg-gray-50">Melhor fornecedor</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32 bg-gray-50">Preço unit. norm.</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32 bg-gray-50">Total</th>
-              <th className="px-4 py-3 w-8 bg-gray-50" />
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-100">
-            {activeItems.map((item: ScenarioItem, idx) => {
-              const isExpanded = expandedId === item.material_id;
-              const hasMultiple = item.all_offers.length > 1;
-              const isEvenRow = idx % 2 === 0;
-              return (
-                <React.Fragment key={item.material_id}>
-                  <tr className={`transition-colors ${isExpanded ? 'bg-[#64ABDE]/10' : isEvenRow ? 'bg-white hover:bg-gray-50' : 'bg-gray-50/50 hover:bg-gray-100'}`}>
-                    <td className="px-4 py-3">
-                      <p className="text-sm font-medium text-[#1D3140]">{item.material_name}</p>
-                      <p className="text-xs text-gray-400"><span className="font-mono">{item.material_code}</span></p>
-                    </td>
-                    <td className="px-4 py-3 text-right text-sm text-gray-600">{formatNumber(item.net_qty)}</td>
-                    <td className="px-4 py-3">
-                      {item.best_supplier && (
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-full">
-                          <Award className="h-3 w-3" />{item.best_supplier}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right"><p className="text-sm font-bold text-[#1D3140]">{formatCurrency(item.best_price_normalized)}</p></td>
-                    <td className="px-4 py-3 text-right"><p className="text-sm font-semibold text-[#64ABDE]">{formatCurrency(item.best_total)}</p></td>
-                    <td className="px-4 py-3 text-center">
-                      {hasMultiple && (
-                        <button type="button" onClick={() => setExpandedId(isExpanded ? null : item.material_id)} className="p-1 text-gray-400 hover:text-gray-600 rounded transition-colors">
-                          <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                  {isExpanded && (
-                    <tr>
-                      <td colSpan={6} className="bg-[#64ABDE]/10 px-4 pb-4 pt-0">
-                        <div className="mt-2 overflow-hidden rounded-lg border border-[#64ABDE]/30">
-                          <table className="min-w-full divide-y divide-[#64ABDE]/20">
-                            <thead className="bg-[#64ABDE]/15">
-                              <tr>
-                                <th className="px-3 py-2 text-left text-xs font-medium uppercase text-[#1D3140]">Fornecedor</th>
-                                <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">Preço Unit.</th>
-                                <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">Fator</th>
-                                <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">Normalizado</th>
-                                <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">Total</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[#64ABDE]/10 bg-white">
-                              {item.all_offers.slice().sort((a, b) => a.preco_normalizado - b.preco_normalizado).map((offer, i) => (
-                                <tr key={offer.quote_id} className={i === 0 ? 'bg-green-50' : ''}>
-                                  <td className="px-3 py-2 text-xs font-medium text-gray-800">
-                                    {i === 0 && <Award className="inline h-3 w-3 text-green-600 mr-1" />}
-                                    {offer.supplier_name}
-                                  </td>
-                                  <td className="px-3 py-2 text-xs text-right text-gray-600">{formatCurrency(offer.preco_unit)}</td>
-                                  <td className="px-3 py-2 text-xs text-right text-gray-400">{formatNumber(offer.conversion_factor)}×</td>
-                                  <td className={`px-3 py-2 text-xs text-right font-semibold ${i === 0 ? 'text-green-700' : 'text-gray-700'}`}>
-                                    {formatCurrency(offer.preco_normalizado)}
-                                  </td>
-                                  <td className="px-3 py-2 text-xs text-right text-gray-700">{formatCurrency(offer.total_normalizado)}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </tbody>
-          <tfoot className="bg-gray-50 sticky bottom-0">
-            <tr className="border-t-2 border-gray-200">
-              <td colSpan={4} className="px-4 py-3 text-sm font-semibold text-gray-700 text-right">Total Cenário B:</td>
-              <td className="px-4 py-3 text-right text-sm font-bold text-[#1D3140]">{formatCurrency(scenarios.scenarioB.total_normalizado)}</td>
-              <td />
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    </div>
+    <ScenarioItemExpandableTable
+      items={items}
+      description="Fracionar a compra: cada item adquirido do fornecedor com menor preço normalizado. Apenas itens com necessidade líquida > 0."
+      supplierColumnLabel="Melhor fornecedor"
+      totalLabel="Total Cenário B:"
+      totalValue={scenarios.scenarioB.total_normalizado}
+      getRowSummary={(item) => ({
+        supplierLabel: item.best_supplier,
+        unitPrice: item.best_price_normalized,
+        lineTotal: item.best_total,
+      })}
+      highlightQuoteId={(materialId) => {
+        const item = items.find((i) => i.material_id === materialId);
+        return item ? getBestOfferQuoteId(item) : null;
+      }}
+    />
   );
 }
 
@@ -1004,6 +962,7 @@ export default function SessionScenariosView({
   const [scenarios, setScenarios] = useState(initialScenarios);
   const [activeTab, setActiveTab] = useState<'tabelona' | 'ranking'>('tabelona');
   const [isPending, startTransition] = useTransition();
+  const [isValidatingAll, startValidateAll] = useTransition();
   const [isSavingPrice, setIsSavingPrice] = useState(false);
 
   const [idealSelections, setIdealSelections] = useState<Map<string, string>>(() => {
@@ -1179,6 +1138,37 @@ export default function SessionScenariosView({
     [idealSelections, sessionId]
   );
 
+  const effectiveIdealSelections = useMemo(
+    () => buildEffectiveSelectionMap(scenarios.scenarioB.items, idealSelections),
+    [scenarios.scenarioB.items, idealSelections]
+  );
+
+  const handleValidateAll = useCallback(() => {
+    const rows: IdealSelectionRow[] = [];
+    for (const item of scenarios.scenarioB.items) {
+      if (item.net_qty <= 0) continue;
+      const quoteId = getBestOfferQuoteId(item);
+      if (quoteId) {
+        rows.push({ material_id: item.material_id, quote_id: quoteId });
+      }
+    }
+    if (rows.length === 0) return;
+
+    const previous = new Map(idealSelections);
+    setIdealSelections((prev) => {
+      const next = new Map(prev);
+      for (const row of rows) next.set(row.material_id, row.quote_id);
+      return next;
+    });
+
+    startValidateAll(async () => {
+      const res = await bulkSaveIdealSelectionsAction(sessionId, rows);
+      if (!res.success) {
+        setIdealSelections(previous);
+      }
+    });
+  }, [scenarios.scenarioB.items, idealSelections, sessionId]);
+
   const pendingQuotes = quotes.filter((q) => q.status !== 'conciliado');
 
   return (
@@ -1234,7 +1224,7 @@ export default function SessionScenariosView({
               quotes={quotesWithOffers}
               enabledQuoteIds={effectiveFilterState.enabledQuoteIds}
               onMaterialClick={handleMaterialClick}
-              idealSelections={idealSelections}
+              idealSelections={effectiveIdealSelections}
               onIdealSelect={handleIdealSelect}
               onNegotiatedPriceSave={handleNegotiatedPriceSave}
               isSavingPrice={isSavingPrice}
@@ -1248,6 +1238,9 @@ export default function SessionScenariosView({
               scenarios={scenarios}
               idealSelections={idealSelections}
               sessionId={sessionId}
+              onIdealSelect={handleIdealSelect}
+              onValidateAll={handleValidateAll}
+              isValidatingAll={isValidatingAll}
             />
           )}
         </div>

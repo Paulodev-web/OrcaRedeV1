@@ -7,7 +7,11 @@ import { getQuotationSessionByIdRead } from '@/lib/quotationSessionReads';
 import { createSupabaseServerClient } from '@/lib/supabaseServer';
 import { slugifyFileName, formatDateForZip } from '@/lib/slugify';
 import { buildSupplierWorkbook, workbookToBuffer } from '@/services/excel/buildSupplierWorkbook';
-import { groupIdealExportBySupplier } from '@/services/scenarios/groupIdealExportBySupplier';
+import {
+  buildSelectionMap,
+  countPendingMaterials,
+  groupIdealExportBySupplier,
+} from '@/services/scenarios/groupIdealExportBySupplier';
 import {
   ExportIdealError,
   type IdealExportSessionContext,
@@ -39,9 +43,20 @@ export async function buildIdealExportZip(
   }
 
   const selections = selectionsRes.data;
-  if (selections.length === 0) {
+  const items = scenariosRes.data.scenarioB.items;
+  const hasPurchaseDemand = items.some((i) => i.net_qty > 0);
+  if (!hasPurchaseDemand) {
     throw new ExportIdealError(
-      'Selecione fornecedores no Cenário Ideal para exportar.',
+      'Nenhum material com necessidade de compra para exportar.',
+      400
+    );
+  }
+
+  const validatedMap = buildSelectionMap(selections);
+  const pending = countPendingMaterials(items, validatedMap);
+  if (pending > 0) {
+    throw new ExportIdealError(
+      `${pending} material(is) sem cotação disponível para exportação.`,
       400
     );
   }

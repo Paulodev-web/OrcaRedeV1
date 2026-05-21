@@ -1,4 +1,8 @@
 import type { IdealSelectionRow, ScenariosResult } from '@/actions/supplierQuotes';
+import {
+  buildEffectiveSelectionMap,
+  getBestOfferQuoteId,
+} from '@/lib/scenarioIdealEngine';
 import { originalNormalizedPrice } from '@/lib/supplierPrice';
 import { slugifyFileName, uniqueSlug } from '@/lib/slugify';
 import type { IdealExportRow, SupplierExportData } from '@/types/exportIdeal';
@@ -11,36 +15,36 @@ export function buildSelectionMap(selections: IdealSelectionRow[]): Map<string, 
   return map;
 }
 
-/** Materiais com net_qty > 0 sem seleção no Cenário Ideal. */
+/** Materiais com net_qty > 0 sem oferta resolvível (nem validado nem menor preço). */
 export function countPendingMaterials(
   items: ScenariosResult['scenarioB']['items'],
-  selectionMap: Map<string, string>
+  validatedMap: Map<string, string>
 ): number {
+  const effective = buildEffectiveSelectionMap(items, validatedMap);
   let count = 0;
   for (const item of items) {
-    if (item.net_qty > 0 && !selectionMap.has(item.material_id)) {
-      count += 1;
-    }
+    if (item.net_qty > 0 && !effective.has(item.material_id)) count += 1;
   }
   return count;
 }
 
 /**
- * Agrupa linhas de exportação por fornecedor selecionado no Cenário Ideal.
- * Diferença (R$): originalNormalized - preco_normalizado.
- * Positivo = desconto; negativo = preço subiu em relação ao original.
+ * Agrupa linhas de exportação por fornecedor do Cenário Ideal.
+ * Usa seleção validada; se ausente, menor preço normalizado (Cenário B).
  */
 export function groupIdealExportBySupplier(
   scenarios: ScenariosResult,
   selections: IdealSelectionRow[]
 ): SupplierExportData[] {
-  const selectionMap = buildSelectionMap(selections);
+  const validatedMap = buildSelectionMap(selections);
+  const effectiveMap = buildEffectiveSelectionMap(scenarios.scenarioB.items, validatedMap);
   const groups = new Map<string, IdealExportRow[]>();
 
   for (const item of scenarios.scenarioB.items) {
     if (item.net_qty <= 0) continue;
 
-    const quoteId = selectionMap.get(item.material_id);
+    const quoteId =
+      effectiveMap.get(item.material_id) ?? getBestOfferQuoteId(item);
     if (!quoteId) continue;
 
     const offer = item.all_offers.find((o) => o.quote_id === quoteId);
