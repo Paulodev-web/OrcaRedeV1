@@ -138,17 +138,18 @@ export default function NewQuotationSessionModal({
                 <SelectValue placeholder="Escopo" />
               </SelectTrigger>
               <SelectContent>
-                <div
-                  className="sticky top-0 z-10 border-b border-gray-200/80 bg-white/95 px-2 pb-2 pt-1 backdrop-blur-sm"
-                  onPointerDown={(e) => e.preventDefault()}
-                >
+                <div className="sticky top-0 z-10 border-b border-gray-200/80 bg-white/95 px-2 pb-2 pt-1 backdrop-blur-sm">
                   <div className="relative">
                     <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
                     <input
-                      type="search"
+                      type="text"
                       value={scopeSearch}
                       onChange={(e) => setScopeSearch(e.target.value)}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
                       onKeyDown={(e) => e.stopPropagation()}
+                      onKeyUp={(e) => e.stopPropagation()}
+                      autoComplete="off"
                       placeholder="Buscar orçamento por nome..."
                       className="w-full rounded-md border border-gray-200 bg-white py-1.5 pl-8 pr-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
                       aria-label="Buscar orçamento por nome"
