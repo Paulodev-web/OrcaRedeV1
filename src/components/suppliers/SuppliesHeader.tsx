@@ -1,7 +1,15 @@
 import Link from 'next/link';
-import { Building2, ChevronRight, GitMerge, LayoutGrid, Package, BarChart3 } from 'lucide-react';
+import {
+  Building2,
+  ChevronRight,
+  GitMerge,
+  LayoutGrid,
+  Package,
+  BarChart3,
+  Users,
+} from 'lucide-react';
 
-type HeaderStep = 'cotacoes' | 'conciliacao' | 'cenarios';
+type HeaderStep = 'fornecedores' | 'cotacoes' | 'conciliacao' | 'cenarios';
 
 interface SuppliesHeaderProps {
   sessionId?: string;
@@ -29,8 +37,9 @@ export default function SuppliesHeader({
   activeStep,
   hasBudget,
   title = 'Suprimentos e Cotações',
-  description = 'Navegue entre cotações, conciliação e cenários do módulo de suprimentos.',
+  description = 'Cadastre fornecedores, importe cotações, concilie materiais e compare cenários.',
 }: SuppliesHeaderProps) {
+  const fornecedoresHref = '/fornecedores/cadastro';
   const cotacoesHref = sessionId ? `/fornecedores/sessao/${sessionId}` : '/fornecedores';
   const conciliacaoHref = sessionId ? `/fornecedores/sessao/${sessionId}/conciliacao` : '';
   const cenariosHref = sessionId ? `/fornecedores/sessao/${sessionId}/cenarios` : '';
@@ -66,6 +75,10 @@ export default function SuppliesHeader({
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
+        <Link href={fornecedoresHref} className={stepClass(activeStep === 'fornecedores')}>
+          <Users className="h-3.5 w-3.5" />
+          Fornecedores
+        </Link>
         <Link href={cotacoesHref} className={stepClass(activeStep === 'cotacoes')}>
           <Package className="h-3.5 w-3.5" />
           Cotações

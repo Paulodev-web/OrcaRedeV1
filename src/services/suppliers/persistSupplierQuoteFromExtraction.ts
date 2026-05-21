@@ -1,11 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { SupplierExtractItem } from '@/types/supplierExtract';
+import { resolveSupplierForQuote } from '@/services/suppliers/resolveSupplierForQuote';
 
 export interface PersistQuoteParams {
   userId: string;
   budgetId: string | null;
   sessionId: string | null;
-  supplierName: string;
+  supplierId: string;
   pdfPath: string;
   observacoesGerais: string;
   items: SupplierExtractItem[];
@@ -15,12 +16,18 @@ export async function persistSupplierQuoteFromExtraction(
   supabase: SupabaseClient,
   params: PersistQuoteParams
 ): Promise<{ quoteId: string } | { error: string }> {
+  const resolved = await resolveSupplierForQuote(supabase, params.userId, params.supplierId);
+  if ('error' in resolved) {
+    return { error: resolved.error };
+  }
+
   const { data: quote, error: quoteError } = await supabase
     .from('supplier_quotes')
     .insert({
       budget_id: params.budgetId,
       session_id: params.sessionId,
-      supplier_name: params.supplierName.trim(),
+      supplier_id: resolved.id,
+      supplier_name: resolved.name,
       pdf_path: params.pdfPath,
       observacoes_gerais: params.observacoesGerais || null,
       status: 'pendente',

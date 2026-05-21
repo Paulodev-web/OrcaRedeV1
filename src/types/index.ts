@@ -250,11 +250,41 @@ export type SupplierMatchMethod = 'exact_memory' | 'semantic_ai' | 'manual';
 export type SupplierMappingSource = 'manual' | 'ai';
 export type SemanticSuggestionStatus = 'suggested' | 'accepted' | 'rejected';
 
+export interface Supplier {
+  id: string;
+  user_id: string;
+  name: string;
+  cnpj?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  sales_contact?: string | null;
+  payment_terms?: string | null;
+  notes?: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupplierInput {
+  name: string;
+  cnpj?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  sales_contact?: string | null;
+  payment_terms?: string | null;
+  notes?: string | null;
+}
+
+export interface UpdateSupplierInput extends SupplierInput {}
+
 export interface SupplierQuote {
   id: string;
   /** Null em cotações de sessão global (conciliação com catálogo). */
   budget_id: string | null;
   session_id?: string | null;
+  supplier_id?: string | null;
   supplier_name: string;
   pdf_path: string;
   /** Nome customizado do orçamento definido pelo usuário. Se vazio, usar fallback para nome do arquivo PDF. */

@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Loader2, Upload } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import { createExtractionJobAction } from '@/actions/supplierQuotes';
+import SupplierPickerModal from './SupplierPickerModal';
 
 const MAX_FILES = 10;
 
@@ -12,9 +14,13 @@ interface Props {
   onJobsCreated?: () => void;
 }
 
+type PendingUpload = {
+  storagePath: string;
+  fileLabel: string;
+};
+
 /**
  * Chave segura para Storage: apenas [a-z0-9.-] e sufixo .pdf (evita "Invalid key").
- * Ex.: "ORÇAMENTO 01.pdf" → "orcamento-01.pdf"
  */
 export function sanitizeStorageFileName(originalName: string): string {
   const trimmed = originalName.trim();
@@ -40,12 +46,6 @@ export function sanitizeStorageFileName(originalName: string): string {
   return `${base}.pdf`;
 }
 
-function supplierNameFromSanitizedFileName(sanitizedFileName: string): string | null {
-  const base = sanitizedFileName.replace(/\.pdf$/i, '');
-  const spaced = base.replace(/-/g, ' ').replace(/\./g, ' ').replace(/\s+/g, ' ').trim();
-  return spaced || null;
-}
-
 export default function BatchDropzoneManager({
   sessionId,
   disabled,
@@ -55,6 +55,10 @@ export default function BatchDropzoneManager({
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [pendingQueue, setPendingQueue] = useState<PendingUpload[]>([]);
+  const [currentPending, setCurrentPending] = useState<PendingUpload | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const batchHadUploadsRef = useRef(false);
 
   useEffect(() => {
     if (!error) return;
@@ -62,9 +66,70 @@ export default function BatchDropzoneManager({
     return () => clearTimeout(t);
   }, [error]);
 
+  useEffect(() => {
+    if (pickerOpen || currentPending) return;
+    if (pendingQueue.length === 0) {
+      if (batchHadUploadsRef.current) {
+        batchHadUploadsRef.current = false;
+        onJobsCreated?.();
+      }
+      return;
+    }
+    const [next, ...rest] = pendingQueue;
+    setPendingQueue(rest);
+    setCurrentPending(next);
+    setPickerOpen(true);
+  }, [pendingQueue, pickerOpen, currentPending, onJobsCreated]);
+
+  const enqueueJob = useCallback(
+    async (storagePath: string, supplierId: string) => {
+      const res = await createExtractionJobAction({
+        sessionId,
+        filePath: storagePath,
+        supplierId,
+      });
+      if (!res.success) {
+        throw new Error(res.error);
+      }
+      void fetch('/api/process-pdfs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ job_id: res.data.jobId }),
+      }).catch((e) => console.warn('[BatchDropzone] enqueue', e));
+    },
+    [sessionId]
+  );
+
+  const handleSupplierConfirmed = useCallback(
+    async (supplierId: string, applyToRemaining: boolean) => {
+      if (!currentPending) return;
+      setPickerOpen(false);
+
+      const batch = applyToRemaining
+        ? [currentPending, ...pendingQueue]
+        : [currentPending];
+
+      if (applyToRemaining) {
+        setPendingQueue([]);
+      }
+      setCurrentPending(null);
+
+      try {
+        for (const item of batch) {
+          await enqueueJob(item.storagePath, supplierId);
+        }
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : 'Erro ao iniciar processamento.');
+      }
+    },
+    [currentPending, pendingQueue, enqueueJob]
+  );
+
   const processFiles = useCallback(
     async (files: FileList | File[]) => {
-      const list = Array.from(files).filter((f) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+      const list = Array.from(files).filter(
+        (f) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')
+      );
       if (list.length === 0) {
         setError('Selecione apenas arquivos PDF.');
         return;
@@ -88,6 +153,7 @@ export default function BatchDropzoneManager({
       }
 
       const base = `${user.id}/${sessionId}`;
+      const uploaded: PendingUpload[] = [];
 
       try {
         for (const file of list) {
@@ -101,31 +167,14 @@ export default function BatchDropzoneManager({
             throw new Error(upErr?.message ?? 'Falha no upload');
           }
 
-          const supplierName = supplierNameFromSanitizedFileName(sanitized);
-
-          const { data: job, error: jobErr } = await supabase
-            .from('extraction_jobs')
-            .insert({
-              session_id: sessionId,
-              file_path: up.path,
-              supplier_name: supplierName,
-              status: 'pending',
-            })
-            .select('id')
-            .single();
-
-          if (jobErr || !job) {
-            throw new Error(jobErr?.message ?? 'Erro ao criar job');
-          }
-
-          void fetch('/api/process-pdfs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ job_id: job.id }),
-          }).catch((e) => console.warn('[BatchDropzone] enqueue', e));
+          uploaded.push({
+            storagePath: up.path,
+            fileLabel: file.name,
+          });
         }
 
-        onJobsCreated?.();
+        batchHadUploadsRef.current = true;
+        setPendingQueue((prev) => [...prev, ...uploaded]);
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'Erro no upload.');
       } finally {
@@ -133,66 +182,85 @@ export default function BatchDropzoneManager({
         if (inputRef.current) inputRef.current.value = '';
       }
     },
-    [sessionId, onJobsCreated]
+    [sessionId]
   );
 
   return (
-    <div className="rounded-2xl border border-[#64ABDE]/40 bg-white p-6 shadow-md">
-      <h2 className="mb-2 text-base font-semibold text-[#1D3140]">Importar PDFs em lote</h2>
-      <p className="mb-4 text-sm text-slate-500">
-        Até {MAX_FILES} arquivos. O processamento roda em segundo plano; acompanhe o status abaixo.
-      </p>
-
-      {error && (
-        <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-          <AlertTriangle className="h-5 w-5 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      <label
-        className={[
-          'flex min-h-[140px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-8 transition-colors',
-          disabled
-            ? 'cursor-not-allowed border-gray-200 bg-gray-50 opacity-60'
-            : dragOver
-              ? 'border-[#64ABDE] bg-[#64ABDE]/10'
-              : 'border-gray-300 bg-gray-50 hover:border-gray-400',
-        ].join(' ')}
-        onDragOver={(e) => {
-          e.preventDefault();
-          if (!disabled) setDragOver(true);
-        }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragOver(false);
-          if (disabled || uploading) return;
-          void processFiles(e.dataTransfer.files);
-        }}
-      >
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".pdf,application/pdf"
-          multiple
-          className="hidden"
-          disabled={disabled || uploading}
-          onChange={(e) => {
-            const f = e.target.files;
-            if (f?.length) void processFiles(f);
-          }}
-        />
-        {uploading ? (
-          <Loader2 className="h-10 w-10 animate-spin text-[#64ABDE]" />
-        ) : (
-          <Upload className="h-10 w-10 text-gray-400" />
-        )}
-        <p className="mt-2 text-sm font-medium text-gray-700">
-          {disabled ? 'Sessão encerrada' : 'Arraste PDFs ou clique para selecionar'}
+    <>
+      <div className="rounded-2xl border border-[#64ABDE]/40 bg-white p-6 shadow-md">
+        <h2 className="mb-2 text-base font-semibold text-[#1D3140]">Importar PDFs em lote</h2>
+        <p className="mb-4 text-sm text-slate-500">
+          Até {MAX_FILES} arquivos. Após o upload, escolha o fornecedor de cada PDF antes do
+          processamento.
         </p>
-        <p className="text-xs text-gray-400 mt-1">Somente .pdf · máx. {MAX_FILES}</p>
-      </label>
-    </div>
+
+        {error && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            <AlertTriangle className="h-5 w-5 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <label
+          className={[
+            'flex min-h-[140px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-8 transition-colors',
+            disabled
+              ? 'cursor-not-allowed border-gray-200 bg-gray-50 opacity-60'
+              : dragOver
+                ? 'border-[#64ABDE] bg-[#64ABDE]/10'
+                : 'border-gray-300 bg-gray-50 hover:border-gray-400',
+          ].join(' ')}
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (!disabled) setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            if (disabled || uploading) return;
+            void processFiles(e.dataTransfer.files);
+          }}
+        >
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".pdf,application/pdf"
+            multiple
+            className="hidden"
+            disabled={disabled || uploading}
+            onChange={(e) => {
+              const f = e.target.files;
+              if (f?.length) void processFiles(f);
+            }}
+          />
+          {uploading ? (
+            <Loader2 className="h-10 w-10 animate-spin text-[#64ABDE]" />
+          ) : (
+            <Upload className="h-10 w-10 text-gray-400" />
+          )}
+          <p className="mt-2 text-sm font-medium text-gray-700">
+            {disabled ? 'Sessão encerrada' : 'Arraste PDFs ou clique para selecionar'}
+          </p>
+          <p className="mt-1 text-xs text-gray-400">Somente .pdf · máx. {MAX_FILES}</p>
+        </label>
+      </div>
+
+      <SupplierPickerModal
+        open={pickerOpen}
+        onOpenChange={(open) => {
+          if (!open && currentPending) {
+            setPickerOpen(false);
+            setCurrentPending(null);
+            setError('Upload cancelado: é necessário vincular um fornecedor.');
+          } else {
+            setPickerOpen(open);
+          }
+        }}
+        fileLabel={currentPending?.fileLabel}
+        remainingInBatch={pendingQueue.length}
+        onConfirm={(id, applyAll) => void handleSupplierConfirmed(id, applyAll)}
+      />
+    </>
   );
 }

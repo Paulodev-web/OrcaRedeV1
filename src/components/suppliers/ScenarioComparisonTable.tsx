@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { Award, TrendingDown, AlertCircle, Pencil, Loader2 } from 'lucide-react';
 import type { ScenarioItem } from '@/actions/supplierQuotes';
-import { getQuoteLabel } from '@/lib/quoteDisplay';
+import { getSupplierDisplayName } from '@/lib/supplierDisplay';
 import { originalNormalizedPrice } from '@/lib/supplierPrice';
 
 const formatCurrency = (v: number) =>
@@ -274,7 +274,7 @@ export default function ScenarioComparisonTable({
         minPrice,
         minTotal,
         winnerQuoteId,
-        winnerLabel: winnerQ ? getQuoteLabel(winnerQ) : '',
+        winnerLabel: winnerQ ? getSupplierDisplayName(winnerQ) : '',
         priceSpread,
         hasDivergence,
         hasNoCoverage,
@@ -285,7 +285,7 @@ export default function ScenarioComparisonTable({
       const t = totalsMap.get(q.id) ?? { total: 0, covered: 0, wins: 0 };
       return {
         quoteId: q.id,
-        label: getQuoteLabel(q),
+        label: getSupplierDisplayName(q),
         totalValue: t.total,
         itemsCovered: t.covered,
         winsCount: t.wins,
@@ -338,8 +338,8 @@ export default function ScenarioComparisonTable({
                     colSpan={2}
                     className="px-2 py-2 text-center text-xs font-medium text-gray-600 uppercase tracking-wider bg-gray-50 border-l border-gray-200"
                   >
-                    <span className="block truncate max-w-[180px]" title={getQuoteLabel(q)}>
-                      {getQuoteLabel(q)}
+                    <span className="block truncate max-w-[180px]" title={getSupplierDisplayName(q)}>
+                      {getSupplierDisplayName(q)}
                     </span>
                   </th>
                 ))}

@@ -19,8 +19,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { extractSupplierDataAction, type SupplierItem } from '@/actions/supplierIngestion';
+import { getSupplierAction } from '@/actions/suppliers';
 import { createSupplierQuoteAction, runAutoMatchAction } from '@/actions/supplierQuotes';
 import { supabase } from '@/lib/supabaseClient';
+import SupplierPickerModal from '@/components/suppliers/SupplierPickerModal';
 import type { BudgetOption } from '@/types';
 
 const formatCurrency = (value: number) =>
@@ -47,7 +49,9 @@ export default function SupplierPdfImporter({ budgets, embedded = false }: Props
 
   // Campos obrigatórios antes do upload
   const [selectedBudgetId, setSelectedBudgetId] = useState<string>('');
-  const [supplierName, setSupplierName] = useState<string>('');
+  const [supplierId, setSupplierId] = useState<string | null>(null);
+  const [supplierDisplayName, setSupplierDisplayName] = useState<string>('');
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   // Upload e extração
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -66,7 +70,7 @@ export default function SupplierPdfImporter({ budgets, embedded = false }: Props
   // Salvamento final
   const [isSaving, setIsSaving] = useState(false);
 
-  const canUpload = selectedBudgetId !== '' && supplierName.trim() !== '';
+  const canUpload = selectedBudgetId !== '';
   const alertCount = items?.filter((item) => item.alerta).length ?? 0;
   const selectedBudgetName = budgets.find((b) => b.id === selectedBudgetId)?.name;
 
@@ -118,17 +122,16 @@ export default function SupplierPdfImporter({ budgets, embedded = false }: Props
     });
   };
 
-  const handleSaveQuote = async () => {
-    if (!items || !pdfPath || !selectedBudgetId || !supplierName.trim()) return;
+  const persistQuote = async (resolvedSupplierId: string) => {
+    if (!items || !pdfPath || !selectedBudgetId) return;
 
     setIsSaving(true);
     setError(null);
 
     try {
-      // 1. Persiste cotação + itens no banco
       const createResult = await createSupplierQuoteAction({
         budget_id: selectedBudgetId,
-        supplier_name: supplierName.trim(),
+        supplier_id: resolvedSupplierId,
         pdf_path: pdfPath,
         observacoes_gerais: observacoes ?? '',
         items,
@@ -158,12 +161,23 @@ export default function SupplierPdfImporter({ budgets, embedded = false }: Props
     }
   };
 
+  const handleSaveQuote = () => {
+    if (!items || !pdfPath || !selectedBudgetId) return;
+    if (supplierId) {
+      void persistQuote(supplierId);
+      return;
+    }
+    setPickerOpen(true);
+  };
+
   const handleReset = () => {
     setSelectedFile(null);
     setPdfPath(null);
     setItems(null);
     setObservacoes(null);
     setError(null);
+    setSupplierId(null);
+    setSupplierDisplayName('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -231,66 +245,46 @@ export default function SupplierPdfImporter({ budgets, embedded = false }: Props
           <h2 className="text-base font-semibold text-[#1D3140] mb-4">
             1. Contexto da cotação
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Select de orçamento */}
-            <div>
-              <label
-                htmlFor="budget-select"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Orçamento / Obra <span className="text-red-500">*</span>
-              </label>
-              <Select
-                value={selectedBudgetId ? selectedBudgetId : BUDGET_SELECT_EMPTY}
-                onValueChange={(v) =>
-                  setSelectedBudgetId(v === BUDGET_SELECT_EMPTY ? '' : v)
-                }
-                disabled={!!items || isPending}
-              >
-                <SelectTrigger id="budget-select" className="w-full">
-                  <SelectValue placeholder="Selecione o orçamento..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={BUDGET_SELECT_EMPTY}>
-                    Selecione o orçamento...
+          <div>
+            <label
+              htmlFor="budget-select"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Orçamento / Obra <span className="text-red-500">*</span>
+            </label>
+            <Select
+              value={selectedBudgetId ? selectedBudgetId : BUDGET_SELECT_EMPTY}
+              onValueChange={(v) =>
+                setSelectedBudgetId(v === BUDGET_SELECT_EMPTY ? '' : v)
+              }
+              disabled={!!items || isPending}
+            >
+              <SelectTrigger id="budget-select" className="w-full">
+                <SelectValue placeholder="Selecione o orçamento..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={BUDGET_SELECT_EMPTY}>
+                  Selecione o orçamento...
+                </SelectItem>
+                {budgets.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.name}
                   </SelectItem>
-                  {budgets.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>
-                      {b.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Input de nome do fornecedor */}
-            <div>
-              <label
-                htmlFor="supplier-name"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Nome do Fornecedor <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="supplier-name"
-                type="text"
-                value={supplierName}
-                onChange={(e) => setSupplierName(e.target.value)}
-                placeholder="Ex.: Eletromar Distribuidora"
-                disabled={!!items || isPending}
-                className="w-full rounded-lg border border-gray-300 bg-white py-2.5 px-3 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
-              />
-            </div>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="mt-2 text-xs text-gray-500">
+              O fornecedor será escolhido ao salvar a cotação (cadastro em Fornecedores).
+            </p>
           </div>
 
-          {/* Indicador quando já está bloqueado (review mode) */}
-          {items && selectedBudgetName && (
+          {items && selectedBudgetName && supplierDisplayName && (
             <p className="mt-3 text-xs text-gray-500">
               Proposta vinculada a:{' '}
               <span className="font-medium text-gray-700">{selectedBudgetName}</span>
               {' — '}
               Fornecedor:{' '}
-              <span className="font-medium text-gray-700">{supplierName}</span>
+              <span className="font-medium text-gray-700">{supplierDisplayName}</span>
             </p>
           )}
         </div>
@@ -543,6 +537,23 @@ export default function SupplierPdfImporter({ budgets, embedded = false }: Props
           </div>
         </div>
       )}
+
+      <SupplierPickerModal
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        fileLabel={selectedFile?.name}
+        onConfirm={(id, _applyAll) => {
+          void (async () => {
+            const res = await getSupplierAction(id);
+            if (res.success) {
+              setSupplierDisplayName(res.data.name);
+            }
+            setSupplierId(id);
+            setPickerOpen(false);
+            void persistQuote(id);
+          })();
+        }}
+      />
     </div>
   );
 }

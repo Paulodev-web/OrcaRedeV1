@@ -8,7 +8,7 @@ import {
   X,
 } from 'lucide-react';
 import type { ScenarioFilterState, SortOption } from './scenarioFilterEngine';
-import { getQuoteLabel } from '@/lib/quoteDisplay';
+import { getSupplierDisplayName } from '@/lib/supplierDisplay';
 
 interface QuoteInfo {
   id: string;
@@ -166,7 +166,7 @@ export default function ScenarioFiltersPanel({
                     <span
                       className={`w-2 h-2 rounded-full ${isEnabled ? 'bg-[#64ABDE]' : 'bg-gray-300'}`}
                     />
-                    {getQuoteLabel(quote)}
+                    {getSupplierDisplayName(quote)}
                   </button>
                 );
               })}

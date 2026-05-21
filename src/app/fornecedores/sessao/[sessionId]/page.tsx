@@ -4,6 +4,7 @@ import {
   getQuotationSessionByIdCached,
   listExtractionJobsBySessionCached,
 } from '@/lib/quotationSessionReads';
+import { getSupplierDisplayName } from '@/lib/supplierDisplay';
 import SessionWorkspace from '@/components/suppliers/SessionWorkspace';
 import CompleteSessionButton from '@/components/suppliers/CompleteSessionButton';
 import SuppliesHeader from '@/components/suppliers/SuppliesHeader';
@@ -39,7 +40,9 @@ export default async function QuotationSessionPage({ params }: Props) {
     .select(
       `
       id,
+      supplier_id,
       supplier_name,
+      suppliers ( name ),
       status,
       budget_id,
       created_at,
@@ -56,9 +59,12 @@ export default async function QuotationSessionPage({ params }: Props) {
       id: string;
       match_status: string;
     }[];
+    const displayName = getSupplierDisplayName(
+      q as { supplier_name: string; suppliers?: { name: string } | { name: string }[] | null }
+    );
     return {
       id: q.id,
-      supplier_name: q.supplier_name,
+      supplier_name: displayName,
       status: q.status,
       item_count: items.length,
       matched_count: items.filter((i) => i.match_status === 'automatico' || i.match_status === 'manual').length,

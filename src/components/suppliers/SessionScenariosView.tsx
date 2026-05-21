@@ -38,7 +38,7 @@ import {
   type ScenarioFilterState,
   type FilteredScenariosResult,
 } from './scenarioFilterEngine';
-import { getQuoteLabel } from '@/lib/quoteDisplay';
+import { getSupplierDisplayName } from '@/lib/supplierDisplay';
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -415,7 +415,7 @@ function TabelonaView({ scenarios, groupBySupplier = true, quotes }: TabelonaPro
         const q = quoteMap.get(qid);
         return {
           key: qid,
-          label: q ? getQuoteLabel(q) : qid,
+          label: q ? getSupplierDisplayName(q) : qid,
           isSupplier: false,
         };
       });
@@ -1099,7 +1099,7 @@ export default function SessionScenariosView({
             <p className="font-medium">{pendingQuotes.length} cotação(ões) ainda não conciliada(s)</p>
             <p className="text-amber-600 mt-0.5">
               Os cenários usam apenas as cotações conciliadas. Finalize:{' '}
-              {pendingQuotes.map((q) => getQuoteLabel(q)).join(', ')}.
+              {pendingQuotes.map((q) => getSupplierDisplayName(q)).join(', ')}.
             </p>
           </div>
         </div>

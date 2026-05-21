@@ -2,18 +2,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseServiceRoleClient } from '@/lib/supabaseServer';
 import { extractSupplierQuoteWithGemini } from '@/services/ai/geminiSupplierQuote';
 import { persistSupplierQuoteFromExtraction } from '@/services/suppliers/persistSupplierQuoteFromExtraction';
+import { resolveSupplierForQuote } from '@/services/suppliers/resolveSupplierForQuote';
 import { autoMatchQuoteItems } from '@/services/suppliers/autoMatchQuoteItems';
 import { semanticMatch } from '@/services/ai/semanticMatch';
 import type { UnconciliatedItem, SystemMaterial } from '@/types/supplierExtract';
 
 const CONFIDENCE_AUTO_APPLY_THRESHOLD = 80;
-
-function deriveSupplierName(filePath: string, explicit?: string | null): string {
-  const trimmed = explicit?.trim();
-  if (trimmed) return trimmed;
-  const base = filePath.split('/').pop() ?? 'fornecedor';
-  return base.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim() || 'Fornecedor';
-}
 
 async function markJobError(
   supabase: SupabaseClient,
@@ -179,7 +173,7 @@ export async function runExtractionJob(jobId: string): Promise<void> {
         session_id,
         file_path,
         status,
-        supplier_name,
+        supplier_id,
         quote_id,
         quotation_sessions (
           id,
@@ -258,14 +252,28 @@ export async function runExtractionJob(jobId: string): Promise<void> {
       return;
     }
 
-    const supplierName = deriveSupplierName(job.file_path, job.supplier_name);
+    const supplierId = job.supplier_id as string | null;
+    if (!supplierId) {
+      await markJobError(
+        supabase,
+        jobId,
+        'Selecione um fornecedor cadastrado antes de processar o PDF.'
+      );
+      return;
+    }
+
+    const resolved = await resolveSupplierForQuote(supabase, userId, supplierId);
+    if ('error' in resolved) {
+      await markJobError(supabase, jobId, resolved.error);
+      return;
+    }
 
     // === Passo 3: Persistência inicial (status: sem_match) ===
     const persist = await persistSupplierQuoteFromExtraction(supabase, {
       userId,
       budgetId: session.budget_id,
       sessionId: session.id,
-      supplierName,
+      supplierId: resolved.id,
       pdfPath: job.file_path,
       observacoesGerais: gemini.data.observacoesGerais,
       items: gemini.data.items,
@@ -300,7 +308,7 @@ export async function runExtractionJob(jobId: string): Promise<void> {
       supabase,
       userId,
       persist.quoteId,
-      supplierName,
+      resolved.name,
       session.budget_id
     ).catch((err) => {
       console.warn('[runExtractionJob] Nível 2 semantic-match falhou:', err);

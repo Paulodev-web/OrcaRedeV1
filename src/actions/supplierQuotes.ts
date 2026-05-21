@@ -2,8 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
+import { getSupplierDisplayName } from '@/lib/supplierDisplay';
 import { effectiveUnitPrice, normalizedPrice } from '@/lib/supplierPrice';
 import { autoMatchQuoteItems } from '@/services/suppliers/autoMatchQuoteItems';
+import { resolveSupplierForQuote } from '@/services/suppliers/resolveSupplierForQuote';
 import type { SupplierExtractItem } from '@/types/supplierExtract';
 import type { SupplierQuote, SupplierQuoteItem, SupplierMatchMethod, SupplierQuoteStatus } from '@/types';
 
@@ -22,7 +24,7 @@ export interface CreateQuoteInput {
   /** Null quando a cotação pertence a uma sessão global (catálogo). */
   budget_id: string | null;
   session_id?: string | null;
-  supplier_name: string;
+  supplier_id: string;
   pdf_path: string;
   observacoes_gerais: string;
   items: SupplierExtractItem[];
@@ -35,13 +37,23 @@ export async function createSupplierQuoteAction(
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
 
+    if (!input.supplier_id?.trim()) {
+      return { success: false, error: 'Selecione um fornecedor antes de salvar a cotação.' };
+    }
+
+    const resolved = await resolveSupplierForQuote(supabase, userId, input.supplier_id.trim());
+    if ('error' in resolved) {
+      return { success: false, error: resolved.error };
+    }
+
     // 1. Cria o registro da cotação
     const { data: quote, error: quoteError } = await supabase
       .from('supplier_quotes')
       .insert({
         budget_id: input.budget_id,
         session_id: input.session_id ?? null,
-        supplier_name: input.supplier_name.trim(),
+        supplier_id: resolved.id,
+        supplier_name: resolved.name,
         pdf_path: input.pdf_path,
         observacoes_gerais: input.observacoes_gerais || null,
         status: 'pendente',
@@ -85,6 +97,78 @@ export async function createSupplierQuoteAction(
     return { success: true, data: { quoteId: quote.id } };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro inesperado ao criar cotação.';
+    return { success: false, error: message };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// createExtractionJobAction
+// Cria job de extração após upload do PDF e escolha do fornecedor.
+// ---------------------------------------------------------------------------
+export async function createExtractionJobAction(input: {
+  sessionId: string;
+  filePath: string;
+  supplierId: string;
+}): Promise<ActionResult<{ jobId: string }>> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const sessionId = input.sessionId?.trim();
+    const filePath = input.filePath?.trim();
+    const supplierId = input.supplierId?.trim();
+
+    if (!sessionId || !filePath || !supplierId) {
+      return { success: false, error: 'Sessão, arquivo e fornecedor são obrigatórios.' };
+    }
+
+    const expectedPrefix = `${userId}/${sessionId}/`;
+    if (!filePath.startsWith(expectedPrefix)) {
+      return { success: false, error: 'Caminho do arquivo inválido para esta sessão.' };
+    }
+
+    const { data: session, error: sessionError } = await supabase
+      .from('quotation_sessions')
+      .select('id, status')
+      .eq('id', sessionId)
+      .eq('user_id', userId)
+      .single();
+
+    if (sessionError || !session) {
+      return { success: false, error: 'Sessão não encontrada.' };
+    }
+
+    if (session.status === 'completed') {
+      return {
+        success: false,
+        error: 'Esta sessão está encerrada; não é possível importar novos PDFs.',
+      };
+    }
+
+    const resolved = await resolveSupplierForQuote(supabase, userId, supplierId);
+    if ('error' in resolved) {
+      return { success: false, error: resolved.error };
+    }
+
+    const { data: job, error: jobError } = await supabase
+      .from('extraction_jobs')
+      .insert({
+        session_id: sessionId,
+        user_id: userId,
+        file_path: filePath,
+        supplier_id: resolved.id,
+        status: 'pending',
+      })
+      .select('id')
+      .single();
+
+    if (jobError || !job) {
+      return { success: false, error: jobError?.message ?? 'Erro ao criar job de extração.' };
+    }
+
+    return { success: true, data: { jobId: job.id } };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao criar job de extração.';
     return { success: false, error: message };
   }
 }
@@ -666,7 +750,9 @@ type ListQuotesByBudgetRow = {
   id: string;
   budget_id: string | null;
   session_id: string | null;
+  supplier_id: string | null;
   supplier_name: string;
+  suppliers?: { name: string } | { name: string }[] | null;
   pdf_path: string;
   display_name?: string | null;
   status: SupplierQuoteStatus;
@@ -693,7 +779,9 @@ export async function listQuotesByBudgetAction(
       id,
       budget_id,
       session_id,
+      supplier_id,
       supplier_name,
+      suppliers ( name ),
       pdf_path,
       display_name,
       status,
@@ -759,7 +847,8 @@ export async function listQuotesByBudgetAction(
       return {
         id: q.id,
         budget_id: q.budget_id,
-        supplier_name: q.supplier_name,
+        supplier_id: q.supplier_id ?? null,
+        supplier_name: getSupplierDisplayName(q),
         pdf_path: q.pdf_path,
         display_name: q.display_name ?? null,
         status: q.status,
@@ -852,10 +941,12 @@ export async function calculateScenariosAction(
         materials (id, code, name, unit),
         supplier_quotes!inner (
           id,
+          supplier_id,
           supplier_name,
           budget_id,
           user_id,
-          session_id
+          session_id,
+          suppliers ( name )
         )
       `)
       .eq('supplier_quotes.budget_id', budgetId)
@@ -899,6 +990,7 @@ export async function calculateScenariosAction(
     type Offer = {
       quote_item_id: string;
       supplier_name: string;
+      supplier_key: string;
       quote_id: string;
       preco_unit: number;
       preco_negociado: number | null;
@@ -914,8 +1006,16 @@ export async function calculateScenariosAction(
 
     for (const row of rawItems) {
       const mat = row.materials as unknown as { id: string; code: string; name: string; unit: string } | null;
-      const quote = row.supplier_quotes as unknown as { id: string; supplier_name: string } | null;
+      const quote = row.supplier_quotes as unknown as {
+        id: string;
+        supplier_id: string | null;
+        supplier_name: string;
+        suppliers?: { name: string } | { name: string }[] | null;
+      } | null;
       if (!mat || !quote) continue;
+
+      const displayName = getSupplierDisplayName(quote);
+      const supplierKey = quote.supplier_id ?? displayName;
 
       const preco_negociado =
         row.preco_negociado != null ? Number(row.preco_negociado) : null;
@@ -924,7 +1024,8 @@ export async function calculateScenariosAction(
 
       const offer: Offer = {
         quote_item_id: row.id,
-        supplier_name: quote.supplier_name,
+        supplier_name: displayName,
+        supplier_key: supplierKey,
         quote_id: row.quote_id,
         preco_unit: Number(row.preco_unit),
         preco_negociado,
@@ -989,7 +1090,10 @@ export async function calculateScenariosAction(
     }
 
     // Cenário A — total por fornecedor (using net_qty)
-    const supplierTotals = new Map<string, { quote_id: string; total: number; items_covered: number }>();
+    const supplierTotals = new Map<
+      string,
+      { quote_id: string; supplier_name: string; total: number; items_covered: number }
+    >();
 
     for (const [, entry] of materialOffers) {
       const stock = stockMap.get(entry.material.id) ?? 0;
@@ -997,14 +1101,15 @@ export async function calculateScenariosAction(
       if (net_qty === 0) continue;
 
       for (const offer of entry.offers) {
-        const existing = supplierTotals.get(offer.supplier_name);
+        const existing = supplierTotals.get(offer.supplier_key);
         const offerTotal = offer.preco_normalizado * net_qty;
         if (existing) {
           existing.total += offerTotal;
           existing.items_covered += 1;
         } else {
-          supplierTotals.set(offer.supplier_name, {
+          supplierTotals.set(offer.supplier_key, {
             quote_id: offer.quote_id,
+            supplier_name: offer.supplier_name,
             total: offerTotal,
             items_covered: 1,
           });
@@ -1013,9 +1118,9 @@ export async function calculateScenariosAction(
     }
 
     const totalItemsWithDemand = scenarioBItems.filter((i) => i.net_qty > 0).length;
-    const scenarioA: ScenarioSupplier[] = Array.from(supplierTotals.entries())
-      .map(([supplier_name, data]) => ({
-        supplier_name,
+    const scenarioA: ScenarioSupplier[] = Array.from(supplierTotals.values())
+      .map((data) => ({
+        supplier_name: data.supplier_name,
         quote_id: data.quote_id,
         items_covered: data.items_covered,
         total_items: totalItemsWithDemand,
@@ -1245,22 +1350,34 @@ export async function getConciliationPayloadBySessionAction(
 
     const { data: quotes } = await supabase
       .from('supplier_quotes')
-      .select('id, supplier_name, status')
+      .select('id, supplier_id, supplier_name, status, suppliers ( name )')
       .eq('session_id', sessionId)
       .eq('user_id', userId)
       .order('created_at', { ascending: true });
 
-    // Stable column order: unique supplier names in import order
+    type QuoteRow = {
+      id: string;
+      supplier_id: string | null;
+      supplier_name: string;
+      status: string;
+      suppliers?: { name: string } | { name: string }[] | null;
+    };
+
+    const quoteRows = (quotes ?? []) as QuoteRow[];
+
+    // Stable column order: unique suppliers in import order (by supplier_id when set)
     const supplier_column_order: string[] = [];
-    const seenSuppliers = new Set<string>();
-    for (const q of quotes ?? []) {
-      if (!seenSuppliers.has(q.supplier_name)) {
-        seenSuppliers.add(q.supplier_name);
-        supplier_column_order.push(q.supplier_name);
+    const seenSupplierKeys = new Set<string>();
+    for (const q of quoteRows) {
+      const key = q.supplier_id ?? q.supplier_name;
+      const displayName = getSupplierDisplayName(q);
+      if (!seenSupplierKeys.has(key)) {
+        seenSupplierKeys.add(key);
+        supplier_column_order.push(displayName);
       }
     }
 
-    if (!quotes || quotes.length === 0) {
+    if (!quoteRows.length) {
       const mats = sessionRow.budget_id
         ? await getBudgetMaterialsAction(sessionRow.budget_id)
         : await getCatalogMaterialsAction();
@@ -1276,8 +1393,8 @@ export async function getConciliationPayloadBySessionAction(
       };
     }
 
-    const quoteIds = quotes.map((q) => q.id);
-    const quoteNameMap = new Map(quotes.map((q) => [q.id, q.supplier_name]));
+    const quoteIds = quoteRows.map((q) => q.id);
+    const quoteNameMap = new Map(quoteRows.map((q) => [q.id, getSupplierDisplayName(q)]));
 
     const { data: rawItems } = await supabase
       .from('supplier_quote_items')
@@ -1366,7 +1483,7 @@ export async function getConciliationPayloadBySessionAction(
     }
 
     const quoteStats = new Map<string, { total: number; matched: number }>();
-    for (const q of quotes ?? []) {
+    for (const q of quoteRows) {
       quoteStats.set(q.id, { total: 0, matched: 0 });
     }
     for (const row of rawItems ?? []) {
@@ -1378,11 +1495,11 @@ export async function getConciliationPayloadBySessionAction(
       }
     }
 
-    const quotes_summary: SessionConciliationQuoteSummary[] = (quotes ?? []).map((q) => {
+    const quotes_summary: SessionConciliationQuoteSummary[] = quoteRows.map((q) => {
       const st = quoteStats.get(q.id) ?? { total: 0, matched: 0 };
       return {
         id: q.id,
-        supplier_name: q.supplier_name,
+        supplier_name: getSupplierDisplayName(q),
         status: q.status,
         item_count: st.total,
         matched_count: st.matched,

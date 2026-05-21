@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabaseClient';
 import type { ExtractionJobRow } from '@/actions/quotationSessions';
 import BatchDropzoneManager from '@/components/suppliers/BatchDropzoneManager';
 import ExtractionCurationModal from '@/components/suppliers/ExtractionCurationModal';
+import { getSupplierDisplayName } from '@/lib/supplierDisplay';
 import { storageFileNameFromPath } from '@/lib/quoteDisplay';
 
 interface QuoteRow {
@@ -186,7 +187,7 @@ export default function SessionExtractionRealtime({
           if (row.status === 'completed' && row.quote_id) {
             void supabase
               .from('supplier_quotes')
-              .select('id, supplier_name, status, created_at, extraction_validated_at')
+              .select('id, supplier_name, supplier_id, suppliers(name), status, created_at, extraction_validated_at')
               .eq('id', row.quote_id)
               .single()
               .then(({ data }) => {
@@ -194,7 +195,9 @@ export default function SessionExtractionRealtime({
                 setQuotes((prev) => {
                   const entry: QuoteRow = {
                     id: data.id,
-                    supplier_name: data.supplier_name,
+                    supplier_name: getSupplierDisplayName(
+                      data as { supplier_name: string; suppliers?: { name: string } | { name: string }[] | null }
+                    ),
                     status: data.status,
                     created_at: data.created_at,
                     extraction_validated_at: data.extraction_validated_at,

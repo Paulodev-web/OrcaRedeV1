@@ -10,7 +10,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import type { ScenarioItem } from '@/actions/supplierQuotes';
-import { getQuoteLabel } from '@/lib/quoteDisplay';
+import { getSupplierDisplayName } from '@/lib/supplierDisplay';
 import { computeItemMetrics } from './scenarioFilterEngine';
 import { originalNormalizedPrice } from '@/lib/supplierPrice';
 
@@ -145,7 +145,7 @@ export default function MaterialDetailModal({
                   <tbody className="divide-y divide-gray-100">
                     {sortedOffers.map((offer, idx) => {
                       const quote = quoteMap.get(offer.quote_id);
-                      const label = quote ? getQuoteLabel(quote) : offer.supplier_name;
+                      const label = quote ? getSupplierDisplayName(quote) : offer.supplier_name;
                       const isWinner = offer.quote_id === metrics.winnerQuoteId;
                       const pctDiff = metrics.percentVsBest.get(offer.quote_id) ?? 0;
                       const totalValue = offer.preco_normalizado * item.net_qty;
@@ -249,7 +249,7 @@ export default function MaterialDetailModal({
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-green-800">
-                    Melhor opção: {getQuoteLabel(winnerQuote)}
+                    Melhor opção: {getSupplierDisplayName(winnerQuote)}
                   </p>
                   <p className="text-xs text-green-600 mt-0.5">
                     {formatCurrency(metrics.minPrice ?? 0)} / unidade

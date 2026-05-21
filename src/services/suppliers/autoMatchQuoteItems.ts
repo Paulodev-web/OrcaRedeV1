@@ -4,6 +4,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
  * Nível 1 — Memória Exata: cruza itens sem match contra supplier_material_mappings.
  * Registra match_level=1 e match_method='exact_memory' para identificar a origem.
  * Atualiza last_seen_at nos mappings utilizados.
+ *
+ * Dependência de supplier_name: a chave De/Para em supplier_material_mappings é
+ * (user_id, supplier_name, supplier_material_name). O lookup usa quote.supplier_name,
+ * que é cache de suppliers.name no insert da cotação. Renomear o fornecedor no cadastro
+ * sem atualizar mappings existentes quebra o auto-match para memórias antigas.
  */
 export async function autoMatchQuoteItems(
   supabase: SupabaseClient,
