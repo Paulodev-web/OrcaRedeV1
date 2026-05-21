@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   Award,
   ChevronDown,
+  Download,
   Lightbulb,
   Loader2,
   Package,
@@ -17,6 +18,8 @@ import {
   Warehouse,
   Target,
 } from 'lucide-react';
+import { useAlertDialog } from '@/hooks/useAlertDialog';
+import { AlertDialog } from '@/components/ui/alert-dialog';
 import {
   saveSessionStockInputsAction,
   calculateScenariosAction,
@@ -63,6 +66,14 @@ interface Props {
   budgetId: string;
   initialStock: SessionStockInput[];
   initialIdealSelections: IdealSelectionRow[];
+}
+
+function parseContentDispositionFilename(header: string | null): string | null {
+  if (!header) return null;
+  const utf8 = /filename\*=UTF-8''([^;]+)/i.exec(header);
+  if (utf8?.[1]) return decodeURIComponent(utf8[1]);
+  const plain = /filename="([^"]+)"/i.exec(header);
+  return plain?.[1] ?? null;
 }
 
 const tabBtnClass = (active: boolean) =>
@@ -519,10 +530,15 @@ function TabelonaView({ scenarios, groupBySupplier = true, quotes }: TabelonaPro
 function ScenarioIdealView({
   scenarios,
   idealSelections,
+  sessionId,
 }: {
   scenarios: ScenariosResult;
   idealSelections: Map<string, string>;
+  sessionId: string;
 }) {
+  const alertDialog = useAlertDialog();
+  const [isExporting, setIsExporting] = useState(false);
+
   const scenarioATotal = scenarios.scenarioA[0]?.total_normalizado ?? 0;
   const scenarioBTotal = scenarios.scenarioB.total_normalizado;
   const ideal = useMemo(
@@ -539,9 +555,89 @@ function ScenarioIdealView({
   const activeLines = ideal.lines.filter((l) => l.status !== 'no_demand');
   const pendingLines = activeLines.filter((l) => l.status === 'pending');
   const selectedLines = activeLines.filter((l) => l.status === 'selected');
+  const canExport = idealSelections.size > 0;
+
+  const runExport = useCallback(async () => {
+    setIsExporting(true);
+    try {
+      const res = await fetch(
+        `/api/scenarios/export-ideal?sessionId=${encodeURIComponent(sessionId)}`
+      );
+      if (!res.ok) {
+        let message = 'Não foi possível gerar a exportação.';
+        try {
+          const body = (await res.json()) as { error?: string };
+          if (body.error) message = body.error;
+        } catch {
+          /* ignore */
+        }
+        alertDialog.showError('Exportação falhou', message);
+        return;
+      }
+      const blob = await res.blob();
+      const filename =
+        parseContentDispositionFilename(res.headers.get('Content-Disposition')) ??
+        `cenario-ideal-${sessionId}.zip`;
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.style.visibility = 'hidden';
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+    } catch {
+      alertDialog.showError(
+        'Exportação falhou',
+        'Erro de rede ao baixar o arquivo. Tente novamente.'
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  }, [sessionId, alertDialog]);
+
+  const handleExportClick = useCallback(() => {
+    if (!canExport || isExporting) return;
+    if (ideal.pendingCount > 0) {
+      alertDialog.showConfirm(
+        'Materiais pendentes',
+        `Existem ${ideal.pendingCount} materiais sem fornecedor selecionado. Eles não serão incluídos na exportação. Deseja continuar?`,
+        runExport,
+        { confirmText: 'Continuar' }
+      );
+    } else {
+      void runExport();
+    }
+  }, [canExport, isExporting, ideal.pendingCount, alertDialog, runExport]);
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <span
+          title={
+            canExport
+              ? undefined
+              : 'Selecione fornecedores no Cenário Ideal para exportar'
+          }
+          className="inline-flex"
+        >
+          <button
+            type="button"
+            onClick={handleExportClick}
+            disabled={!canExport || isExporting}
+            className="inline-flex items-center gap-2 rounded-lg border border-[#64ABDE] bg-white px-4 py-2 text-sm font-medium text-[#1D3140] transition-colors hover:bg-[#64ABDE]/10 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
+          >
+            {isExporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            Exportar Excel
+          </button>
+        </span>
+      </div>
+
       {ideal.pendingCount > 0 && (
         <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
           <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
@@ -638,6 +734,8 @@ function ScenarioIdealView({
           </tfoot>
         </table>
       </div>
+
+      <AlertDialog {...alertDialog.dialogProps} />
     </div>
   );
 }
@@ -645,9 +743,11 @@ function ScenarioIdealView({
 function RankingView({
   scenarios,
   idealSelections,
+  sessionId,
 }: {
   scenarios: ScenariosResult;
   idealSelections: Map<string, string>;
+  sessionId: string;
 }) {
   const [rankingTab, setRankingTab] = useState<'A' | 'B' | 'Ideal'>('A');
   const idealPending = useMemo(() => {
@@ -691,7 +791,11 @@ function RankingView({
         {rankingTab === 'A' && <ScenarioAView scenarios={scenarios} />}
         {rankingTab === 'B' && <ScenarioBView scenarios={scenarios} />}
         {rankingTab === 'Ideal' && (
-          <ScenarioIdealView scenarios={scenarios} idealSelections={idealSelections} />
+          <ScenarioIdealView
+            scenarios={scenarios}
+            idealSelections={idealSelections}
+            sessionId={sessionId}
+          />
         )}
       </div>
     </div>
@@ -1140,7 +1244,11 @@ export default function SessionScenariosView({
               pelo engine de filtros para evitar que toggles do painel afetem a
               aba de Ranking. */}
           {activeTab === 'ranking' && (
-            <RankingView scenarios={scenarios} idealSelections={idealSelections} />
+            <RankingView
+              scenarios={scenarios}
+              idealSelections={idealSelections}
+              sessionId={sessionId}
+            />
           )}
         </div>
       </div>
