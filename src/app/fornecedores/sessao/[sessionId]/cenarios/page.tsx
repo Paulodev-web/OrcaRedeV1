@@ -9,6 +9,7 @@ import {
 } from '@/actions/supplierQuotes';
 import SessionScenariosView from '@/components/suppliers/SessionScenariosView';
 import SuppliesHeader from '@/components/suppliers/SuppliesHeader';
+import { suppliesPageColumnClass } from '@/lib/suppliesLayout';
 
 interface Props {
   params: Promise<{ sessionId: string }>;
@@ -39,7 +40,7 @@ export default async function SessionCenariosPage({ params }: Props) {
   const initialIdealSelections = idealResult.success ? idealResult.data : [];
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className={suppliesPageColumnClass}>
       <SuppliesHeader
         sessionId={sessionId}
         sessionTitle={session.title}

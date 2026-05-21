@@ -8,6 +8,7 @@ import { getSupplierDisplayName } from '@/lib/supplierDisplay';
 import SessionWorkspace from '@/components/suppliers/SessionWorkspace';
 import CompleteSessionButton from '@/components/suppliers/CompleteSessionButton';
 import SuppliesHeader from '@/components/suppliers/SuppliesHeader';
+import { suppliesPageColumnClass } from '@/lib/suppliesLayout';
 
 interface Props {
   params: Promise<{ sessionId: string }>;
@@ -85,7 +86,7 @@ export default async function QuotationSessionPage({ params }: Props) {
   });
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className={`${suppliesPageColumnClass} max-w-5xl`}>
       <SuppliesHeader
         sessionId={sessionId}
         sessionTitle={session.title}

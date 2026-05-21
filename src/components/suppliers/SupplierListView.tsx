@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { suppliesTableScrollClass } from '@/lib/suppliesLayout';
 import { Loader2, Pencil, Plus, UserX, UserCheck } from 'lucide-react';
 import {
   deactivateSupplierAction,
@@ -68,7 +69,7 @@ export default function SupplierListView({ initialSuppliers }: Props) {
   };
 
   return (
-    <div className="rounded-2xl border border-[#64ABDE]/30 bg-white shadow-sm">
+    <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-[#64ABDE]/30 bg-white shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 px-6 py-4">
         <div className="flex items-center gap-3">
           <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-600">
@@ -97,7 +98,7 @@ export default function SupplierListView({ initialSuppliers }: Props) {
         </p>
       )}
 
-      <div className="overflow-x-auto">
+      <div className={`mx-6 mb-6 min-h-0 flex-1 ${suppliesTableScrollClass}`}>
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-slate-50/80 text-xs font-semibold uppercase tracking-wide text-gray-500">

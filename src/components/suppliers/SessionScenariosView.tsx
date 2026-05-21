@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useCallback, useMemo, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import {
   AlertTriangle,
   Award,
@@ -35,10 +34,14 @@ import {
 import { negotiatedFromNormalized } from '@/lib/supplierPrice';
 import {
   buildEffectiveSelectionMap,
+  buildStaleValidationMap,
   computeIdealScenario,
+  countStaleValidations,
   getEffectiveQuoteId,
   getBestOfferQuoteId,
+  getStaleValidationInfo,
 } from '@/lib/scenarioIdealEngine';
+import { useSessionScenariosRefresh } from '@/hooks/useSessionScenariosRefresh';
 import ScenarioFiltersPanel from './ScenarioFiltersPanel';
 import ScenarioComparisonTable from './ScenarioComparisonTable';
 import ScenarioItemExpandableTable from './ScenarioItemExpandableTable';
@@ -50,6 +53,7 @@ import {
   type FilteredScenariosResult,
 } from './scenarioFilterEngine';
 import { getSupplierDisplayName } from '@/lib/supplierDisplay';
+import { suppliesTableBorderedScrollClass, suppliesTableScrollYCompactClass } from '@/lib/suppliesLayout';
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -202,7 +206,7 @@ function StockEditor({
           <p className="mb-3 text-xs text-gray-500">
             Informe a quantidade em estoque por material para descontar da necessidade de compra.
           </p>
-          <div className="max-h-80 overflow-y-auto">
+          <div className={suppliesTableScrollYCompactClass}>
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-white">
                 <tr className="border-b border-gray-100">
@@ -455,7 +459,7 @@ function TabelonaView({ scenarios, groupBySupplier = true, quotes }: TabelonaPro
       <p className="text-xs text-gray-500">
         Preços normalizados (preço ÷ fator). Totais calculados sobre a necessidade líquida (necessidade − estoque).
       </p>
-      <div className="overflow-x-auto border border-gray-200 rounded-lg max-h-[600px]">
+      <div className={suppliesTableBorderedScrollClass}>
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead className="bg-gray-50 sticky top-0 z-20">
             <tr>
@@ -541,14 +545,20 @@ function ScenarioIdealView({
   sessionId,
   onIdealSelect,
   onValidateAll,
+  onRevalidateStale,
   isValidatingAll,
+  isRevalidatingStale,
+  staleCount,
 }: {
   scenarios: ScenariosResult;
   idealSelections: Map<string, string>;
   sessionId: string;
   onIdealSelect: (materialId: string, quoteId: string) => void;
   onValidateAll: () => void;
+  onRevalidateStale: () => void;
   isValidatingAll: boolean;
+  isRevalidatingStale: boolean;
+  staleCount: number;
 }) {
   const alertDialog = useAlertDialog();
   const [isExporting, setIsExporting] = useState(false);
@@ -644,6 +654,21 @@ function ScenarioIdealView({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-end gap-2">
+        {staleCount > 0 && (
+          <button
+            type="button"
+            onClick={onRevalidateStale}
+            disabled={isRevalidatingStale}
+            className="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isRevalidatingStale ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <TrendingDown className="h-4 w-4" />
+            )}
+            Revalidar menores ({staleCount})
+          </button>
+        )}
         <button
           type="button"
           onClick={onValidateAll}
@@ -680,6 +705,20 @@ function ScenarioIdealView({
           </button>
         </span>
       </div>
+
+      {staleCount > 0 && (
+        <div className="flex items-start gap-3 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+          <AlertTriangle className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-orange-900">
+            <p className="font-medium">
+              {staleCount} validação(ões) com oferta mais barata disponível
+            </p>
+            <p className="text-orange-700 mt-0.5">
+              A escolha manual foi mantida. Use &quot;Revalidar menores&quot; para atualizar ao menor preço atual.
+            </p>
+          </div>
+        </div>
+      )}
 
       {ideal.unvalidatedCount > 0 && (
         <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
@@ -755,9 +794,17 @@ function ScenarioIdealView({
           if (!line || line.status === 'pending' || line.status === 'no_demand') return null;
           if (line.status === 'validated') {
             return (
-              <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-green-700 bg-green-100 border border-green-200 px-1.5 py-0.5 rounded-full">
-                <Check className="h-3 w-3" />
-                Validado
+              <span className="mt-1 inline-flex flex-wrap items-center gap-1">
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-green-700 bg-green-100 border border-green-200 px-1.5 py-0.5 rounded-full">
+                  <Check className="h-3 w-3" />
+                  Validado
+                </span>
+                {line.isStale && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-orange-800 bg-orange-100 border border-orange-200 px-1.5 py-0.5 rounded-full">
+                    <AlertTriangle className="h-3 w-3" />
+                    Oferta mais barata
+                  </span>
+                )}
               </span>
             );
           }
@@ -785,14 +832,20 @@ function RankingView({
   sessionId,
   onIdealSelect,
   onValidateAll,
+  onRevalidateStale,
   isValidatingAll,
+  isRevalidatingStale,
+  staleCount,
 }: {
   scenarios: ScenariosResult;
   idealSelections: Map<string, string>;
   sessionId: string;
   onIdealSelect: (materialId: string, quoteId: string) => void;
   onValidateAll: () => void;
+  onRevalidateStale: () => void;
   isValidatingAll: boolean;
+  isRevalidatingStale: boolean;
+  staleCount: number;
 }) {
   const [rankingTab, setRankingTab] = useState<'A' | 'B' | 'Ideal'>('A');
   const idealUnvalidated = useMemo(() => {
@@ -830,6 +883,11 @@ function RankingView({
               {idealUnvalidated} sug.
             </span>
           )}
+          {staleCount > 0 && (
+            <span className="ml-1 inline-flex items-center px-1.5 py-0.5 bg-orange-100 text-orange-800 text-xs rounded-full border border-orange-200">
+              {staleCount} revisar
+            </span>
+          )}
         </button>
       </div>
       <div className="pt-2">
@@ -842,7 +900,10 @@ function RankingView({
             sessionId={sessionId}
             onIdealSelect={onIdealSelect}
             onValidateAll={onValidateAll}
+            onRevalidateStale={onRevalidateStale}
             isValidatingAll={isValidatingAll}
+            isRevalidatingStale={isRevalidatingStale}
+            staleCount={staleCount}
           />
         )}
       </div>
@@ -867,7 +928,7 @@ function ScenarioAView({ scenarios }: { scenarios: ScenariosResult }) {
       <p className="text-xs text-gray-500">
         Comprar tudo de um único fornecedor. Totais sobre necessidade líquida.
       </p>
-      <div className="overflow-x-auto border border-gray-200 rounded-lg max-h-[500px]">
+      <div className={suppliesTableBorderedScrollClass}>
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
@@ -958,11 +1019,11 @@ export default function SessionScenariosView({
   initialStock,
   initialIdealSelections,
 }: Props) {
-  const router = useRouter();
   const [scenarios, setScenarios] = useState(initialScenarios);
   const [activeTab, setActiveTab] = useState<'tabelona' | 'ranking'>('tabelona');
   const [isPending, startTransition] = useTransition();
   const [isValidatingAll, startValidateAll] = useTransition();
+  const [isRevalidatingStale, startRevalidateStale] = useTransition();
   const [isSavingPrice, setIsSavingPrice] = useState(false);
 
   const [idealSelections, setIdealSelections] = useState<Map<string, string>>(() => {
@@ -972,6 +1033,41 @@ export default function SessionScenariosView({
     }
     return m;
   });
+
+  useEffect(() => {
+    setScenarios(initialScenarios);
+  }, [initialScenarios]);
+
+  const syncIdealFromRows = useCallback((rows: IdealSelectionRow[]) => {
+    const m = new Map<string, string>();
+    for (const row of rows) {
+      m.set(row.material_id, row.quote_id);
+    }
+    setIdealSelections(m);
+  }, []);
+
+  const sessionQuoteIds = useMemo(
+    () => quotes.map((q) => q.id),
+    [quotes]
+  );
+
+  const { refresh: refreshScenarios } = useSessionScenariosRefresh({
+    budgetId,
+    sessionId,
+    onScenarios: setScenarios,
+    onIdealSelections: syncIdealFromRows,
+    quoteIds: sessionQuoteIds,
+  });
+
+  const staleByMaterialId = useMemo(
+    () => buildStaleValidationMap(scenarios.scenarioB.items, idealSelections),
+    [scenarios.scenarioB.items, idealSelections]
+  );
+
+  const staleCount = useMemo(
+    () => countStaleValidations(scenarios.scenarioB.items, idealSelections),
+    [scenarios.scenarioB.items, idealSelections]
+  );
 
   // Filter state
   const [filterState, setFilterState] = useState<ScenarioFilterState>(defaultFilterState);
@@ -1073,22 +1169,10 @@ export default function SessionScenariosView({
       const res = await saveSessionStockInputsAction(sessionId, inputs);
       if (res.success) {
         setSavedStockSnapshot(JSON.stringify(Array.from(stockMap.entries())));
-        const scenariosRes = await calculateScenariosAction(budgetId, sessionId);
-        if (scenariosRes.success) {
-          setScenarios(scenariosRes.data);
-        }
-        router.refresh();
+        await refreshScenarios();
       }
     });
   };
-
-  const refreshScenarios = useCallback(async () => {
-    const scenariosRes = await calculateScenariosAction(budgetId, sessionId);
-    if (scenariosRes.success) {
-      setScenarios(scenariosRes.data);
-    }
-    router.refresh();
-  }, [budgetId, sessionId, router]);
 
   const handleNegotiatedPriceSave = useCallback(
     async (quoteItemId: string, precoNegociadoNormalized: number | null) => {
@@ -1132,10 +1216,12 @@ export default function SessionScenariosView({
             else next.delete(materialId);
             return next;
           });
+        } else {
+          await refreshScenarios();
         }
       });
     },
-    [idealSelections, sessionId]
+    [idealSelections, sessionId, refreshScenarios]
   );
 
   const effectiveIdealSelections = useMemo(
@@ -1165,14 +1251,45 @@ export default function SessionScenariosView({
       const res = await bulkSaveIdealSelectionsAction(sessionId, rows);
       if (!res.success) {
         setIdealSelections(previous);
+      } else {
+        await refreshScenarios();
       }
     });
-  }, [scenarios.scenarioB.items, idealSelections, sessionId]);
+  }, [scenarios.scenarioB.items, idealSelections, sessionId, refreshScenarios]);
+
+  const handleRevalidateStale = useCallback(() => {
+    const rows: IdealSelectionRow[] = [];
+    for (const item of scenarios.scenarioB.items) {
+      if (item.net_qty <= 0) continue;
+      const validatedQuoteId = idealSelections.get(item.material_id);
+      const stale = getStaleValidationInfo(item, validatedQuoteId);
+      if (stale.isStale && stale.bestQuoteId) {
+        rows.push({ material_id: item.material_id, quote_id: stale.bestQuoteId });
+      }
+    }
+    if (rows.length === 0) return;
+
+    const previous = new Map(idealSelections);
+    setIdealSelections((prev) => {
+      const next = new Map(prev);
+      for (const row of rows) next.set(row.material_id, row.quote_id);
+      return next;
+    });
+
+    startRevalidateStale(async () => {
+      const res = await bulkSaveIdealSelectionsAction(sessionId, rows);
+      if (!res.success) {
+        setIdealSelections(previous);
+      } else {
+        await refreshScenarios();
+      }
+    });
+  }, [scenarios.scenarioB.items, idealSelections, sessionId, refreshScenarios]);
 
   const pendingQuotes = quotes.filter((q) => q.status !== 'conciliado');
 
   return (
-    <div className="space-y-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-6">
       <ScenarioSummaryCards scenarios={filteredScenarios} isFiltered={filteredScenarios.isFiltered} />
 
       <SuggestionCards scenarios={scenarios} />
@@ -1207,8 +1324,8 @@ export default function SessionScenariosView({
         onExpandedChange={setFiltersExpanded}
       />
 
-      <div className="overflow-hidden rounded-xl border border-[#64ABDE]/40 bg-white shadow-md">
-        <div className="flex border-b border-gray-200 bg-white/80">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#64ABDE]/40 bg-white shadow-md">
+        <div className="flex shrink-0 border-b border-gray-200 bg-white/80">
           <button type="button" onClick={() => setActiveTab('tabelona')} className={tabBtnClass(activeTab === 'tabelona')}>
             <Table2 className="h-4 w-4" /> Tabela de Avaliação
           </button>
@@ -1216,7 +1333,7 @@ export default function SessionScenariosView({
             <Trophy className="h-4 w-4" /> Ranking (Cenários A e B)
           </button>
         </div>
-        <div className="p-5">
+        <div className="flex min-h-0 flex-1 flex-col p-5">
           {/* Tabela de Avaliação consome filteredData (passa pelo engine). */}
           {activeTab === 'tabelona' && (
             <ScenarioComparisonTable
@@ -1225,6 +1342,8 @@ export default function SessionScenariosView({
               enabledQuoteIds={effectiveFilterState.enabledQuoteIds}
               onMaterialClick={handleMaterialClick}
               idealSelections={effectiveIdealSelections}
+              validatedSelections={idealSelections}
+              staleByMaterialId={staleByMaterialId}
               onIdealSelect={handleIdealSelect}
               onNegotiatedPriceSave={handleNegotiatedPriceSave}
               isSavingPrice={isSavingPrice}
@@ -1240,7 +1359,10 @@ export default function SessionScenariosView({
               sessionId={sessionId}
               onIdealSelect={handleIdealSelect}
               onValidateAll={handleValidateAll}
+              onRevalidateStale={handleRevalidateStale}
               isValidatingAll={isValidatingAll}
+              isRevalidatingStale={isRevalidatingStale}
+              staleCount={staleCount}
             />
           )}
         </div>

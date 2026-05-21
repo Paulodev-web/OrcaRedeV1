@@ -1,3 +1,4 @@
+import { revalidatePath } from 'next/cache';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseServiceRoleClient } from '@/lib/supabaseServer';
 import { extractSupplierQuoteWithGemini } from '@/services/ai/geminiSupplierQuote';
@@ -323,6 +324,10 @@ export async function runExtractionJob(jobId: string): Promise<void> {
       `[runExtractionJob] Pipeline concluído para job ${jobId} — ` +
         `Total: L1=${level1.matched} + L2=${level2.matched} matches automáticos`
     );
+
+    revalidatePath(`/fornecedores/sessao/${session.id}/cenarios`);
+    revalidatePath(`/fornecedores/sessao/${session.id}/conciliacao`);
+    revalidatePath(`/fornecedores/sessao/${session.id}`);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro inesperado ao processar o PDF.';
     console.error('[runExtractionJob]', jobId, err);

@@ -2,6 +2,12 @@ import type { ScenarioItem } from '@/actions/supplierQuotes';
 
 export type IdealLineStatus = 'validated' | 'suggested' | 'pending' | 'no_demand';
 
+export interface StaleValidationInfo {
+  isStale: boolean;
+  bestQuoteId: string | null;
+  savingsPerUnit: number;
+}
+
 export interface IdealScenarioLine {
   material_id: string;
   material_name: string;
@@ -13,6 +19,8 @@ export interface IdealScenarioLine {
   line_total: number;
   status: IdealLineStatus;
   isValidated: boolean;
+  /** Validação manual com oferta mais barata disponível */
+  isStale?: boolean;
 }
 
 export interface IdealScenarioResult {
@@ -69,6 +77,46 @@ export function countUnvalidatedMaterials(
     if (item.net_qty > 0 && !validatedMap.has(item.material_id)) count += 1;
   }
   return count;
+}
+
+export function getStaleValidationInfo(
+  item: ScenarioItem,
+  validatedQuoteId: string | undefined
+): StaleValidationInfo {
+  const empty: StaleValidationInfo = { isStale: false, bestQuoteId: null, savingsPerUnit: 0 };
+  if (!validatedQuoteId || item.net_qty <= 0 || item.all_offers.length === 0) return empty;
+
+  const bestQuoteId = getBestOfferQuoteId(item);
+  if (!bestQuoteId || bestQuoteId === validatedQuoteId) return empty;
+
+  const validatedOffer = item.all_offers.find((o) => o.quote_id === validatedQuoteId);
+  const bestOffer = item.all_offers.find((o) => o.quote_id === bestQuoteId);
+  if (!validatedOffer || !bestOffer) return empty;
+
+  const savingsPerUnit = validatedOffer.preco_normalizado - bestOffer.preco_normalizado;
+  if (savingsPerUnit <= 0) return empty;
+
+  return { isStale: true, bestQuoteId, savingsPerUnit };
+}
+
+export function buildStaleValidationMap(
+  items: ScenarioItem[],
+  validatedMap: Map<string, string>
+): Map<string, StaleValidationInfo> {
+  const stale = new Map<string, StaleValidationInfo>();
+  for (const item of items) {
+    const validatedQuoteId = validatedMap.get(item.material_id);
+    const info = getStaleValidationInfo(item, validatedQuoteId);
+    if (info.isStale) stale.set(item.material_id, info);
+  }
+  return stale;
+}
+
+export function countStaleValidations(
+  items: ScenarioItem[],
+  validatedMap: Map<string, string>
+): number {
+  return buildStaleValidationMap(items, validatedMap).size;
 }
 
 export function computeIdealScenario(
@@ -142,6 +190,9 @@ export function computeIdealScenario(
     const line_total = offer.preco_normalizado * item.net_qty;
     total += line_total;
     const status: IdealLineStatus = hasValidated ? 'validated' : 'suggested';
+    const staleInfo = hasValidated
+      ? getStaleValidationInfo(item, validatedMap.get(item.material_id))
+      : { isStale: false, bestQuoteId: null, savingsPerUnit: 0 };
 
     lines.push({
       material_id: item.material_id,
@@ -154,6 +205,7 @@ export function computeIdealScenario(
       line_total,
       status,
       isValidated: hasValidated,
+      isStale: staleInfo.isStale,
     });
   }
 

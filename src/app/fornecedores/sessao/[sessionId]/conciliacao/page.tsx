@@ -7,6 +7,7 @@ import {
 import { getConciliationPayloadBySessionAction } from '@/actions/supplierQuotes';
 import ConciliationCurationView from '@/components/suppliers/ConciliationCurationView';
 import SuppliesHeader from '@/components/suppliers/SuppliesHeader';
+import { suppliesPageColumnClass } from '@/lib/suppliesLayout';
 
 interface Props {
   params: Promise<{ sessionId: string }>;
@@ -60,7 +61,7 @@ export default async function SessionConciliacaoPage({ params }: Props) {
   const payloadRes = await getConciliationPayloadBySessionAction(sessionId);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className={suppliesPageColumnClass}>
       <SuppliesHeader
         sessionId={sessionId}
         sessionTitle={session.title}

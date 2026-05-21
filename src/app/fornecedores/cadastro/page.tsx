@@ -11,8 +11,8 @@ export default async function FornecedoresCadastroPage() {
   const suppliers = result.success ? result.data : [];
 
   return (
-    <main className="min-h-screen bg-slate-100 p-6 lg:p-8">
-      <div className="mx-auto max-w-6xl space-y-8">
+    <main className="flex min-h-screen flex-col bg-slate-100 p-6 lg:p-8">
+      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8">
         <SuppliesHeader
           activeStep="fornecedores"
           title="Cadastro de Fornecedores"
@@ -23,7 +23,9 @@ export default async function FornecedoresCadastroPage() {
             {result.error}
           </p>
         )}
-        <SupplierListView initialSuppliers={suppliers} />
+        <div className="flex min-h-0 flex-1 flex-col">
+          <SupplierListView initialSuppliers={suppliers} />
+        </div>
       </div>
     </main>
   );

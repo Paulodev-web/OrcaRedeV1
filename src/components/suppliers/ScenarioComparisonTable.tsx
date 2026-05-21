@@ -3,8 +3,10 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { Award, TrendingDown, AlertCircle, Pencil, Loader2 } from 'lucide-react';
 import type { ScenarioItem } from '@/actions/supplierQuotes';
+import type { StaleValidationInfo } from '@/lib/scenarioIdealEngine';
 import { getSupplierDisplayName } from '@/lib/supplierDisplay';
 import { originalNormalizedPrice } from '@/lib/supplierPrice';
+import { suppliesTableBorderedScrollClass } from '@/lib/suppliesLayout';
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -44,6 +46,8 @@ function PriceUnitCell({
   offer,
   isWinner,
   isIdealSelected,
+  isValidatedStale,
+  staleSavingsPerUnit,
   disabled,
   isSavingPrice,
   onIdealSelect,
@@ -52,6 +56,8 @@ function PriceUnitCell({
   offer: ScenarioOffer;
   isWinner: boolean;
   isIdealSelected: boolean;
+  isValidatedStale?: boolean;
+  staleSavingsPerUnit?: number;
   disabled: boolean;
   isSavingPrice?: boolean;
   onIdealSelect?: () => void;
@@ -64,9 +70,18 @@ function PriceUnitCell({
   const isNegotiated = offer.preco_negociado != null;
   const originalNorm = originalNormalizedPrice(offer.preco_unit, offer.conversion_factor);
 
-  const tooltip = isNegotiated
-    ? `Original: ${formatCurrency(originalNorm)} | Negociado: ${formatCurrency(offer.preco_normalizado)}`
-    : `Preço do PDF: ${formatCurrency(originalNorm)}`;
+  const staleTooltip =
+    isValidatedStale && staleSavingsPerUnit != null && staleSavingsPerUnit > 0
+      ? `Oferta mais barata disponível (economia de ${formatCurrency(staleSavingsPerUnit)}/un.)`
+      : '';
+  const tooltip = [
+    isNegotiated
+      ? `Original: ${formatCurrency(originalNorm)} | Negociado: ${formatCurrency(offer.preco_normalizado)}`
+      : `Preço do PDF: ${formatCurrency(originalNorm)}`,
+    staleTooltip,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   const startEdit = useCallback(
     (e: React.MouseEvent) => {
@@ -115,6 +130,9 @@ function PriceUnitCell({
   if (isIdealSelected) {
     cellClass += ' ring-2 ring-blue-500 ring-inset';
   }
+  if (isValidatedStale) {
+    cellClass += ' ring-2 ring-orange-400 ring-inset bg-orange-50/80';
+  }
 
   if (editing) {
     return (
@@ -156,6 +174,11 @@ function PriceUnitCell({
       {offer.conversion_factor !== 1 && (
         <span className="block text-[10px] text-gray-400 font-normal">÷{formatNumber(offer.conversion_factor)}</span>
       )}
+      {isValidatedStale && (
+        <span className="block text-[10px] font-medium text-orange-700 mt-0.5">
+          Oferta mais barata
+        </span>
+      )}
       {onNegotiatedPriceSave && !disabled && (
         <button
           type="button"
@@ -180,7 +203,11 @@ interface Props {
   quotes: QuoteColumnInfo[];
   enabledQuoteIds: Set<string>;
   onMaterialClick?: (item: ScenarioItem) => void;
+  /** Fornecedor efetivo (validado ou menor preço sugerido) */
   idealSelections?: Map<string, string>;
+  /** Apenas seleções validadas no banco — para detectar stale */
+  validatedSelections?: Map<string, string>;
+  staleByMaterialId?: Map<string, StaleValidationInfo>;
   onIdealSelect?: (materialId: string, quoteId: string) => void;
   onNegotiatedPriceSave?: (quoteItemId: string, precoNegociadoNormalized: number | null) => Promise<void>;
   isSavingPrice?: boolean;
@@ -192,6 +219,8 @@ export default function ScenarioComparisonTable({
   enabledQuoteIds,
   onMaterialClick,
   idealSelections,
+  validatedSelections,
+  staleByMaterialId,
   onIdealSelect,
   onNegotiatedPriceSave,
   isSavingPrice,
@@ -316,14 +345,13 @@ export default function ScenarioComparisonTable({
   }
 
   return (
-    <div className="space-y-3">
-      <p className="text-xs text-gray-500">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <p className="shrink-0 text-xs text-gray-500">
         Preços normalizados (÷ fator). Validação principal na aba Cenário Ideal (Ranking); aqui você pode
         validar como atalho clicando no preço unitário. Destaque azul = fornecedor efetivo (validado ou menor
         preço sugerido). Use o lápis para negociar. Clique na linha para detalhes do material.
       </p>
-      <div className="overflow-x-auto border border-gray-200 rounded-lg">
-        <div className="max-h-[600px] overflow-y-auto">
+      <div className={`min-h-0 flex-1 ${suppliesTableBorderedScrollClass}`}>
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50 sticky top-0 z-20">
               <tr>
@@ -380,6 +408,9 @@ export default function ScenarioComparisonTable({
                 const rowBg = isEvenRow ? 'bg-white' : 'bg-gray-50/50';
                 const offerMap = new Map(item.all_offers.map((o) => [o.quote_id, o]));
                 const idealQuoteId = idealSelections?.get(item.material_id);
+                const validatedQuoteId = validatedSelections?.get(item.material_id);
+                const staleInfo = staleByMaterialId?.get(item.material_id);
+                const isRowStale = !!staleInfo?.isStale;
 
                 return (
                   <tr
@@ -417,6 +448,8 @@ export default function ScenarioComparisonTable({
                         ? 'bg-green-50 font-semibold text-green-700'
                         : 'text-gray-600';
                       const isIdealSelected = idealQuoteId === q.id;
+                      const isValidatedStaleCell =
+                        isRowStale && validatedQuoteId === q.id;
 
                       return (
                         <React.Fragment key={q.id}>
@@ -424,6 +457,10 @@ export default function ScenarioComparisonTable({
                             offer={offer}
                             isWinner={!!isWinner}
                             isIdealSelected={isIdealSelected}
+                            isValidatedStale={isValidatedStaleCell}
+                            staleSavingsPerUnit={
+                              isValidatedStaleCell ? staleInfo?.savingsPerUnit : undefined
+                            }
                             disabled={isFullyStocked}
                             isSavingPrice={isSavingPrice}
                             onIdealSelect={
@@ -446,9 +483,19 @@ export default function ScenarioComparisonTable({
                       {hasNoCoverage ? (
                         <span className="text-xs text-amber-600 font-medium">Sem cotação</span>
                       ) : (
-                        <span className="text-xs font-bold text-green-700">
-                          {minPrice !== null ? formatCurrency(minPrice) : '—'}
-                        </span>
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="text-xs font-bold text-green-700">
+                            {minPrice !== null ? formatCurrency(minPrice) : '—'}
+                          </span>
+                          {isRowStale && (
+                            <span
+                              className="text-[10px] font-medium text-orange-700"
+                              title="Mínimo global; sua validação usa outro fornecedor"
+                            >
+                              ≠ validado
+                            </span>
+                          )}
+                        </div>
                       )}
                     </td>
                     <td className="px-3 py-2.5 bg-green-50/50">
@@ -495,7 +542,6 @@ export default function ScenarioComparisonTable({
               </tr>
             </tfoot>
           </table>
-        </div>
       </div>
     </div>
   );

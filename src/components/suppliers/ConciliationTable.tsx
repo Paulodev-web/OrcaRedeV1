@@ -20,6 +20,7 @@ import type {
   BudgetMaterialOption,
 } from '@/actions/supplierQuotes';
 import { onPortalPrimaryButtonSmClass } from '@/lib/branding';
+import { suppliesTableBorderedScrollClass } from '@/lib/suppliesLayout';
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -167,7 +168,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
       </div>
 
       {/* Tabela */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className={`bg-white shadow ${suppliesTableBorderedScrollClass}`}>
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>

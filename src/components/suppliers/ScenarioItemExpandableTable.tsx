@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Award, ChevronDown } from 'lucide-react';
 import type { ScenarioItem } from '@/actions/supplierQuotes';
+import { suppliesTableBorderedScrollClass } from '@/lib/suppliesLayout';
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -58,7 +59,7 @@ export default function ScenarioItemExpandableTable({
   return (
     <div className="space-y-4">
       {description && <p className="text-xs text-gray-500">{description}</p>}
-      <div className="overflow-x-auto border border-gray-200 rounded-lg max-h-[500px]">
+      <div className={suppliesTableBorderedScrollClass}>
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>

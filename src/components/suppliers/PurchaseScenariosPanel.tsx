@@ -22,6 +22,7 @@ import type {
   ScenariosResult,
   ScenarioItem,
 } from '@/actions/supplierQuotes';
+import { suppliesTableBorderedScrollClass } from '@/lib/suppliesLayout';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -203,14 +204,14 @@ function ScenarioBCard({ scenarios }: { scenarios: ScenariosResult }) {
       </div>
 
       {/* Tabela por item */}
-      <div className="overflow-x-auto border border-gray-200 rounded-lg">
+      <div className={suppliesTableBorderedScrollClass}>
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                 Material
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36 bg-gray-50">
                 Melhor fornecedor
               </th>
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32">

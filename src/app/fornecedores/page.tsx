@@ -23,8 +23,8 @@ export default async function FornecedoresPage() {
   }));
 
   return (
-    <main className="min-h-screen bg-slate-100 p-6 lg:p-8">
-      <div className="mx-auto max-w-7xl space-y-8">
+    <main className="flex min-h-screen flex-col bg-slate-100 p-6 lg:p-8">
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-8">
         <SuppliesHeader
           title="Portal de Suprimentos"
           description="Crie sessões de cotação, concilie materiais e compare cenários de compra."

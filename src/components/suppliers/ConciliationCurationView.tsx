@@ -34,6 +34,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { onPortalPrimaryButtonSmClass } from '@/lib/branding';
+import { suppliesTableBorderedScrollClass } from '@/lib/suppliesLayout';
 
 const fmtCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -522,8 +523,8 @@ export default function ConciliationCurationView({
   const showEmpty = !loadError && filteredMaterials.length === 0 && unlinked.length === 0;
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-2xl border border-[#64ABDE]/40 bg-white p-6 shadow-md">
+    <div className="flex min-h-0 flex-1 flex-col gap-6">
+      <div className="shrink-0 rounded-2xl border border-[#64ABDE]/40 bg-white p-6 shadow-md">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-xl font-semibold text-[#1D3140]">Conciliação de materiais</h1>
@@ -633,7 +634,7 @@ export default function ConciliationCurationView({
       )}
 
       {!loadError && (filteredMaterials.length > 0 || unlinked.length > 0) && activeSupplier && (
-        <div className="min-w-0 overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <div className={`min-h-0 min-w-0 flex-1 bg-white shadow-sm ${suppliesTableBorderedScrollClass}`}>
           <table className="w-full table-fixed border-collapse text-sm">
             <colgroup>
               <col style={{ width: '40%' }} />
