@@ -12,6 +12,7 @@ import {
 import type { ScenarioItem } from '@/actions/supplierQuotes';
 import { getQuoteLabel } from '@/lib/quoteDisplay';
 import { computeItemMetrics } from './scenarioFilterEngine';
+import { originalNormalizedPrice } from '@/lib/supplierPrice';
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -164,8 +165,16 @@ export default function MaterialDetailModal({
                               </span>
                             </div>
                           </td>
-                          <td className={`px-4 py-3 text-right ${isWinner ? 'font-bold text-green-800' : 'text-gray-700'}`}>
+                          <td className={`px-4 py-3 text-right ${isWinner ? 'font-bold text-green-800' : offer.preco_negociado != null ? 'text-blue-700' : 'text-gray-700'}`}>
                             {formatCurrency(offer.preco_normalizado)}
+                            {offer.preco_negociado != null && (
+                              <span className="block text-[10px] text-gray-400 line-through font-normal">
+                                {formatCurrency(originalNormalizedPrice(offer.preco_unit, offer.conversion_factor))}
+                              </span>
+                            )}
+                            {offer.preco_negociado != null && (
+                              <span className="block text-[10px] text-blue-600 font-medium">Negociado</span>
+                            )}
                             {offer.conversion_factor !== 1 && (
                               <span className="block text-xs text-gray-400 font-normal">
                                 ÷ {formatNumber(offer.conversion_factor)}

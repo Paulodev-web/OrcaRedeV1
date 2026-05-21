@@ -274,6 +274,8 @@ export interface SupplierQuoteItem {
   unidade: string;
   quantidade: number;
   preco_unit: number;
+  /** Preço acordado pelo usuário; quando preenchido, substitui preco_unit nos cenários. */
+  preco_negociado?: number | null;
   total_item: number;
   ipi_percent: number;
   st_incluso: boolean;

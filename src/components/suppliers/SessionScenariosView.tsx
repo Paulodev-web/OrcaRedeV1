@@ -15,14 +15,20 @@ import {
   TrendingDown,
   Trophy,
   Warehouse,
+  Target,
 } from 'lucide-react';
 import {
   saveSessionStockInputsAction,
   calculateScenariosAction,
+  updateNegotiatedPriceAction,
+  saveIdealSelectionAction,
   type ScenariosResult,
   type ScenarioItem,
   type SessionStockInput,
+  type IdealSelectionRow,
 } from '@/actions/supplierQuotes';
+import { negotiatedFromNormalized } from '@/lib/supplierPrice';
+import { computeIdealScenario } from '@/lib/scenarioIdealEngine';
 import ScenarioFiltersPanel from './ScenarioFiltersPanel';
 import ScenarioComparisonTable from './ScenarioComparisonTable';
 import MaterialDetailModal from './MaterialDetailModal';
@@ -56,6 +62,7 @@ interface Props {
   sessionId: string;
   budgetId: string;
   initialStock: SessionStockInput[];
+  initialIdealSelections: IdealSelectionRow[];
 }
 
 const tabBtnClass = (active: boolean) =>
@@ -509,8 +516,149 @@ function TabelonaView({ scenarios, groupBySupplier = true, quotes }: TabelonaPro
 // ---------------------------------------------------------------------------
 // Ranking views (A & B)
 // ---------------------------------------------------------------------------
-function RankingView({ scenarios }: { scenarios: ScenariosResult }) {
-  const [rankingTab, setRankingTab] = useState<'A' | 'B'>('A');
+function ScenarioIdealView({
+  scenarios,
+  idealSelections,
+}: {
+  scenarios: ScenariosResult;
+  idealSelections: Map<string, string>;
+}) {
+  const scenarioATotal = scenarios.scenarioA[0]?.total_normalizado ?? 0;
+  const scenarioBTotal = scenarios.scenarioB.total_normalizado;
+  const ideal = useMemo(
+    () =>
+      computeIdealScenario(
+        scenarios.scenarioB.items,
+        idealSelections,
+        scenarioATotal,
+        scenarioBTotal
+      ),
+    [scenarios, idealSelections, scenarioATotal, scenarioBTotal]
+  );
+
+  const activeLines = ideal.lines.filter((l) => l.status !== 'no_demand');
+  const pendingLines = activeLines.filter((l) => l.status === 'pending');
+  const selectedLines = activeLines.filter((l) => l.status === 'selected');
+
+  return (
+    <div className="space-y-4">
+      {ideal.pendingCount > 0 && (
+        <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-amber-800">
+            <p className="font-medium">
+              {ideal.pendingCount} material(is) sem fornecedor selecionado
+            </p>
+            <p className="text-amber-600 mt-0.5">
+              Clique no preço unitário na Tabela de Avaliação para definir o Cenário Ideal.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <p className="text-xs font-semibold uppercase text-blue-700">Total Cenário Ideal</p>
+          <p className="text-2xl font-bold text-[#1D3140] mt-1">{formatCurrency(ideal.total)}</p>
+          <p className="text-xs text-gray-500 mt-1">{selectedLines.length} itens selecionados</p>
+        </div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs font-semibold uppercase text-gray-500">vs. Cenário A (pacote)</p>
+          <p className={`text-xl font-bold mt-1 ${ideal.diffVsA < 0 ? 'text-green-700' : ideal.diffVsA > 0 ? 'text-red-600' : 'text-gray-600'}`}>
+            {ideal.diffVsA < 0 ? '−' : ideal.diffVsA > 0 ? '+' : ''}
+            {formatCurrency(Math.abs(ideal.diffVsA))}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">Referência: {formatCurrency(scenarioATotal)}</p>
+        </div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs font-semibold uppercase text-gray-500">vs. Cenário B (por item)</p>
+          <p className={`text-xl font-bold mt-1 ${ideal.diffVsB < 0 ? 'text-green-700' : ideal.diffVsB > 0 ? 'text-red-600' : 'text-gray-600'}`}>
+            {ideal.diffVsB < 0 ? '−' : ideal.diffVsB > 0 ? '+' : ''}
+            {formatCurrency(Math.abs(ideal.diffVsB))}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">Referência: {formatCurrency(scenarioBTotal)}</p>
+        </div>
+      </div>
+
+      <p className="text-xs text-gray-500">
+        Composição manual: fornecedor escolhido por material. Preços respeitam negociação quando informada.
+      </p>
+      <div className="overflow-x-auto border border-gray-200 rounded-lg max-h-[500px]">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50 sticky top-0 z-10">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase bg-gray-50">Material</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase w-20 bg-gray-50">Compra</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-40 bg-gray-50">Fornecedor</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase w-32 bg-gray-50">Preço norm.</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase w-32 bg-gray-50">Total</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-100">
+            {activeLines.map((line) => (
+              <tr
+                key={line.material_id}
+                className={line.status === 'pending' ? 'bg-amber-50' : ''}
+              >
+                <td className="px-4 py-3">
+                  <p className="text-sm font-medium text-[#1D3140]">{line.material_name}</p>
+                  <p className="text-xs text-gray-400 font-mono">{line.material_code}</p>
+                </td>
+                <td className="px-4 py-3 text-right text-sm text-gray-600">{formatNumber(line.net_qty)}</td>
+                <td className="px-4 py-3">
+                  {line.status === 'pending' ? (
+                    <span className="text-xs font-medium text-amber-700">Pendente — selecione na tabela</span>
+                  ) : (
+                    <span className="text-sm text-[#1D3140]">{line.supplier_name}</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-right text-sm text-gray-700">
+                  {line.status === 'selected' ? formatCurrency(line.preco_normalizado) : '—'}
+                </td>
+                <td className="px-4 py-3 text-right text-sm font-semibold text-[#64ABDE]">
+                  {line.status === 'selected' ? formatCurrency(line.line_total) : '—'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot className="bg-gray-50 sticky bottom-0 border-t-2 border-gray-200">
+            <tr>
+              <td colSpan={4} className="px-4 py-3 text-sm font-semibold text-gray-700 text-right">
+                Total Cenário Ideal
+                {pendingLines.length > 0 && (
+                  <span className="block text-xs font-normal text-amber-600">
+                    ({pendingLines.length} pendente(s) não incluídos)
+                  </span>
+                )}
+              </td>
+              <td className="px-4 py-3 text-right text-sm font-bold text-[#1D3140]">
+                {formatCurrency(ideal.total)}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function RankingView({
+  scenarios,
+  idealSelections,
+}: {
+  scenarios: ScenariosResult;
+  idealSelections: Map<string, string>;
+}) {
+  const [rankingTab, setRankingTab] = useState<'A' | 'B' | 'Ideal'>('A');
+  const idealPending = useMemo(() => {
+    const result = computeIdealScenario(
+      scenarios.scenarioB.items,
+      idealSelections,
+      scenarios.scenarioA[0]?.total_normalizado ?? 0,
+      scenarios.scenarioB.total_normalizado
+    );
+    return result.pendingCount;
+  }, [scenarios, idealSelections]);
 
   return (
     <div className="space-y-4">
@@ -529,10 +677,22 @@ function RankingView({ scenarios }: { scenarios: ScenariosResult }) {
             </span>
           )}
         </button>
+        <button type="button" onClick={() => setRankingTab('Ideal')} className={tabBtnClass(rankingTab === 'Ideal')}>
+          <Target className="h-4 w-4" />
+          Cenário Ideal
+          {idealPending > 0 && (
+            <span className="ml-1 inline-flex items-center px-1.5 py-0.5 bg-amber-100 text-amber-800 text-xs rounded-full border border-amber-200">
+              {idealPending} pend.
+            </span>
+          )}
+        </button>
       </div>
       <div className="pt-2">
         {rankingTab === 'A' && <ScenarioAView scenarios={scenarios} />}
         {rankingTab === 'B' && <ScenarioBView scenarios={scenarios} />}
+        {rankingTab === 'Ideal' && (
+          <ScenarioIdealView scenarios={scenarios} idealSelections={idealSelections} />
+        )}
       </div>
     </div>
   );
@@ -734,11 +894,21 @@ export default function SessionScenariosView({
   sessionId,
   budgetId,
   initialStock,
+  initialIdealSelections,
 }: Props) {
   const router = useRouter();
   const [scenarios, setScenarios] = useState(initialScenarios);
   const [activeTab, setActiveTab] = useState<'tabelona' | 'ranking'>('tabelona');
   const [isPending, startTransition] = useTransition();
+  const [isSavingPrice, setIsSavingPrice] = useState(false);
+
+  const [idealSelections, setIdealSelections] = useState<Map<string, string>>(() => {
+    const m = new Map<string, string>();
+    for (const row of initialIdealSelections) {
+      m.set(row.material_id, row.quote_id);
+    }
+    return m;
+  });
 
   // Filter state
   const [filterState, setFilterState] = useState<ScenarioFilterState>(defaultFilterState);
@@ -849,6 +1019,62 @@ export default function SessionScenariosView({
     });
   };
 
+  const refreshScenarios = useCallback(async () => {
+    const scenariosRes = await calculateScenariosAction(budgetId, sessionId);
+    if (scenariosRes.success) {
+      setScenarios(scenariosRes.data);
+    }
+    router.refresh();
+  }, [budgetId, sessionId, router]);
+
+  const handleNegotiatedPriceSave = useCallback(
+    async (quoteItemId: string, precoNegociadoNormalized: number | null) => {
+      const item = scenarios.scenarioB.items
+        .flatMap((i) => i.all_offers)
+        .find((o) => o.quote_item_id === quoteItemId);
+      if (!item) return;
+
+      const precoNegociado =
+        precoNegociadoNormalized === null
+          ? null
+          : negotiatedFromNormalized(precoNegociadoNormalized, item.conversion_factor);
+
+      setIsSavingPrice(true);
+      const res = await updateNegotiatedPriceAction(sessionId, quoteItemId, precoNegociado);
+      setIsSavingPrice(false);
+      if (res.success) {
+        await refreshScenarios();
+      }
+    },
+    [scenarios, sessionId, refreshScenarios]
+  );
+
+  const handleIdealSelect = useCallback(
+    (materialId: string, quoteId: string) => {
+      const current = idealSelections.get(materialId);
+      if (current === quoteId) return;
+
+      setIdealSelections((prev) => {
+        const next = new Map(prev);
+        next.set(materialId, quoteId);
+        return next;
+      });
+
+      startTransition(async () => {
+        const res = await saveIdealSelectionAction(sessionId, materialId, quoteId);
+        if (!res.success) {
+          setIdealSelections((prev) => {
+            const next = new Map(prev);
+            if (current) next.set(materialId, current);
+            else next.delete(materialId);
+            return next;
+          });
+        }
+      });
+    },
+    [idealSelections, sessionId]
+  );
+
   const pendingQuotes = quotes.filter((q) => q.status !== 'conciliado');
 
   return (
@@ -904,12 +1130,18 @@ export default function SessionScenariosView({
               quotes={quotesWithOffers}
               enabledQuoteIds={effectiveFilterState.enabledQuoteIds}
               onMaterialClick={handleMaterialClick}
+              idealSelections={idealSelections}
+              onIdealSelect={handleIdealSelect}
+              onNegotiatedPriceSave={handleNegotiatedPriceSave}
+              isSavingPrice={isSavingPrice}
             />
           )}
           {/* Ranking consome rawData (`scenarios` direto da action) — nunca passa
               pelo engine de filtros para evitar que toggles do painel afetem a
               aba de Ranking. */}
-          {activeTab === 'ranking' && <RankingView scenarios={scenarios} />}
+          {activeTab === 'ranking' && (
+            <RankingView scenarios={scenarios} idealSelections={idealSelections} />
+          )}
         </div>
       </div>
 

@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabaseClient';
 import type { ExtractionJobRow } from '@/actions/quotationSessions';
 import BatchDropzoneManager from '@/components/suppliers/BatchDropzoneManager';
 import ExtractionCurationModal from '@/components/suppliers/ExtractionCurationModal';
+import { storageFileNameFromPath } from '@/lib/quoteDisplay';
 
 interface QuoteRow {
   id: string;
@@ -27,8 +28,8 @@ interface Props {
 }
 
 function fileLabel(path: string): string {
-  const base = path.split('/').pop() ?? path;
-  return base.length > 48 ? `${base.slice(0, 44)}…` : base;
+  const label = storageFileNameFromPath(path) || path.split('/').pop() || path;
+  return label.length > 48 ? `${label.slice(0, 44)}…` : label;
 }
 
 function JobStatusIcon({ status }: { status: ExtractionJobRow['status'] }) {

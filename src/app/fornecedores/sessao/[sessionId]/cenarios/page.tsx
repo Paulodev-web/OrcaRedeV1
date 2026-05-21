@@ -5,6 +5,7 @@ import {
   calculateScenariosAction,
   listQuotesByBudgetAction,
   getSessionStockInputsAction,
+  getIdealSelectionsAction,
 } from '@/actions/supplierQuotes';
 import SessionScenariosView from '@/components/suppliers/SessionScenariosView';
 import SuppliesHeader from '@/components/suppliers/SuppliesHeader';
@@ -25,15 +26,17 @@ export default async function SessionCenariosPage({ params }: Props) {
     redirect(`/fornecedores/sessao/${sessionId}`);
   }
 
-  const [scenariosResult, quotesResult, stockResult] = await Promise.all([
+  const [scenariosResult, quotesResult, stockResult, idealResult] = await Promise.all([
     calculateScenariosAction(session.budget_id, sessionId),
     listQuotesByBudgetAction(session.budget_id, sessionId),
     getSessionStockInputsAction(sessionId),
+    getIdealSelectionsAction(sessionId),
   ]);
 
   const scenarios = scenariosResult.success ? scenariosResult.data : null;
   const quotes = quotesResult.success ? quotesResult.data.quotes : [];
   const initialStock = stockResult.success ? stockResult.data : [];
+  const initialIdealSelections = idealResult.success ? idealResult.data : [];
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -68,6 +71,7 @@ export default async function SessionCenariosPage({ params }: Props) {
           sessionId={sessionId}
           budgetId={session.budget_id}
           initialStock={initialStock}
+          initialIdealSelections={initialIdealSelections}
         />
       )}
     </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Select,
   SelectContent,
@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, X } from 'lucide-react';
+import { Loader2, Search, X } from 'lucide-react';
 import type { BudgetOption } from '@/types';
 import { onPortalPrimaryButtonSmClass } from '@/lib/branding';
 
@@ -33,17 +33,37 @@ export default function NewQuotationSessionModal({
 }: Props) {
   const [title, setTitle] = useState('');
   const [scope, setScope] = useState<string>(SCOPE_GLOBAL);
+  const [scopeSearch, setScopeSearch] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setTitle(initialValues?.title ?? '');
     setScope(initialValues?.budgetId ?? SCOPE_GLOBAL);
+    setScopeSearch('');
   }, [initialValues, open]);
+
+  const filteredBudgets = useMemo(() => {
+    const term = scopeSearch.trim().toLowerCase();
+    if (!term) return budgets;
+    return budgets.filter((b) => b.name.toLowerCase().includes(term));
+  }, [budgets, scopeSearch]);
+
+  const showGlobalOption = useMemo(() => {
+    const term = scopeSearch.trim().toLowerCase();
+    if (!term) return true;
+    return (
+      'global'.includes(term) ||
+      'catálogo'.includes(term) ||
+      'catalogo'.includes(term) ||
+      'sistema'.includes(term)
+    );
+  }, [scopeSearch]);
 
   const reset = () => {
     setTitle('');
     setScope(SCOPE_GLOBAL);
+    setScopeSearch('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -107,17 +127,47 @@ export default function NewQuotationSessionModal({
           </div>
           <div>
             <span className="block text-sm font-medium text-gray-700 mb-1">Escopo</span>
-            <Select value={scope} onValueChange={setScope}>
+            <Select
+              value={scope}
+              onValueChange={setScope}
+              onOpenChange={(isOpen) => {
+                if (!isOpen) setScopeSearch('');
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Escopo" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={SCOPE_GLOBAL}>Global (catálogo do sistema)</SelectItem>
-                {budgets.map((b) => (
+                <div
+                  className="sticky top-0 z-10 border-b border-gray-200/80 bg-white/95 px-2 pb-2 pt-1 backdrop-blur-sm"
+                  onPointerDown={(e) => e.preventDefault()}
+                >
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="search"
+                      value={scopeSearch}
+                      onChange={(e) => setScopeSearch(e.target.value)}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      placeholder="Buscar orçamento por nome..."
+                      className="w-full rounded-md border border-gray-200 bg-white py-1.5 pl-8 pr-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+                      aria-label="Buscar orçamento por nome"
+                    />
+                  </div>
+                </div>
+                {showGlobalOption && (
+                  <SelectItem value={SCOPE_GLOBAL}>Global (catálogo do sistema)</SelectItem>
+                )}
+                {filteredBudgets.map((b) => (
                   <SelectItem key={b.id} value={b.id}>
                     Orçamento: {b.name}
                   </SelectItem>
                 ))}
+                {!showGlobalOption && filteredBudgets.length === 0 && (
+                  <p className="px-3 py-4 text-center text-sm text-gray-400">
+                    Nenhum orçamento encontrado.
+                  </p>
+                )}
               </SelectContent>
             </Select>
           </div>

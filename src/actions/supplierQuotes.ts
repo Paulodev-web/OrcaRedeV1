@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
+import { effectiveUnitPrice, normalizedPrice } from '@/lib/supplierPrice';
 import { autoMatchQuoteItems } from '@/services/suppliers/autoMatchQuoteItems';
 import type { SupplierExtractItem } from '@/types/supplierExtract';
 import type { SupplierQuote, SupplierQuoteItem, SupplierMatchMethod, SupplierQuoteStatus } from '@/types';
@@ -795,13 +796,20 @@ export interface ScenarioItem {
   best_price_normalized: number;
   best_total: number;
   all_offers: {
+    quote_item_id: string;
     quote_id: string;
     supplier_name: string;
     preco_unit: number;
+    preco_negociado: number | null;
     conversion_factor: number;
     preco_normalizado: number;
     total_normalizado: number;
   }[];
+}
+
+export interface IdealSelectionRow {
+  material_id: string;
+  quote_id: string;
 }
 
 export interface ScenarioSupplier {
@@ -836,6 +844,7 @@ export async function calculateScenariosAction(
         id,
         quote_id,
         preco_unit,
+        preco_negociado,
         quantidade,
         conversion_factor,
         match_status,
@@ -888,9 +897,11 @@ export async function calculateScenariosAction(
     }
 
     type Offer = {
+      quote_item_id: string;
       supplier_name: string;
       quote_id: string;
       preco_unit: number;
+      preco_negociado: number | null;
       conversion_factor: number;
       preco_normalizado: number;
       quantidade: number;
@@ -906,17 +917,20 @@ export async function calculateScenariosAction(
       const quote = row.supplier_quotes as unknown as { id: string; supplier_name: string } | null;
       if (!mat || !quote) continue;
 
-      const preco_normalizado = row.conversion_factor > 0
-        ? row.preco_unit / row.conversion_factor
-        : row.preco_unit;
+      const preco_negociado =
+        row.preco_negociado != null ? Number(row.preco_negociado) : null;
+      const preco_efetivo = effectiveUnitPrice(preco_negociado, Number(row.preco_unit));
+      const preco_normalizado = normalizedPrice(preco_efetivo, Number(row.conversion_factor));
 
       const offer: Offer = {
+        quote_item_id: row.id,
         supplier_name: quote.supplier_name,
         quote_id: row.quote_id,
-        preco_unit: row.preco_unit,
-        conversion_factor: row.conversion_factor,
+        preco_unit: Number(row.preco_unit),
+        preco_negociado,
+        conversion_factor: Number(row.conversion_factor),
         preco_normalizado,
-        quantidade: row.quantidade,
+        quantidade: Number(row.quantidade),
       };
 
       const existing = materialOffers.get(mat.id);
@@ -957,9 +971,11 @@ export async function calculateScenariosAction(
         best_price_normalized: best.preco_normalizado,
         best_total: best.preco_normalizado * net_qty,
         all_offers: entry.offers.map((o) => ({
+          quote_item_id: o.quote_item_id,
           quote_id: o.quote_id,
           supplier_name: o.supplier_name,
           preco_unit: o.preco_unit,
+          preco_negociado: o.preco_negociado,
           conversion_factor: o.conversion_factor,
           preco_normalizado: o.preco_normalizado,
           total_normalizado: o.preco_normalizado * net_qty,
@@ -1457,6 +1473,172 @@ export async function saveSessionStockInputsAction(
     return { success: true, data: undefined };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao salvar estoque manual.';
+    return { success: false, error: message };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// updateNegotiatedPriceAction — persiste preco_negociado (preco_unit do PDF intacto)
+// ---------------------------------------------------------------------------
+export async function updateNegotiatedPriceAction(
+  sessionId: string,
+  quoteItemId: string,
+  precoNegociado: number | null
+): Promise<ActionResult<void>> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    if (precoNegociado !== null && precoNegociado <= 0) {
+      return { success: false, error: 'O preço negociado deve ser maior que zero.' };
+    }
+
+    const { data: item, error: fetchError } = await supabase
+      .from('supplier_quote_items')
+      .select(`
+        id,
+        supplier_quotes!inner (id, user_id, session_id)
+      `)
+      .eq('id', quoteItemId)
+      .single();
+
+    if (fetchError || !item) {
+      return { success: false, error: 'Item da cotação não encontrado.' };
+    }
+
+    const quote = item.supplier_quotes as unknown as {
+      id: string;
+      user_id: string;
+      session_id: string | null;
+    };
+
+    if (quote.user_id !== userId) {
+      return { success: false, error: 'Sem permissão para alterar este item.' };
+    }
+
+    if (quote.session_id !== sessionId) {
+      return { success: false, error: 'Item não pertence a esta sessão.' };
+    }
+
+    const { error: updateError } = await supabase
+      .from('supplier_quote_items')
+      .update({ preco_negociado: precoNegociado })
+      .eq('id', quoteItemId);
+
+    if (updateError) {
+      return { success: false, error: updateError.message };
+    }
+
+    revalidatePath(`/fornecedores/sessao/${sessionId}/cenarios`);
+    return { success: true, data: undefined };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao salvar preço negociado.';
+    return { success: false, error: message };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Cenário Ideal — seleções manuais por material
+// ---------------------------------------------------------------------------
+export async function getIdealSelectionsAction(
+  sessionId: string
+): Promise<ActionResult<IdealSelectionRow[]>> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const { data, error } = await supabase
+      .from('scenario_ideal_selections')
+      .select('material_id, quote_id')
+      .eq('session_id', sessionId)
+      .eq('user_id', userId);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return {
+      success: true,
+      data: (data ?? []).map((r) => ({
+        material_id: r.material_id,
+        quote_id: r.quote_id,
+      })),
+    };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao buscar seleções do cenário ideal.';
+    return { success: false, error: message };
+  }
+}
+
+export async function saveIdealSelectionAction(
+  sessionId: string,
+  materialId: string,
+  quoteId: string
+): Promise<ActionResult<void>> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const { data: quote, error: quoteError } = await supabase
+      .from('supplier_quotes')
+      .select('id, session_id, user_id')
+      .eq('id', quoteId)
+      .eq('user_id', userId)
+      .single();
+
+    if (quoteError || !quote) {
+      return { success: false, error: 'Cotação não encontrada.' };
+    }
+
+    if (quote.session_id !== sessionId) {
+      return { success: false, error: 'Cotação não pertence a esta sessão.' };
+    }
+
+    const { error } = await supabase.from('scenario_ideal_selections').upsert(
+      {
+        session_id: sessionId,
+        material_id: materialId,
+        quote_id: quoteId,
+        user_id: userId,
+      },
+      { onConflict: 'session_id,material_id,user_id' }
+    );
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath(`/fornecedores/sessao/${sessionId}/cenarios`);
+    return { success: true, data: undefined };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao salvar seleção do cenário ideal.';
+    return { success: false, error: message };
+  }
+}
+
+export async function removeIdealSelectionAction(
+  sessionId: string,
+  materialId: string
+): Promise<ActionResult<void>> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const { error } = await supabase
+      .from('scenario_ideal_selections')
+      .delete()
+      .eq('session_id', sessionId)
+      .eq('material_id', materialId)
+      .eq('user_id', userId);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath(`/fornecedores/sessao/${sessionId}/cenarios`);
+    return { success: true, data: undefined };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao remover seleção do cenário ideal.';
     return { success: false, error: message };
   }
 }

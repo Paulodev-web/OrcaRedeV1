@@ -4,18 +4,25 @@
  */
 
 /**
+ * Extrai o nome legível do arquivo a partir do caminho no Storage.
+ * Remove o prefixo numérico de upload (Date.now()) e a extensão .pdf.
+ */
+export function storageFileNameFromPath(path: string | null | undefined): string {
+  if (!path) return '';
+
+  const basename = path.split('/').pop() ?? '';
+  const withoutExt = basename.replace(/\.pdf$/i, '').trim();
+  const withoutUploadPrefix = withoutExt.replace(/^\d+_/, '').trim();
+
+  return withoutUploadPrefix || withoutExt || basename;
+}
+
+/**
  * Extrai o nome padrão a partir do caminho do arquivo PDF.
  * Remove a extensão .pdf e retorna o basename.
  */
 export function pdfPathToDefaultDisplayName(pdfPath: string | null | undefined): string {
-  if (!pdfPath) return '';
-
-  // Pega o último segmento do path (basename)
-  const segments = pdfPath.split('/');
-  const basename = segments[segments.length - 1] || '';
-
-  // Remove extensão .pdf (case-insensitive)
-  return basename.replace(/\.pdf$/i, '').trim();
+  return storageFileNameFromPath(pdfPath);
 }
 
 /**
