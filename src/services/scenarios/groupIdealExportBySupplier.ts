@@ -39,6 +39,7 @@ export function groupIdealExportBySupplier(
   const validatedMap = buildSelectionMap(selections);
   const effectiveMap = buildEffectiveSelectionMap(scenarios.scenarioB.items, validatedMap);
   const groups = new Map<string, IdealExportRow[]>();
+  const quoteIdsBySupplier = new Map<string, Set<string>>();
 
   for (const item of scenarios.scenarioB.items) {
     if (item.net_qty <= 0) continue;
@@ -69,12 +70,19 @@ export function groupIdealExportBySupplier(
       precoTotal,
     };
 
-    const existing = groups.get(offer.supplier_name);
+    const supplierKey = offer.supplier_name;
+    const existing = groups.get(supplierKey);
     if (existing) {
       existing.push(row);
     } else {
-      groups.set(offer.supplier_name, [row]);
+      groups.set(supplierKey, [row]);
     }
+    let quoteSet = quoteIdsBySupplier.get(supplierKey);
+    if (!quoteSet) {
+      quoteSet = new Set();
+      quoteIdsBySupplier.set(supplierKey, quoteSet);
+    }
+    quoteSet.add(offer.quote_id);
   }
 
   const usedSlugs = new Set<string>();
@@ -85,7 +93,13 @@ export function groupIdealExportBySupplier(
     const grandTotal = rows.reduce((sum, r) => sum + r.precoTotal, 0);
     const baseSlug = slugifyFileName(supplierName);
     const fileSlug = uniqueSlug(baseSlug, usedSlugs);
-    result.push({ supplierName, fileSlug, rows, grandTotal });
+    result.push({
+      supplierName,
+      fileSlug,
+      rows,
+      grandTotal,
+      quoteIds: [...(quoteIdsBySupplier.get(supplierName) ?? [])],
+    });
   }
 
   result.sort((a, b) => a.supplierName.localeCompare(b.supplierName, 'pt-BR'));

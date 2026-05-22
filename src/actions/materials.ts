@@ -86,3 +86,48 @@ export async function deleteMaterialAction(id: string): Promise<ActionResult> {
     return { success: false, error: message };
   }
 }
+
+export async function deactivateMaterialForSuppliesAction(
+  materialId: string
+): Promise<ActionResult> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const { data: updated, error: updateError } = await supabase
+      .from('materials')
+      .update({ active_in_supplies: false })
+      .eq('id', materialId)
+      .eq('user_id', userId)
+      .select('id')
+      .maybeSingle();
+
+    if (updateError) {
+      return { success: false, error: updateError.message };
+    }
+
+    if (!updated) {
+      return { success: false, error: 'Material não encontrado.' };
+    }
+
+    await Promise.all([
+      supabase
+        .from('scenario_ideal_selections')
+        .delete()
+        .eq('material_id', materialId)
+        .eq('user_id', userId),
+      supabase
+        .from('session_material_stock_inputs')
+        .delete()
+        .eq('material_id', materialId)
+        .eq('user_id', userId),
+    ]);
+
+    revalidatePath('/fornecedores');
+    return { success: true };
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : 'Erro ao remover material do Suprimentos.';
+    return { success: false, error: message };
+  }
+}

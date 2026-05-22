@@ -25,6 +25,12 @@ export interface SupplierExportData {
   fileSlug: string;
   rows: IdealExportRow[];
   grandTotal: number;
+  quoteIds: string[];
+}
+
+export interface IdealExportSupplierOption {
+  supplierName: string;
+  fileSlug: string;
 }
 
 export class ExportIdealError extends Error {

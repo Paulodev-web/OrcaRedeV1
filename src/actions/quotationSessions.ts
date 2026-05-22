@@ -6,6 +6,7 @@ import {
   getQuotationSessionByIdRead,
   listExtractionJobsBySessionRead,
 } from '@/lib/quotationSessionReads';
+import { deleteUploadedPdfCascade } from '@/services/suppliers/deleteUploadedPdfCascade';
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -337,6 +338,30 @@ export async function retryExtractionJobsAction(
     return { success: true, data: { jobIds } };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao reenfileirar jobs.';
+    return { success: false, error: message };
+  }
+}
+
+export async function deleteUploadedPdfAction(input: {
+  sessionId: string;
+  jobId?: string;
+  quoteId?: string;
+}): Promise<ActionResult<void>> {
+  try {
+    const result = await deleteUploadedPdfCascade(input);
+    if ('error' in result) {
+      return { success: false, error: result.error };
+    }
+
+    const sessionId = input.sessionId.trim();
+    revalidatePath('/fornecedores');
+    revalidatePath(`/fornecedores/sessao/${sessionId}`);
+    revalidatePath(`/fornecedores/sessao/${sessionId}/conciliacao`);
+    revalidatePath(`/fornecedores/sessao/${sessionId}/cenarios`);
+
+    return { success: true, data: undefined };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao excluir PDF.';
     return { success: false, error: message };
   }
 }

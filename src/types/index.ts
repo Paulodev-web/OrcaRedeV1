@@ -5,6 +5,7 @@ export interface Material {
   precoUnit: number;
   unidade: string;
   user_id?: string;
+  activeInSupplies?: boolean;
 }
 
 export interface GrupoItem {

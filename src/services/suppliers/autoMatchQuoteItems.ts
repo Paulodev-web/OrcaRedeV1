@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { getInactiveSuppliesMaterialIds } from '@/services/supplies/materialSuppliesFilter';
 
 /**
  * Nível 1 — Memória Exata: cruza itens sem match contra supplier_material_mappings.
@@ -50,12 +51,14 @@ export async function autoMatchQuoteItems(
     mappings.map((m) => [m.supplier_material_name.toLowerCase().trim(), m])
   );
 
+  const inactiveMaterialIds = await getInactiveSuppliesMaterialIds(supabase, userId);
+
   let matchedCount = 0;
   for (const item of items) {
     const key = item.descricao.toLowerCase().trim();
     const mapping = mappingMap.get(key);
 
-    if (mapping) {
+    if (mapping && !inactiveMaterialIds.has(mapping.internal_material_id)) {
       const { error: updateError } = await supabase
         .from('supplier_quote_items')
         .update({

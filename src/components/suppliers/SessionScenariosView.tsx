@@ -12,6 +12,7 @@ import {
   Package,
   Save,
   Shuffle,
+  Trash2,
   Table2,
   TrendingDown,
   Trophy,
@@ -20,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { AlertDialog } from '@/components/ui/alert-dialog';
+import { IdealPdfExportControls } from '@/components/suppliers/IdealPdfExportControls';
 import {
   saveSessionStockInputsAction,
   calculateScenariosAction,
@@ -31,6 +33,7 @@ import {
   type SessionStockInput,
   type IdealSelectionRow,
 } from '@/actions/supplierQuotes';
+import { deactivateMaterialForSuppliesAction } from '@/actions/materials';
 import { negotiatedFromNormalized } from '@/lib/supplierPrice';
 import {
   buildEffectiveSelectionMap,
@@ -404,9 +407,17 @@ interface TabelonaProps {
   scenarios: ScenariosResult & { filteredItems?: ScenarioItem[] };
   groupBySupplier?: boolean;
   quotes: TabelonaQuoteInfo[];
+  onRemoveMaterial?: (item: ScenarioItem) => void;
+  isRemovingMaterial?: boolean;
 }
 
-function TabelonaView({ scenarios, groupBySupplier = true, quotes }: TabelonaProps) {
+function TabelonaView({
+  scenarios,
+  groupBySupplier = true,
+  quotes,
+  onRemoveMaterial,
+  isRemovingMaterial = false,
+}: TabelonaProps) {
   // Use filteredItems if available, otherwise fall back to scenarioB.items
   const items = (scenarios as { filteredItems?: ScenarioItem[] }).filteredItems ?? scenarios.scenarioB.items;
 
@@ -475,6 +486,11 @@ function TabelonaView({ scenarios, groupBySupplier = true, quotes }: TabelonaPro
                 </th>
               ))}
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36 bg-gray-50">Melhor</th>
+              {onRemoveMaterial && (
+                <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-14 bg-gray-50">
+                  Ações
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-100">
@@ -526,6 +542,19 @@ function TabelonaView({ scenarios, groupBySupplier = true, quotes }: TabelonaPro
                       </span>
                     )}
                   </td>
+                  {onRemoveMaterial && (
+                    <td className={`px-2 py-3 text-center ${isEvenRow ? 'bg-white' : 'bg-gray-50/50'}`}>
+                      <button
+                        type="button"
+                        title="Remover do Suprimentos"
+                        disabled={isRemovingMaterial}
+                        onClick={() => onRemoveMaterial(item)}
+                        className="inline-flex items-center justify-center rounded-md p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -651,6 +680,32 @@ function ScenarioIdealView({
     runExport,
   ]);
 
+  const handleConfirmExport = useCallback(
+    (run: () => void | Promise<void>) => {
+      if (!canExport) return;
+      if (ideal.pendingCount > 0) {
+        alertDialog.showConfirm(
+          'Materiais sem cotação',
+          `Existem ${ideal.pendingCount} materiais sem oferta disponível. Eles não entrarão na exportação. Deseja continuar?`,
+          () => void run(),
+          { confirmText: 'Continuar' }
+        );
+        return;
+      }
+      if (ideal.unvalidatedCount > 0) {
+        alertDialog.showConfirm(
+          'Itens só sugeridos',
+          `${ideal.unvalidatedCount} item(ns) ainda não foram validados explicitamente. A exportação usará o menor preço para esses itens. Deseja continuar?`,
+          () => void run(),
+          { confirmText: 'Exportar' }
+        );
+        return;
+      }
+      void run();
+    },
+    [canExport, ideal.pendingCount, ideal.unvalidatedCount, alertDialog]
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-end gap-2">
@@ -704,6 +759,11 @@ function ScenarioIdealView({
             Exportar Excel
           </button>
         </span>
+        <IdealPdfExportControls
+          sessionId={sessionId}
+          canExport={canExport}
+          onConfirmExport={handleConfirmExport}
+        />
       </div>
 
       {staleCount > 0 && (
@@ -1021,10 +1081,12 @@ export default function SessionScenariosView({
 }: Props) {
   const [scenarios, setScenarios] = useState(initialScenarios);
   const [activeTab, setActiveTab] = useState<'tabelona' | 'ranking'>('tabelona');
+  const alertDialog = useAlertDialog();
   const [isPending, startTransition] = useTransition();
   const [isValidatingAll, startValidateAll] = useTransition();
   const [isRevalidatingStale, startRevalidateStale] = useTransition();
   const [isSavingPrice, setIsSavingPrice] = useState(false);
+  const [isRemovingMaterial, setIsRemovingMaterial] = useState(false);
 
   const [idealSelections, setIdealSelections] = useState<Map<string, string>>(() => {
     const m = new Map<string, string>();
@@ -1173,6 +1235,57 @@ export default function SessionScenariosView({
       }
     });
   };
+
+  const handleRemoveMaterial = useCallback(
+    (item: ScenarioItem) => {
+      if (isRemovingMaterial) return;
+
+      alertDialog.showConfirm(
+        'Remover do Suprimentos',
+        `O material "${item.material_name}" deixará de aparecer em todas as sessões de Suprimentos (Tabelona, conciliação, cenários e extração). Ele continua disponível no orçamento.`,
+        async () => {
+          setIsRemovingMaterial(true);
+          try {
+            const result = await deactivateMaterialForSuppliesAction(item.material_id);
+            if (!result.success) {
+              alertDialog.showError(
+                'Não foi possível remover',
+                result.error ?? 'Erro ao desativar material.'
+              );
+              return;
+            }
+
+            setStockMap((prev) => {
+              const next = new Map(prev);
+              next.delete(item.material_id);
+              return next;
+            });
+            setIdealSelections((prev) => {
+              const next = new Map(prev);
+              next.delete(item.material_id);
+              return next;
+            });
+            setSelectedMaterial((current) => {
+              if (current?.material_id === item.material_id) {
+                setMaterialModalOpen(false);
+                return null;
+              }
+              return current;
+            });
+            await refreshScenarios();
+          } finally {
+            setIsRemovingMaterial(false);
+          }
+        },
+        {
+          type: 'destructive',
+          confirmText: 'Remover',
+          cancelText: 'Cancelar',
+        }
+      );
+    },
+    [isRemovingMaterial, alertDialog, refreshScenarios]
+  );
 
   const handleNegotiatedPriceSave = useCallback(
     async (quoteItemId: string, precoNegociadoNormalized: number | null) => {
@@ -1347,6 +1460,8 @@ export default function SessionScenariosView({
               onIdealSelect={handleIdealSelect}
               onNegotiatedPriceSave={handleNegotiatedPriceSave}
               isSavingPrice={isSavingPrice}
+              onRemoveMaterial={handleRemoveMaterial}
+              isRemovingMaterial={isRemovingMaterial}
             />
           )}
           {/* Ranking consome rawData (`scenarios` direto da action) — nunca passa
@@ -1375,6 +1490,8 @@ export default function SessionScenariosView({
         open={materialModalOpen}
         onOpenChange={setMaterialModalOpen}
       />
+
+      <AlertDialog {...alertDialog.dialogProps} />
     </div>
   );
 }

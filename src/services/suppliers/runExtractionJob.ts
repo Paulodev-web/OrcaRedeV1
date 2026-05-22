@@ -7,6 +7,7 @@ import { resolveSupplierForQuote } from '@/services/suppliers/resolveSupplierFor
 import { autoMatchQuoteItems } from '@/services/suppliers/autoMatchQuoteItems';
 import { semanticMatch } from '@/services/ai/semanticMatch';
 import type { UnconciliatedItem, SystemMaterial } from '@/types/supplierExtract';
+import { isMaterialActiveInSupplies } from '@/services/supplies/materialSuppliesFilter';
 
 const CONFIDENCE_AUTO_APPLY_THRESHOLD = 80;
 
@@ -37,7 +38,7 @@ async function loadSystemMaterials(
     const { data: groupMaterials } = await supabase
       .from('post_item_group_materials')
       .select(`
-        materials (id, code, name, unit),
+        materials (id, code, name, unit, active_in_supplies),
         post_item_groups!inner (
           budget_posts!inner (budget_id)
         )
@@ -47,7 +48,7 @@ async function loadSystemMaterials(
     const { data: looseMaterials } = await supabase
       .from('post_materials')
       .select(`
-        materials (id, code, name, unit),
+        materials (id, code, name, unit, active_in_supplies),
         budget_posts!inner (budget_id)
       `)
       .eq('budget_posts.budget_id', budgetId);
@@ -55,10 +56,12 @@ async function loadSystemMaterials(
     const seen = new Set<string>();
     const materials: SystemMaterial[] = [];
     for (const row of [...(groupMaterials ?? []), ...(looseMaterials ?? [])]) {
-      const mat = row.materials as unknown as SystemMaterial | null;
-      if (mat && !seen.has(mat.id)) {
+      const mat = row.materials as unknown as (SystemMaterial & {
+        active_in_supplies?: boolean | null;
+      }) | null;
+      if (mat && isMaterialActiveInSupplies(mat) && !seen.has(mat.id)) {
         seen.add(mat.id);
-        materials.push(mat);
+        materials.push({ id: mat.id, code: mat.code, name: mat.name, unit: mat.unit });
       }
     }
     return materials;
@@ -67,7 +70,8 @@ async function loadSystemMaterials(
   const { data } = await supabase
     .from('materials')
     .select('id, code, name, unit')
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .eq('active_in_supplies', true);
 
   return (data ?? []) as SystemMaterial[];
 }

@@ -6,6 +6,10 @@ import { getSupplierDisplayName } from '@/lib/supplierDisplay';
 import { effectiveUnitPrice, normalizedPrice } from '@/lib/supplierPrice';
 import { autoMatchQuoteItems } from '@/services/suppliers/autoMatchQuoteItems';
 import { resolveSupplierForQuote } from '@/services/suppliers/resolveSupplierForQuote';
+import {
+  getInactiveSuppliesMaterialIds,
+  isMaterialActiveInSupplies,
+} from '@/services/supplies/materialSuppliesFilter';
 import type { SupplierExtractItem } from '@/types/supplierExtract';
 import type { SupplierQuote, SupplierQuoteItem, SupplierMatchMethod, SupplierQuoteStatus } from '@/types';
 
@@ -390,7 +394,7 @@ export async function getBudgetMaterialsAction(
     const { data: groupMaterials, error: gmError } = await supabase
       .from('post_item_group_materials')
       .select(`
-        materials (id, code, name, unit),
+        materials (id, code, name, unit, active_in_supplies),
         post_item_groups!inner (
           budget_posts!inner (budget_id)
         )
@@ -401,7 +405,7 @@ export async function getBudgetMaterialsAction(
     const { data: looseMaterials, error: lmError } = await supabase
       .from('post_materials')
       .select(`
-        materials (id, code, name, unit),
+        materials (id, code, name, unit, active_in_supplies),
         budget_posts!inner (budget_id)
       `)
       .eq('budget_posts.budget_id', budgetId);
@@ -416,8 +420,14 @@ export async function getBudgetMaterialsAction(
     const materials: BudgetMaterialOption[] = [];
 
     for (const row of [...(groupMaterials ?? []), ...(looseMaterials ?? [])]) {
-      const mat = row.materials as unknown as { id: string; code: string; name: string; unit: string } | null;
-      if (mat && !seen.has(mat.id)) {
+      const mat = row.materials as unknown as {
+        id: string;
+        code: string;
+        name: string;
+        unit: string;
+        active_in_supplies?: boolean | null;
+      } | null;
+      if (mat && isMaterialActiveInSupplies(mat) && !seen.has(mat.id)) {
         seen.add(mat.id);
         materials.push({ id: mat.id, code: mat.code, name: mat.name, unit: mat.unit });
       }
@@ -447,6 +457,7 @@ export async function getCatalogMaterialsAction(): Promise<
       .from('materials')
       .select('id, code, name, unit')
       .eq('user_id', userId)
+      .eq('active_in_supplies', true)
       .order('name', { ascending: true });
 
     if (error) {
@@ -987,6 +998,8 @@ export async function calculateScenariosAction(
       };
     }
 
+    const inactiveMaterialIds = await getInactiveSuppliesMaterialIds(supabase, userId);
+
     type Offer = {
       quote_item_id: string;
       supplier_name: string;
@@ -1012,7 +1025,7 @@ export async function calculateScenariosAction(
         supplier_name: string;
         suppliers?: { name: string } | { name: string }[] | null;
       } | null;
-      if (!mat || !quote) continue;
+      if (!mat || !quote || inactiveMaterialIds.has(mat.id)) continue;
 
       const displayName = getSupplierDisplayName(quote);
       const supplierKey = quote.supplier_id ?? displayName;
@@ -1413,6 +1426,7 @@ export async function getConciliationPayloadBySessionAction(
       : await getCatalogMaterialsAction();
 
     const budgetMaterials = mats.success ? mats.data.materials : [];
+    const inactiveMaterialIds = await getInactiveSuppliesMaterialIds(supabase, userId);
     const materialMap = new Map<string, SessionConciliationMaterialRow>();
     const unlinked: (SupplierQuoteItemWithMaterial & { supplier_name: string })[] = [];
 
@@ -1427,6 +1441,10 @@ export async function getConciliationPayloadBySessionAction(
     }
 
     for (const row of rawItems ?? []) {
+      if (row.matched_material_id && inactiveMaterialIds.has(row.matched_material_id)) {
+        continue;
+      }
+
       const materialRow = Array.isArray(row.materials) ? row.materials[0] : row.materials;
       const suggestions = (row.semantic_match_suggestions ?? []) as {
         id: string; rationale?: string; status: string;
@@ -1434,6 +1452,13 @@ export async function getConciliationPayloadBySessionAction(
       }[];
       const suggestion = suggestions.find((s) => s.status === 'suggested') ?? suggestions[0];
       const rejectedSuggestion = suggestions.find((s) => s.status === 'rejected');
+
+      if (
+        rejectedSuggestion?.suggested_material_id &&
+        inactiveMaterialIds.has(rejectedSuggestion.suggested_material_id)
+      ) {
+        continue;
+      }
 
       const item: SupplierQuoteItemWithMaterial & { supplier_name: string; suggestion_id?: string | null } = {
         id: row.id,

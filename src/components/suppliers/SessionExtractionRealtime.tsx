@@ -1,9 +1,20 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Clock, Eye, FileText, Loader2, RotateCcw, XCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Eye,
+  FileText,
+  Loader2,
+  RotateCcw,
+  Trash2,
+  XCircle,
+} from 'lucide-react';
 import { toast } from 'sonner';
-import { retryExtractionJobsAction } from '@/actions/quotationSessions';
+import { deleteUploadedPdfAction, retryExtractionJobsAction } from '@/actions/quotationSessions';
 import { supabase } from '@/lib/supabaseClient';
 import type { ExtractionJobRow } from '@/actions/quotationSessions';
 import BatchDropzoneManager from '@/components/suppliers/BatchDropzoneManager';
@@ -33,6 +44,9 @@ function fileLabel(path: string): string {
   return label.length > 48 ? `${label.slice(0, 44)}…` : label;
 }
 
+const DELETE_PDF_CONFIRM_MESSAGE =
+  'Excluir este PDF? Serão removidos a cotação, todos os itens extraídos, a conciliação, seleções do cenário ideal e o arquivo. Os cenários A/B serão recalculados sem este fornecedor. Esta ação não pode ser desfeita.';
+
 function JobStatusIcon({ status }: { status: ExtractionJobRow['status'] }) {
   switch (status) {
     case 'pending':
@@ -56,11 +70,13 @@ export default function SessionExtractionRealtime({
   onAllProcessed,
   onJobsChange,
 }: Props) {
+  const router = useRouter();
   const [jobs, setJobs] = useState<ExtractionJobRow[]>(initialJobs);
   const [quotes, setQuotes] = useState<QuoteRow[]>(initialQuotes);
   const [curationQuoteId, setCurationQuoteId] = useState<string | null>(null);
   const [curationSupplier, setCurationSupplier] = useState('');
   const [retryingErrors, setRetryingErrors] = useState(false);
+  const [deletingKey, setDeletingKey] = useState<string | null>(null);
 
   const hadProcessingRef = useRef(false);
   const toastFiredRef = useRef(false);
@@ -246,6 +262,46 @@ export default function SessionExtractionRealtime({
     }
   };
 
+  const handleDeletePdf = async (params: { jobId?: string; quoteId?: string; label: string }) => {
+    if (disabled || deletingKey) return;
+    const accepted = confirm(DELETE_PDF_CONFIRM_MESSAGE);
+    if (!accepted) return;
+
+    const key = params.jobId ?? params.quoteId ?? '';
+    setDeletingKey(key);
+    try {
+      const result = await deleteUploadedPdfAction({
+        sessionId,
+        jobId: params.jobId,
+        quoteId: params.quoteId,
+      });
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+
+      if (params.quoteId) {
+        setQuotes((prev) => prev.filter((q) => q.id !== params.quoteId));
+        if (curationQuoteId === params.quoteId) setCurationQuoteId(null);
+      }
+      if (params.jobId) {
+        setJobs((prev) => prev.filter((j) => j.id !== params.jobId));
+        notifiedErrorJobIdsRef.current.delete(params.jobId);
+        dismissTransientError(params.jobId);
+      } else if (params.quoteId) {
+        setJobs((prev) => prev.filter((j) => j.quote_id !== params.quoteId));
+      }
+
+      toast.success(`PDF "${params.label}" excluído.`);
+      router.refresh();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro ao excluir PDF.';
+      toast.error(message);
+    } finally {
+      setDeletingKey(null);
+    }
+  };
+
   const handleRetryErroredJobs = async () => {
     const erroredIds = jobs.filter((j) => j.status === 'error').map((j) => j.id);
     if (erroredIds.length === 0 || retryingErrors) return;
@@ -272,6 +328,8 @@ export default function SessionExtractionRealtime({
   };
 
   const activeJobs = jobs.filter((j) => j.status === 'pending' || j.status === 'processing');
+  const pendingJobs = jobs.filter((j) => j.status === 'pending');
+  const processingJobs = jobs.filter((j) => j.status === 'processing');
   const erroredJobs = jobs.filter((j) => j.status === 'error');
 
   return (
@@ -325,7 +383,7 @@ export default function SessionExtractionRealtime({
             Processando ({activeJobs.length})
           </h2>
           <ul className="space-y-2">
-            {activeJobs.map((j) => (
+            {processingJobs.map((j) => (
               <li
                 key={j.id}
                 className="flex flex-wrap items-center gap-3 rounded-lg border border-[#64ABDE]/40 bg-[#64ABDE]/10 px-4 py-3 text-sm"
@@ -335,8 +393,41 @@ export default function SessionExtractionRealtime({
                   {fileLabel(j.file_path)}
                 </span>
                 <span className="text-xs uppercase text-gray-500">{j.status}</span>
-                {j.estimated_time != null && j.status === 'processing' && (
+                {j.estimated_time != null && (
                   <span className="text-xs text-gray-400">~{j.estimated_time}s</span>
+                )}
+              </li>
+            ))}
+            {pendingJobs.map((j) => (
+              <li
+                key={j.id}
+                className="flex flex-wrap items-center gap-3 rounded-lg border border-[#64ABDE]/40 bg-[#64ABDE]/10 px-4 py-3 text-sm"
+              >
+                <JobStatusIcon status={j.status} />
+                <span className="flex-1 min-w-0 font-medium text-gray-800 truncate">
+                  {fileLabel(j.file_path)}
+                </span>
+                <span className="text-xs uppercase text-gray-500">{j.status}</span>
+                {!disabled && (
+                  <button
+                    type="button"
+                    title="Excluir PDF"
+                    disabled={deletingKey === j.id}
+                    onClick={() =>
+                      void handleDeletePdf({
+                        jobId: j.id,
+                        label: fileLabel(j.file_path),
+                      })
+                    }
+                    className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-red-200 bg-white px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    {deletingKey === j.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
+                    Excluir
+                  </button>
                 )}
               </li>
             ))}
@@ -380,6 +471,27 @@ export default function SessionExtractionRealtime({
                 {j.error_message && (
                   <span className="w-full text-xs text-red-700/90">{j.error_message}</span>
                 )}
+                {!disabled && (
+                  <button
+                    type="button"
+                    title="Excluir PDF"
+                    disabled={deletingKey === j.id}
+                    onClick={() =>
+                      void handleDeletePdf({
+                        jobId: j.id,
+                        label: fileLabel(j.file_path),
+                      })
+                    }
+                    className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-red-200 bg-white px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    {deletingKey === j.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
+                    Excluir
+                  </button>
+                )}
               </li>
             ))}
           </ul>
@@ -399,42 +511,68 @@ export default function SessionExtractionRealtime({
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {quotes.map((q) => {
               const validated = !!q.extraction_validated_at;
+              const isDeleting = deletingKey === q.id;
               return (
-                <button
+                <div
                   key={q.id}
-                  type="button"
-                  onClick={() => openCuration(q)}
-                  className={`group relative rounded-lg border p-4 text-left transition-all hover:shadow-md ${
+                  className={`group relative rounded-lg border p-4 transition-all hover:shadow-md ${
                     validated
                       ? 'border-green-200 bg-green-50/30'
                       : 'border-gray-200 bg-white hover:border-[#64ABDE]/50'
                   }`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                        validated
-                          ? 'bg-green-100 text-green-600'
-                          : 'bg-gray-100 text-gray-500 group-hover:bg-[#64ABDE]/15 group-hover:text-[#64ABDE]'
-                      }`}
+                  <button
+                    type="button"
+                    onClick={() => openCuration(q)}
+                    className="w-full text-left"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                          validated
+                            ? 'bg-green-100 text-green-600'
+                            : 'bg-gray-100 text-gray-500 group-hover:bg-[#64ABDE]/15 group-hover:text-[#64ABDE]'
+                        }`}
+                      >
+                        <FileText className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1 pr-6">
+                        <p className="truncate text-sm font-semibold text-[#1D3140]">
+                          {q.supplier_name}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {validated ? (
+                            <span className="text-green-600 font-medium">Extração validada</span>
+                          ) : (
+                            'Clique para revisar extração'
+                          )}
+                        </p>
+                      </div>
+                      <Eye className="h-4 w-4 shrink-0 text-gray-300 transition-colors group-hover:text-[#64ABDE]" />
+                    </div>
+                  </button>
+                  {!disabled && (
+                    <button
+                      type="button"
+                      title="Excluir PDF"
+                      disabled={isDeleting}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void handleDeletePdf({
+                          quoteId: q.id,
+                          label: q.supplier_name,
+                        });
+                      }}
+                      className="absolute right-3 top-3 inline-flex items-center justify-center rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
                     >
-                      <FileText className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-[#1D3140]">
-                        {q.supplier_name}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {validated ? (
-                          <span className="text-green-600 font-medium">Extração validada</span>
-                        ) : (
-                          'Clique para revisar extração'
-                        )}
-                      </p>
-                    </div>
-                    <Eye className="h-4 w-4 shrink-0 text-gray-300 transition-colors group-hover:text-[#64ABDE]" />
-                  </div>
-                </button>
+                      {isDeleting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </button>
+                  )}
+                </div>
               );
             })}
           </div>
