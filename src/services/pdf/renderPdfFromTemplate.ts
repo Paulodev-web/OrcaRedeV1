@@ -21,6 +21,12 @@ import {
   tableHeaderHeight,
   tableRowHeight,
 } from './drawTable';
+import {
+  drawSignatureBlock,
+  embedSignatureImage,
+  measureSignatureBlockHeight,
+} from './drawSignatureBlock';
+import { loadSignatureImageBytes } from './loadSignatureImage';
 
 type LayoutContext = {
   pdfDoc: PDFDocument;
@@ -56,6 +62,11 @@ export async function renderPdfFromTemplate(
 
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const signatureImage = await embedSignatureImage(
+    pdfDoc,
+    loadSignatureImageBytes()
+  );
+  const signatureHeight = measureSignatureBlockHeight(signatureImage);
 
   const [firstPage] = await pdfDoc.copyPages(templateDoc, [0]);
   pdfDoc.addPage(firstPage);
@@ -133,6 +144,17 @@ export async function renderPdfFromTemplate(
       headerDrawn = true;
       void headerDrawn;
     }
+  }
+
+  if (signatureImage) {
+    await ensureVerticalSpace(ctx, signatureHeight);
+    ctx.y = drawSignatureBlock(
+      currentPage(ctx),
+      ctx.y,
+      signatureImage,
+      ctx.font,
+      ctx.fontBold
+    );
   }
 
   const totalPages = ctx.pages.length;
