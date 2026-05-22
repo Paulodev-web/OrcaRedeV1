@@ -9,7 +9,7 @@ import { sanitizePdfText } from './sanitizePdfText';
 export const SIGNATURE_GAP_AFTER_TABLE = 28;
 const SIGNATURE_IMAGE_MAX_WIDTH = 130;
 const SIGNATURE_IMAGE_MAX_HEIGHT = 48;
-const SIGNATURE_IMAGE_GAP = 8;
+const SIGNATURE_IMAGE_GAP = 3;
 const SIGNATURE_LINE_SIZE = 9;
 const SIGNATURE_NAME_SIZE = 10;
 const SIGNATURE_TEXT_GAP = 5;
