@@ -5,6 +5,15 @@ import type {
 import type { GeneratePdfRequest, SupplierPdfInfo } from '@/types/pdfExport';
 import type { Supplier } from '@/types';
 
+function pdfCell(value: string | number): string {
+  return String(value)
+    .replace(/\t/g, ' ')
+    .replace(/\r\n?|\n/g, ' ')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 const moneyFmt = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
   currency: 'BRL',
@@ -31,16 +40,16 @@ function supplierToPdfInfo(
 ): SupplierPdfInfo {
   if (master) {
     return {
-      name: master.name,
-      cnpj: master.cnpj,
-      phone: master.phone,
-      email: master.email,
-      address: master.address,
-      salesContact: master.sales_contact,
-      paymentTerms: master.payment_terms,
+      name: pdfCell(master.name),
+      cnpj: master.cnpj ? pdfCell(master.cnpj) : null,
+      phone: master.phone ? pdfCell(master.phone) : null,
+      email: master.email ? pdfCell(master.email) : null,
+      address: master.address ? pdfCell(master.address) : null,
+      salesContact: master.sales_contact ? pdfCell(master.sales_contact) : null,
+      paymentTerms: master.payment_terms ? pdfCell(master.payment_terms) : null,
     };
   }
-  return { name: supplier.supplierName };
+  return { name: pdfCell(supplier.supplierName) };
 }
 
 export function mapSupplierExportToPdfRequest(
@@ -49,13 +58,13 @@ export function mapSupplierExportToPdfRequest(
   master: Supplier | null
 ): GeneratePdfRequest {
   const dataRows = supplier.rows.map((row) => [
-    row.codigo,
-    row.material,
-    moneyFmt.format(row.precoOriginalNorm),
-    moneyFmt.format(row.precoNegociadoNorm),
-    moneyFmt.format(row.diferenca),
-    qtyFmt.format(row.quantidade),
-    moneyFmt.format(row.precoTotal),
+    pdfCell(row.codigo),
+    pdfCell(row.material),
+    pdfCell(moneyFmt.format(row.precoOriginalNorm)),
+    pdfCell(moneyFmt.format(row.precoNegociadoNorm)),
+    pdfCell(moneyFmt.format(row.diferenca)),
+    pdfCell(qtyFmt.format(row.quantidade)),
+    pdfCell(moneyFmt.format(row.precoTotal)),
   ]);
 
   const totalRow = [
@@ -71,9 +80,9 @@ export function mapSupplierExportToPdfRequest(
   return {
     supplier: supplierToPdfInfo(supplier, master),
     meta: {
-      sessionTitle: ctx.sessionTitle,
-      budgetLabel: ctx.budgetLabel,
-      exportedAt: formatExportedAt(ctx.exportedAt),
+      sessionTitle: pdfCell(ctx.sessionTitle),
+      budgetLabel: pdfCell(ctx.budgetLabel),
+      exportedAt: pdfCell(formatExportedAt(ctx.exportedAt)),
     },
     tables: [
       {

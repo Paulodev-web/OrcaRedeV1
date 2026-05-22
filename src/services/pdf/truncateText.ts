@@ -1,4 +1,5 @@
 import type { PDFFont } from 'pdf-lib';
+import { sanitizePdfText } from './sanitizePdfText';
 
 export function truncateText(
   text: string,
@@ -6,10 +7,10 @@ export function truncateText(
   fontSize: number,
   maxWidth: number
 ): string {
-  const value = text ?? '';
+  const value = sanitizePdfText(text ?? '', font);
   if (font.widthOfTextAtSize(value, fontSize) <= maxWidth) return value;
 
-  const ellipsis = '…';
+  const ellipsis = '...';
   const ellipsisWidth = font.widthOfTextAtSize(ellipsis, fontSize);
   const limit = Math.max(0, maxWidth - ellipsisWidth);
   let low = 0;

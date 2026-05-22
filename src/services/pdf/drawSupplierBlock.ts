@@ -1,5 +1,6 @@
 import type { PDFPage, PDFFont } from 'pdf-lib';
 import type { PdfDocumentMeta, SupplierPdfInfo } from '@/types/pdfExport';
+import { sanitizePdfText } from './sanitizePdfText';
 import {
   COLOR_META,
   COLOR_TITLE,
@@ -55,7 +56,7 @@ export function drawSupplierBlock(
   let y = yTop;
 
   if (supplier?.name) {
-    page.drawText(supplier.name, {
+    page.drawText(sanitizePdfText(supplier.name, fontBold), {
       x: CONTENT_LEFT,
       y: y - TITLE_SIZE,
       size: TITLE_SIZE,
@@ -73,7 +74,7 @@ export function drawSupplierBlock(
     pushLine(detailLines, 'Condições de pagamento', supplier.paymentTerms);
 
     for (const line of detailLines) {
-      page.drawText(line, {
+      page.drawText(sanitizePdfText(line, font), {
         x: CONTENT_LEFT,
         y: y - SUPPLIER_LINE_SIZE,
         size: SUPPLIER_LINE_SIZE,
@@ -92,7 +93,7 @@ export function drawSupplierBlock(
     if (metaLines.length > 0) {
       if (supplier?.name) y -= SUPPLIER_LINE_GAP;
       for (const line of metaLines) {
-        page.drawText(line, {
+        page.drawText(sanitizePdfText(line, font), {
           x: CONTENT_LEFT,
           y: y - META_LINE_SIZE,
           size: META_LINE_SIZE,

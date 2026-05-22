@@ -18,6 +18,7 @@ import {
   TITLE_GAP,
   TITLE_SIZE,
 } from './constants';
+import { sanitizePdfText } from './sanitizePdfText';
 import { truncateText } from './truncateText';
 
 function drawRowBackground(page: PDFPage, yBottom: number, fill: RGB): void {
@@ -122,7 +123,7 @@ export function drawTableTitle(
   title: string,
   fontBold: PDFFont
 ): number {
-  page.drawText(title, {
+  page.drawText(sanitizePdfText(title, fontBold), {
     x: CONTENT_LEFT,
     y: yTop - TITLE_SIZE,
     size: TITLE_SIZE,
