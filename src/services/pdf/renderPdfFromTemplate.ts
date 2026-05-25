@@ -17,6 +17,7 @@ import {
   drawTableHeader,
   drawTableTitle,
   getTableColumnWidths,
+  measureTableDataRowHeight,
   measureTableTitleHeight,
   tableHeaderHeight,
   tableRowHeight,
@@ -123,13 +124,21 @@ export async function renderPdfFromTemplate(
     drawHeaderOnCurrentPage();
 
     for (const row of table.rows) {
-      if (ctx.y - tableRowHeight() < CONTENT_BOTTOM) {
+      const isTotalRow = row[0]?.trim().toUpperCase() === 'TOTAL GERAL';
+      const rowHeight = measureTableDataRowHeight(
+        row,
+        colWidths,
+        ctx.font,
+        ctx.fontBold,
+        { bold: isTotalRow }
+      );
+
+      if (ctx.y - rowHeight < CONTENT_BOTTOM) {
         await addTemplatePage(ctx);
         headerDrawn = false;
         drawHeaderOnCurrentPage();
       }
 
-      const isTotalRow = row[0]?.trim().toUpperCase() === 'TOTAL GERAL';
       ctx.y = drawTableDataRow(
         currentPage(ctx),
         ctx.y,

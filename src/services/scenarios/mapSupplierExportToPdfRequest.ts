@@ -60,17 +60,13 @@ export function mapSupplierExportToPdfRequest(
   const dataRows = supplier.rows.map((row) => [
     pdfCell(row.codigo),
     pdfCell(row.material),
-    pdfCell(moneyFmt.format(row.precoOriginalNorm)),
     pdfCell(moneyFmt.format(row.precoNegociadoNorm)),
-    pdfCell(moneyFmt.format(row.diferenca)),
     pdfCell(qtyFmt.format(row.quantidade)),
     pdfCell(moneyFmt.format(row.precoTotal)),
   ]);
 
   const totalRow = [
     'TOTAL GERAL',
-    '',
-    '',
     '',
     '',
     '',
@@ -89,12 +85,10 @@ export function mapSupplierExportToPdfRequest(
         title: 'Itens do pedido',
         columns: [
           { header: 'Código', weight: 1 },
-          { header: 'Material', weight: 3 },
-          { header: 'Preço Unit. Original', weight: 1.2 },
-          { header: 'Preço Unit. Negociado', weight: 1.2 },
-          { header: 'Diferença (R$)', weight: 1 },
-          { header: 'Quantidade', weight: 0.8 },
-          { header: 'Preço Total', weight: 1.2 },
+          { header: 'Material', weight: 4 },
+          { header: 'Preço Unitário', weight: 1.4 },
+          { header: 'Quantidade', weight: 1 },
+          { header: 'Preço Total', weight: 1.5 },
         ],
         rows: [...dataRows, totalRow],
       },

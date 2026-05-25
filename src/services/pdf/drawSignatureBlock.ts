@@ -18,7 +18,6 @@ const UNDERLINE =
   '__________________________________';
 const LINES = [
   'Eng. Luan Stefanello Pianesso',
-  'CPF: 017.392.480-82',
   'CREA RS: 278122',
 ] as const;
 
