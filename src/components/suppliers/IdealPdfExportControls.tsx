@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { FileText, Loader2 } from 'lucide-react';
 import type { IdealExportSupplierOption } from '@/types/exportIdeal';
 
+const ALL_SUPPLIERS_VALUE = 'all';
+
 function parseContentDispositionFilename(header: string | null): string | null {
   if (!header) return null;
   const match = /filename\*?=(?:UTF-8''|")?([^";\n]+)/i.exec(header);
@@ -30,16 +32,19 @@ function downloadBlob(blob: Blob, filename: string) {
 interface Props {
   sessionId: string;
   canExport: boolean;
+  selectedSupplierSlug: string;
+  onSelectedSupplierSlugChange: (slug: string) => void;
   onConfirmExport: (run: () => void | Promise<void>) => void;
 }
 
 export function IdealPdfExportControls({
   sessionId,
   canExport,
+  selectedSupplierSlug,
+  onSelectedSupplierSlugChange,
   onConfirmExport,
 }: Props) {
   const [suppliers, setSuppliers] = useState<IdealExportSupplierOption[]>([]);
-  const [selectedSlug, setSelectedSlug] = useState('');
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
@@ -47,7 +52,7 @@ export function IdealPdfExportControls({
   useEffect(() => {
     if (!canExport) {
       setSuppliers([]);
-      setSelectedSlug('');
+      onSelectedSupplierSlugChange(ALL_SUPPLIERS_VALUE);
       return;
     }
 
@@ -71,9 +76,12 @@ export function IdealPdfExportControls({
         if (cancelled) return;
         const list = body.suppliers ?? [];
         setSuppliers(list);
-        setSelectedSlug((prev) =>
-          list.some((s) => s.fileSlug === prev) ? prev : (list[0]?.fileSlug ?? '')
-        );
+        if (
+          selectedSupplierSlug !== ALL_SUPPLIERS_VALUE &&
+          !list.some((s) => s.fileSlug === selectedSupplierSlug)
+        ) {
+          onSelectedSupplierSlugChange(ALL_SUPPLIERS_VALUE);
+        }
       } catch {
         if (!cancelled) {
           setListError('Erro de rede ao carregar fornecedores.');
@@ -87,14 +95,20 @@ export function IdealPdfExportControls({
     return () => {
       cancelled = true;
     };
-  }, [sessionId, canExport]);
+  }, [sessionId, canExport, selectedSupplierSlug, onSelectedSupplierSlugChange]);
 
   const runPdfExport = useCallback(async () => {
-    if (!selectedSlug || isExporting) return;
+    if (
+      !selectedSupplierSlug ||
+      selectedSupplierSlug === ALL_SUPPLIERS_VALUE ||
+      isExporting
+    ) {
+      return;
+    }
     setIsExporting(true);
     try {
       const res = await fetch(
-        `/api/scenarios/export-ideal-pdf?sessionId=${encodeURIComponent(sessionId)}&supplierSlug=${encodeURIComponent(selectedSlug)}`
+        `/api/scenarios/export-ideal-pdf?sessionId=${encodeURIComponent(sessionId)}&supplierSlug=${encodeURIComponent(selectedSupplierSlug)}`
       );
       if (!res.ok) {
         let message = 'Não foi possível gerar o PDF.';
@@ -110,32 +124,45 @@ export function IdealPdfExportControls({
       const blob = await res.blob();
       const filename =
         parseContentDispositionFilename(res.headers.get('Content-Disposition')) ??
-        `pedido-${selectedSlug}.pdf`;
+        `pedido-${selectedSupplierSlug}.pdf`;
       downloadBlob(blob, filename);
     } catch {
       alert('Erro de rede ao baixar o PDF. Tente novamente.');
     } finally {
       setIsExporting(false);
     }
-  }, [sessionId, selectedSlug, isExporting]);
+  }, [sessionId, selectedSupplierSlug, isExporting]);
 
   const handleExportClick = () => {
-    if (!canExport || isExporting || !selectedSlug) return;
+    if (
+      !canExport ||
+      isExporting ||
+      !selectedSupplierSlug ||
+      selectedSupplierSlug === ALL_SUPPLIERS_VALUE
+    ) {
+      return;
+    }
     onConfirmExport(() => void runPdfExport());
   };
 
   const disabled =
-    !canExport || isExporting || isLoadingList || !selectedSlug || suppliers.length === 0;
+    !canExport ||
+    isExporting ||
+    isLoadingList ||
+    !selectedSupplierSlug ||
+    selectedSupplierSlug === ALL_SUPPLIERS_VALUE ||
+    suppliers.length === 0;
 
   return (
     <div className="inline-flex flex-wrap items-center gap-2">
       <select
-        value={selectedSlug}
-        onChange={(e) => setSelectedSlug(e.target.value)}
+        value={selectedSupplierSlug}
+        onChange={(e) => onSelectedSupplierSlugChange(e.target.value)}
         disabled={!canExport || isLoadingList || suppliers.length === 0}
         className="max-w-[200px] rounded-lg border border-[#64ABDE] bg-white px-3 py-2 text-sm text-[#1D3140] disabled:cursor-not-allowed disabled:opacity-50 sm:max-w-[240px]"
-        aria-label="Fornecedor para exportação PDF"
+        aria-label="Filtrar Cenário Ideal por fornecedor"
       >
+        <option value={ALL_SUPPLIERS_VALUE}>Todos</option>
         {isLoadingList && <option value="">Carregando…</option>}
         {!isLoadingList && suppliers.length === 0 && (
           <option value="">Sem fornecedores</option>
@@ -148,8 +175,10 @@ export function IdealPdfExportControls({
       </select>
       <span
         title={
-          canExport
+          canExport && selectedSupplierSlug !== ALL_SUPPLIERS_VALUE
             ? 'PDF do pedido para o fornecedor selecionado'
+            : selectedSupplierSlug === ALL_SUPPLIERS_VALUE
+              ? 'Escolha um fornecedor específico para exportar PDF'
             : 'Nenhum material com necessidade de compra'
         }
         className="inline-flex"

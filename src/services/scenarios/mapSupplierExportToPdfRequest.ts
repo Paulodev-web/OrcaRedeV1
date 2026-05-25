@@ -24,8 +24,11 @@ const qtyFmt = new Intl.NumberFormat('pt-BR', {
   maximumFractionDigits: 2,
 });
 
+const EXPORT_TIME_ZONE = 'America/Sao_Paulo';
+
 function formatExportedAt(date: Date): string {
   return date.toLocaleString('pt-BR', {
+    timeZone: EXPORT_TIME_ZONE,
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

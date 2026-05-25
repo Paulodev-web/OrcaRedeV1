@@ -56,6 +56,7 @@ import {
   type FilteredScenariosResult,
 } from './scenarioFilterEngine';
 import { getSupplierDisplayName } from '@/lib/supplierDisplay';
+import { slugifyFileName } from '@/lib/slugify';
 import { suppliesTableBorderedScrollClass, suppliesTableScrollYCompactClass } from '@/lib/suppliesLayout';
 
 const formatCurrency = (v: number) =>
@@ -591,6 +592,7 @@ function ScenarioIdealView({
 }) {
   const alertDialog = useAlertDialog();
   const [isExporting, setIsExporting] = useState(false);
+  const [selectedSupplierSlug, setSelectedSupplierSlug] = useState('all');
   const items = scenarios.scenarioB.items;
 
   const scenarioATotal = scenarios.scenarioA[0]?.total_normalizado ?? 0;
@@ -609,6 +611,25 @@ function ScenarioIdealView({
     for (const line of ideal.lines) m.set(line.material_id, line);
     return m;
   }, [ideal.lines]);
+
+  const filteredIdealItems = useMemo(() => {
+    if (selectedSupplierSlug === 'all') return items;
+
+    return items.filter((item) => {
+      const line = lineByMaterialId.get(item.material_id);
+      if (!line?.supplier_name) return false;
+      return slugifyFileName(line.supplier_name) === selectedSupplierSlug;
+    });
+  }, [items, lineByMaterialId, selectedSupplierSlug]);
+
+  const filteredIdealTotal = useMemo(() => {
+    if (selectedSupplierSlug === 'all') return ideal.total;
+
+    return filteredIdealItems.reduce((sum, item) => {
+      const line = lineByMaterialId.get(item.material_id);
+      return sum + (line?.line_total ?? 0);
+    }, 0);
+  }, [filteredIdealItems, ideal.total, lineByMaterialId, selectedSupplierSlug]);
 
   const runExport = useCallback(async () => {
     setIsExporting(true);
@@ -762,6 +783,8 @@ function ScenarioIdealView({
         <IdealPdfExportControls
           sessionId={sessionId}
           canExport={canExport}
+          selectedSupplierSlug={selectedSupplierSlug}
+          onSelectedSupplierSlugChange={setSelectedSupplierSlug}
           onConfirmExport={handleConfirmExport}
         />
       </div>
@@ -836,11 +859,11 @@ function ScenarioIdealView({
       </div>
 
       <ScenarioItemExpandableTable
-        items={items}
+        items={filteredIdealItems}
         description="Menor preço por item como sugestão. Expanda a linha para comparar fornecedores e validar a compra."
         supplierColumnLabel="Fornecedor"
         totalLabel="Total Cenário Ideal:"
-        totalValue={ideal.total}
+        totalValue={filteredIdealTotal}
         getRowSummary={(item) => {
           const line = lineByMaterialId.get(item.material_id);
           return {
@@ -875,7 +898,7 @@ function ScenarioIdealView({
           );
         }}
         highlightQuoteId={(materialId) => {
-          const item = items.find((i) => i.material_id === materialId);
+          const item = filteredIdealItems.find((i) => i.material_id === materialId);
           return item ? getEffectiveQuoteId(item, idealSelections) : null;
         }}
         onOfferSelect={onIdealSelect}
