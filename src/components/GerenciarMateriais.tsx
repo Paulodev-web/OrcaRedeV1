@@ -42,7 +42,7 @@ export function GerenciarMateriais() {
   // Buscar materiais quando o componente for montado
   useEffect(() => {
     fetchMaterials();
-  }, []);
+  }, [fetchMaterials]);
 
   // Auto-hide messages after 5 seconds
   useEffect(() => {
@@ -131,10 +131,10 @@ export function GerenciarMateriais() {
     return score;
   };
 
-  // Resetar para primeira página quando mudar busca ou ordenação
-  useEffect(() => {
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
     setCurrentPage(1);
-  }, [searchTerm, sortField, sortOrder, itemsPerPage]);
+  };
 
   // Filtrar e ordenar materiais
   const filteredMateriais = materiais
@@ -199,6 +199,7 @@ export function GerenciarMateriais() {
       setSortField(field);
       setSortOrder('asc');
     }
+    setCurrentPage(1);
   };
 
   const getSortIcon = (field: SortField) => {
@@ -410,13 +411,13 @@ export function GerenciarMateriais() {
             <input
               type="text"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Buscar por código ou descrição..."
               className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
             {searchTerm && (
               <button
-                onClick={() => setSearchTerm('')}
+                onClick={() => handleSearchChange('')}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                 title="Limpar busca"
               >
@@ -429,7 +430,7 @@ export function GerenciarMateriais() {
               {searchTerm ? (
                 <div className="flex items-center space-x-2">
                   <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded font-medium">
-                    🔍 Buscando: "{searchTerm}"
+                    🔍 Buscando: &quot;{searchTerm}&quot;
                   </span>
                   <span className="text-gray-600">
                     {filteredMateriais.length} {filteredMateriais.length === 1 ? 'resultado' : 'resultados'} encontrado{filteredMateriais.length === 1 ? '' : 's'}
@@ -502,6 +503,9 @@ export function GerenciarMateriais() {
                       Unidade
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Origem do Preço
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Ações
                     </th>
                   </tr>
@@ -520,6 +524,22 @@ export function GerenciarMateriais() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {material.unidade}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {material.priceSourceSupplierName ? (
+                          <div>
+                            <p className="font-medium text-gray-800">
+                              {material.priceSourceSupplierName}
+                            </p>
+                            {material.priceSourceUpdatedAt && (
+                              <p className="text-xs text-gray-400">
+                                {new Date(material.priceSourceUpdatedAt).toLocaleDateString('pt-BR')}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">Manual/importado</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                         <button

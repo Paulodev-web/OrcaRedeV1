@@ -10,6 +10,7 @@ import {
   getInactiveSuppliesMaterialIds,
   isMaterialActiveInSupplies,
 } from '@/services/supplies/materialSuppliesFilter';
+import { applyIdealScenarioPricesToMaterials } from '@/services/supplies/applyIdealScenarioPricesToMaterials';
 import type { SupplierExtractItem } from '@/types/supplierExtract';
 import type { SupplierQuote, SupplierQuoteItem, SupplierMatchMethod, SupplierQuoteStatus } from '@/types';
 
@@ -1839,6 +1840,86 @@ export async function removeIdealSelectionAction(
     return { success: true, data: undefined };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao remover seleção do cenário ideal.';
+    return { success: false, error: message };
+  }
+}
+
+export async function closeIdealScenarioAndUpdateMaterialsAction(
+  sessionId: string
+): Promise<
+  ActionResult<{
+    updated: number;
+    skippedPending: number;
+    suggestedApplied: number;
+  }>
+> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const { data: session, error: sessionError } = await supabase
+      .from('quotation_sessions')
+      .select('id, budget_id')
+      .eq('id', sessionId)
+      .eq('user_id', userId)
+      .single();
+
+    if (sessionError || !session) {
+      return { success: false, error: 'Sessão não encontrada.' };
+    }
+
+    if (!session.budget_id) {
+      return { success: false, error: 'Sessão sem orçamento vinculado.' };
+    }
+
+    const [scenariosRes, selectionsRes] = await Promise.all([
+      calculateScenariosAction(session.budget_id, sessionId),
+      getIdealSelectionsAction(sessionId),
+    ]);
+
+    if (!scenariosRes.success) {
+      return { success: false, error: scenariosRes.error };
+    }
+
+    if (!selectionsRes.success) {
+      return { success: false, error: selectionsRes.error };
+    }
+
+    const hasPurchaseDemand = scenariosRes.data.scenarioB.items.some((item) => item.net_qty > 0);
+    if (!hasPurchaseDemand) {
+      return {
+        success: false,
+        error: 'Nenhum material com necessidade de compra para atualizar.',
+      };
+    }
+
+    const result = await applyIdealScenarioPricesToMaterials({
+      supabase,
+      userId,
+      sessionId,
+      scenarios: scenariosRes.data,
+      selections: selectionsRes.data,
+    });
+
+    const { error: completeError } = await supabase
+      .from('quotation_sessions')
+      .update({ status: 'completed' })
+      .eq('id', sessionId)
+      .eq('user_id', userId);
+
+    if (completeError) {
+      return { success: false, error: completeError.message };
+    }
+
+    revalidatePath('/');
+    revalidatePath('/fornecedores');
+    revalidatePath(`/fornecedores/sessao/${sessionId}`);
+    revalidatePath(`/fornecedores/sessao/${sessionId}/cenarios`);
+
+    return { success: true, data: result };
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : 'Erro ao fechar cenário ideal e atualizar materiais.';
     return { success: false, error: message };
   }
 }

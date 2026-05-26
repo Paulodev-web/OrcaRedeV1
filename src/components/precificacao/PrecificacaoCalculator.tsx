@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { savePricingBudgetAction } from '@/actions/pricingBudgets';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -15,7 +17,7 @@ import { CostItemsTable } from './CostItemsTable';
 import { ServicePricingSummary } from './ServicePricingSummary';
 import { ServiceValueInput } from './ServiceValueInput';
 import { TaxInput } from './TaxInput';
-import type { CostItem, PricingInputMode } from './types';
+import type { CostItem, PricingInputMode, PricingSaveMode } from './types';
 
 function parseNonNegativeNumber(value: string): number {
   const parsed = Number.parseFloat(value);
@@ -63,6 +65,8 @@ export function PrecificacaoCalculator() {
   const [pricingInputMode, setPricingInputMode] = useState<PricingInputMode>('valor');
   const [costItems, setCostItems] = useState<CostItem[]>([]);
   const [impostoPercent, setImpostoPercent] = useState(0);
+  const [savingMode, setSavingMode] = useState<PricingSaveMode | null>(null);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -81,14 +85,18 @@ export function PrecificacaoCalculator() {
     fetchBudgetDetails(selectedBudgetId);
   }, [fetchBudgetDetails, selectedBudgetId]);
 
-  const valorMateriais = useMemo(() => {
+  const consolidatedMaterials = useMemo(() => {
     if (!selectedBudgetId || !budgetDetails || budgetDetails.id !== selectedBudgetId) {
-      return 0;
+      return [];
     }
 
-    const consolidatedMaterials = consolidateMaterialsFromBudgetDetails(budgetDetails);
-    return consolidatedMaterials.reduce((acc, m) => acc + m.subtotal, 0);
+    return consolidateMaterialsFromBudgetDetails(budgetDetails);
   }, [budgetDetails, selectedBudgetId]);
+
+  const valorMateriais = useMemo(
+    () => consolidatedMaterials.reduce((acc, m) => acc + m.subtotal, 0),
+    [consolidatedMaterials]
+  );
 
   const totalCustos = useMemo(
     () => costItems.reduce((acc, item) => acc + item.valor, 0),
@@ -113,10 +121,13 @@ export function PrecificacaoCalculator() {
     [valorServico, costItems, impostoPercent, valorMateriais]
   );
 
-  const selectedBudgetName = useMemo(
-    () => budgets.find((budget) => budget.id === selectedBudgetId)?.nome ?? '',
+  const selectedBudget = useMemo(
+    () => budgets.find((budget) => budget.id === selectedBudgetId) ?? null,
     [budgets, selectedBudgetId]
   );
+
+  const selectedBudgetName = selectedBudget?.nome ?? '';
+  const canPersistPricing = Boolean(selectedBudgetId && selectedBudgetName);
 
   const handleValorServicoChange = (value: string) => {
     const novoValor = parseNonNegativeNumber(value);
@@ -158,6 +169,76 @@ export function PrecificacaoCalculator() {
     setImpostoPercent(parsePercent(value));
   };
 
+  const buildPricingPayload = (saveMode: PricingSaveMode) => ({
+    budgetId: selectedBudgetId,
+    budgetName: selectedBudgetName,
+    clientName: budgetDetails?.client_name ?? selectedBudget?.clientName ?? null,
+    city: budgetDetails?.city ?? selectedBudget?.city ?? null,
+    saveMode,
+    pricingInputMode,
+    valorServicoInput,
+    lucroPercentInput,
+    impostoPercent,
+    costItems,
+    materialsSnapshot: consolidatedMaterials,
+    result: pricingResult,
+  });
+
+  const handleSavePricing = async (saveMode: PricingSaveMode) => {
+    if (!canPersistPricing) {
+      toast.error('Selecione um orçamento antes de salvar a precificação.');
+      return;
+    }
+
+    setSavingMode(saveMode);
+    const result = await savePricingBudgetAction(buildPricingPayload(saveMode));
+    setSavingMode(null);
+
+    if (result.success) {
+      toast.success('Precificação salva no dashboard.');
+      return;
+    }
+
+    toast.error(result.error);
+  };
+
+  const handleExportExcel = async () => {
+    if (!canPersistPricing) {
+      toast.error('Selecione um orçamento antes de exportar.');
+      return;
+    }
+
+    setIsExportingExcel(true);
+    try {
+      const response = await fetch('/api/pricing/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildPricingPayload('snapshot')),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(data?.error || 'Erro ao gerar Excel.');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `precificacao-${selectedBudgetName || 'orcamento'}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      toast.success('Excel gerado com sucesso.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro ao exportar Excel.';
+      toast.error(message);
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
+
   if (loadingAuth) {
     return <div className="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-500">Verificando sessão...</div>;
   }
@@ -175,7 +256,8 @@ export function PrecificacaoCalculator() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
         <p className="text-xs text-gray-400">
           <Link href="/" className="hover:text-[#64ABDE]">
             Portal
@@ -188,6 +270,13 @@ export function PrecificacaoCalculator() {
           Precificação de serviços: defina o valor ou lucro desejado, adicione custos e calcule o total ao cliente.
           {selectedBudgetName ? ` Orçamento selecionado: ${selectedBudgetName}.` : ''}
         </p>
+        </div>
+        <Link
+          href="/tools/precificacao/dashboard"
+          className="inline-flex h-10 items-center justify-center rounded-lg border border-[#64ABDE]/30 bg-white px-4 text-sm font-medium text-[#1D3140] shadow-sm transition hover:border-[#64ABDE] hover:text-[#64ABDE]"
+        >
+          Ver dashboard
+        </Link>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
@@ -224,7 +313,16 @@ export function PrecificacaoCalculator() {
           <TaxInput impostoPercent={impostoPercent} onChange={handleImpostoChange} />
         </section>
 
-        <ServicePricingSummary result={pricingResult} />
+        <ServicePricingSummary
+          result={pricingResult}
+          canSave={canPersistPricing}
+          canExport={canPersistPricing}
+          savingMode={savingMode}
+          isExportingExcel={isExportingExcel}
+          onSaveSnapshot={() => handleSavePricing('snapshot')}
+          onSaveLive={() => handleSavePricing('live')}
+          onExportExcel={handleExportExcel}
+        />
       </div>
     </div>
   );

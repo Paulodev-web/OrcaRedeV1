@@ -6,6 +6,11 @@ export interface Material {
   unidade: string;
   user_id?: string;
   activeInSupplies?: boolean;
+  priceSourceSupplierName?: string | null;
+  priceSourceSupplierId?: string | null;
+  priceSourceQuoteId?: string | null;
+  priceSourceSessionId?: string | null;
+  priceSourceUpdatedAt?: string | null;
 }
 
 export interface GrupoItem {

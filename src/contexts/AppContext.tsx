@@ -230,6 +230,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         descricao: item.name || '',
         precoUnit: parseFloat(item.price) || 0,
         unidade: item.unit || '',
+        priceSourceSupplierName: item.price_source_supplier_name ?? null,
+        priceSourceSupplierId: item.price_source_supplier_id ?? null,
+        priceSourceQuoteId: item.price_source_quote_id ?? null,
+        priceSourceSessionId: item.price_source_session_id ?? null,
+        priceSourceUpdatedAt: item.price_source_updated_at ?? null,
       }));
 
       // Remover duplicatas baseado no ID (manter apenas o primeiro)

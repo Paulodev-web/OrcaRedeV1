@@ -51,6 +51,11 @@ export async function updateMaterialAction(id: string, material: MaterialInput):
         name: material.descricao,
         price: material.precoUnit,
         unit: material.unidade,
+        price_source_supplier_name: null,
+        price_source_supplier_id: null,
+        price_source_quote_id: null,
+        price_source_session_id: null,
+        price_source_updated_at: null,
       })
       .eq('id', id);
 

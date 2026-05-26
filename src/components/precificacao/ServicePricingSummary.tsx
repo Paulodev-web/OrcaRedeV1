@@ -1,10 +1,18 @@
 "use client";
 
-import { Package } from 'lucide-react';
-import type { ServicePricingResult } from './types';
+import { Download, FileSpreadsheet, Loader2, Package, Save } from 'lucide-react';
+import { useState } from 'react';
+import type { PricingSaveMode, ServicePricingResult } from './types';
 
 interface ServicePricingSummaryProps {
   result: ServicePricingResult;
+  canSave?: boolean;
+  canExport?: boolean;
+  savingMode?: PricingSaveMode | null;
+  isExportingExcel?: boolean;
+  onSaveSnapshot?: () => void;
+  onSaveLive?: () => void;
+  onExportExcel?: () => void;
 }
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
@@ -25,11 +33,22 @@ function formatPercent(value: number, hasVS: boolean): string {
   return `${percentFormatter.format(value)}%`;
 }
 
-export function ServicePricingSummary({ result }: ServicePricingSummaryProps) {
+export function ServicePricingSummary({
+  result,
+  canSave = false,
+  canExport = false,
+  savingMode = null,
+  isExportingExcel = false,
+  onSaveSnapshot,
+  onSaveLive,
+  onExportExcel,
+}: ServicePricingSummaryProps) {
+  const [showSaveChoices, setShowSaveChoices] = useState(false);
   const hasVS = result.valorServico > 0;
   const lucroNegativo = result.lucroLiquido < 0;
   const lucroBrutoNegativo = result.lucroBruto < 0;
   const hasMateriais = result.valorMateriais > 0;
+  const isSaving = Boolean(savingMode);
 
   return (
     <aside className="space-y-4 lg:sticky lg:top-6">
@@ -179,23 +198,78 @@ export function ServicePricingSummary({ result }: ServicePricingSummaryProps) {
 
       {/* Exportação */}
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-        <h3 className="text-sm font-semibold text-[#1D3140]">Exportação</h3>
+        <h3 className="text-sm font-semibold text-[#1D3140]">Ações</h3>
         <div className="mt-3 grid gap-2">
           <button
             type="button"
-            disabled
-            className="h-10 rounded-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-500"
+            disabled={!canSave || isSaving}
+            onClick={() => setShowSaveChoices((prev) => !prev)}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-[#64ABDE]/40 bg-[#64ABDE] text-sm font-medium text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
           >
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {isSaving ? 'Salvando...' : 'Salvar precificação'}
+          </button>
+
+          {showSaveChoices && (
+            <div className="rounded-lg border border-[#64ABDE]/20 bg-[#64ABDE]/5 p-3">
+              <p className="text-xs font-medium text-[#1D3140]">Como deseja salvar?</p>
+              <div className="mt-2 grid gap-2">
+                <button
+                  type="button"
+                  disabled={!canSave || isSaving}
+                  onClick={onSaveSnapshot}
+                  className="rounded-md border border-gray-200 bg-white px-3 py-2 text-left text-xs text-gray-700 transition hover:border-[#64ABDE]/50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <span className="block font-semibold text-[#1D3140]">
+                    {savingMode === 'snapshot' ? 'Salvando snapshot...' : 'Snapshot'}
+                  </span>
+                  Preserva os valores atuais mesmo se o orçamento mudar.
+                </button>
+                <button
+                  type="button"
+                  disabled={!canSave || isSaving}
+                  onClick={onSaveLive}
+                  className="rounded-md border border-gray-200 bg-white px-3 py-2 text-left text-xs text-gray-700 transition hover:border-[#64ABDE]/50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <span className="block font-semibold text-[#1D3140]">
+                    {savingMode === 'live' ? 'Salvando vínculo...' : 'Vinculado ao orçamento atual'}
+                  </span>
+                  Recalcula materiais e totais usando o orçamento atual.
+                </button>
+              </div>
+            </div>
+          )}
+
+          <button
+            type="button"
+            disabled={!canExport || isExportingExcel}
+            onClick={onExportExcel}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-50 disabled:text-gray-400"
+          >
+            {isExportingExcel ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+            {isExportingExcel ? 'Gerando Excel...' : 'Exportar Excel'}
+          </button>
+
+          <button
+            type="button"
+            disabled
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-500"
+          >
+            <Download className="h-4 w-4" />
             PDF Cliente
           </button>
           <button
             type="button"
             disabled
-            className="h-10 rounded-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-500"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-500"
           >
+            <Download className="h-4 w-4" />
             PDF Detalhado
           </button>
         </div>
+        {!canSave && (
+          <p className="mt-2 text-[11px] text-gray-500">Selecione um orçamento para salvar ou exportar.</p>
+        )}
       </div>
     </aside>
   );

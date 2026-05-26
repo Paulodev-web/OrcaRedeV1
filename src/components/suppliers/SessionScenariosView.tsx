@@ -28,6 +28,7 @@ import {
   updateNegotiatedPriceAction,
   saveIdealSelectionAction,
   bulkSaveIdealSelectionsAction,
+  closeIdealScenarioAndUpdateMaterialsAction,
   type ScenariosResult,
   type ScenarioItem,
   type SessionStockInput,
@@ -43,6 +44,7 @@ import {
   getEffectiveQuoteId,
   getBestOfferQuoteId,
   getStaleValidationInfo,
+  type IdealScenarioLine,
 } from '@/lib/scenarioIdealEngine';
 import { useSessionScenariosRefresh } from '@/hooks/useSessionScenariosRefresh';
 import ScenarioFiltersPanel from './ScenarioFiltersPanel';
@@ -576,8 +578,10 @@ function ScenarioIdealView({
   onIdealSelect,
   onValidateAll,
   onRevalidateStale,
+  onCloseIdeal,
   isValidatingAll,
   isRevalidatingStale,
+  isClosingIdeal,
   staleCount,
 }: {
   scenarios: ScenariosResult;
@@ -586,8 +590,10 @@ function ScenarioIdealView({
   onIdealSelect: (materialId: string, quoteId: string) => void;
   onValidateAll: () => void;
   onRevalidateStale: () => void;
+  onCloseIdeal: () => void | Promise<void>;
   isValidatingAll: boolean;
   isRevalidatingStale: boolean;
+  isClosingIdeal: boolean;
   staleCount: number;
 }) {
   const alertDialog = useAlertDialog();
@@ -607,7 +613,7 @@ function ScenarioIdealView({
   const canExport = items.some((i) => i.net_qty > 0);
 
   const lineByMaterialId = useMemo(() => {
-    const m = new Map<string, (typeof ideal.lines)[number]>();
+    const m = new Map<string, IdealScenarioLine>();
     for (const line of ideal.lines) m.set(line.material_id, line);
     return m;
   }, [ideal.lines]);
@@ -727,6 +733,40 @@ function ScenarioIdealView({
     [canExport, ideal.pendingCount, ideal.unvalidatedCount, alertDialog]
   );
 
+  const handleCloseIdealClick = useCallback(() => {
+    if (!canExport || isClosingIdeal) return;
+
+    const run = () => onCloseIdeal();
+    const warnings: string[] = [];
+    if (ideal.pendingCount > 0) {
+      warnings.push(
+        `${ideal.pendingCount} material(is) sem cotação não serão atualizados.`
+      );
+    }
+    if (ideal.unvalidatedCount > 0) {
+      warnings.push(
+        `${ideal.unvalidatedCount} item(ns) ainda estão como sugestão; será usado o menor preço atual.`
+      );
+    }
+
+    alertDialog.showConfirm(
+      'Fechar cenário ideal?',
+      [
+        'Os preços unitários dos materiais serão atualizados pelo fornecedor escolhido no Cenário Ideal.',
+        ...warnings,
+      ].join(' '),
+      run,
+      { confirmText: 'Atualizar materiais' }
+    );
+  }, [
+    canExport,
+    isClosingIdeal,
+    ideal.pendingCount,
+    ideal.unvalidatedCount,
+    alertDialog,
+    onCloseIdeal,
+  ]);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-end gap-2">
@@ -757,6 +797,19 @@ function ScenarioIdealView({
             <Check className="h-4 w-4" />
           )}
           Validar todos (menor preço)
+        </button>
+        <button
+          type="button"
+          onClick={handleCloseIdealClick}
+          disabled={!canExport || isClosingIdeal}
+          className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isClosingIdeal ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4" />
+          )}
+          Fechar cenário ideal e atualizar materiais
         </button>
         <span
           title={
@@ -916,8 +969,10 @@ function RankingView({
   onIdealSelect,
   onValidateAll,
   onRevalidateStale,
+  onCloseIdeal,
   isValidatingAll,
   isRevalidatingStale,
+  isClosingIdeal,
   staleCount,
 }: {
   scenarios: ScenariosResult;
@@ -926,8 +981,10 @@ function RankingView({
   onIdealSelect: (materialId: string, quoteId: string) => void;
   onValidateAll: () => void;
   onRevalidateStale: () => void;
+  onCloseIdeal: () => void | Promise<void>;
   isValidatingAll: boolean;
   isRevalidatingStale: boolean;
+  isClosingIdeal: boolean;
   staleCount: number;
 }) {
   const [rankingTab, setRankingTab] = useState<'A' | 'B' | 'Ideal'>('A');
@@ -984,8 +1041,10 @@ function RankingView({
             onIdealSelect={onIdealSelect}
             onValidateAll={onValidateAll}
             onRevalidateStale={onRevalidateStale}
+            onCloseIdeal={onCloseIdeal}
             isValidatingAll={isValidatingAll}
             isRevalidatingStale={isRevalidatingStale}
+            isClosingIdeal={isClosingIdeal}
             staleCount={staleCount}
           />
         )}
@@ -1110,6 +1169,7 @@ export default function SessionScenariosView({
   const [isRevalidatingStale, startRevalidateStale] = useTransition();
   const [isSavingPrice, setIsSavingPrice] = useState(false);
   const [isRemovingMaterial, setIsRemovingMaterial] = useState(false);
+  const [isClosingIdeal, setIsClosingIdeal] = useState(false);
 
   const [idealSelections, setIdealSelections] = useState<Map<string, string>>(() => {
     const m = new Map<string, string>();
@@ -1422,6 +1482,40 @@ export default function SessionScenariosView({
     });
   }, [scenarios.scenarioB.items, idealSelections, sessionId, refreshScenarios]);
 
+  const handleCloseIdeal = useCallback(async () => {
+    if (isClosingIdeal) return;
+
+    setIsClosingIdeal(true);
+    try {
+      const res = await closeIdealScenarioAndUpdateMaterialsAction(sessionId);
+      if (!res.success) {
+        alertDialog.showError(
+          'Não foi possível atualizar',
+          res.error ?? 'Erro ao fechar o cenário ideal.'
+        );
+        return;
+      }
+
+      const { updated, skippedPending, suggestedApplied } = res.data;
+      const details = [
+        `${updated} material(is) tiveram o preço atualizado pelo Cenário Ideal.`,
+        suggestedApplied > 0
+          ? `${suggestedApplied} atualização(ões) usaram sugestão de menor preço.`
+          : '',
+        skippedPending > 0
+          ? `${skippedPending} material(is) sem cotação foram ignorados.`
+          : '',
+      ]
+        .filter(Boolean)
+        .join(' ');
+
+      alertDialog.showSuccess('Materiais atualizados', details);
+      await refreshScenarios();
+    } finally {
+      setIsClosingIdeal(false);
+    }
+  }, [isClosingIdeal, sessionId, alertDialog, refreshScenarios]);
+
   const pendingQuotes = quotes.filter((q) => q.status !== 'conciliado');
 
   return (
@@ -1498,8 +1592,10 @@ export default function SessionScenariosView({
               onIdealSelect={handleIdealSelect}
               onValidateAll={handleValidateAll}
               onRevalidateStale={handleRevalidateStale}
+              onCloseIdeal={handleCloseIdeal}
               isValidatingAll={isValidatingAll}
               isRevalidatingStale={isRevalidatingStale}
+              isClosingIdeal={isClosingIdeal}
               staleCount={staleCount}
             />
           )}
