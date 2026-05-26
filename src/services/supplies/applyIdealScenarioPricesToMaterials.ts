@@ -27,6 +27,16 @@ type QuoteSourceRow = {
   suppliers?: { name: string } | { name: string }[] | null;
 };
 
+type SelectedUpdate =
+  | { type: 'pending' }
+  | {
+      type: 'update';
+      materialId: string;
+      quoteId: string;
+      price: number;
+      isSuggested: boolean;
+    };
+
 export async function applyIdealScenarioPricesToMaterials({
   supabase,
   userId,
@@ -37,7 +47,7 @@ export async function applyIdealScenarioPricesToMaterials({
   const validatedMap = new Map(selections.map((row) => [row.material_id, row.quote_id]));
   const effectiveMap = buildEffectiveSelectionMap(scenarios.scenarioB.items, validatedMap);
 
-  const selectedUpdates = scenarios.scenarioB.items.flatMap((item) => {
+  const selectedUpdates = scenarios.scenarioB.items.flatMap<SelectedUpdate>((item) => {
     if (item.net_qty <= 0) return [];
 
     const quoteId = effectiveMap.get(item.material_id);
