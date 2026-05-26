@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { buildIdealExportZip } from '@/services/scenarios/buildIdealExportZip';
+import { buildIdealExportWorkbookFile } from '@/services/scenarios/buildIdealExportWorkbookFile';
 import { ExportIdealError } from '@/types/exportIdeal';
 
 export const runtime = 'nodejs';
@@ -12,12 +12,12 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const { buffer, filename } = await buildIdealExportZip(sessionId);
+    const { buffer, filename } = await buildIdealExportWorkbookFile(sessionId);
 
     return new Response(new Uint8Array(buffer), {
       status: 200,
       headers: {
-        'Content-Type': 'application/zip',
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'Content-Disposition': `attachment; filename="${filename}"`,
         'Cache-Control': 'no-store',
       },

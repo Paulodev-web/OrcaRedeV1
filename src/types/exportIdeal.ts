@@ -12,6 +12,7 @@ export interface IdealExportSessionContext {
 export interface IdealExportRow {
   codigo: string;
   material: string;
+  unidade: string;
   precoOriginalNorm: number;
   precoNegociadoNorm: number;
   /** Positivo = desconto (original > negociado); negativo = preço subiu. */

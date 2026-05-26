@@ -890,6 +890,7 @@ export interface ScenarioItem {
   material_id: string;
   material_name: string;
   material_code: string;
+  material_unit: string;
   required_qty: number;
   stock_qty: number;
   net_qty: number;
@@ -1013,7 +1014,7 @@ export async function calculateScenariosAction(
       quantidade: number;
     };
     const materialOffers = new Map<string, {
-      material: { id: string; code: string; name: string };
+      material: { id: string; code: string; name: string; unit: string };
       required_qty: number;
       offers: Offer[];
     }>();
@@ -1079,6 +1080,7 @@ export async function calculateScenariosAction(
         material_id: entry.material.id,
         material_name: entry.material.name,
         material_code: entry.material.code,
+        material_unit: entry.material.unit,
         required_qty: entry.required_qty,
         stock_qty: stock,
         net_qty,

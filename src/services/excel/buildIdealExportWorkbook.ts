@@ -13,8 +13,10 @@ const NEGATIVE_DIFF_FONT: Partial<ExcelJS.Font> = {
 };
 
 const TABLE_HEADERS = [
+  'Fornecedor',
   'Código',
   'Material',
+  'Unidade',
   'Preço Unit. Original',
   'Preço Unit. Negociado',
   'Diferença (R$)',
@@ -51,16 +53,20 @@ function autoFitColumns(sheet: ExcelJS.Worksheet, startRow: number, endRow: numb
   }
 }
 
-export async function buildSupplierWorkbook(
-  supplier: SupplierExportData,
+export async function buildIdealExportWorkbook(
+  suppliers: SupplierExportData[],
   ctx: IdealExportSessionContext
 ): Promise<ExcelJS.Workbook> {
   const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet('Pedido');
+  workbook.creator = 'OrcaRede';
+  workbook.created = ctx.exportedAt;
+  workbook.modified = ctx.exportedAt;
+
+  const sheet = workbook.addWorksheet('Materiais');
 
   sheet.mergeCells(1, 1, 1, COL_COUNT);
   const titleCell = sheet.getCell(1, 1);
-  titleCell.value = supplier.supplierName;
+  titleCell.value = 'Cenário Ideal - Lista de Materiais';
   titleCell.font = { bold: true, size: 16 };
   titleCell.alignment = { vertical: 'middle' };
 
@@ -79,42 +85,51 @@ export async function buildSupplierWorkbook(
     cell.value = label;
     cell.font = { bold: true };
     cell.fill = HEADER_FILL;
-    cell.alignment = { vertical: 'middle', horizontal: i >= 2 ? 'right' : 'left' };
+    cell.alignment = { vertical: 'middle', horizontal: i >= 4 ? 'right' : 'left' };
   });
 
   let dataRowNum = headerRowNum + 1;
-  for (const row of supplier.rows) {
-    const excelRow = sheet.getRow(dataRowNum);
-    excelRow.getCell(1).value = row.codigo;
-    excelRow.getCell(2).value = row.material;
-    excelRow.getCell(3).value = row.precoOriginalNorm;
-    excelRow.getCell(3).numFmt = MONEY_FMT;
-    excelRow.getCell(4).value = row.precoNegociadoNorm;
-    excelRow.getCell(4).numFmt = MONEY_FMT;
-    excelRow.getCell(5).value = row.diferenca;
-    excelRow.getCell(5).numFmt = MONEY_FMT;
-    if (row.diferenca < 0) {
-      excelRow.getCell(5).font = NEGATIVE_DIFF_FONT;
+  for (const supplier of suppliers) {
+    for (const row of supplier.rows) {
+      const excelRow = sheet.getRow(dataRowNum);
+      excelRow.getCell(1).value = supplier.supplierName;
+      excelRow.getCell(2).value = row.codigo;
+      excelRow.getCell(3).value = row.material;
+      excelRow.getCell(4).value = row.unidade;
+      excelRow.getCell(5).value = row.precoOriginalNorm;
+      excelRow.getCell(5).numFmt = MONEY_FMT;
+      excelRow.getCell(6).value = row.precoNegociadoNorm;
+      excelRow.getCell(6).numFmt = MONEY_FMT;
+      excelRow.getCell(7).value = row.diferenca;
+      excelRow.getCell(7).numFmt = MONEY_FMT;
+      if (row.diferenca < 0) {
+        excelRow.getCell(7).font = NEGATIVE_DIFF_FONT;
+      }
+      excelRow.getCell(8).value = row.quantidade;
+      excelRow.getCell(8).numFmt = QTY_FMT;
+      excelRow.getCell(9).value = row.precoTotal;
+      excelRow.getCell(9).numFmt = MONEY_FMT;
+      dataRowNum += 1;
     }
-    excelRow.getCell(6).value = row.quantidade;
-    excelRow.getCell(6).numFmt = QTY_FMT;
-    excelRow.getCell(7).value = row.precoTotal;
-    excelRow.getCell(7).numFmt = MONEY_FMT;
-    dataRowNum += 1;
   }
 
   const totalRowNum = dataRowNum;
-  sheet.mergeCells(totalRowNum, 1, totalRowNum, 6);
+  sheet.mergeCells(totalRowNum, 1, totalRowNum, COL_COUNT - 1);
   const totalLabel = sheet.getCell(totalRowNum, 1);
   totalLabel.value = 'TOTAL GERAL';
   totalLabel.font = { bold: true };
   totalLabel.alignment = { horizontal: 'right', vertical: 'middle' };
 
-  const totalValue = sheet.getCell(totalRowNum, 7);
-  totalValue.value = supplier.grandTotal;
+  const totalValue = sheet.getCell(totalRowNum, COL_COUNT);
+  totalValue.value = suppliers.reduce((sum, supplier) => sum + supplier.grandTotal, 0);
   totalValue.numFmt = MONEY_FMT;
   totalValue.font = { bold: true };
 
+  sheet.autoFilter = {
+    from: { row: headerRowNum, column: 1 },
+    to: { row: headerRowNum, column: COL_COUNT },
+  };
+  sheet.views = [{ state: 'frozen', ySplit: headerRowNum }];
   autoFitColumns(sheet, headerRowNum, totalRowNum);
 
   return workbook;

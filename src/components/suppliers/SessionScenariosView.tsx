@@ -657,7 +657,7 @@ function ScenarioIdealView({
       const blob = await res.blob();
       const filename =
         parseContentDispositionFilename(res.headers.get('Content-Disposition')) ??
-        `cenario-ideal-${sessionId}.zip`;
+        `cenario-ideal-${sessionId}.xlsx`;
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
@@ -814,7 +814,7 @@ function ScenarioIdealView({
         <span
           title={
             canExport
-              ? 'ZIP com um Excel por fornecedor; itens não validados usam menor preço'
+              ? 'Excel único com materiais, fornecedor, unidade, quantidades e preços'
               : 'Nenhum material com necessidade de compra'
           }
           className="inline-flex"

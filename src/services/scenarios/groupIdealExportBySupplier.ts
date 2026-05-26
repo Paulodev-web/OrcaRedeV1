@@ -63,6 +63,7 @@ export function groupIdealExportBySupplier(
     const row: IdealExportRow = {
       codigo: item.material_code,
       material: item.material_name,
+      unidade: item.material_unit,
       precoOriginalNorm,
       precoNegociadoNorm: hasNegociado ? precoNegociadoNorm : precoOriginalNorm,
       diferenca,
