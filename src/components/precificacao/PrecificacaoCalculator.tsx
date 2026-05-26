@@ -1,6 +1,7 @@
 "use client";
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { savePricingBudgetAction } from '@/actions/pricingBudgets';
@@ -47,6 +48,7 @@ function createCostItem(): CostItem {
 }
 
 export function PrecificacaoCalculator() {
+  const router = useRouter();
   const { user, loading: loadingAuth } = useAuth();
   const {
     budgets,
@@ -196,6 +198,7 @@ export function PrecificacaoCalculator() {
 
     if (result.success) {
       toast.success('Precificação salva no dashboard.');
+      router.push('/tools/precificacao');
       return;
     }
 
@@ -263,19 +266,23 @@ export function PrecificacaoCalculator() {
             Portal
           </Link>
           <span className="mx-1">/</span>
-          <span className="text-gray-600">Módulo de Precificação</span>
+          <Link href="/tools/precificacao" className="hover:text-[#64ABDE]">
+            Módulo de Precificação
+          </Link>
+          <span className="mx-1">/</span>
+          <span className="text-gray-600">Nova precificação</span>
         </p>
-        <h1 className="mt-1 text-2xl font-bold text-[#1D3140]">Módulo de Precificação</h1>
+        <h1 className="mt-1 text-2xl font-bold text-[#1D3140]">Nova Precificação</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Precificação de serviços: defina o valor ou lucro desejado, adicione custos e calcule o total ao cliente.
+          Vincule um orçamento, defina o valor ou lucro desejado, adicione custos e salve no dashboard.
           {selectedBudgetName ? ` Orçamento selecionado: ${selectedBudgetName}.` : ''}
         </p>
         </div>
         <Link
-          href="/tools/precificacao/dashboard"
+          href="/tools/precificacao"
           className="inline-flex h-10 items-center justify-center rounded-lg border border-[#64ABDE]/30 bg-white px-4 text-sm font-medium text-[#1D3140] shadow-sm transition hover:border-[#64ABDE] hover:text-[#64ABDE]"
         >
-          Ver dashboard
+          Voltar ao dashboard
         </Link>
       </div>
 
