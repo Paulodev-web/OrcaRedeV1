@@ -182,7 +182,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
                 Material Interno Vinculado
               </th>
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
-                Preço Normalizado
+                Preço unit. (cotação)
               </th>
               <th className="px-4 py-3 w-10" />
             </tr>

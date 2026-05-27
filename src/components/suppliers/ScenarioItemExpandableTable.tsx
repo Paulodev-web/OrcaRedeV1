@@ -4,6 +4,10 @@ import React, { useState } from 'react';
 import { Award, ChevronDown } from 'lucide-react';
 import type { ScenarioItem } from '@/actions/supplierQuotes';
 import { suppliesTableBorderedScrollClass } from '@/lib/suppliesLayout';
+import { originalNormalizedPrice } from '@/lib/supplierPrice';
+
+/** comparison = detalhe PDF/fator; supplierQuotes = só preços de cotação (Cenário Ideal). */
+export type ScenarioPriceDisplay = 'comparison' | 'supplierQuotes';
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -28,6 +32,8 @@ interface Props {
   highlightQuoteId?: (materialId: string) => string | null;
   onOfferSelect?: (materialId: string, quoteId: string) => void;
   emptyMessage?: React.ReactNode;
+  /** Cenário Ideal usa supplierQuotes — sem colunas técnicas de PDF/normalizado. */
+  priceDisplay?: ScenarioPriceDisplay;
 }
 
 export default function ScenarioItemExpandableTable({
@@ -41,7 +47,9 @@ export default function ScenarioItemExpandableTable({
   highlightQuoteId,
   onOfferSelect,
   emptyMessage,
+  priceDisplay = 'comparison',
 }: Props) {
+  const supplierQuotesMode = priceDisplay === 'supplierQuotes';
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const activeItems = items.filter((i) => i.net_qty > 0);
 
@@ -73,7 +81,7 @@ export default function ScenarioItemExpandableTable({
                 {supplierColumnLabel}
               </th>
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32 bg-gray-50">
-                Preço unit. norm.
+                Preço unit.
               </th>
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32 bg-gray-50">
                 Total
@@ -126,6 +134,9 @@ export default function ScenarioItemExpandableTable({
                       <p className="text-sm font-bold text-[#1D3140]">
                         {summary.unitPrice > 0 ? formatCurrency(summary.unitPrice) : '—'}
                       </p>
+                      {summary.unitPrice > 0 && item.material_unit && (
+                        <p className="text-[10px] text-gray-400">/{item.material_unit}</p>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <p className="text-sm font-semibold text-[#64ABDE]">
@@ -160,14 +171,24 @@ export default function ScenarioItemExpandableTable({
                                 <th className="px-3 py-2 text-left text-xs font-medium uppercase text-[#1D3140]">
                                   Fornecedor
                                 </th>
+                                {!supplierQuotesMode && (
+                                  <>
+                                    <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">
+                                      Preço no PDF
+                                    </th>
+                                    <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">
+                                      Fator
+                                    </th>
+                                  </>
+                                )}
                                 <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">
-                                  Preço Unit.
-                                </th>
-                                <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">
-                                  Fator
-                                </th>
-                                <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">
-                                  Normalizado
+                                  Preço unit.
+                                  {item.material_unit ? (
+                                    <span className="font-normal normal-case text-gray-500">
+                                      {' '}
+                                      /{item.material_unit}
+                                    </span>
+                                  ) : null}
                                 </th>
                                 <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">
                                   Total
@@ -187,6 +208,11 @@ export default function ScenarioItemExpandableTable({
                                   const isBest = i === 0;
                                   const isHighlighted =
                                     highlightedQuoteId === offer.quote_id;
+                                  const isNegotiated = offer.preco_negociado != null;
+                                  const pdfUnitNorm = originalNormalizedPrice(
+                                    offer.preco_unit,
+                                    offer.conversion_factor
+                                  );
                                   return (
                                     <tr
                                       key={offer.quote_id}
@@ -213,18 +239,40 @@ export default function ScenarioItemExpandableTable({
                                         )}
                                         {offer.supplier_name}
                                       </td>
-                                      <td className="px-3 py-2 text-xs text-right text-gray-600">
-                                        {formatCurrency(offer.preco_unit)}
-                                      </td>
-                                      <td className="px-3 py-2 text-xs text-right text-gray-400">
-                                        {formatNumber(offer.conversion_factor)}×
-                                      </td>
+                                      {!supplierQuotesMode && (
+                                        <>
+                                          <td className="px-3 py-2 text-xs text-right text-gray-600">
+                                            {formatCurrency(offer.preco_unit)}
+                                          </td>
+                                          <td className="px-3 py-2 text-xs text-right text-gray-400">
+                                            {formatNumber(offer.conversion_factor)}×
+                                          </td>
+                                        </>
+                                      )}
                                       <td
                                         className={`px-3 py-2 text-xs text-right font-semibold ${
                                           isBest ? 'text-green-700' : 'text-gray-700'
                                         }`}
                                       >
                                         {formatCurrency(offer.preco_normalizado)}
+                                        {isNegotiated && (
+                                          <span className="block text-[10px] font-normal text-blue-600">
+                                            Negociado
+                                          </span>
+                                        )}
+                                        {supplierQuotesMode &&
+                                          isNegotiated &&
+                                          pdfUnitNorm !== offer.preco_normalizado && (
+                                            <span className="block text-[10px] font-normal text-gray-400 line-through">
+                                              {formatCurrency(pdfUnitNorm)}
+                                            </span>
+                                          )}
+                                        {supplierQuotesMode && offer.conversion_factor !== 1 && (
+                                          <span className="block text-[10px] font-normal text-gray-400">
+                                            PDF: {formatCurrency(offer.preco_unit)} · fator{' '}
+                                            {formatNumber(offer.conversion_factor)}×
+                                          </span>
+                                        )}
                                       </td>
                                       <td className="px-3 py-2 text-xs text-right text-gray-700">
                                         {formatCurrency(offer.total_normalizado)}

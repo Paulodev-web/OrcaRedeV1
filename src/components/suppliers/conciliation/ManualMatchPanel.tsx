@@ -145,9 +145,9 @@ export default function ManualMatchPanel({
               </p>
             </div>
             <p className="text-xs text-gray-400 mt-1">
-              Preço normalizado:{' '}
+              Preço na unidade do material ({selectedMat.unit}):{' '}
               <span className="font-semibold text-gray-700">
-                {formatCurrency(item.preco_unit / factorNum)} / {selectedMat.unit}
+                {formatCurrency(item.preco_unit / factorNum)}
               </span>
             </p>
           </div>

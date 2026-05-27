@@ -78,7 +78,7 @@ function ScenarioACard({ scenarios }: { scenarios: ScenariosResult }) {
               Itens cobertos
             </th>
             <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
-              Total normalizado
+              Total
             </th>
             <th className="px-4 py-3 w-24" />
           </tr>
@@ -295,7 +295,7 @@ function ScenarioBCard({ scenarios }: { scenarios: ScenariosResult }) {
                                   Fator
                                 </th>
                                 <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">
-                                  Normalizado
+                                  Preço unit.
                                 </th>
                                 <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">
                                   Total
@@ -523,8 +523,7 @@ export default function PurchaseScenariosPanel({
                   {activeTab === 'A' && (
                     <>
                       <p className="text-xs text-gray-500 mb-4">
-                        Comprar tudo de um único fornecedor. Preços normalizados por unidade interna do
-                        sistema.
+                        Comprar tudo de um único fornecedor. Totais com base nas cotações conciliadas.
                       </p>
                       <ScenarioACard scenarios={scenarios} />
                     </>
@@ -532,8 +531,7 @@ export default function PurchaseScenariosPanel({
                   {activeTab === 'B' && (
                     <>
                       <p className="text-xs text-gray-500 mb-4">
-                        Fracionar a compra: cada item é adquirido do fornecedor com menor preço
-                        normalizado.
+                        Fracionar a compra: cada item é adquirido do fornecedor com menor preço na cotação.
                       </p>
                       <ScenarioBCard scenarios={scenarios} />
                     </>

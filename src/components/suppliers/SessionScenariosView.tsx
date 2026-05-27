@@ -471,7 +471,7 @@ function TabelonaView({
   return (
     <div className="space-y-4">
       <p className="text-xs text-gray-500">
-        Nec. do orçamento de engenharia; preços dos PDFs (÷ fator). Compra = necessidade − estoque.
+        Nec. do orçamento de engenharia; preços das cotações (ajuste por fator quando houver). Compra = necessidade − estoque.
       </p>
       <div className={suppliesTableBorderedScrollClass}>
         <table className="min-w-full divide-y divide-gray-200 text-sm">
@@ -913,7 +913,8 @@ function ScenarioIdealView({
 
       <ScenarioItemExpandableTable
         items={filteredIdealItems}
-        description="Menor preço por item como sugestão. Expanda a linha para comparar fornecedores e validar a compra."
+        priceDisplay="supplierQuotes"
+        description="Preços das cotações dos fornecedores (não usa a lista de preços do orçamento). Expanda a linha para comparar e validar a compra."
         supplierColumnLabel="Fornecedor"
         totalLabel="Total Cenário Ideal:"
         totalValue={filteredIdealTotal}
@@ -1076,7 +1077,7 @@ function ScenarioAView({ scenarios }: { scenarios: ScenariosResult }) {
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">Fornecedor</th>
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32 bg-gray-50">Itens cobertos</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-40 bg-gray-50">Total normalizado</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-40 bg-gray-50">Total</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-100">
@@ -1133,7 +1134,7 @@ function ScenarioBView({ scenarios }: { scenarios: ScenariosResult & { filteredI
   return (
     <ScenarioItemExpandableTable
       items={items}
-      description="Fracionar a compra: cada item adquirido do fornecedor com menor preço normalizado. Apenas itens com necessidade líquida > 0."
+      description="Fracionar a compra: cada item do fornecedor com menor preço na cotação. Apenas itens com necessidade líquida > 0."
       supplierColumnLabel="Melhor fornecedor"
       totalLabel="Total Cenário B:"
       totalValue={scenarios.scenarioB.total_normalizado}
