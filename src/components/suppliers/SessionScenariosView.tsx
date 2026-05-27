@@ -615,6 +615,7 @@ function ScenarioIdealView({
   const validatedLines = ideal.lines.filter((l) => l.status === 'validated');
   const suggestedLines = ideal.lines.filter((l) => l.status === 'suggested');
   const canExport = items.some((i) => i.net_qty > 0);
+  const canExportPdf = items.some((i) => i.net_qty > 0 && i.all_offers.length > 0);
 
   const lineByMaterialId = useMemo(() => {
     const m = new Map<string, IdealScenarioLine>();
@@ -683,33 +684,15 @@ function ScenarioIdealView({
 
   const handleExportClick = useCallback(() => {
     if (!canExport || isExporting) return;
-    if (ideal.unvalidatedCount > 0) {
-      alertDialog.showConfirm(
-        'Itens só sugeridos',
-        `${ideal.unvalidatedCount} item(ns) ainda não foram validados explicitamente. A exportação usará o menor preço para esses itens. Deseja continuar?`,
-        runExport,
-        { confirmText: 'Exportar' }
-      );
-      return;
-    }
     void runExport();
-  }, [canExport, isExporting, ideal.unvalidatedCount, alertDialog, runExport]);
+  }, [canExport, isExporting, runExport]);
 
   const handleConfirmExport = useCallback(
     (run: () => void | Promise<void>) => {
       if (!canExport) return;
-      if (ideal.unvalidatedCount > 0) {
-        alertDialog.showConfirm(
-          'Itens só sugeridos',
-          `${ideal.unvalidatedCount} item(ns) ainda não foram validados explicitamente. A exportação usará o menor preço para esses itens. Deseja continuar?`,
-          () => void run(),
-          { confirmText: 'Exportar' }
-        );
-        return;
-      }
       void run();
     },
-    [canExport, ideal.unvalidatedCount, alertDialog]
+    [canExport]
   );
 
   const handleCloseIdealClick = useCallback(() => {
@@ -814,7 +797,7 @@ function ScenarioIdealView({
         </span>
         <IdealPdfExportControls
           sessionId={sessionId}
-          canExport={canExport}
+          canExport={canExportPdf}
           selectedSupplierSlug={selectedSupplierSlug}
           onSelectedSupplierSlugChange={setSelectedSupplierSlug}
           onConfirmExport={handleConfirmExport}

@@ -67,7 +67,14 @@ export function IdealPdfExportControls({
         );
         if (!res.ok) {
           if (!cancelled) {
-            setListError('Não foi possível carregar fornecedores.');
+            let message = 'Não foi possível carregar fornecedores.';
+            try {
+              const body = (await res.json()) as { error?: string };
+              if (body.error) message = body.error;
+            } catch {
+              /* ignore */
+            }
+            setListError(message);
             setSuppliers([]);
           }
           return;

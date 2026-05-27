@@ -44,12 +44,17 @@ export function groupIdealExportBySupplier(
   for (const item of scenarios.scenarioB.items) {
     if (item.net_qty <= 0) continue;
 
-    const quoteId =
+    let quoteId =
       effectiveMap.get(item.material_id) ?? getBestOfferQuoteId(item);
     if (!quoteId) continue;
 
-    const offer = item.all_offers.find((o) => o.quote_id === quoteId);
-    if (!offer) continue;
+    let offer = item.all_offers.find((o) => o.quote_id === quoteId);
+    if (!offer) {
+      quoteId = getBestOfferQuoteId(item);
+      if (!quoteId) continue;
+      offer = item.all_offers.find((o) => o.quote_id === quoteId);
+      if (!offer) continue;
+    }
 
     const precoOriginalNorm = originalNormalizedPrice(
       offer.preco_unit,

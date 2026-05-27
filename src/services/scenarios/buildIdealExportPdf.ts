@@ -26,7 +26,9 @@ export async function buildIdealExportPdf(
   sessionId: string,
   supplierSlug: string
 ): Promise<{ buffer: Buffer; filename: string }> {
-  const { ctx, suppliers } = await loadIdealExportContext(sessionId);
+  const { ctx, suppliers } = await loadIdealExportContext(sessionId, {
+    skipPendingCheck: true,
+  });
   const supplier = suppliers.find((s) => s.fileSlug === supplierSlug);
   if (!supplier) {
     throw new ExportIdealError('Fornecedor não encontrado para esta exportação.', 404);

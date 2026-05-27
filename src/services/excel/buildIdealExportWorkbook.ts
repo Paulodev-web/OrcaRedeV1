@@ -89,6 +89,15 @@ export async function buildIdealExportWorkbook(
   });
 
   let dataRowNum = headerRowNum + 1;
+  if (suppliers.length === 0) {
+    const noteRow = sheet.getRow(dataRowNum);
+    sheet.mergeCells(dataRowNum, 1, dataRowNum, COL_COUNT);
+    noteRow.getCell(1).value =
+      'Nenhum material com cotação disponível para exportação. Adicione cotações manuais ou concilie PDFs.';
+    noteRow.getCell(1).font = { italic: true, color: { argb: 'FF6B7280' } };
+    dataRowNum += 1;
+  }
+
   for (const supplier of suppliers) {
     for (const row of supplier.rows) {
       const excelRow = sheet.getRow(dataRowNum);

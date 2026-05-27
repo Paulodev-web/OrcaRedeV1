@@ -83,7 +83,7 @@ export async function loadIdealExportContext(
   };
 
   const suppliers = groupIdealExportBySupplier(scenariosRes.data, selections);
-  if (suppliers.length === 0) {
+  if (suppliers.length === 0 && !options?.skipPendingCheck) {
     throw new ExportIdealError(
       'Nenhum material válido encontrado para os fornecedores selecionados.',
       400
