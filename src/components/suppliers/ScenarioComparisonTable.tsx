@@ -213,6 +213,7 @@ interface Props {
   isSavingPrice?: boolean;
   onRemoveMaterial?: (item: ScenarioItem) => void;
   isRemovingMaterial?: boolean;
+  onManualQuoteRequest?: (item: ScenarioItem) => void;
 }
 
 export default function ScenarioComparisonTable({
@@ -228,6 +229,7 @@ export default function ScenarioComparisonTable({
   isSavingPrice,
   onRemoveMaterial,
   isRemovingMaterial = false,
+  onManualQuoteRequest,
 }: Props) {
   const quoteMap = useMemo(() => new Map(quotes.map((q) => [q.id, q])), [quotes]);
   const availableQuoteIds = useMemo(() => new Set(quotes.map((q) => q.id)), [quotes]);
@@ -339,11 +341,63 @@ export default function ScenarioComparisonTable({
   }
 
   if (quotes.length === 0) {
+    const purchasable = items.filter((i) => i.net_qty > 0);
     return (
-      <div className="flex flex-col items-center justify-center h-40 text-sm text-gray-400 border border-dashed border-gray-200 rounded-lg">
-        <AlertCircle className="h-8 w-8 mb-2 text-gray-300" />
-        <p>Nenhum orçamento disponível para comparação.</p>
-        <p className="text-xs mt-1">Concilie ao menos uma cotação para montar a tabela.</p>
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
+        <p className="shrink-0 text-xs text-gray-500">
+          Nenhuma cotação importada ainda. Adicione cotação manual por material ou importe PDFs na
+          sessão.
+        </p>
+        {purchasable.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-40 text-sm text-gray-400 border border-dashed border-gray-200 rounded-lg">
+            <AlertCircle className="h-8 w-8 mb-2 text-gray-300" />
+            <p>Nenhum material com necessidade de compra.</p>
+          </div>
+        ) : (
+          <div className={`min-h-0 flex-1 ${suppliesTableBorderedScrollClass}`}>
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50 sticky top-0 z-10">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Material
+                  </th>
+                  <th className="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase w-16">
+                    Compra
+                  </th>
+                  <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase w-36">
+                    Cotação
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {purchasable.map((item) => (
+                  <tr key={item.material_id} className="hover:bg-[#64ABDE]/5">
+                    <td className="px-4 py-2.5">
+                      <p className="font-medium text-[#1D3140]">{item.material_name}</p>
+                      <p className="text-xs text-gray-400 font-mono">{item.material_code}</p>
+                    </td>
+                    <td className="px-2 py-2.5 text-right text-xs font-medium">
+                      {formatNumber(item.net_qty)}
+                    </td>
+                    <td className="px-3 py-2.5 text-right">
+                      {onManualQuoteRequest ? (
+                        <button
+                          type="button"
+                          onClick={() => onManualQuoteRequest(item)}
+                          className="text-xs font-medium text-[#64ABDE] hover:text-[#1D3140] hover:underline"
+                        >
+                          Cotação manual
+                        </button>
+                      ) : (
+                        <span className="text-xs text-amber-600">Sem cotação</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     );
   }
@@ -489,8 +543,23 @@ export default function ScenarioComparisonTable({
                         </React.Fragment>
                       );
                     })}
-                    <td className="px-3 py-2.5 text-right border-l-2 border-green-200 bg-green-50/50">
-                      {hasNoCoverage ? (
+                    <td
+                      className="px-3 py-2.5 text-right border-l-2 border-green-200 bg-green-50/50"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {hasNoCoverage && !isFullyStocked ? (
+                        onManualQuoteRequest ? (
+                          <button
+                            type="button"
+                            onClick={() => onManualQuoteRequest(item)}
+                            className="text-xs font-medium text-[#64ABDE] hover:text-[#1D3140] hover:underline"
+                          >
+                            Cotação manual
+                          </button>
+                        ) : (
+                          <span className="text-xs text-amber-600 font-medium">Sem cotação</span>
+                        )
+                      ) : hasNoCoverage ? (
                         <span className="text-xs text-amber-600 font-medium">Sem cotação</span>
                       ) : (
                         <div className="flex flex-col items-end gap-0.5">

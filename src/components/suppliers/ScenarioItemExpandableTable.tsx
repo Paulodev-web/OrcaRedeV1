@@ -31,6 +31,7 @@ interface Props {
   renderRowBadge?: (item: ScenarioItem) => React.ReactNode;
   highlightQuoteId?: (materialId: string) => string | null;
   onOfferSelect?: (materialId: string, quoteId: string) => void;
+  onManualQuoteRequest?: (item: ScenarioItem) => void;
   emptyMessage?: React.ReactNode;
   /** Cenário Ideal usa supplierQuotes — sem colunas técnicas de PDF/normalizado. */
   priceDisplay?: ScenarioPriceDisplay;
@@ -46,6 +47,7 @@ export default function ScenarioItemExpandableTable({
   renderRowBadge,
   highlightQuoteId,
   onOfferSelect,
+  onManualQuoteRequest,
   emptyMessage,
   priceDisplay = 'comparison',
 }: Props) {
@@ -93,6 +95,7 @@ export default function ScenarioItemExpandableTable({
             {activeItems.map((item, idx) => {
               const isExpanded = expandedId === item.material_id;
               const hasMultiple = item.all_offers.length > 1;
+              const hasNoOffers = item.all_offers.length === 0;
               const isEvenRow = idx % 2 === 0;
               const summary = getRowSummary(item);
               const highlightedQuoteId = highlightQuoteId?.(item.material_id) ?? null;
@@ -126,6 +129,14 @@ export default function ScenarioItemExpandableTable({
                             {summary.supplierLabel}
                           </span>
                         </span>
+                      ) : hasNoOffers && onManualQuoteRequest ? (
+                        <button
+                          type="button"
+                          onClick={() => onManualQuoteRequest(item)}
+                          className="text-xs font-medium text-[#64ABDE] hover:text-[#1D3140] hover:underline"
+                        >
+                          Cotação manual
+                        </button>
                       ) : (
                         <span className="text-xs text-amber-600">Sem cotação</span>
                       )}
@@ -144,7 +155,7 @@ export default function ScenarioItemExpandableTable({
                       </p>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      {hasMultiple && (
+                      {(hasMultiple || (hasNoOffers && onManualQuoteRequest)) && (
                         <button
                           type="button"
                           onClick={() =>
@@ -152,7 +163,7 @@ export default function ScenarioItemExpandableTable({
                           }
                           className="p-1 text-gray-400 hover:text-gray-600 rounded transition-colors"
                           aria-expanded={isExpanded}
-                          aria-label="Comparar fornecedores"
+                          aria-label={hasNoOffers ? 'Adicionar cotação manual' : 'Comparar fornecedores'}
                         >
                           <ChevronDown
                             className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
@@ -161,7 +172,23 @@ export default function ScenarioItemExpandableTable({
                       )}
                     </td>
                   </tr>
-                  {isExpanded && (
+                  {isExpanded && hasNoOffers && onManualQuoteRequest && (
+                    <tr>
+                      <td colSpan={6} className="bg-[#64ABDE]/10 px-4 py-4">
+                        <p className="text-sm text-gray-600 mb-2">
+                          Nenhuma oferta de fornecedor para este material.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => onManualQuoteRequest(item)}
+                          className="text-sm font-medium text-[#64ABDE] hover:text-[#1D3140] hover:underline"
+                        >
+                          Adicionar cotação manual
+                        </button>
+                      </td>
+                    </tr>
+                  )}
+                  {isExpanded && !hasNoOffers && (
                     <tr>
                       <td colSpan={6} className="bg-[#64ABDE]/10 px-4 pb-4 pt-0">
                         <div className="mt-2 overflow-hidden rounded-lg border border-[#64ABDE]/30">

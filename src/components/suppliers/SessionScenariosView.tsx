@@ -47,10 +47,12 @@ import {
   type IdealScenarioLine,
 } from '@/lib/scenarioIdealEngine';
 import { useSessionScenariosRefresh } from '@/hooks/useSessionScenariosRefresh';
+import { hasSeenConciliation } from '@/lib/suppliesConciliationAlert';
 import ScenarioFiltersPanel from './ScenarioFiltersPanel';
 import ScenarioComparisonTable from './ScenarioComparisonTable';
 import ScenarioItemExpandableTable from './ScenarioItemExpandableTable';
 import MaterialDetailModal from './MaterialDetailModal';
+import ManualQuoteDialog, { type ManualQuoteMaterialInfo } from './ManualQuoteDialog';
 import {
   deriveFilteredScenarios,
   defaultFilterState,
@@ -583,6 +585,7 @@ function ScenarioIdealView({
   isRevalidatingStale,
   isClosingIdeal,
   staleCount,
+  onManualQuoteRequest,
 }: {
   scenarios: ScenariosResult;
   idealSelections: Map<string, string>;
@@ -595,6 +598,7 @@ function ScenarioIdealView({
   isRevalidatingStale: boolean;
   isClosingIdeal: boolean;
   staleCount: number;
+  onManualQuoteRequest?: (item: ScenarioItem) => void;
 }) {
   const alertDialog = useAlertDialog();
   const [isExporting, setIsExporting] = useState(false);
@@ -679,15 +683,6 @@ function ScenarioIdealView({
 
   const handleExportClick = useCallback(() => {
     if (!canExport || isExporting) return;
-    if (ideal.pendingCount > 0) {
-      alertDialog.showConfirm(
-        'Materiais sem cotação',
-        `Existem ${ideal.pendingCount} materiais sem oferta disponível. Eles não entrarão na exportação. Deseja continuar?`,
-        runExport,
-        { confirmText: 'Continuar' }
-      );
-      return;
-    }
     if (ideal.unvalidatedCount > 0) {
       alertDialog.showConfirm(
         'Itens só sugeridos',
@@ -698,27 +693,11 @@ function ScenarioIdealView({
       return;
     }
     void runExport();
-  }, [
-    canExport,
-    isExporting,
-    ideal.pendingCount,
-    ideal.unvalidatedCount,
-    alertDialog,
-    runExport,
-  ]);
+  }, [canExport, isExporting, ideal.unvalidatedCount, alertDialog, runExport]);
 
   const handleConfirmExport = useCallback(
     (run: () => void | Promise<void>) => {
       if (!canExport) return;
-      if (ideal.pendingCount > 0) {
-        alertDialog.showConfirm(
-          'Materiais sem cotação',
-          `Existem ${ideal.pendingCount} materiais sem oferta disponível. Eles não entrarão na exportação. Deseja continuar?`,
-          () => void run(),
-          { confirmText: 'Continuar' }
-        );
-        return;
-      }
       if (ideal.unvalidatedCount > 0) {
         alertDialog.showConfirm(
           'Itens só sugeridos',
@@ -730,7 +709,7 @@ function ScenarioIdealView({
       }
       void run();
     },
-    [canExport, ideal.pendingCount, ideal.unvalidatedCount, alertDialog]
+    [canExport, ideal.unvalidatedCount, alertDialog]
   );
 
   const handleCloseIdealClick = useCallback(() => {
@@ -956,6 +935,7 @@ function ScenarioIdealView({
           return item ? getEffectiveQuoteId(item, idealSelections) : null;
         }}
         onOfferSelect={onIdealSelect}
+        onManualQuoteRequest={onManualQuoteRequest}
       />
 
       <AlertDialog {...alertDialog.dialogProps} />
@@ -975,6 +955,7 @@ function RankingView({
   isRevalidatingStale,
   isClosingIdeal,
   staleCount,
+  onManualQuoteRequest,
 }: {
   scenarios: ScenariosResult;
   idealSelections: Map<string, string>;
@@ -987,6 +968,7 @@ function RankingView({
   isRevalidatingStale: boolean;
   isClosingIdeal: boolean;
   staleCount: number;
+  onManualQuoteRequest?: (item: ScenarioItem) => void;
 }) {
   const [rankingTab, setRankingTab] = useState<'A' | 'B' | 'Ideal'>('A');
   const idealUnvalidated = useMemo(() => {
@@ -1047,6 +1029,7 @@ function RankingView({
             isRevalidatingStale={isRevalidatingStale}
             isClosingIdeal={isClosingIdeal}
             staleCount={staleCount}
+            onManualQuoteRequest={onManualQuoteRequest}
           />
         )}
       </div>
@@ -1222,6 +1205,18 @@ export default function SessionScenariosView({
   // Material detail modal state
   const [selectedMaterial, setSelectedMaterial] = useState<ScenarioItem | null>(null);
   const [materialModalOpen, setMaterialModalOpen] = useState(false);
+  const [manualQuoteMaterial, setManualQuoteMaterial] = useState<ManualQuoteMaterialInfo | null>(
+    null
+  );
+  const [manualQuoteOpen, setManualQuoteOpen] = useState(false);
+  const [conciliationSeen, setConciliationSeen] = useState(false);
+
+  useEffect(() => {
+    const sync = () => setConciliationSeen(hasSeenConciliation(sessionId));
+    sync();
+    document.addEventListener('visibilitychange', sync);
+    return () => document.removeEventListener('visibilitychange', sync);
+  }, [sessionId]);
 
   const handleMaterialClick = useCallback((item: ScenarioItem) => {
     setSelectedMaterial(item);
@@ -1421,6 +1416,36 @@ export default function SessionScenariosView({
     [idealSelections, sessionId, refreshScenarios]
   );
 
+  const handleManualQuoteRequest = useCallback((item: ScenarioItem) => {
+    setManualQuoteMaterial({
+      materialId: item.material_id,
+      materialName: item.material_name,
+      materialCode: item.material_code,
+      materialUnit: item.material_unit,
+    });
+    setManualQuoteOpen(true);
+  }, []);
+
+  const handleManualQuoteSaved = useCallback(
+    async (quoteId: string) => {
+      const materialId = manualQuoteMaterial?.materialId;
+      if (!materialId) return;
+
+      setIdealSelections((prev) => {
+        const next = new Map(prev);
+        next.set(materialId, quoteId);
+        return next;
+      });
+
+      const res = await saveIdealSelectionAction(sessionId, materialId, quoteId);
+      if (!res.success) {
+        alertDialog.showError('Cotação salva', res.error ?? 'Não foi possível validar no cenário ideal.');
+      }
+      await refreshScenarios();
+    },
+    [manualQuoteMaterial, sessionId, refreshScenarios, alertDialog]
+  );
+
   const effectiveIdealSelections = useMemo(
     () => buildEffectiveSelectionMap(scenarios.scenarioB.items, idealSelections),
     [scenarios.scenarioB.items, idealSelections]
@@ -1534,7 +1559,7 @@ export default function SessionScenariosView({
         hasChanges={hasStockChanges}
       />
 
-      {pendingQuotes.length > 0 && (
+      {pendingQuotes.length > 0 && !conciliationSeen && (
         <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
           <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-amber-800">
@@ -1580,6 +1605,7 @@ export default function SessionScenariosView({
               isSavingPrice={isSavingPrice}
               onRemoveMaterial={handleRemoveMaterial}
               isRemovingMaterial={isRemovingMaterial}
+              onManualQuoteRequest={handleManualQuoteRequest}
             />
           )}
           {/* Ranking consome rawData (`scenarios` direto da action) — nunca passa
@@ -1598,10 +1624,20 @@ export default function SessionScenariosView({
               isRevalidatingStale={isRevalidatingStale}
               isClosingIdeal={isClosingIdeal}
               staleCount={staleCount}
+              onManualQuoteRequest={handleManualQuoteRequest}
             />
           )}
         </div>
       </div>
+
+      <ManualQuoteDialog
+        open={manualQuoteOpen}
+        onOpenChange={setManualQuoteOpen}
+        sessionId={sessionId}
+        budgetId={budgetId}
+        material={manualQuoteMaterial}
+        onSaved={(quoteId) => void handleManualQuoteSaved(quoteId)}
+      />
 
       <MaterialDetailModal
         item={selectedMaterial}

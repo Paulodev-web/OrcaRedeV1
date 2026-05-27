@@ -6,6 +6,7 @@ import { getSupplierDisplayName } from '@/lib/supplierDisplay';
 import { effectiveUnitPrice, normalizedPrice } from '@/lib/supplierPrice';
 import { autoMatchQuoteItems } from '@/services/suppliers/autoMatchQuoteItems';
 import { resolveSupplierForQuote } from '@/services/suppliers/resolveSupplierForQuote';
+import { saveManualSessionQuoteItem } from '@/services/suppliers/saveManualSessionQuoteItem';
 import {
   getInactiveSuppliesMaterialIds,
   isMaterialActiveInSupplies,
@@ -1747,6 +1748,45 @@ export async function updateNegotiatedPriceAction(
     return { success: true, data: undefined };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao salvar preço negociado.';
+    return { success: false, error: message };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// saveManualSessionQuoteItemAction — cotação manual por material/fornecedor
+// ---------------------------------------------------------------------------
+export async function saveManualSessionQuoteItemAction(input: {
+  sessionId: string;
+  budgetId: string;
+  materialId: string;
+  supplierId: string;
+  unitPrice: number;
+}): Promise<ActionResult<{ quoteId: string; quoteItemId: string }>> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const result = await saveManualSessionQuoteItem(supabase, {
+      sessionId: input.sessionId,
+      budgetId: input.budgetId,
+      materialId: input.materialId,
+      supplierId: input.supplierId,
+      unitPrice: input.unitPrice,
+      userId,
+    });
+
+    if ('error' in result) {
+      return { success: false, error: result.error };
+    }
+
+    revalidatePath(`/fornecedores/sessao/${input.sessionId}`);
+    revalidatePath(`/fornecedores/sessao/${input.sessionId}/cenarios`);
+    revalidatePath(`/fornecedores/sessao/${input.sessionId}/conciliacao`);
+
+    return { success: true, data: result };
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : 'Erro ao salvar cotação manual.';
     return { success: false, error: message };
   }
 }

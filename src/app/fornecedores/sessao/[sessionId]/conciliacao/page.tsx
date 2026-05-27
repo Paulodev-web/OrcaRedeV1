@@ -6,6 +6,7 @@ import {
 } from '@/lib/quotationSessionReads';
 import { getConciliationPayloadBySessionAction } from '@/actions/supplierQuotes';
 import ConciliationCurationView from '@/components/suppliers/ConciliationCurationView';
+import ConciliationSeenMarker from '@/components/suppliers/ConciliationSeenMarker';
 import SuppliesHeader from '@/components/suppliers/SuppliesHeader';
 import { suppliesPageColumnClass } from '@/lib/suppliesLayout';
 
@@ -70,6 +71,8 @@ export default async function SessionConciliacaoPage({ params }: Props) {
         title="Conciliação de Materiais"
         description="Valide os vínculos entre itens dos fornecedores e a fonte da verdade."
       />
+
+      <ConciliationSeenMarker sessionId={sessionId} />
 
       <ConciliationCurationView
         sessionId={sessionId}

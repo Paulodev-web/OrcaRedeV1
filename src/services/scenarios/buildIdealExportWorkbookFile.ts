@@ -8,7 +8,9 @@ import { loadIdealExportContext } from '@/services/scenarios/loadIdealExportCont
 export async function buildIdealExportWorkbookFile(
   sessionId: string
 ): Promise<{ buffer: Buffer; filename: string }> {
-  const { ctx, suppliers } = await loadIdealExportContext(sessionId);
+  const { ctx, suppliers } = await loadIdealExportContext(sessionId, {
+    skipPendingCheck: true,
+  });
 
   const workbook = await buildIdealExportWorkbook(suppliers, ctx);
   const buffer = await workbookToBuffer(workbook);
