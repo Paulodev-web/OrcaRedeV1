@@ -72,11 +72,27 @@ function sanitizeCostItems(value: unknown): CostItem[] {
     const row = item && typeof item === 'object' ? item as Record<string, unknown> : {};
     const id = typeof row.id === 'string' && row.id ? row.id : `cost-${index}`;
     const descricao = typeof row.descricao === 'string' ? row.descricao : '';
+    const hasUnitFields = row.unidade !== undefined || row.valorUnitario !== undefined || row.valor_unitario !== undefined;
+    const unidade = Math.max(toNumber(row.unidade), 0);
+    const valorUnitario = Math.max(toNumber(row.valorUnitario ?? row.valor_unitario), 0);
+    const valorLegado = Math.max(toNumber(row.valor), 0);
+
+    if (hasUnitFields) {
+      return {
+        id,
+        descricao,
+        unidade,
+        valorUnitario,
+        valor: unidade * valorUnitario,
+      };
+    }
 
     return {
       id,
       descricao,
-      valor: Math.max(toNumber(row.valor), 0),
+      unidade: valorLegado > 0 ? 1 : 0,
+      valorUnitario: valorLegado,
+      valor: valorLegado,
     };
   });
 }

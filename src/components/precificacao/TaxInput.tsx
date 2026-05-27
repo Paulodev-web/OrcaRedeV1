@@ -1,8 +1,10 @@
 "use client";
 
+import { DecimalInput } from './DecimalInput';
+
 interface TaxInputProps {
   impostoPercent: number;
-  onChange: (value: string) => void;
+  onChange: (value: number) => void;
 }
 
 export function TaxInput({ impostoPercent, onChange }: TaxInputProps) {
@@ -19,14 +21,10 @@ export function TaxInput({ impostoPercent, onChange }: TaxInputProps) {
             Imposto sobre VS (%)
           </label>
           <div className="w-28">
-            <input
+            <DecimalInput
               id="imposto-percent"
-              type="number"
-              min={0}
-              max={100}
-              step={0.01}
               value={impostoPercent}
-              onChange={(event) => onChange(event.target.value)}
+              onValueChange={onChange}
               className="h-9 w-full rounded-lg border border-gray-200 px-2 text-right text-sm text-gray-800 outline-none transition focus:border-[#64ABDE]/80 focus:ring-2 focus:ring-[#64ABDE]/20"
             />
           </div>
@@ -38,7 +36,7 @@ export function TaxInput({ impostoPercent, onChange }: TaxInputProps) {
           max={100}
           step={0.01}
           value={impostoPercent}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(event) => onChange(Number.parseFloat(event.target.value) || 0)}
           className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-[#64ABDE]"
           aria-label="Imposto sobre o Serviço (%)"
         />

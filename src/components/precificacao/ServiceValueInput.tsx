@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle } from 'lucide-react';
+import { DecimalInput } from './DecimalInput';
 import type { PricingInputMode } from './types';
 
 interface ServiceValueInputProps {
@@ -8,8 +9,8 @@ interface ServiceValueInputProps {
   valorServico: number;
   lucroPercent: number;
   inputMode: PricingInputMode;
-  onValorServicoChange: (value: string) => void;
-  onLucroPercentChange: (value: string) => void;
+  onValorServicoChange: (value: number) => void;
+  onLucroPercentChange: (value: number) => void;
 }
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
@@ -48,13 +49,10 @@ export function ServiceValueInput({
           <label htmlFor="valor-servico" className="text-xs font-medium text-gray-700">
             Valor do Serviço (R$)
           </label>
-          <input
+          <DecimalInput
             id="valor-servico"
-            type="number"
-            min="0"
-            step="0.01"
             value={valorServico}
-            onChange={(event) => onValorServicoChange(event.target.value)}
+            onValueChange={onValorServicoChange}
             className={`h-10 w-full rounded-lg border px-3 text-sm outline-none transition focus:ring-2 ${
               inputMode === 'valor'
                 ? 'border-[#64ABDE] bg-white text-[#1D3140] focus:border-[#64ABDE]/80 focus:ring-[#64ABDE]/20'
@@ -70,14 +68,10 @@ export function ServiceValueInput({
           <label htmlFor="lucro-percent" className="text-xs font-medium text-gray-700">
             Lucro desejado (%)
           </label>
-          <input
+          <DecimalInput
             id="lucro-percent"
-            type="number"
-            min="0"
-            max="99.99"
-            step="0.01"
             value={lucroPercent}
-            onChange={(event) => onLucroPercentChange(event.target.value)}
+            onValueChange={onLucroPercentChange}
             className={`h-10 w-full rounded-lg border px-3 text-sm outline-none transition focus:ring-2 ${
               inputMode === 'lucro'
                 ? 'border-[#64ABDE] bg-white text-[#1D3140] focus:border-[#64ABDE]/80 focus:ring-[#64ABDE]/20'

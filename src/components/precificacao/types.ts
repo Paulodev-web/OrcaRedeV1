@@ -2,7 +2,18 @@
 export interface CostItem {
   id: string;
   descricao: string;
+  /** Quantidade (ex.: 10 diárias). */
+  unidade: number;
+  /** Valor por unidade (R$). */
+  valorUnitario: number;
+  /** Total da linha: unidade × valorUnitario. */
   valor: number;
+}
+
+export function computeCostItemTotal(unidade: number, valorUnitario: number): number {
+  const qty = Math.max(unidade, 0);
+  const unit = Math.max(valorUnitario, 0);
+  return qty * unit;
 }
 
 /** Custo enriquecido com seu percentual sobre o Valor do Serviço. */

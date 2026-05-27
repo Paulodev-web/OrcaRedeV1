@@ -51,12 +51,16 @@ export function calculateServicePricing(
   const materiais = Math.max(toSafeNumber(valorMateriais), 0);
 
   const custosDetalhados: CostItemWithPercent[] = custos.map((custo) => {
-    const valor = toSafeNumber(custo.valor);
+    const unidade = Math.max(toSafeNumber(custo.unidade), 0);
+    const valorUnitario = Math.max(toSafeNumber(custo.valorUnitario), 0);
+    const valor = unidade > 0 || valorUnitario > 0 ? unidade * valorUnitario : toSafeNumber(custo.valor);
     const percentualDoVS = vs > 0 ? (valor / vs) * 100 : 0;
 
     return {
       id: custo.id,
       descricao: custo.descricao,
+      unidade,
+      valorUnitario,
       valor,
       percentualDoVS,
     };

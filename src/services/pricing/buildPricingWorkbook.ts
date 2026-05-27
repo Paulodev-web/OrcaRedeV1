@@ -117,7 +117,7 @@ export async function buildPricingWorkbook(data: PricingWorkbookData): Promise<E
 
   const costs = workbook.addWorksheet('Custos');
   const costsHeader = costs.getRow(1);
-  ['Descrição', 'Valor', '% do VS'].forEach((label, index) => {
+  ['Descrição', 'Unidade', 'Valor/unid.', 'Total', '% do VS'].forEach((label, index) => {
     costsHeader.getCell(index + 1).value = label;
   });
   styleHeader(costsHeader);
@@ -125,16 +125,20 @@ export async function buildPricingWorkbook(data: PricingWorkbookData): Promise<E
   if (data.costItems.length === 0) {
     costs.getRow(2).getCell(1).value = 'Nenhum custo cadastrado.';
   } else {
-    data.result.custosDetalhados.forEach((item, index) => {
+    data.costItems.forEach((item, index) => {
+      const detalhe = data.result.custosDetalhados.find((custo) => custo.id === item.id);
       const row = costs.getRow(index + 2);
       row.getCell(1).value = item.descricao || 'Custo sem descrição';
-      row.getCell(2).value = item.valor;
-      row.getCell(2).numFmt = MONEY_FMT;
-      row.getCell(3).value = item.percentualDoVS / 100;
-      row.getCell(3).numFmt = PERCENT_FMT;
+      row.getCell(2).value = item.unidade;
+      row.getCell(3).value = item.valorUnitario;
+      row.getCell(3).numFmt = MONEY_FMT;
+      row.getCell(4).value = item.valor;
+      row.getCell(4).numFmt = MONEY_FMT;
+      row.getCell(5).value = (detalhe?.percentualDoVS ?? 0) / 100;
+      row.getCell(5).numFmt = PERCENT_FMT;
     });
   }
-  autoFitColumns(costs, 3);
+  autoFitColumns(costs, 5);
 
   const materials = workbook.addWorksheet('Materiais');
   const materialHeader = materials.getRow(1);

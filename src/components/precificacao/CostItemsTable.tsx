@@ -1,13 +1,14 @@
 "use client";
 
 import { Plus, Trash2 } from 'lucide-react';
+import { DecimalInput } from './DecimalInput';
 import type { CostItem } from './types';
 
 interface CostItemsTableProps {
   valorServico: number;
   costItems: CostItem[];
   onAddCostItem: () => void;
-  onUpdateCostItem: (id: string, field: 'descricao' | 'valor', value: string) => void;
+  onUpdateCostItem: (id: string, field: 'descricao' | 'unidade' | 'valorUnitario', value: string | number) => void;
   onRemoveCostItem: (id: string) => void;
 }
 
@@ -44,7 +45,7 @@ export function CostItemsTable({
         <div>
           <h2 className="text-sm font-semibold text-[#1D3140]">Custos do Serviço</h2>
           <p className="mt-1 text-xs text-gray-500">
-            Adicione os custos variáveis do serviço: mão de obra, diárias, alimentação, hospedagem, etc.
+            Adicione os custos variáveis do serviço. O total de cada linha é calculado como unidade × valor por unidade.
           </p>
         </div>
         <button
@@ -62,7 +63,9 @@ export function CostItemsTable({
           <thead>
             <tr className="border-b border-gray-100 text-left text-xs uppercase tracking-wide text-gray-500">
               <th className="py-2 pr-3">Descrição</th>
-              <th className="py-2 pr-3">Valor (R$)</th>
+              <th className="py-2 pr-3">Unidade</th>
+              <th className="py-2 pr-3">Valor/unid. (R$)</th>
+              <th className="py-2 pr-3">Total (R$)</th>
               <th className="py-2 pr-3">% do VS</th>
               <th className="py-2">Ações</th>
             </tr>
@@ -76,18 +79,26 @@ export function CostItemsTable({
                     value={item.descricao}
                     onChange={(event) => onUpdateCostItem(item.id, 'descricao', event.target.value)}
                     placeholder="Ex: Mão de obra, Diária, Alimentação..."
-                    className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-800 outline-none transition focus:border-[#64ABDE]/80 focus:ring-2 focus:ring-[#64ABDE]/20"
+                    className="h-10 w-full min-w-[140px] rounded-lg border border-gray-200 px-3 text-sm text-gray-800 outline-none transition focus:border-[#64ABDE]/80 focus:ring-2 focus:ring-[#64ABDE]/20"
                   />
                 </td>
                 <td className="py-2 pr-3">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={item.valor}
-                    onChange={(event) => onUpdateCostItem(item.id, 'valor', event.target.value)}
-                    className="h-10 w-32 rounded-lg border border-gray-200 px-3 text-right text-sm text-gray-800 outline-none transition focus:border-[#64ABDE]/80 focus:ring-2 focus:ring-[#64ABDE]/20"
+                  <DecimalInput
+                    value={item.unidade}
+                    onValueChange={(unidade) => onUpdateCostItem(item.id, 'unidade', unidade)}
+                    placeholder="Ex: 10"
+                    className="h-10 w-24 rounded-lg border border-gray-200 px-3 text-right text-sm text-gray-800 outline-none transition focus:border-[#64ABDE]/80 focus:ring-2 focus:ring-[#64ABDE]/20"
                   />
+                </td>
+                <td className="py-2 pr-3">
+                  <DecimalInput
+                    value={item.valorUnitario}
+                    onValueChange={(valorUnitario) => onUpdateCostItem(item.id, 'valorUnitario', valorUnitario)}
+                    className="h-10 w-28 rounded-lg border border-gray-200 px-3 text-right text-sm text-gray-800 outline-none transition focus:border-[#64ABDE]/80 focus:ring-2 focus:ring-[#64ABDE]/20"
+                  />
+                </td>
+                <td className="py-2 pr-3 text-right text-sm font-medium text-[#1D3140]">
+                  {currencyFormatter.format(item.valor)}
                 </td>
                 <td className="py-2 pr-3 text-sm font-medium text-[#1D3140]">
                   {formatPercentOfVS(item.valor, valorServico)}
@@ -106,7 +117,7 @@ export function CostItemsTable({
             ))}
             {costItems.length === 0 && (
               <tr>
-                <td colSpan={4} className="py-8 text-center text-sm text-gray-500">
+                <td colSpan={6} className="py-8 text-center text-sm text-gray-500">
                   Adicione custos do serviço (mão de obra, diária, alimentação, etc.) para calcular o lucro.
                 </td>
               </tr>
@@ -115,7 +126,9 @@ export function CostItemsTable({
           {costItems.length > 0 && (
             <tfoot>
               <tr className="bg-gray-50 text-sm font-semibold text-[#1D3140]">
-                <td className="py-2 pr-3 text-right">Total</td>
+                <td className="py-2 pr-3 text-right" colSpan={3}>
+                  Total
+                </td>
                 <td className="py-2 pr-3 text-right">{currencyFormatter.format(totalCustos)}</td>
                 <td className="py-2 pr-3">{formatPercentOfVS(totalCustos, valorServico)}</td>
                 <td />

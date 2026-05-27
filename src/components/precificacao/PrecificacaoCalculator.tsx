@@ -19,6 +19,7 @@ import { ServicePricingSummary } from './ServicePricingSummary';
 import { ServiceValueInput } from './ServiceValueInput';
 import { TaxInput } from './TaxInput';
 import type { CostItem, PricingInputMode, PricingSaveMode } from './types';
+import { computeCostItemTotal } from './types';
 
 function parseNonNegativeNumber(value: string): number {
   const parsed = Number.parseFloat(value);
@@ -43,6 +44,8 @@ function createCostItem(): CostItem {
   return {
     id: `${Date.now()}-${Math.round(Math.random() * 100000)}`,
     descricao: '',
+    unidade: 0,
+    valorUnitario: 0,
     valor: 0,
   };
 }
@@ -131,15 +134,13 @@ export function PrecificacaoCalculator() {
   const selectedBudgetName = selectedBudget?.nome ?? '';
   const canPersistPricing = Boolean(selectedBudgetId && selectedBudgetName);
 
-  const handleValorServicoChange = (value: string) => {
-    const novoValor = parseNonNegativeNumber(value);
-    setValorServicoInput(novoValor);
+  const handleValorServicoChange = (value: number) => {
+    setValorServicoInput(parseNonNegativeNumber(String(value)));
     setPricingInputMode('valor');
   };
 
-  const handleLucroPercentChange = (value: string) => {
-    const novoLucro = parsePercent(value);
-    setLucroPercentInput(novoLucro);
+  const handleLucroPercentChange = (value: number) => {
+    setLucroPercentInput(parsePercent(String(value)));
     setPricingInputMode('lucro');
   };
 
@@ -147,18 +148,31 @@ export function PrecificacaoCalculator() {
     setCostItems((prev) => [...prev, createCostItem()]);
   };
 
-  const handleUpdateCostItem = (id: string, field: 'descricao' | 'valor', value: string) => {
+  const handleUpdateCostItem = (
+    id: string,
+    field: 'descricao' | 'unidade' | 'valorUnitario',
+    value: string | number
+  ) => {
     setCostItems((prev) =>
       prev.map((item) => {
         if (item.id !== id) {
           return item;
         }
 
-        if (field === 'valor') {
-          return { ...item, valor: parseNonNegativeNumber(value) };
+        if (field === 'descricao') {
+          return { ...item, descricao: String(value) };
         }
 
-        return { ...item, descricao: value };
+        const unidade = field === 'unidade' ? parseNonNegativeNumber(String(value)) : item.unidade;
+        const valorUnitario =
+          field === 'valorUnitario' ? parseNonNegativeNumber(String(value)) : item.valorUnitario;
+
+        return {
+          ...item,
+          unidade,
+          valorUnitario,
+          valor: computeCostItemTotal(unidade, valorUnitario),
+        };
       })
     );
   };
@@ -167,8 +181,8 @@ export function PrecificacaoCalculator() {
     setCostItems((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const handleImpostoChange = (value: string) => {
-    setImpostoPercent(parsePercent(value));
+  const handleImpostoChange = (value: number) => {
+    setImpostoPercent(parsePercent(String(value)));
   };
 
   const buildPricingPayload = (saveMode: PricingSaveMode) => ({

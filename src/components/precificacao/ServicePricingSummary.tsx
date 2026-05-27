@@ -183,6 +183,11 @@ export function ServicePricingSummary({
               <div key={custo.id} className="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-2 py-1.5">
                 <span className="truncate text-gray-600" title={custo.descricao || 'Custo sem descrição'}>
                   {custo.descricao || 'Custo sem descrição'}
+                  {custo.unidade > 0 && custo.valorUnitario > 0 ? (
+                    <span className="ml-1 text-[11px] text-gray-400">
+                      ({custo.unidade} × {currencyFormatter.format(custo.valorUnitario)})
+                    </span>
+                  ) : null}
                 </span>
                 <span className="flex items-baseline gap-2 whitespace-nowrap">
                   <span className="font-medium text-[#1D3140]">{currencyFormatter.format(custo.valor)}</span>

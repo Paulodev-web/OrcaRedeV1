@@ -44,6 +44,11 @@ import {
 } from '@/components/ui/select';
 import { ON_ENGENHARIA_LOGO_SRC } from '@/lib/branding';
 import { deleteWorkTrackingAction } from '@/actions/workTrackings';
+import { updateBudgetAction } from '@/actions/budgets';
+
+function getTrackingDisplayName(tracking: WorkTracking): string {
+  return tracking.budget_data?.project_name?.trim() || tracking.name;
+}
 
 type ViewMode = 'dashboard' | 'select-budget' | 'tracking-detail';
 
@@ -697,7 +702,7 @@ export function EngineerPortal() {
   const handleDeleteWorkTracking = (tracking: WorkTracking) => {
     alertDialog.showConfirm(
       'Excluir obra em acompanhamento?',
-      `A obra "${tracking.name}" será removida permanentemente, incluindo postes e linhas no mapa. A página pública deixará de existir. Esta ação não pode ser desfeita.`,
+      `A obra "${getTrackingDisplayName(tracking)}" será removida permanentemente, incluindo postes e linhas no mapa. A página pública deixará de existir. Esta ação não pode ser desfeita.`,
       async () => {
         const result = await deleteWorkTrackingAction(tracking.id);
         if (!result.success) {
@@ -1202,12 +1207,44 @@ export function EngineerPortal() {
 
   const handleSaveChanges = async () => {
     if (!activeTracking) return;
-    
+
+    const budgetName = activeTracking.budget_data?.project_name?.trim();
+    if (!budgetName) {
+      alertDialog.showError('Campo obrigatório', 'Informe o nome do orçamento antes de salvar.');
+      return;
+    }
+
     setIsSavingChanges(true);
-    
+
     try {
-      // Persistência explícita no Supabase (totais planejados MT/BT/postes, extensões, status, datas, etc.)
-      const persisted = await persistTrackingToSupabase(activeTracking);
+      if (activeTracking.budget_id) {
+        const budgetResult = await updateBudgetAction(activeTracking.budget_id, {
+          project_name: budgetName,
+        });
+        if (!budgetResult.success) {
+          alertDialog.showError(
+            'Erro ao salvar orçamento',
+            budgetResult.error || 'Não foi possível atualizar o nome do orçamento.'
+          );
+          return;
+        }
+        await fetchBudgets();
+      }
+
+      const trackingToSave: WorkTracking = {
+        ...activeTracking,
+        name: budgetName,
+        budget_data: {
+          ...activeTracking.budget_data,
+          project_name: budgetName,
+        },
+      };
+
+      setWorkTrackings((prev) =>
+        prev.map((t) => (t.id === trackingToSave.id ? trackingToSave : t))
+      );
+
+      const persisted = await persistTrackingToSupabase(trackingToSave);
       if (!persisted) {
         alertDialog.showError('Erro ao Salvar', 'Não foi possível salvar no servidor. Tente novamente.');
         return;
@@ -1215,12 +1252,11 @@ export function EngineerPortal() {
 
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
-      
+
       alertDialog.showSuccess(
         'Alterações salvas',
-        'Dados da obra (incluindo totais planejados e extensões) foram gravados no servidor.'
+        'Nome do orçamento, descrição e demais dados da obra foram gravados no servidor.'
       );
-      
     } catch {
       alertDialog.showError('Erro ao Salvar', 'Ocorreu um erro ao salvar as alterações.');
     } finally {
@@ -1620,7 +1656,7 @@ export function EngineerPortal() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-3">
-                      <h4 className="text-lg font-semibold text-gray-900">{tracking.name}</h4>
+                      <h4 className="text-lg font-semibold text-gray-900">{getTrackingDisplayName(tracking)}</h4>
                       <span className={`px-3 py-1 text-xs rounded-full border ${getStatusColor(tracking.status)}`}>
                         {tracking.status}
                       </span>
@@ -1767,7 +1803,7 @@ export function EngineerPortal() {
       <div className="space-y-6">
         <div className="flex items-center justify-between bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
           <div>
-            <h1 className="text-2xl font-bold text-[#1D3140]">{activeTracking.name}</h1>
+            <h1 className="text-2xl font-bold text-[#1D3140]">{getTrackingDisplayName(activeTracking)}</h1>
             <p className="text-gray-600 mt-1">
               Cliente: {activeTracking.budget_data.client_name} • {activeTracking.budget_data.city}
             </p>
@@ -2177,7 +2213,7 @@ export function EngineerPortal() {
               <CanvasVisual
                 orcamento={{
                   id: activeTracking.budget_id,
-                  nome: activeTracking.name,
+                  nome: getTrackingDisplayName(activeTracking),
                   concessionariaId: '',
                   dataModificacao: activeTracking.updated_at,
                   status: 'Em Andamento',
@@ -2188,7 +2224,7 @@ export function EngineerPortal() {
                 }}
                 budgetDetails={{
                   id: activeTracking.budget_id,
-                  name: activeTracking.name,
+                  name: getTrackingDisplayName(activeTracking),
                   client_name: activeTracking.budget_data.client_name,
                   city: activeTracking.budget_data.city,
                   render_version: pdfRenderVersion,
@@ -2266,6 +2302,50 @@ export function EngineerPortal() {
 
             {/* Informações Detalhadas */}
             <div className="space-y-4">
+              <div className="pb-4 border-b border-gray-200">
+                <h4 className="text-sm font-medium text-gray-700 mb-1">Orçamento (Página do Cliente)</h4>
+                <p className="text-xs text-gray-500 mb-3">
+                  Nome e descrição exibidos no topo da página pública da obra.
+                </p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Nome do orçamento</label>
+                    <input
+                      type="text"
+                      value={activeTracking.budget_data?.project_name || ''}
+                      onChange={(e) =>
+                        updateTracking(activeTracking.id, (t) => ({
+                          ...t,
+                          budget_data: {
+                            ...t.budget_data,
+                            project_name: e.target.value,
+                          },
+                          updated_at: new Date().toISOString(),
+                        }))
+                      }
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                      placeholder="Ex: Rede MT/BT — Bairro Centro"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Descrição do projeto</label>
+                    <textarea
+                      value={activeTracking.project_description || ''}
+                      onChange={(e) =>
+                        updateTracking(activeTracking.id, (t) => ({
+                          ...t,
+                          project_description: e.target.value,
+                          updated_at: new Date().toISOString(),
+                        }))
+                      }
+                      rows={4}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                      placeholder="Ex: Painel executivo com avanço físico da obra, evolução da rede e marcos de entrega..."
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Status da Obra</label>
                 <Select
