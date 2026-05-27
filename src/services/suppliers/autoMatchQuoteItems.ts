@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { getBudgetMaterialIdSet } from '@/services/supplies/budgetMaterialQuantities';
 import { getInactiveSuppliesMaterialIds } from '@/services/supplies/materialSuppliesFilter';
 
 /**
@@ -18,7 +19,7 @@ export async function autoMatchQuoteItems(
 ): Promise<{ matched: number; total: number }> {
   const { data: quote, error: quoteError } = await supabase
     .from('supplier_quotes')
-    .select('id, supplier_name')
+    .select('id, supplier_name, budget_id')
     .eq('id', quoteId)
     .eq('user_id', userId)
     .single();
@@ -53,12 +54,20 @@ export async function autoMatchQuoteItems(
 
   const inactiveMaterialIds = await getInactiveSuppliesMaterialIds(supabase, userId);
 
+  const budgetMaterialIds = quote.budget_id
+    ? await getBudgetMaterialIdSet(supabase, quote.budget_id)
+    : null;
+
   let matchedCount = 0;
   for (const item of items) {
     const key = item.descricao.toLowerCase().trim();
     const mapping = mappingMap.get(key);
 
-    if (mapping && !inactiveMaterialIds.has(mapping.internal_material_id)) {
+    if (
+      mapping &&
+      !inactiveMaterialIds.has(mapping.internal_material_id) &&
+      (!budgetMaterialIds || budgetMaterialIds.has(mapping.internal_material_id))
+    ) {
       const { error: updateError } = await supabase
         .from('supplier_quote_items')
         .update({

@@ -11,7 +11,10 @@ import {
   isMaterialActiveInSupplies,
 } from '@/services/supplies/materialSuppliesFilter';
 import { applyIdealScenarioPricesToMaterials } from '@/services/supplies/applyIdealScenarioPricesToMaterials';
-import { loadBudgetMaterialQuantities } from '@/services/supplies/budgetMaterialQuantities';
+import {
+  assertMaterialInBudgetScope,
+  loadBudgetMaterialQuantities,
+} from '@/services/supplies/budgetMaterialQuantities';
 import type { SupplierExtractItem } from '@/types/supplierExtract';
 import type { SupplierQuote, SupplierQuoteItem, SupplierMatchMethod, SupplierQuoteStatus } from '@/types';
 
@@ -509,6 +512,33 @@ export async function saveManualMatchAction(
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
 
+    const { data: itemQuote, error: itemQuoteError } = await supabase
+      .from('supplier_quote_items')
+      .select('quote_id, supplier_quotes!inner (budget_id, user_id)')
+      .eq('id', input.itemId)
+      .single();
+
+    if (itemQuoteError || !itemQuote) {
+      return { success: false, error: 'Item da cotação não encontrado.' };
+    }
+
+    const quote = itemQuote.supplier_quotes as unknown as {
+      budget_id: string | null;
+      user_id: string;
+    };
+    if (quote.user_id !== userId) {
+      return { success: false, error: 'Sem permissão para este item.' };
+    }
+
+    const scope = await assertMaterialInBudgetScope(
+      supabase,
+      quote.budget_id,
+      input.materialId
+    );
+    if (!scope.ok) {
+      return { success: false, error: scope.error };
+    }
+
     const { error: itemError } = await supabase
       .from('supplier_quote_items')
       .update({
@@ -592,6 +622,33 @@ export async function acceptAiSuggestionAction(
   try {
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
+
+    const { data: itemQuote, error: itemQuoteError } = await supabase
+      .from('supplier_quote_items')
+      .select('quote_id, supplier_quotes!inner (budget_id, user_id)')
+      .eq('id', input.itemId)
+      .single();
+
+    if (itemQuoteError || !itemQuote) {
+      return { success: false, error: 'Item da cotação não encontrado.' };
+    }
+
+    const quote = itemQuote.supplier_quotes as unknown as {
+      budget_id: string | null;
+      user_id: string;
+    };
+    if (quote.user_id !== userId) {
+      return { success: false, error: 'Sem permissão para este item.' };
+    }
+
+    const scope = await assertMaterialInBudgetScope(
+      supabase,
+      quote.budget_id,
+      input.materialId
+    );
+    if (!scope.ok) {
+      return { success: false, error: scope.error };
+    }
 
     const { error: itemError } = await supabase
       .from('supplier_quote_items')
@@ -1067,17 +1124,10 @@ export async function calculateScenariosAction(
         quantidade_pdf: Number(row.quantidade),
       };
 
+      // PDF nunca expande a lista de compra — só anexa preços a materiais do BOM.
       const existing = materialOffers.get(mat.id);
-      if (existing) {
-        existing.offers.push(offer);
-      } else {
-        const budgetRow = budgetQtyMap.get(mat.id);
-        materialOffers.set(mat.id, {
-          material: mat,
-          required_qty: budgetRow?.required_qty ?? 0,
-          offers: [offer],
-        });
-      }
+      if (!existing) continue;
+      existing.offers.push(offer);
     }
 
     const scenarioBItems: ScenarioItem[] = [];

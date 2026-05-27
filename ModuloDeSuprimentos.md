@@ -66,8 +66,8 @@ O módulo é uma esteira de **inteligência de compras**: ingestão de cotaçõe
 - **RDN03 — Tolerância matemática**  
   A IA marca `alerta` quando `quantidade * preco_unit` diverge do `total_item` (prompt em `geminiSupplierQuote.ts`).
 
-- **RDN04 — Quantidades de compra nos cenários**  
-  A lista de materiais e as colunas **Nec.** / **Compra** (via `required_qty` e `net_qty`) vêm do orçamento agregado (`post_item_group_materials` + `post_materials`), implementado em [`loadBudgetMaterialQuantities`](src/services/supplies/budgetMaterialQuantities.ts) e [`calculateScenariosAction`](src/actions/supplierQuotes.ts). Todos os materiais ativos do orçamento aparecem na tabela de avaliação, mesmo sem PDF conciliado. Os PDFs informam **preços** (e `quantidade` do fornecedor apenas como referência na conciliação/detalhe).
+- **RDN04 — Lista de compra e quantidades (somente orçamento)**  
+  Com `budget_id` na sessão, a **lista de compra** (Tabela de Avaliação, cenários A/B, Cenário Ideal e exportações) contém **exclusivamente** materiais ativos do BOM do orçamento, com **Nec.** / **Compra** agregados de `post_item_group_materials` + `post_materials` ([`loadBudgetMaterialQuantities`](src/services/supplies/budgetMaterialQuantities.ts)). PDFs **não criam linhas novas** — apenas conciliam preços a materiais já orçados. Conciliação manual, memória De/Para e aceite de sugestão IA devem vincular só a materiais do BOM ([`assertMaterialInBudgetScope`](src/services/supplies/budgetMaterialQuantities.ts)). Linha apagada com **✓** em Compra = necessidade do orçamento coberta pelo **estoque** (`net_qty === 0`).
 
 - **Cascata de match**  
   Memória exata → sugestão semântica (pode gerar `match_status = ia_suggested`) → aceite manual; metadados em `match_level`, `match_method`, `semantic_match_suggestions`.

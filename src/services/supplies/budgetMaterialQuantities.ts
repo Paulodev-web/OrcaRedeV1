@@ -101,3 +101,40 @@ export async function loadBudgetMaterialQuantities(
     normalizeRows((looseMaterials ?? []) as unknown as RawRow[])
   );
 }
+
+/** IDs de materiais ativos presentes no BOM do orçamento. */
+export async function getBudgetMaterialIdSet(
+  supabase: SupabaseClient,
+  budgetId: string
+): Promise<Set<string>> {
+  const map = await loadBudgetMaterialQuantities(supabase, budgetId);
+  return new Set(map.keys());
+}
+
+export async function isMaterialInBudget(
+  supabase: SupabaseClient,
+  budgetId: string,
+  materialId: string
+): Promise<boolean> {
+  const ids = await getBudgetMaterialIdSet(supabase, budgetId);
+  return ids.has(materialId);
+}
+
+const OFF_BUDGET_MATCH_ERROR =
+  'Este material não faz parte do orçamento vinculado à sessão. Escolha um material da lista do orçamento.';
+
+export type BudgetMaterialScopeResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+/** Valida vínculo quando a cotação/sessão tem orçamento (RDN04). */
+export async function assertMaterialInBudgetScope(
+  supabase: SupabaseClient,
+  budgetId: string | null | undefined,
+  materialId: string
+): Promise<BudgetMaterialScopeResult> {
+  if (!budgetId) return { ok: true };
+  const allowed = await isMaterialInBudget(supabase, budgetId, materialId);
+  if (!allowed) return { ok: false, error: OFF_BUDGET_MATCH_ERROR };
+  return { ok: true };
+}
