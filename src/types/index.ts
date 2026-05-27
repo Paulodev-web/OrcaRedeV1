@@ -297,6 +297,8 @@ export interface SupplierQuote {
   display_name?: string | null;
   status: SupplierQuoteStatus;
   observacoes_gerais?: string;
+  /** Data da cotação no PDF (YYYY-MM-DD). */
+  quote_date?: string | null;
   extraction_validated_at?: string | null;
   user_id: string;
   created_at: string;

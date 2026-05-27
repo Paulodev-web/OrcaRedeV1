@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { suppliesTableScrollClass } from '@/lib/suppliesLayout';
-import { Loader2, Pencil, Plus, UserX, UserCheck } from 'lucide-react';
+import { History, Loader2, Pencil, Plus, UserX, UserCheck } from 'lucide-react';
 import {
   deactivateSupplierAction,
   listAllSuppliersAction,
@@ -10,6 +10,7 @@ import {
 } from '@/actions/suppliers';
 import type { Supplier } from '@/types';
 import SupplierFormModal from './SupplierFormModal';
+import SupplierPdfHistoryModal from './SupplierPdfHistoryModal';
 
 interface Props {
   initialSuppliers: Supplier[];
@@ -22,6 +23,8 @@ export default function SupplierListView({ initialSuppliers }: Props) {
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [historySupplier, setHistorySupplier] = useState<Supplier | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const visible = useMemo(
     () => (showInactive ? suppliers : suppliers.filter((s) => s.is_active)),
@@ -41,6 +44,11 @@ export default function SupplierListView({ initialSuppliers }: Props) {
   const openEdit = (s: Supplier) => {
     setEditing(s);
     setModalOpen(true);
+  };
+
+  const openHistory = (s: Supplier) => {
+    setHistorySupplier(s);
+    setHistoryOpen(true);
   };
 
   const handleDeactivate = async (id: string) => {
@@ -134,6 +142,14 @@ export default function SupplierListView({ initialSuppliers }: Props) {
                     <div className="flex justify-end gap-2">
                       <button
                         type="button"
+                        onClick={() => openHistory(s)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-[#64ABDE]/40 px-2.5 py-1.5 text-xs font-medium text-[#1D3140] hover:bg-[#64ABDE]/10"
+                      >
+                        <History className="h-3.5 w-3.5" />
+                        Histórico
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => openEdit(s)}
                         className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
                       >
@@ -184,6 +200,15 @@ export default function SupplierListView({ initialSuppliers }: Props) {
         supplier={editing}
         onSaved={async () => {
           await refresh();
+        }}
+      />
+
+      <SupplierPdfHistoryModal
+        supplier={historySupplier}
+        open={historyOpen}
+        onOpenChange={(open) => {
+          setHistoryOpen(open);
+          if (!open) setHistorySupplier(null);
         }}
       />
     </div>

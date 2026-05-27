@@ -66,6 +66,9 @@ O módulo é uma esteira de **inteligência de compras**: ingestão de cotaçõe
 - **RDN03 — Tolerância matemática**  
   A IA marca `alerta` quando `quantidade * preco_unit` diverge do `total_item` (prompt em `geminiSupplierQuote.ts`).
 
+- **RDN04 — Quantidades de compra nos cenários**  
+  A lista de materiais e as colunas **Nec.** / **Compra** (via `required_qty` e `net_qty`) vêm do orçamento agregado (`post_item_group_materials` + `post_materials`), implementado em [`loadBudgetMaterialQuantities`](src/services/supplies/budgetMaterialQuantities.ts) e [`calculateScenariosAction`](src/actions/supplierQuotes.ts). Todos os materiais ativos do orçamento aparecem na tabela de avaliação, mesmo sem PDF conciliado. Os PDFs informam **preços** (e `quantidade` do fornecedor apenas como referência na conciliação/detalhe).
+
 - **Cascata de match**  
   Memória exata → sugestão semântica (pode gerar `match_status = ia_suggested`) → aceite manual; metadados em `match_level`, `match_method`, `semantic_match_suggestions`.
 

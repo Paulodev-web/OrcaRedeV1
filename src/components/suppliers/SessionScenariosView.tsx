@@ -471,7 +471,7 @@ function TabelonaView({
   return (
     <div className="space-y-4">
       <p className="text-xs text-gray-500">
-        Preços normalizados (preço ÷ fator). Totais calculados sobre a necessidade líquida (necessidade − estoque).
+        Nec. do orçamento de engenharia; preços dos PDFs (÷ fator). Compra = necessidade − estoque.
       </p>
       <div className={suppliesTableBorderedScrollClass}>
         <table className="min-w-full divide-y divide-gray-200 text-sm">

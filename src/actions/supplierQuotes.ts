@@ -11,6 +11,7 @@ import {
   isMaterialActiveInSupplies,
 } from '@/services/supplies/materialSuppliesFilter';
 import { applyIdealScenarioPricesToMaterials } from '@/services/supplies/applyIdealScenarioPricesToMaterials';
+import { loadBudgetMaterialQuantities } from '@/services/supplies/budgetMaterialQuantities';
 import type { SupplierExtractItem } from '@/types/supplierExtract';
 import type { SupplierQuote, SupplierQuoteItem, SupplierMatchMethod, SupplierQuoteStatus } from '@/types';
 
@@ -32,6 +33,7 @@ export interface CreateQuoteInput {
   supplier_id: string;
   pdf_path: string;
   observacoes_gerais: string;
+  quote_date?: string | null;
   items: SupplierExtractItem[];
 }
 
@@ -61,6 +63,7 @@ export async function createSupplierQuoteAction(
         supplier_name: resolved.name,
         pdf_path: input.pdf_path,
         observacoes_gerais: input.observacoes_gerais || null,
+        quote_date: input.quote_date ?? null,
         status: 'pendente',
         user_id: userId,
       })
@@ -254,7 +257,7 @@ export async function getQuoteWithItemsAction(
     }
 
     const primaryQuoteColumns =
-      'id, budget_id, session_id, supplier_name, pdf_path, display_name, status, observacoes_gerais, extraction_validated_at, user_id, created_at, updated_at';
+      'id, budget_id, session_id, supplier_name, pdf_path, display_name, status, observacoes_gerais, quote_date, extraction_validated_at, user_id, created_at, updated_at';
     const legacyQuoteColumns =
       'id, budget_id, session_id, supplier_name, pdf_path, status, observacoes_gerais, user_id, created_at, updated_at';
 
@@ -267,7 +270,9 @@ export async function getQuoteWithItemsAction(
 
     const quoteErrorMsg = quoteError?.message ?? '';
     const shouldRetryWithLegacyColumns =
-      quoteErrorMsg.includes('display_name') || quoteErrorMsg.includes('extraction_validated_at');
+      quoteErrorMsg.includes('display_name') ||
+      quoteErrorMsg.includes('extraction_validated_at') ||
+      quoteErrorMsg.includes('quote_date');
 
     if ((quoteError || !quote) && shouldRetryWithLegacyColumns) {
       const fallbackRes = await supabase
@@ -278,7 +283,12 @@ export async function getQuoteWithItemsAction(
         .single();
 
       quote = fallbackRes.data
-        ? { ...fallbackRes.data, display_name: null, extraction_validated_at: null }
+        ? {
+            ...fallbackRes.data,
+            display_name: null,
+            quote_date: null,
+            extraction_validated_at: null,
+          }
         : null;
       quoteError = fallbackRes.error;
     }
@@ -884,7 +894,9 @@ export async function listQuotesByBudgetAction(
 // calculateScenariosAction
 // Calcula Cenário A (pacote por fornecedor) e Cenário B (melhor preço por item).
 // Todos os preços são normalizados: preco_normalizado = preco_unit / conversion_factor.
-// Quantidade usada é net_qty = max(required_qty - stock_qty, 0).
+// required_qty = necessidade agregada do orçamento (fonte da verdade, RDN04).
+// supplier_quote_items.quantidade = qtd. declarada no PDF do fornecedor (referência).
+// net_qty = max(required_qty - stock_qty, 0).
 // ---------------------------------------------------------------------------
 export interface ScenarioItem {
   material_id: string;
@@ -906,6 +918,8 @@ export interface ScenarioItem {
     conversion_factor: number;
     preco_normalizado: number;
     total_normalizado: number;
+    /** Quantidade extraída do PDF do fornecedor (não usada em NEC/COMPRA). */
+    quantidade_pdf: number;
   }[];
 }
 
@@ -939,6 +953,8 @@ export async function calculateScenariosAction(
   try {
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
+
+    const budgetQtyMap = await loadBudgetMaterialQuantities(supabase, budgetId);
 
     let query = supabase
       .from('supplier_quote_items')
@@ -976,7 +992,6 @@ export async function calculateScenariosAction(
       return { success: false, error: error.message };
     }
 
-    // Build stock map from session inputs (if session provided)
     const stockMap = new Map<string, number>();
     if (sessionId) {
       const { data: stockRows } = await supabase
@@ -987,17 +1002,6 @@ export async function calculateScenariosAction(
       for (const r of stockRows ?? []) {
         stockMap.set(r.material_id, Number(r.stock_qty));
       }
-    }
-
-    if (!rawItems || rawItems.length === 0) {
-      return {
-        success: true,
-        data: {
-          scenarioA: [],
-          scenarioB: { items: [], total_normalizado: 0, saving_vs_cheapest_a: 0 },
-          budget_total_reference: 0,
-        },
-      };
     }
 
     const inactiveMaterialIds = await getInactiveSuppliesMaterialIds(supabase, userId);
@@ -1011,7 +1015,7 @@ export async function calculateScenariosAction(
       preco_negociado: number | null;
       conversion_factor: number;
       preco_normalizado: number;
-      quantidade: number;
+      quantidade_pdf: number;
     };
     const materialOffers = new Map<string, {
       material: { id: string; code: string; name: string; unit: string };
@@ -1019,7 +1023,21 @@ export async function calculateScenariosAction(
       offers: Offer[];
     }>();
 
-    for (const row of rawItems) {
+    for (const row of budgetQtyMap.values()) {
+      if (inactiveMaterialIds.has(row.id)) continue;
+      materialOffers.set(row.id, {
+        material: {
+          id: row.id,
+          code: row.code,
+          name: row.name,
+          unit: row.unit,
+        },
+        required_qty: row.required_qty,
+        offers: [],
+      });
+    }
+
+    for (const row of rawItems ?? []) {
       const mat = row.materials as unknown as { id: string; code: string; name: string; unit: string } | null;
       const quote = row.supplier_quotes as unknown as {
         id: string;
@@ -1046,25 +1064,22 @@ export async function calculateScenariosAction(
         preco_negociado,
         conversion_factor: Number(row.conversion_factor),
         preco_normalizado,
-        quantidade: Number(row.quantidade),
+        quantidade_pdf: Number(row.quantidade),
       };
 
       const existing = materialOffers.get(mat.id);
       if (existing) {
         existing.offers.push(offer);
-        if (row.quantidade > existing.required_qty) {
-          existing.required_qty = row.quantidade;
-        }
       } else {
+        const budgetRow = budgetQtyMap.get(mat.id);
         materialOffers.set(mat.id, {
           material: mat,
-          required_qty: row.quantidade,
+          required_qty: budgetRow?.required_qty ?? 0,
           offers: [offer],
         });
       }
     }
 
-    // Cenário B — melhor preço por item (using net_qty)
     const scenarioBItems: ScenarioItem[] = [];
     let scenarioBTotal = 0;
 
@@ -1072,9 +1087,12 @@ export async function calculateScenariosAction(
       const stock = stockMap.get(entry.material.id) ?? 0;
       const net_qty = Math.max(entry.required_qty - stock, 0);
 
-      const best = entry.offers.reduce((a, b) =>
-        a.preco_normalizado < b.preco_normalizado ? a : b
-      );
+      const hasOffers = entry.offers.length > 0;
+      const best = hasOffers
+        ? entry.offers.reduce((a, b) =>
+            a.preco_normalizado < b.preco_normalizado ? a : b
+          )
+        : null;
 
       const item: ScenarioItem = {
         material_id: entry.material.id,
@@ -1084,9 +1102,9 @@ export async function calculateScenariosAction(
         required_qty: entry.required_qty,
         stock_qty: stock,
         net_qty,
-        best_supplier: best.supplier_name,
-        best_price_normalized: best.preco_normalizado,
-        best_total: best.preco_normalizado * net_qty,
+        best_supplier: best?.supplier_name ?? '',
+        best_price_normalized: best?.preco_normalizado ?? 0,
+        best_total: (best?.preco_normalizado ?? 0) * net_qty,
         all_offers: entry.offers.map((o) => ({
           quote_item_id: o.quote_item_id,
           quote_id: o.quote_id,
@@ -1096,11 +1114,12 @@ export async function calculateScenariosAction(
           conversion_factor: o.conversion_factor,
           preco_normalizado: o.preco_normalizado,
           total_normalizado: o.preco_normalizado * net_qty,
+          quantidade_pdf: o.quantidade_pdf,
         })),
       };
 
       scenarioBItems.push(item);
-      if (net_qty > 0) {
+      if (net_qty > 0 && hasOffers) {
         scenarioBTotal += item.best_total;
       }
     }

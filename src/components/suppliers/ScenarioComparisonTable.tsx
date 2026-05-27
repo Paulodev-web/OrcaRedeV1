@@ -351,9 +351,9 @@ export default function ScenarioComparisonTable({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <p className="shrink-0 text-xs text-gray-500">
-        Preços normalizados (÷ fator). Validação principal na aba Cenário Ideal (Ranking); aqui você pode
-        validar como atalho clicando no preço unitário. Destaque azul = fornecedor efetivo (validado ou menor
-        preço sugerido). Use o lápis para negociar. Clique na linha para detalhes do material.
+        Nec. e Compra vêm do orçamento de engenharia (menos estoque informado). Preços normalizados (÷ fator)
+        vêm dos PDFs conciliados. Validação principal na aba Cenário Ideal (Ranking); aqui você pode validar
+        como atalho clicando no preço unitário. Destaque azul = fornecedor efetivo. Clique na linha para detalhes.
       </p>
       <div className={`min-h-0 flex-1 ${suppliesTableBorderedScrollClass}`}>
           <table className="min-w-full divide-y divide-gray-200 text-sm">

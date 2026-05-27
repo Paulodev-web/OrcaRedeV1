@@ -50,19 +50,20 @@ export default async function SessionCenariosPage({ params }: Props) {
         description={`Sessão com ${quotes.length} fornecedor(es) cotado(s).`}
       />
 
-      {!scenarios || scenarios.scenarioA.length === 0 ? (
+      {!scenarios || scenarios.scenarioB.items.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-200 bg-white p-12 text-center">
           <p className="text-gray-400 text-sm">
-            Nenhum item conciliado encontrado para este orçamento.
+            Nenhum material ativo em suprimentos encontrado neste orçamento.
           </p>
           <p className="mt-2 text-sm text-gray-400">
-            Volte à sessão e concilie pelo menos uma proposta para gerar cenários.
+            Adicione materiais ao orçamento de engenharia ou reative itens no catálogo para
+            comparar cenários.
           </p>
           <Link
-            href={`/fornecedores/sessao/${sessionId}/conciliacao`}
+            href={`/fornecedores/sessao/${sessionId}`}
             className="mt-4 inline-block text-sm font-medium text-[#64ABDE] transition-colors hover:text-[#1D3140] hover:underline"
           >
-            ← Voltar para conciliação
+            ← Voltar para a sessão
           </Link>
         </div>
       ) : (

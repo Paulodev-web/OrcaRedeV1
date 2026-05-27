@@ -101,7 +101,7 @@ export default function MaterialDetailModal({
           {/* Resumo do Material */}
           <div className="grid grid-cols-3 gap-4">
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-center">
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Necessidade</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Necessidade (orçamento)</p>
               <p className="text-lg font-bold text-[#1D3140]">{formatNumber(item.required_qty)}</p>
             </div>
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-center">
@@ -136,7 +136,8 @@ export default function MaterialDetailModal({
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase">Orçamento</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase">Fornecedor</th>
+                      <th className="px-4 py-2.5 text-right text-xs font-medium text-gray-500 uppercase">Qtd. PDF</th>
                       <th className="px-4 py-2.5 text-right text-xs font-medium text-gray-500 uppercase">Preço Unit.</th>
                       <th className="px-4 py-2.5 text-right text-xs font-medium text-gray-500 uppercase">Valor Total</th>
                       <th className="px-4 py-2.5 text-right text-xs font-medium text-gray-500 uppercase">vs Melhor</th>
@@ -164,6 +165,9 @@ export default function MaterialDetailModal({
                                 {label}
                               </span>
                             </div>
+                          </td>
+                          <td className="px-4 py-3 text-right text-gray-500 text-xs">
+                            {offer.quantidade_pdf > 0 ? formatNumber(offer.quantidade_pdf) : '—'}
                           </td>
                           <td className={`px-4 py-3 text-right ${isWinner ? 'font-bold text-green-800' : offer.preco_negociado != null ? 'text-blue-700' : 'text-gray-700'}`}>
                             {formatCurrency(offer.preco_normalizado)}
@@ -211,7 +215,7 @@ export default function MaterialDetailModal({
               <AlertCircle className="h-10 w-10 mb-2 text-amber-400" />
               <p className="text-sm font-medium text-amber-600">Sem cobertura</p>
               <p className="text-xs text-gray-500 mt-1">
-                Nenhum orçamento cobre este material com os filtros atuais.
+                Nenhuma cotação conciliada cobre este material. Concilie PDFs na sessão para ver preços.
               </p>
             </div>
           )}

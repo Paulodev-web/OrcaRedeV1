@@ -3,6 +3,11 @@
 import { revalidatePath } from 'next/cache';
 import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
 import type { Supplier, SupplierInput, UpdateSupplierInput } from '@/types';
+import {
+  listSupplierPdfHistory,
+  type SupplierPdfHistoryItem,
+} from '@/services/suppliers/listSupplierPdfHistory';
+import { getSupplierPdfSignedUrl } from '@/services/suppliers/getSupplierPdfSignedUrl';
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -259,6 +264,58 @@ export async function deactivateSupplierAction(id: string): Promise<ActionResult
     return {
       success: false,
       error: err instanceof Error ? err.message : 'Erro ao desativar fornecedor.',
+    };
+  }
+}
+
+export async function listSupplierPdfHistoryAction(
+  supplierId: string
+): Promise<ActionResult<SupplierPdfHistoryItem[]>> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const { data: supplier, error: supplierError } = await supabase
+      .from('suppliers')
+      .select('id')
+      .eq('id', supplierId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (supplierError) {
+      return { success: false, error: supplierError.message };
+    }
+    if (!supplier) {
+      return { success: false, error: 'Fornecedor não encontrado.' };
+    }
+
+    const items = await listSupplierPdfHistory(supabase, userId, supplierId);
+    return { success: true, data: items };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Erro ao carregar histórico de PDFs.',
+    };
+  }
+}
+
+export async function getSupplierPdfSignedUrlAction(
+  filePath: string
+): Promise<ActionResult<{ url: string }>> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const url = await getSupplierPdfSignedUrl(supabase, userId, filePath);
+    if (!url) {
+      return { success: false, error: 'Não foi possível abrir o PDF.' };
+    }
+
+    return { success: true, data: { url } };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Erro ao gerar link do PDF.',
     };
   }
 }

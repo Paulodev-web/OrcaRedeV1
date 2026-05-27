@@ -9,6 +9,7 @@ export interface PersistQuoteParams {
   supplierId: string;
   pdfPath: string;
   observacoesGerais: string;
+  quoteDate?: string | null;
   items: SupplierExtractItem[];
 }
 
@@ -30,6 +31,7 @@ export async function persistSupplierQuoteFromExtraction(
       supplier_name: resolved.name,
       pdf_path: params.pdfPath,
       observacoes_gerais: params.observacoesGerais || null,
+      quote_date: params.quoteDate ?? null,
       status: 'pendente',
       user_id: params.userId,
     })

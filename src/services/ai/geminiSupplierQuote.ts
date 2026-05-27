@@ -4,6 +4,8 @@ import type { SupplierExtractItem } from '@/types/supplierExtract';
 export type GeminiExtractSuccess = {
   items: SupplierExtractItem[];
   observacoesGerais: string;
+  /** Data da cotação/proposta no PDF (YYYY-MM-DD), quando identificável. */
+  quoteDate: string | null;
 };
 
 export type GeminiExtractResult =
@@ -20,7 +22,9 @@ Produza APENAS um objeto JSON válido (sem texto ou markdown fora do JSON), com 
 
 2) "observacoesGerais": string com um resumo organizado das informações do orçamento que NÃO são linhas da tabela de itens. Inclua quando existirem: prazo de entrega, validade da proposta, frete/entrega, impostos ou totais globais descritos em rodapé, faturamento, condições de pagamento e demais regras gerais. Use quebras de linha (\\n) e, se útil, formatação Markdown (títulos com ##, listas com -) para manter legível. Se não houver nada além dos itens, use string vazia "".
 
-Não inclua chaves extras no JSON.`;
+3) "quoteDate": string no formato ISO "YYYY-MM-DD" com a data da cotação, proposta ou orçamento impressa no documento (cabeçalho, rodapé ou campo "data"). Se não houver data clara, use null.
+
+Não inclua outras chaves no JSON.`;
 
 export async function extractSupplierQuoteWithGemini(
   pdfBuffer: Buffer
@@ -51,7 +55,11 @@ export async function extractSupplierQuoteWithGemini(
   ]);
   const responseText = result.response.text();
 
-  let parsed: { items: SupplierExtractItem[]; observacoesGerais?: string };
+  let parsed: {
+    items: SupplierExtractItem[];
+    observacoesGerais?: string;
+    quoteDate?: string | null;
+  };
   try {
     parsed = JSON.parse(responseText);
   } catch {
@@ -65,8 +73,30 @@ export async function extractSupplierQuoteWithGemini(
   const observacoesGerais =
     typeof parsed.observacoesGerais === 'string' ? parsed.observacoesGerais : '';
 
+  const quoteDate = normalizeQuoteDate(parsed.quoteDate);
+
   return {
     success: true,
-    data: { items: parsed.items, observacoesGerais },
+    data: { items: parsed.items, observacoesGerais, quoteDate },
   };
+}
+
+/** Aceita YYYY-MM-DD ou DD/MM/YYYY e normaliza para ISO date. */
+function normalizeQuoteDate(raw: unknown): string | null {
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  const brMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (brMatch) {
+    const [, d, m, y] = brMatch;
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+
+  return null;
 }

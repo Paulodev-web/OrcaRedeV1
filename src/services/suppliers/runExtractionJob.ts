@@ -281,6 +281,7 @@ export async function runExtractionJob(jobId: string): Promise<void> {
       supplierId: resolved.id,
       pdfPath: job.file_path,
       observacoesGerais: gemini.data.observacoesGerais,
+      quoteDate: gemini.data.quoteDate,
       items: gemini.data.items,
     });
 
