@@ -6,6 +6,7 @@ import {
 import { originalNormalizedPrice } from '@/lib/supplierPrice';
 import { slugifyFileName, uniqueSlug } from '@/lib/slugify';
 import type { IdealExportRow, SupplierExportData } from '@/types/exportIdeal';
+import { EXPORT_NO_QUOTE_SUPPLIER_LABEL } from '@/types/exportIdeal';
 
 export function buildSelectionMap(selections: IdealSelectionRow[]): Map<string, string> {
   const map = new Map<string, string>();
@@ -34,8 +35,10 @@ export function countPendingMaterials(
  */
 export function groupIdealExportBySupplier(
   scenarios: ScenariosResult,
-  selections: IdealSelectionRow[]
+  selections: IdealSelectionRow[],
+  options?: { includeWithoutQuote?: boolean }
 ): SupplierExportData[] {
+  const includeWithoutQuote = options?.includeWithoutQuote ?? false;
   const validatedMap = buildSelectionMap(selections);
   const effectiveMap = buildEffectiveSelectionMap(scenarios.scenarioB.items, validatedMap);
   const groups = new Map<string, IdealExportRow[]>();
@@ -46,14 +49,26 @@ export function groupIdealExportBySupplier(
 
     let quoteId =
       effectiveMap.get(item.material_id) ?? getBestOfferQuoteId(item);
-    if (!quoteId) continue;
+    if (!quoteId) {
+      if (!includeWithoutQuote) continue;
+      appendNoQuoteRow(groups, item);
+      continue;
+    }
 
     let offer = item.all_offers.find((o) => o.quote_id === quoteId);
     if (!offer) {
       quoteId = getBestOfferQuoteId(item);
-      if (!quoteId) continue;
+      if (!quoteId) {
+        if (!includeWithoutQuote) continue;
+        appendNoQuoteRow(groups, item);
+        continue;
+      }
       offer = item.all_offers.find((o) => o.quote_id === quoteId);
-      if (!offer) continue;
+      if (!offer) {
+        if (!includeWithoutQuote) continue;
+        appendNoQuoteRow(groups, item);
+        continue;
+      }
     }
 
     const precoOriginalNorm = originalNormalizedPrice(
@@ -108,6 +123,33 @@ export function groupIdealExportBySupplier(
     });
   }
 
-  result.sort((a, b) => a.supplierName.localeCompare(b.supplierName, 'pt-BR'));
+  result.sort((a, b) => {
+    if (a.supplierName === EXPORT_NO_QUOTE_SUPPLIER_LABEL) return 1;
+    if (b.supplierName === EXPORT_NO_QUOTE_SUPPLIER_LABEL) return -1;
+    return a.supplierName.localeCompare(b.supplierName, 'pt-BR');
+  });
   return result;
+}
+
+function appendNoQuoteRow(
+  groups: Map<string, IdealExportRow[]>,
+  item: ScenariosResult['scenarioB']['items'][number]
+) {
+  const row: IdealExportRow = {
+    codigo: item.material_code,
+    material: item.material_name,
+    unidade: item.material_unit,
+    precoOriginalNorm: 0,
+    precoNegociadoNorm: 0,
+    diferenca: 0,
+    quantidade: item.net_qty,
+    precoTotal: 0,
+    semCotacao: true,
+  };
+  const existing = groups.get(EXPORT_NO_QUOTE_SUPPLIER_LABEL);
+  if (existing) {
+    existing.push(row);
+  } else {
+    groups.set(EXPORT_NO_QUOTE_SUPPLIER_LABEL, [row]);
+  }
 }

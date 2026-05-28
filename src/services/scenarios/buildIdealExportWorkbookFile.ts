@@ -10,6 +10,7 @@ export async function buildIdealExportWorkbookFile(
 ): Promise<{ buffer: Buffer; filename: string }> {
   const { ctx, suppliers } = await loadIdealExportContext(sessionId, {
     skipPendingCheck: true,
+    includeWithoutQuote: true,
   });
 
   const workbook = await buildIdealExportWorkbook(suppliers, ctx);

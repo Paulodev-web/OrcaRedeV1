@@ -89,11 +89,13 @@ export async function buildIdealExportWorkbook(
   });
 
   let dataRowNum = headerRowNum + 1;
-  if (suppliers.length === 0) {
+  const hasDataRows = suppliers.some((s) => s.rows.length > 0);
+
+  if (!hasDataRows) {
     const noteRow = sheet.getRow(dataRowNum);
     sheet.mergeCells(dataRowNum, 1, dataRowNum, COL_COUNT);
     noteRow.getCell(1).value =
-      'Nenhum material com cotação disponível para exportação. Adicione cotações manuais ou concilie PDFs.';
+      'Nenhum material com necessidade de compra para exportar.';
     noteRow.getCell(1).font = { italic: true, color: { argb: 'FF6B7280' } };
     dataRowNum += 1;
   }
@@ -105,19 +107,29 @@ export async function buildIdealExportWorkbook(
       excelRow.getCell(2).value = row.codigo;
       excelRow.getCell(3).value = row.material;
       excelRow.getCell(4).value = row.unidade;
-      excelRow.getCell(5).value = row.precoOriginalNorm;
-      excelRow.getCell(5).numFmt = MONEY_FMT;
-      excelRow.getCell(6).value = row.precoNegociadoNorm;
-      excelRow.getCell(6).numFmt = MONEY_FMT;
-      excelRow.getCell(7).value = row.diferenca;
-      excelRow.getCell(7).numFmt = MONEY_FMT;
-      if (row.diferenca < 0) {
-        excelRow.getCell(7).font = NEGATIVE_DIFF_FONT;
+      if (row.semCotacao) {
+        excelRow.getCell(5).value = '—';
+        excelRow.getCell(6).value = '—';
+        excelRow.getCell(7).value = '—';
+        excelRow.getCell(9).value = '—';
+        for (const col of [5, 6, 7, 9]) {
+          excelRow.getCell(col).font = { italic: true, color: { argb: 'FF9CA3AF' } };
+        }
+      } else {
+        excelRow.getCell(5).value = row.precoOriginalNorm;
+        excelRow.getCell(5).numFmt = MONEY_FMT;
+        excelRow.getCell(6).value = row.precoNegociadoNorm;
+        excelRow.getCell(6).numFmt = MONEY_FMT;
+        excelRow.getCell(7).value = row.diferenca;
+        excelRow.getCell(7).numFmt = MONEY_FMT;
+        if (row.diferenca < 0) {
+          excelRow.getCell(7).font = NEGATIVE_DIFF_FONT;
+        }
+        excelRow.getCell(9).value = row.precoTotal;
+        excelRow.getCell(9).numFmt = MONEY_FMT;
       }
       excelRow.getCell(8).value = row.quantidade;
       excelRow.getCell(8).numFmt = QTY_FMT;
-      excelRow.getCell(9).value = row.precoTotal;
-      excelRow.getCell(9).numFmt = MONEY_FMT;
       dataRowNum += 1;
     }
   }

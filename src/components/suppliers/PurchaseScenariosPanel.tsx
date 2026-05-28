@@ -3,7 +3,6 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
-  AlertTriangle,
   Award,
   ChevronDown,
   Package,
@@ -385,7 +384,6 @@ export default function PurchaseScenariosPanel({
 
   const [activeTab, setActiveTab] = useState<'A' | 'B'>('A');
 
-  const pendingQuotes = quotes?.filter((q) => q.status !== 'conciliado') ?? [];
   const hasData = scenarios && scenarios.scenarioA.length > 0;
 
   return (
@@ -422,23 +420,6 @@ export default function PurchaseScenariosPanel({
 
       {selectedBudgetId && (
         <>
-          {/* Alertas de cotações pendentes */}
-          {pendingQuotes.length > 0 && (
-            <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-amber-800">
-                <p className="font-medium">
-                  {pendingQuotes.length} cotação(ões) ainda não conciliada(s)
-                </p>
-                <p className="text-amber-600 mt-0.5">
-                  Os cenários abaixo usam apenas as cotações conciliadas. Finalize a conciliação
-                  para incluir:{' '}
-                  {pendingQuotes.map((q) => q.supplier_name).join(', ')}.
-                </p>
-              </div>
-            </div>
-          )}
-
           {/* Resumo das cotações */}
           {quotes && quotes.length > 0 && (
             <div className="rounded-lg border border-gray-100 bg-gray-50/60 p-5">

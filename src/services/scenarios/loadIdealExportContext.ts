@@ -22,7 +22,7 @@ export interface IdealExportLoaded {
 
 export async function loadIdealExportContext(
   sessionId: string,
-  options?: { skipPendingCheck?: boolean }
+  options?: { skipPendingCheck?: boolean; includeWithoutQuote?: boolean }
 ): Promise<IdealExportLoaded> {
   const sessionRes = await getQuotationSessionByIdRead(sessionId);
   if (!sessionRes.success) {
@@ -82,7 +82,9 @@ export async function loadIdealExportContext(
     exportedAt,
   };
 
-  const suppliers = groupIdealExportBySupplier(scenariosRes.data, selections);
+  const suppliers = groupIdealExportBySupplier(scenariosRes.data, selections, {
+    includeWithoutQuote: options?.includeWithoutQuote,
+  });
   if (suppliers.length === 0 && !options?.skipPendingCheck) {
     throw new ExportIdealError(
       'Nenhum material válido encontrado para os fornecedores selecionados.',

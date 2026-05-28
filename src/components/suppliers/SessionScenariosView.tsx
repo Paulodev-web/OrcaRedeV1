@@ -47,7 +47,6 @@ import {
   type IdealScenarioLine,
 } from '@/lib/scenarioIdealEngine';
 import { useSessionScenariosRefresh } from '@/hooks/useSessionScenariosRefresh';
-import { hasSeenConciliation } from '@/lib/suppliesConciliationAlert';
 import ScenarioFiltersPanel from './ScenarioFiltersPanel';
 import ScenarioComparisonTable from './ScenarioComparisonTable';
 import ScenarioItemExpandableTable from './ScenarioItemExpandableTable';
@@ -1192,15 +1191,6 @@ export default function SessionScenariosView({
     null
   );
   const [manualQuoteOpen, setManualQuoteOpen] = useState(false);
-  const [conciliationSeen, setConciliationSeen] = useState(false);
-
-  useEffect(() => {
-    const sync = () => setConciliationSeen(hasSeenConciliation(sessionId));
-    sync();
-    document.addEventListener('visibilitychange', sync);
-    return () => document.removeEventListener('visibilitychange', sync);
-  }, [sessionId]);
-
   const handleMaterialClick = useCallback((item: ScenarioItem) => {
     setSelectedMaterial(item);
     setMaterialModalOpen(true);
@@ -1525,8 +1515,6 @@ export default function SessionScenariosView({
     }
   }, [isClosingIdeal, sessionId, alertDialog, refreshScenarios]);
 
-  const pendingQuotes = quotes.filter((q) => q.status !== 'conciliado');
-
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6">
       <ScenarioSummaryCards scenarios={filteredScenarios} isFiltered={filteredScenarios.isFiltered} />
@@ -1541,19 +1529,6 @@ export default function SessionScenariosView({
         isSaving={isPending}
         hasChanges={hasStockChanges}
       />
-
-      {pendingQuotes.length > 0 && !conciliationSeen && (
-        <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-amber-800">
-            <p className="font-medium">{pendingQuotes.length} cotação(ões) ainda não conciliada(s)</p>
-            <p className="text-amber-600 mt-0.5">
-              Os cenários usam apenas as cotações conciliadas. Finalize:{' '}
-              {pendingQuotes.map((q) => getSupplierDisplayName(q)).join(', ')}.
-            </p>
-          </div>
-        </div>
-      )}
 
       <ScenarioFiltersPanel
         quotes={quotesWithOffers}

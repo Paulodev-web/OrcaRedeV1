@@ -19,7 +19,11 @@ export interface IdealExportRow {
   diferenca: number;
   quantidade: number;
   precoTotal: number;
+  /** Material com necessidade de compra mas sem oferta de fornecedor. */
+  semCotacao?: boolean;
 }
+
+export const EXPORT_NO_QUOTE_SUPPLIER_LABEL = 'Sem cotação';
 
 export interface SupplierExportData {
   supplierName: string;
