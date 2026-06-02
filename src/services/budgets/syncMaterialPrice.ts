@@ -78,6 +78,11 @@ async function updateInBatches(
 
   let updated = 0;
 
+  const selectColumns =
+    table === 'post_item_group_materials'
+      ? 'post_item_group_id, material_id'
+      : 'id';
+
   for (let i = 0; i < filterIds.length; i += IN_BATCH) {
     const batch = filterIds.slice(i, i + IN_BATCH);
 
@@ -86,7 +91,7 @@ async function updateInBatches(
       .update({ price_at_addition: newPrice })
       .eq('material_id', materialId)
       .in(filterColumn, batch)
-      .select('id');
+      .select(selectColumns);
 
     if (error) {
       throw new Error(error.message);
