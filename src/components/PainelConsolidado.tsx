@@ -55,14 +55,17 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
     
     try {
       setIsUpdating(true);
-      console.log('💾 Salvando preço:', { materialId, newPrice, budgetId: budgetDetails.id });
       await updateConsolidatedMaterialPrice(budgetDetails.id, materialId, newPrice);
       setEditingMaterialId(null);
       setEditingPrice('');
-      alert(`Preço atualizado com sucesso para R$ ${newPrice.toFixed(2)}`);
+      alert(
+        `Preço atualizado para ${formatCurrency(newPrice)} no orçamento e no catálogo de materiais.`
+      );
     } catch (error) {
-      console.error('❌ Erro ao salvar:', error);
-      alert('Erro ao atualizar preço. Por favor, tente novamente.');
+      console.error('Erro ao salvar preço consolidado:', error);
+      const message =
+        error instanceof Error ? error.message : 'Erro ao atualizar preço. Por favor, tente novamente.';
+      alert(message);
     } finally {
       setIsUpdating(false);
     }

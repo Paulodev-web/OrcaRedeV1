@@ -21,6 +21,7 @@ import BatchDropzoneManager from '@/components/suppliers/BatchDropzoneManager';
 import ExtractionCurationModal from '@/components/suppliers/ExtractionCurationModal';
 import { getSupplierDisplayName } from '@/lib/supplierDisplay';
 import { storageFileNameFromPath } from '@/lib/quoteDisplay';
+import { MAX_PDFS_PER_QUOTATION } from '@/lib/suppliesLimits';
 
 interface QuoteRow {
   id: string;
@@ -264,11 +265,11 @@ export default function SessionExtractionRealtime({
 
   const handleDeletePdf = async (params: { jobId?: string; quoteId?: string; label: string }) => {
     if (disabled || deletingKey) return;
+    const opKey = params.jobId ?? params.quoteId ?? '';
     const accepted = confirm(DELETE_PDF_CONFIRM_MESSAGE);
     if (!accepted) return;
 
-    const key = params.jobId ?? params.quoteId ?? '';
-    setDeletingKey(key);
+    setDeletingKey(opKey);
     try {
       const result = await deleteUploadedPdfAction({
         sessionId,
@@ -336,7 +337,8 @@ export default function SessionExtractionRealtime({
     <div className="space-y-8">
       <BatchDropzoneManager
         sessionId={sessionId}
-        disabled={disabled}
+        disabled={disabled || jobs.length >= MAX_PDFS_PER_QUOTATION}
+        existingJobCount={jobs.length}
         onJobsCreated={() => {}}
       />
 
@@ -515,18 +517,18 @@ export default function SessionExtractionRealtime({
               return (
                 <div
                   key={q.id}
-                  className={`group relative rounded-lg border p-4 transition-all hover:shadow-md ${
+                  className={`group rounded-lg border p-4 transition-all hover:shadow-md ${
                     validated
                       ? 'border-green-200 bg-green-50/30'
                       : 'border-gray-200 bg-white hover:border-[#64ABDE]/50'
                   }`}
                 >
-                  <button
-                    type="button"
-                    onClick={() => openCuration(q)}
-                    className="w-full text-left"
-                  >
-                    <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-3">
+                    <button
+                      type="button"
+                      onClick={() => openCuration(q)}
+                      className="flex min-w-0 flex-1 items-start gap-3 text-left"
+                    >
                       <div
                         className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
                           validated
@@ -536,42 +538,50 @@ export default function SessionExtractionRealtime({
                       >
                         <FileText className="h-5 w-5" />
                       </div>
-                      <div className="min-w-0 flex-1 pr-6">
+                      <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-[#1D3140]">
                           {q.supplier_name}
                         </p>
-                        <p className="text-xs text-gray-500 mt-0.5">
+                        <p className="mt-0.5 text-xs text-gray-500">
                           {validated ? (
-                            <span className="text-green-600 font-medium">Extração validada</span>
+                            <span className="font-medium text-green-600">Extração validada</span>
                           ) : (
                             'Clique para revisar extração'
                           )}
                         </p>
                       </div>
-                      <Eye className="h-4 w-4 shrink-0 text-gray-300 transition-colors group-hover:text-[#64ABDE]" />
-                    </div>
-                  </button>
-                  {!disabled && (
-                    <button
-                      type="button"
-                      title="Excluir PDF"
-                      disabled={isDeleting}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void handleDeletePdf({
-                          quoteId: q.id,
-                          label: q.supplier_name,
-                        });
-                      }}
-                      className="absolute right-3 top-3 inline-flex items-center justify-center rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                    >
-                      {isDeleting ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
                     </button>
-                  )}
+                    <div className="relative z-10 flex shrink-0 items-center gap-0.5">
+                      <button
+                        type="button"
+                        title="Revisar extração"
+                        onClick={() => openCuration(q)}
+                        className="inline-flex items-center justify-center rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-[#64ABDE]/10 hover:text-[#64ABDE]"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      {!disabled && (
+                        <button
+                          type="button"
+                          title="Excluir PDF"
+                          disabled={isDeleting}
+                          onClick={() =>
+                            void handleDeletePdf({
+                              quoteId: q.id,
+                              label: q.supplier_name,
+                            })
+                          }
+                          className="inline-flex items-center justify-center rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                        >
+                          {isDeleting ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               );
             })}

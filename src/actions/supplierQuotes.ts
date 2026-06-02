@@ -8,7 +8,7 @@ import { autoMatchQuoteItems } from '@/services/suppliers/autoMatchQuoteItems';
 import { resolveSupplierForQuote } from '@/services/suppliers/resolveSupplierForQuote';
 import { saveManualSessionQuoteItem } from '@/services/suppliers/saveManualSessionQuoteItem';
 import {
-  getInactiveSuppliesMaterialIds,
+  getSuppliesExcludedMaterialIds,
   isMaterialActiveInSupplies,
 } from '@/services/supplies/materialSuppliesFilter';
 import { applyIdealScenarioPricesToMaterials } from '@/services/supplies/applyIdealScenarioPricesToMaterials';
@@ -16,6 +16,7 @@ import {
   assertMaterialInBudgetScope,
   loadBudgetMaterialQuantities,
 } from '@/services/supplies/budgetMaterialQuantities';
+import { MAX_PDFS_PER_QUOTATION } from '@/lib/suppliesLimits';
 import type { SupplierExtractItem } from '@/types/supplierExtract';
 import type { SupplierQuote, SupplierQuoteItem, SupplierMatchMethod, SupplierQuoteStatus } from '@/types';
 
@@ -154,6 +155,22 @@ export async function createExtractionJobAction(input: {
       return {
         success: false,
         error: 'Esta sessão está encerrada; não é possível importar novos PDFs.',
+      };
+    }
+
+    const { count: jobCount, error: countError } = await supabase
+      .from('extraction_jobs')
+      .select('id', { count: 'exact', head: true })
+      .eq('session_id', sessionId)
+      .eq('user_id', userId);
+
+    if (countError) {
+      return { success: false, error: countError.message };
+    }
+    if ((jobCount ?? 0) >= MAX_PDFS_PER_QUOTATION) {
+      return {
+        success: false,
+        error: `Esta cotação já atingiu o limite de ${MAX_PDFS_PER_QUOTATION} PDFs.`,
       };
     }
 
@@ -399,11 +416,13 @@ export interface BudgetMaterialOption {
 }
 
 export async function getBudgetMaterialsAction(
-  budgetId: string
+  budgetId: string,
+  sessionId?: string | null
 ): Promise<ActionResult<{ materials: BudgetMaterialOption[] }>> {
   try {
     const supabase = await createSupabaseServerClient();
-    await requireAuthUserId(supabase);
+    const userId = await requireAuthUserId(supabase);
+    const excludedIds = await getSuppliesExcludedMaterialIds(supabase, userId, sessionId);
 
     // Materiais via grupos de itens
     const { data: groupMaterials, error: gmError } = await supabase
@@ -442,7 +461,12 @@ export async function getBudgetMaterialsAction(
         unit: string;
         active_in_supplies?: boolean | null;
       } | null;
-      if (mat && isMaterialActiveInSupplies(mat) && !seen.has(mat.id)) {
+      if (
+        mat &&
+        isMaterialActiveInSupplies(mat) &&
+        !excludedIds.has(mat.id) &&
+        !seen.has(mat.id)
+      ) {
         seen.add(mat.id);
         materials.push({ id: mat.id, code: mat.code, name: mat.name, unit: mat.unit });
       }
@@ -461,12 +485,13 @@ export async function getBudgetMaterialsAction(
 // getCatalogMaterialsAction
 // Catálogo global do usuário (sessão sem orçamento).
 // ---------------------------------------------------------------------------
-export async function getCatalogMaterialsAction(): Promise<
-  ActionResult<{ materials: BudgetMaterialOption[] }>
-> {
+export async function getCatalogMaterialsAction(
+  sessionId?: string | null
+): Promise<ActionResult<{ materials: BudgetMaterialOption[] }>> {
   try {
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
+    const excludedIds = await getSuppliesExcludedMaterialIds(supabase, userId, sessionId);
 
     const { data, error } = await supabase
       .from('materials')
@@ -479,12 +504,14 @@ export async function getCatalogMaterialsAction(): Promise<
       return { success: false, error: error.message };
     }
 
-    const materials: BudgetMaterialOption[] = (data ?? []).map((m) => ({
-      id: m.id,
-      code: m.code,
-      name: m.name,
-      unit: m.unit,
-    }));
+    const materials: BudgetMaterialOption[] = (data ?? [])
+      .filter((m) => !excludedIds.has(m.id))
+      .map((m) => ({
+        id: m.id,
+        code: m.code,
+        name: m.name,
+        unit: m.unit,
+      }));
 
     return { success: true, data: { materials } };
   } catch (err: unknown) {
@@ -515,7 +542,7 @@ export async function saveManualMatchAction(
 
     const { data: itemQuote, error: itemQuoteError } = await supabase
       .from('supplier_quote_items')
-      .select('quote_id, supplier_quotes!inner (budget_id, user_id)')
+      .select('quote_id, supplier_quotes!inner (budget_id, session_id, user_id)')
       .eq('id', input.itemId)
       .single();
 
@@ -525,6 +552,7 @@ export async function saveManualMatchAction(
 
     const quote = itemQuote.supplier_quotes as unknown as {
       budget_id: string | null;
+      session_id: string | null;
       user_id: string;
     };
     if (quote.user_id !== userId) {
@@ -534,7 +562,8 @@ export async function saveManualMatchAction(
     const scope = await assertMaterialInBudgetScope(
       supabase,
       quote.budget_id,
-      input.materialId
+      input.materialId,
+      { sessionId: quote.session_id, userId }
     );
     if (!scope.ok) {
       return { success: false, error: scope.error };
@@ -626,7 +655,7 @@ export async function acceptAiSuggestionAction(
 
     const { data: itemQuote, error: itemQuoteError } = await supabase
       .from('supplier_quote_items')
-      .select('quote_id, supplier_quotes!inner (budget_id, user_id)')
+      .select('quote_id, supplier_quotes!inner (budget_id, session_id, user_id)')
       .eq('id', input.itemId)
       .single();
 
@@ -636,6 +665,7 @@ export async function acceptAiSuggestionAction(
 
     const quote = itemQuote.supplier_quotes as unknown as {
       budget_id: string | null;
+      session_id: string | null;
       user_id: string;
     };
     if (quote.user_id !== userId) {
@@ -645,7 +675,8 @@ export async function acceptAiSuggestionAction(
     const scope = await assertMaterialInBudgetScope(
       supabase,
       quote.budget_id,
-      input.materialId
+      input.materialId,
+      { sessionId: quote.session_id, userId }
     );
     if (!scope.ok) {
       return { success: false, error: scope.error };
@@ -1012,7 +1043,10 @@ export async function calculateScenariosAction(
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
 
-    const budgetQtyMap = await loadBudgetMaterialQuantities(supabase, budgetId);
+    const budgetQtyMap = await loadBudgetMaterialQuantities(supabase, budgetId, {
+      sessionId,
+      userId,
+    });
 
     let query = supabase
       .from('supplier_quote_items')
@@ -1062,7 +1096,11 @@ export async function calculateScenariosAction(
       }
     }
 
-    const inactiveMaterialIds = await getInactiveSuppliesMaterialIds(supabase, userId);
+    const excludedMaterialIds = await getSuppliesExcludedMaterialIds(
+      supabase,
+      userId,
+      sessionId
+    );
 
     type Offer = {
       quote_item_id: string;
@@ -1082,7 +1120,7 @@ export async function calculateScenariosAction(
     }>();
 
     for (const row of budgetQtyMap.values()) {
-      if (inactiveMaterialIds.has(row.id)) continue;
+      if (excludedMaterialIds.has(row.id)) continue;
       materialOffers.set(row.id, {
         material: {
           id: row.id,
@@ -1103,7 +1141,7 @@ export async function calculateScenariosAction(
         supplier_name: string;
         suppliers?: { name: string } | { name: string }[] | null;
       } | null;
-      if (!mat || !quote || inactiveMaterialIds.has(mat.id)) continue;
+      if (!mat || !quote || excludedMaterialIds.has(mat.id)) continue;
 
       const displayName = getSupplierDisplayName(quote);
       const supplierKey = quote.supplier_id ?? displayName;
@@ -1251,8 +1289,8 @@ export async function getConciliationPayloadByQuoteAction(
 
   const quote = quoteResult.data.quote;
   const mats = quote.budget_id
-    ? await getBudgetMaterialsAction(quote.budget_id)
-    : await getCatalogMaterialsAction();
+    ? await getBudgetMaterialsAction(quote.budget_id, quote.session_id)
+    : await getCatalogMaterialsAction(quote.session_id);
 
   if (!mats.success) {
     return { success: false, error: mats.error };
@@ -1465,8 +1503,8 @@ export async function getConciliationPayloadBySessionAction(
 
     if (!quoteRows.length) {
       const mats = sessionRow.budget_id
-        ? await getBudgetMaterialsAction(sessionRow.budget_id)
-        : await getCatalogMaterialsAction();
+        ? await getBudgetMaterialsAction(sessionRow.budget_id, sessionId)
+        : await getCatalogMaterialsAction(sessionId);
       return {
         success: true,
         data: {
@@ -1495,11 +1533,15 @@ export async function getConciliationPayloadBySessionAction(
       .order('created_at', { ascending: true });
 
     const mats = sessionRow.budget_id
-      ? await getBudgetMaterialsAction(sessionRow.budget_id)
-      : await getCatalogMaterialsAction();
+      ? await getBudgetMaterialsAction(sessionRow.budget_id, sessionId)
+      : await getCatalogMaterialsAction(sessionId);
 
     const budgetMaterials = mats.success ? mats.data.materials : [];
-    const inactiveMaterialIds = await getInactiveSuppliesMaterialIds(supabase, userId);
+    const excludedMaterialIds = await getSuppliesExcludedMaterialIds(
+      supabase,
+      userId,
+      sessionId
+    );
     const materialMap = new Map<string, SessionConciliationMaterialRow>();
     const unlinked: (SupplierQuoteItemWithMaterial & { supplier_name: string })[] = [];
 
@@ -1514,7 +1556,7 @@ export async function getConciliationPayloadBySessionAction(
     }
 
     for (const row of rawItems ?? []) {
-      if (row.matched_material_id && inactiveMaterialIds.has(row.matched_material_id)) {
+      if (row.matched_material_id && excludedMaterialIds.has(row.matched_material_id)) {
         continue;
       }
 
@@ -1528,7 +1570,7 @@ export async function getConciliationPayloadBySessionAction(
 
       if (
         rejectedSuggestion?.suggested_material_id &&
-        inactiveMaterialIds.has(rejectedSuggestion.suggested_material_id)
+        excludedMaterialIds.has(rejectedSuggestion.suggested_material_id)
       ) {
         continue;
       }
@@ -1607,7 +1649,9 @@ export async function getConciliationPayloadBySessionAction(
     return {
       success: true,
       data: {
-        materials: Array.from(materialMap.values()),
+        materials: Array.from(materialMap.values()).filter(
+          (row) => !excludedMaterialIds.has(row.material_id)
+        ),
         unlinked_items: unlinked,
         budgetMaterials,
         supplier_column_order,
@@ -2008,6 +2052,7 @@ export async function closeIdealScenarioAndUpdateMaterialsAction(
       supabase,
       userId,
       sessionId,
+      budgetId: session.budget_id,
       scenarios: scenariosRes.data,
       selections: selectionsRes.data,
     });

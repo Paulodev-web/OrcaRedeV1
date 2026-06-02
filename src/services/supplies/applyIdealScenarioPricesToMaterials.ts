@@ -5,11 +5,13 @@ import type { IdealSelectionRow, ScenariosResult } from '@/actions/supplierQuote
 import { buildEffectiveSelectionMap } from '@/lib/scenarioIdealEngine';
 import { effectiveUnitPrice } from '@/lib/supplierPrice';
 import { getSupplierDisplayName } from '@/lib/supplierDisplay';
+import { syncMaterialPriceInBudget } from '@/services/budgets/syncMaterialPrice';
 
 export interface ApplyIdealScenarioPricesInput {
   supabase: SupabaseClient;
   userId: string;
   sessionId: string;
+  budgetId: string;
   scenarios: ScenariosResult;
   selections: IdealSelectionRow[];
 }
@@ -41,6 +43,7 @@ export async function applyIdealScenarioPricesToMaterials({
   supabase,
   userId,
   sessionId,
+  budgetId,
   scenarios,
   selections,
 }: ApplyIdealScenarioPricesInput): Promise<ApplyIdealScenarioPricesResult> {
@@ -121,6 +124,7 @@ export async function applyIdealScenarioPricesToMaterials({
     if (updatedMaterial) {
       updated += 1;
       if (item.isSuggested) suggestedApplied += 1;
+      await syncMaterialPriceInBudget(supabase, budgetId, item.materialId, item.price);
     }
   }
 

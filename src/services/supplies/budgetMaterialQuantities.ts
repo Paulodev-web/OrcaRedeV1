@@ -1,6 +1,9 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { isMaterialActiveInSupplies } from '@/services/supplies/materialSuppliesFilter';
+import {
+  getSuppliesExcludedMaterialIds,
+  isMaterialActiveInSupplies,
+} from '@/services/supplies/materialSuppliesFilter';
 
 export interface BudgetMaterialQuantityRow {
   id: string;
@@ -54,7 +57,8 @@ export function aggregateBudgetMaterialQuantities(
 
 export async function loadBudgetMaterialQuantities(
   supabase: SupabaseClient,
-  budgetId: string
+  budgetId: string,
+  options?: { sessionId?: string | null; userId?: string }
 ): Promise<Map<string, BudgetMaterialQuantityRow>> {
   const { data: groupMaterials, error: gmError } = await supabase
     .from('post_item_group_materials')
@@ -96,18 +100,32 @@ export async function loadBudgetMaterialQuantities(
       materials: Array.isArray(row.materials) ? row.materials[0] ?? null : row.materials,
     }));
 
-  return aggregateBudgetMaterialQuantities(
+  const map = aggregateBudgetMaterialQuantities(
     normalizeRows((groupMaterials ?? []) as unknown as RawRow[]),
     normalizeRows((looseMaterials ?? []) as unknown as RawRow[])
   );
+
+  if (options?.sessionId && options?.userId) {
+    const excluded = await getSuppliesExcludedMaterialIds(
+      supabase,
+      options.userId,
+      options.sessionId
+    );
+    for (const materialId of excluded) {
+      map.delete(materialId);
+    }
+  }
+
+  return map;
 }
 
 /** IDs de materiais ativos presentes no BOM do orçamento. */
 export async function getBudgetMaterialIdSet(
   supabase: SupabaseClient,
-  budgetId: string
+  budgetId: string,
+  options?: { sessionId?: string | null; userId?: string }
 ): Promise<Set<string>> {
-  const map = await loadBudgetMaterialQuantities(supabase, budgetId);
+  const map = await loadBudgetMaterialQuantities(supabase, budgetId, options);
   return new Set(map.keys());
 }
 
@@ -131,10 +149,13 @@ export type BudgetMaterialScopeResult =
 export async function assertMaterialInBudgetScope(
   supabase: SupabaseClient,
   budgetId: string | null | undefined,
-  materialId: string
+  materialId: string,
+  options?: { sessionId?: string | null; userId?: string }
 ): Promise<BudgetMaterialScopeResult> {
   if (!budgetId) return { ok: true };
-  const allowed = await isMaterialInBudget(supabase, budgetId, materialId);
+  const allowed = options?.sessionId && options?.userId
+    ? (await getBudgetMaterialIdSet(supabase, budgetId, options)).has(materialId)
+    : await isMaterialInBudget(supabase, budgetId, materialId);
   if (!allowed) return { ok: false, error: OFF_BUDGET_MATCH_ERROR };
   return { ok: true };
 }

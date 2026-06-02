@@ -7,7 +7,10 @@ import { resolveSupplierForQuote } from '@/services/suppliers/resolveSupplierFor
 import { autoMatchQuoteItems } from '@/services/suppliers/autoMatchQuoteItems';
 import { semanticMatch } from '@/services/ai/semanticMatch';
 import type { UnconciliatedItem, SystemMaterial } from '@/types/supplierExtract';
-import { isMaterialActiveInSupplies } from '@/services/supplies/materialSuppliesFilter';
+import {
+  getSuppliesExcludedMaterialIds,
+  isMaterialActiveInSupplies,
+} from '@/services/supplies/materialSuppliesFilter';
 
 const CONFIDENCE_AUTO_APPLY_THRESHOLD = 80;
 
@@ -32,8 +35,11 @@ async function markJobError(
 async function loadSystemMaterials(
   supabase: SupabaseClient,
   userId: string,
-  budgetId: string | null
+  budgetId: string | null,
+  sessionId?: string | null
 ): Promise<SystemMaterial[]> {
+  const excludedIds = await getSuppliesExcludedMaterialIds(supabase, userId, sessionId);
+
   if (budgetId) {
     const { data: groupMaterials } = await supabase
       .from('post_item_group_materials')
@@ -59,7 +65,12 @@ async function loadSystemMaterials(
       const mat = row.materials as unknown as (SystemMaterial & {
         active_in_supplies?: boolean | null;
       }) | null;
-      if (mat && isMaterialActiveInSupplies(mat) && !seen.has(mat.id)) {
+      if (
+        mat &&
+        isMaterialActiveInSupplies(mat) &&
+        !excludedIds.has(mat.id) &&
+        !seen.has(mat.id)
+      ) {
         seen.add(mat.id);
         materials.push({ id: mat.id, code: mat.code, name: mat.name, unit: mat.unit });
       }
@@ -73,7 +84,7 @@ async function loadSystemMaterials(
     .eq('user_id', userId)
     .eq('active_in_supplies', true);
 
-  return (data ?? []) as SystemMaterial[];
+  return ((data ?? []) as SystemMaterial[]).filter((m) => !excludedIds.has(m.id));
 }
 
 /**
@@ -86,7 +97,8 @@ async function runSemanticMatchLevel2(
   userId: string,
   quoteId: string,
   supplierName: string,
-  budgetId: string | null
+  budgetId: string | null,
+  sessionId: string | null
 ): Promise<{ matched: number; total: number }> {
   const { data: pendingItems } = await supabase
     .from('supplier_quote_items')
@@ -98,7 +110,7 @@ async function runSemanticMatchLevel2(
     return { matched: 0, total: 0 };
   }
 
-  const systemMaterials = await loadSystemMaterials(supabase, userId, budgetId);
+  const systemMaterials = await loadSystemMaterials(supabase, userId, budgetId, sessionId);
   if (systemMaterials.length === 0) {
     return { matched: 0, total: pendingItems.length };
   }
@@ -315,7 +327,8 @@ export async function runExtractionJob(jobId: string): Promise<void> {
       userId,
       persist.quoteId,
       resolved.name,
-      session.budget_id
+      session.budget_id,
+      session.id
     ).catch((err) => {
       console.warn('[runExtractionJob] Nível 2 semantic-match falhou:', err);
       return { matched: 0, total: 0 };

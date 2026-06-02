@@ -32,7 +32,10 @@ export async function saveManualSessionQuoteItem(
     return { error: 'Informe um preço unitário maior que zero.' };
   }
 
-  const scope = await assertMaterialInBudgetScope(supabase, budgetId, materialId);
+  const scope = await assertMaterialInBudgetScope(supabase, budgetId, materialId, {
+    sessionId,
+    userId,
+  });
   if (!scope.ok) {
     return { error: scope.error };
   }
@@ -42,7 +45,10 @@ export async function saveManualSessionQuoteItem(
     return { error: resolved.error };
   }
 
-  const budgetQtyMap = await loadBudgetMaterialQuantities(supabase, budgetId);
+  const budgetQtyMap = await loadBudgetMaterialQuantities(supabase, budgetId, {
+    sessionId,
+    userId,
+  });
   const material = budgetQtyMap.get(materialId);
   if (!material) {
     return { error: 'Material não encontrado no orçamento.' };

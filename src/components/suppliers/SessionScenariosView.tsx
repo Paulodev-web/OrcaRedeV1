@@ -34,7 +34,7 @@ import {
   type SessionStockInput,
   type IdealSelectionRow,
 } from '@/actions/supplierQuotes';
-import { deactivateMaterialForSuppliesAction } from '@/actions/materials';
+import { excludeMaterialFromSessionAction } from '@/actions/materials';
 import { negotiatedFromNormalized } from '@/lib/supplierPrice';
 import {
   buildEffectiveSelectionMap,
@@ -1293,12 +1293,12 @@ export default function SessionScenariosView({
       if (isRemovingMaterial) return;
 
       alertDialog.showConfirm(
-        'Remover do Suprimentos',
-        `O material "${item.material_name}" deixará de aparecer em todas as sessões de Suprimentos (Tabelona, conciliação, cenários e extração). Ele continua disponível no orçamento.`,
+        'Remover desta sessão',
+        `O material "${item.material_name}" deixará de aparecer nesta sessão de cotação (Tabelona, conciliação e cenários). Outras sessões e o orçamento não são alterados.`,
         async () => {
           setIsRemovingMaterial(true);
           try {
-            const result = await deactivateMaterialForSuppliesAction(item.material_id);
+            const result = await excludeMaterialFromSessionAction(sessionId, item.material_id);
             if (!result.success) {
               alertDialog.showError(
                 'Não foi possível remover',

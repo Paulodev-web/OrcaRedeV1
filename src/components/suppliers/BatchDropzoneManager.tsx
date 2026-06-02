@@ -4,13 +4,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Loader2, Upload } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { createExtractionJobAction } from '@/actions/supplierQuotes';
+import { MAX_PDFS_PER_QUOTATION } from '@/lib/suppliesLimits';
 import SupplierPickerModal from './SupplierPickerModal';
-
-const MAX_FILES = 10;
 
 interface Props {
   sessionId: string;
   disabled: boolean;
+  /** PDFs já enfileirados ou processados nesta sessão de cotação. */
+  existingJobCount?: number;
   onJobsCreated?: () => void;
 }
 
@@ -49,6 +50,7 @@ export function sanitizeStorageFileName(originalName: string): string {
 export default function BatchDropzoneManager({
   sessionId,
   disabled,
+  existingJobCount = 0,
   onJobsCreated,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -134,8 +136,21 @@ export default function BatchDropzoneManager({
         setError('Selecione apenas arquivos PDF.');
         return;
       }
-      if (list.length > MAX_FILES) {
-        setError(`Máximo de ${MAX_FILES} arquivos por lote.`);
+      if (list.length > MAX_PDFS_PER_QUOTATION) {
+        setError(`Máximo de ${MAX_PDFS_PER_QUOTATION} arquivos por envio.`);
+        return;
+      }
+      const remaining = MAX_PDFS_PER_QUOTATION - existingJobCount;
+      if (remaining <= 0) {
+        setError(
+          `Esta cotação já atingiu o limite de ${MAX_PDFS_PER_QUOTATION} PDFs. Exclua um arquivo para enviar outro.`
+        );
+        return;
+      }
+      if (list.length > remaining) {
+        setError(
+          `Só é possível adicionar mais ${remaining} PDF(s) nesta cotação (limite de ${MAX_PDFS_PER_QUOTATION}).`
+        );
         return;
       }
 
@@ -182,7 +197,7 @@ export default function BatchDropzoneManager({
         if (inputRef.current) inputRef.current.value = '';
       }
     },
-    [sessionId]
+    [sessionId, existingJobCount]
   );
 
   return (
@@ -190,8 +205,11 @@ export default function BatchDropzoneManager({
       <div className="rounded-2xl border border-[#64ABDE]/40 bg-white p-6 shadow-md">
         <h2 className="mb-2 text-base font-semibold text-[#1D3140]">Importar PDFs em lote</h2>
         <p className="mb-4 text-sm text-slate-500">
-          Até {MAX_FILES} arquivos. Após o upload, escolha o fornecedor de cada PDF antes do
-          processamento.
+          Até {MAX_PDFS_PER_QUOTATION} PDFs por cotação
+          {existingJobCount > 0
+            ? ` (${existingJobCount}/${MAX_PDFS_PER_QUOTATION} já nesta sessão)`
+            : ''}
+          . Após o upload, escolha o fornecedor de cada PDF antes do processamento.
         </p>
 
         {error && (
@@ -242,7 +260,9 @@ export default function BatchDropzoneManager({
           <p className="mt-2 text-sm font-medium text-gray-700">
             {disabled ? 'Sessão encerrada' : 'Arraste PDFs ou clique para selecionar'}
           </p>
-          <p className="mt-1 text-xs text-gray-400">Somente .pdf · máx. {MAX_FILES}</p>
+          <p className="mt-1 text-xs text-gray-400">
+            Somente .pdf · máx. {MAX_PDFS_PER_QUOTATION} por cotação
+          </p>
         </label>
       </div>
 

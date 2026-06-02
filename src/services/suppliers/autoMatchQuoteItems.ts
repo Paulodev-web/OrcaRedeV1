@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getBudgetMaterialIdSet } from '@/services/supplies/budgetMaterialQuantities';
-import { getInactiveSuppliesMaterialIds } from '@/services/supplies/materialSuppliesFilter';
+import { getSuppliesExcludedMaterialIds } from '@/services/supplies/materialSuppliesFilter';
 
 /**
  * Nível 1 — Memória Exata: cruza itens sem match contra supplier_material_mappings.
@@ -19,7 +19,7 @@ export async function autoMatchQuoteItems(
 ): Promise<{ matched: number; total: number }> {
   const { data: quote, error: quoteError } = await supabase
     .from('supplier_quotes')
-    .select('id, supplier_name, budget_id')
+    .select('id, supplier_name, budget_id, session_id')
     .eq('id', quoteId)
     .eq('user_id', userId)
     .single();
@@ -52,10 +52,17 @@ export async function autoMatchQuoteItems(
     mappings.map((m) => [m.supplier_material_name.toLowerCase().trim(), m])
   );
 
-  const inactiveMaterialIds = await getInactiveSuppliesMaterialIds(supabase, userId);
+  const excludedMaterialIds = await getSuppliesExcludedMaterialIds(
+    supabase,
+    userId,
+    quote.session_id
+  );
 
   const budgetMaterialIds = quote.budget_id
-    ? await getBudgetMaterialIdSet(supabase, quote.budget_id)
+    ? await getBudgetMaterialIdSet(supabase, quote.budget_id, {
+        sessionId: quote.session_id,
+        userId,
+      })
     : null;
 
   let matchedCount = 0;
@@ -65,7 +72,7 @@ export async function autoMatchQuoteItems(
 
     if (
       mapping &&
-      !inactiveMaterialIds.has(mapping.internal_material_id) &&
+      !excludedMaterialIds.has(mapping.internal_material_id) &&
       (!budgetMaterialIds || budgetMaterialIds.has(mapping.internal_material_id))
     ) {
       const { error: updateError } = await supabase
