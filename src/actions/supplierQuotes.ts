@@ -2057,16 +2057,6 @@ export async function closeIdealScenarioAndUpdateMaterialsAction(
       selections: selectionsRes.data,
     });
 
-    const { error: completeError } = await supabase
-      .from('quotation_sessions')
-      .update({ status: 'completed' })
-      .eq('id', sessionId)
-      .eq('user_id', userId);
-
-    if (completeError) {
-      return { success: false, error: completeError.message };
-    }
-
     revalidatePath('/');
     revalidatePath('/fornecedores');
     revalidatePath(`/fornecedores/sessao/${sessionId}`);
@@ -2075,7 +2065,7 @@ export async function closeIdealScenarioAndUpdateMaterialsAction(
     return { success: true, data: result };
   } catch (err: unknown) {
     const message =
-      err instanceof Error ? err.message : 'Erro ao fechar cenário ideal e atualizar materiais.';
+      err instanceof Error ? err.message : 'Erro ao atualizar materiais pelo cenário ideal.';
     return { success: false, error: message };
   }
 }

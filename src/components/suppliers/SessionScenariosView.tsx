@@ -711,9 +711,9 @@ function ScenarioIdealView({
     }
 
     alertDialog.showConfirm(
-      'Fechar cenário ideal?',
+      'Atualizar materiais?',
       [
-        'Os preços unitários dos materiais serão atualizados pelo fornecedor escolhido no Cenário Ideal.',
+        'Os preços unitários dos materiais do orçamento serão atualizados pelo fornecedor escolhido no Cenário Ideal. A sessão permanece aberta para importar mais cotações.',
         ...warnings,
       ].join(' '),
       run,
@@ -770,7 +770,7 @@ function ScenarioIdealView({
           ) : (
             <Save className="h-4 w-4" />
           )}
-          Fechar cenário ideal e atualizar materiais
+          Atualizar materiais do orçamento
         </button>
         <span
           title={
@@ -1490,7 +1490,7 @@ export default function SessionScenariosView({
       if (!res.success) {
         alertDialog.showError(
           'Não foi possível atualizar',
-          res.error ?? 'Erro ao fechar o cenário ideal.'
+          res.error ?? 'Erro ao atualizar materiais.'
         );
         return;
       }
