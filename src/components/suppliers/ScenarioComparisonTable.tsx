@@ -75,6 +75,9 @@ function PriceUnitCell({
       ? `Oferta mais barata disponível (economia de ${formatCurrency(staleSavingsPerUnit)}/un.)`
       : '';
   const tooltip = [
+    offer.match_status === 'ia_suggested'
+      ? 'Sugestão IA — valide na conciliação para confirmar o vínculo.'
+      : null,
     isNegotiated
       ? `Original: ${formatCurrency(originalNorm)} | Negociado: ${formatCurrency(offer.preco_normalizado)}`
       : `Preço do PDF: ${formatCurrency(originalNorm)}`,
@@ -132,6 +135,9 @@ function PriceUnitCell({
   }
   if (isValidatedStale) {
     cellClass += ' ring-2 ring-orange-400 ring-inset bg-orange-50/80';
+  }
+  if (offer.match_status === 'ia_suggested') {
+    cellClass += ' bg-amber-50/90';
   }
 
   if (editing) {

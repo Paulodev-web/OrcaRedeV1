@@ -592,7 +592,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         `)
         .eq('budget_id', budgetId)
         .order('counter', { ascending: true })
-        .limit(500); // ⚡ Usar limit ao invés de range
+        .limit(2000);
       console.timeEnd('⏱️ Posts query');
 
       if (postsError) {

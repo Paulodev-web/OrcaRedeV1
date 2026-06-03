@@ -1,9 +1,6 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import {
-  getSuppliesExcludedMaterialIds,
-  isMaterialActiveInSupplies,
-} from '@/services/supplies/materialSuppliesFilter';
+import { getSessionExcludedMaterialIds } from '@/services/supplies/materialSuppliesFilter';
 
 export interface BudgetMaterialQuantityRow {
   id: string;
@@ -18,12 +15,11 @@ type MaterialRef = {
   code: string;
   name: string;
   unit: string;
-  active_in_supplies?: boolean | null;
 };
 
 /**
  * Agrega quantidades do orçamento por material_id (grupos + avulsos).
- * Fonte da verdade para Nec. nos cenários de suprimentos (RDN04).
+ * Mesma regra do Painel Consolidado — sem filtro active_in_supplies.
  */
 export function aggregateBudgetMaterialQuantities(
   groupRows: { material_id: string; quantity: number; materials: MaterialRef | null }[],
@@ -48,24 +44,47 @@ export function aggregateBudgetMaterialQuantities(
 
   for (const row of [...groupRows, ...looseRows]) {
     const mat = row.materials;
-    if (!mat || !isMaterialActiveInSupplies(mat)) continue;
+    if (!mat) continue;
     addQuantity(row.material_id, Number(row.quantity) || 0, mat);
   }
 
   return map;
 }
 
-export async function loadBudgetMaterialQuantities(
+type RawRow = {
+  material_id: string;
+  quantity: number;
+  materials: MaterialRef | MaterialRef[] | null;
+};
+
+function normalizeRows(rows: RawRow[]) {
+  return rows.map((row) => ({
+    material_id: row.material_id,
+    quantity: row.quantity,
+    materials: Array.isArray(row.materials) ? row.materials[0] ?? null : row.materials,
+  }));
+}
+
+export interface LoadConsolidatedBudgetMaterialsOptions {
+  sessionId?: string | null;
+  userId?: string;
+}
+
+/**
+ * BOM do orçamento no DB — paridade com Painel Consolidado.
+ * Exclusões: apenas session_material_exclusions quando sessionId + userId informados.
+ */
+export async function loadConsolidatedBudgetMaterialsFromDb(
   supabase: SupabaseClient,
   budgetId: string,
-  options?: { sessionId?: string | null; userId?: string }
+  options?: LoadConsolidatedBudgetMaterialsOptions
 ): Promise<Map<string, BudgetMaterialQuantityRow>> {
   const { data: groupMaterials, error: gmError } = await supabase
     .from('post_item_group_materials')
     .select(`
       material_id,
       quantity,
-      materials (id, code, name, unit, active_in_supplies),
+      materials (id, code, name, unit),
       post_item_groups!inner (
         budget_posts!inner (budget_id)
       )
@@ -77,28 +96,15 @@ export async function loadBudgetMaterialQuantities(
     .select(`
       material_id,
       quantity,
-      materials (id, code, name, unit, active_in_supplies),
+      materials (id, code, name, unit),
       budget_posts!inner (budget_id)
     `)
     .eq('budget_posts.budget_id', budgetId);
 
   if (gmError || lmError) {
-    const errMsg = gmError?.message ?? lmError?.message ?? 'Erro ao buscar quantidades do orçamento.';
+    const errMsg = gmError?.message ?? lmError?.message ?? 'Erro ao buscar materiais do orçamento.';
     throw new Error(errMsg);
   }
-
-  type RawRow = {
-    material_id: string;
-    quantity: number;
-    materials: MaterialRef | MaterialRef[] | null;
-  };
-
-  const normalizeRows = (rows: RawRow[]) =>
-    rows.map((row) => ({
-      material_id: row.material_id,
-      quantity: row.quantity,
-      materials: Array.isArray(row.materials) ? row.materials[0] ?? null : row.materials,
-    }));
 
   const map = aggregateBudgetMaterialQuantities(
     normalizeRows((groupMaterials ?? []) as unknown as RawRow[]),
@@ -106,17 +112,26 @@ export async function loadBudgetMaterialQuantities(
   );
 
   if (options?.sessionId && options?.userId) {
-    const excluded = await getSuppliesExcludedMaterialIds(
+    const sessionExcluded = await getSessionExcludedMaterialIds(
       supabase,
-      options.userId,
-      options.sessionId
+      options.sessionId,
+      options.userId
     );
-    for (const materialId of excluded) {
+    for (const materialId of sessionExcluded) {
       map.delete(materialId);
     }
   }
 
   return map;
+}
+
+/** Fonte da verdade para Nec. / cenários. */
+export async function loadBudgetMaterialQuantities(
+  supabase: SupabaseClient,
+  budgetId: string,
+  options?: LoadConsolidatedBudgetMaterialsOptions
+): Promise<Map<string, BudgetMaterialQuantityRow>> {
+  return loadConsolidatedBudgetMaterialsFromDb(supabase, budgetId, options);
 }
 
 /** IDs de materiais ativos presentes no BOM do orçamento. */

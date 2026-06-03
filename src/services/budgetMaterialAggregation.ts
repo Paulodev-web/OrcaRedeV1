@@ -1,5 +1,11 @@
 import type { BudgetDetails } from '@/types';
 
+/**
+ * Lista consolidada no cliente (Painel Consolidado).
+ * Paridade server-side: loadConsolidatedBudgetMaterialsFromDb em
+ * src/services/supplies/budgetMaterialQuantities.ts
+ */
+
 export interface ConsolidatedMaterialRow {
   materialId: string;
   codigo: string;

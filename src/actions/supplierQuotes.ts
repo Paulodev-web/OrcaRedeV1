@@ -8,13 +8,14 @@ import { autoMatchQuoteItems } from '@/services/suppliers/autoMatchQuoteItems';
 import { resolveSupplierForQuote } from '@/services/suppliers/resolveSupplierForQuote';
 import { saveManualSessionQuoteItem } from '@/services/suppliers/saveManualSessionQuoteItem';
 import {
+  getSessionExcludedMaterialIds,
   getSuppliesExcludedMaterialIds,
-  isMaterialActiveInSupplies,
 } from '@/services/supplies/materialSuppliesFilter';
 import { applyIdealScenarioPricesToMaterials } from '@/services/supplies/applyIdealScenarioPricesToMaterials';
 import {
   assertMaterialInBudgetScope,
   loadBudgetMaterialQuantities,
+  loadConsolidatedBudgetMaterialsFromDb,
 } from '@/services/supplies/budgetMaterialQuantities';
 import { MAX_PDFS_PER_QUOTATION } from '@/lib/suppliesLimits';
 import type { SupplierExtractItem } from '@/types/supplierExtract';
@@ -422,57 +423,15 @@ export async function getBudgetMaterialsAction(
   try {
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
-    const excludedIds = await getSuppliesExcludedMaterialIds(supabase, userId, sessionId);
 
-    // Materiais via grupos de itens
-    const { data: groupMaterials, error: gmError } = await supabase
-      .from('post_item_group_materials')
-      .select(`
-        materials (id, code, name, unit, active_in_supplies),
-        post_item_groups!inner (
-          budget_posts!inner (budget_id)
-        )
-      `)
-      .eq('post_item_groups.budget_posts.budget_id', budgetId);
+    const map = await loadConsolidatedBudgetMaterialsFromDb(supabase, budgetId, {
+      sessionId,
+      userId,
+    });
 
-    // Materiais avulsos (post_materials)
-    const { data: looseMaterials, error: lmError } = await supabase
-      .from('post_materials')
-      .select(`
-        materials (id, code, name, unit, active_in_supplies),
-        budget_posts!inner (budget_id)
-      `)
-      .eq('budget_posts.budget_id', budgetId);
-
-    if (gmError || lmError) {
-      const errMsg = gmError?.message ?? lmError?.message ?? 'Erro ao buscar materiais.';
-      return { success: false, error: errMsg };
-    }
-
-    // Deduplica por material id
-    const seen = new Set<string>();
-    const materials: BudgetMaterialOption[] = [];
-
-    for (const row of [...(groupMaterials ?? []), ...(looseMaterials ?? [])]) {
-      const mat = row.materials as unknown as {
-        id: string;
-        code: string;
-        name: string;
-        unit: string;
-        active_in_supplies?: boolean | null;
-      } | null;
-      if (
-        mat &&
-        isMaterialActiveInSupplies(mat) &&
-        !excludedIds.has(mat.id) &&
-        !seen.has(mat.id)
-      ) {
-        seen.add(mat.id);
-        materials.push({ id: mat.id, code: mat.code, name: mat.name, unit: mat.unit });
-      }
-    }
-
-    materials.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+    const materials: BudgetMaterialOption[] = Array.from(map.values())
+      .map((m) => ({ id: m.id, code: m.code, name: m.name, unit: m.unit }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 
     return { success: true, data: { materials } };
   } catch (err: unknown) {
@@ -1009,6 +968,7 @@ export interface ScenarioItem {
     total_normalizado: number;
     /** Quantidade extraída do PDF do fornecedor (não usada em NEC/COMPRA). */
     quantidade_pdf: number;
+    match_status: 'automatico' | 'manual' | 'ia_suggested';
   }[];
 }
 
@@ -1072,7 +1032,7 @@ export async function calculateScenariosAction(
       `)
       .eq('supplier_quotes.budget_id', budgetId)
       .eq('supplier_quotes.user_id', userId)
-      .in('match_status', ['automatico', 'manual']);
+      .in('match_status', ['automatico', 'manual', 'ia_suggested']);
 
     if (sessionId) {
       query = query.eq('supplier_quotes.session_id', sessionId);
@@ -1096,11 +1056,9 @@ export async function calculateScenariosAction(
       }
     }
 
-    const excludedMaterialIds = await getSuppliesExcludedMaterialIds(
-      supabase,
-      userId,
-      sessionId
-    );
+    const excludedMaterialIds = sessionId
+      ? await getSessionExcludedMaterialIds(supabase, sessionId, userId)
+      : new Set<string>();
 
     type Offer = {
       quote_item_id: string;
@@ -1112,6 +1070,7 @@ export async function calculateScenariosAction(
       conversion_factor: number;
       preco_normalizado: number;
       quantidade_pdf: number;
+      match_status: 'automatico' | 'manual' | 'ia_suggested';
     };
     const materialOffers = new Map<string, {
       material: { id: string; code: string; name: string; unit: string };
@@ -1120,7 +1079,6 @@ export async function calculateScenariosAction(
     }>();
 
     for (const row of budgetQtyMap.values()) {
-      if (excludedMaterialIds.has(row.id)) continue;
       materialOffers.set(row.id, {
         material: {
           id: row.id,
@@ -1134,6 +1092,13 @@ export async function calculateScenariosAction(
     }
 
     for (const row of rawItems ?? []) {
+      if (
+        row.match_status === 'ia_suggested' &&
+        !row.matched_material_id
+      ) {
+        continue;
+      }
+
       const mat = row.materials as unknown as { id: string; code: string; name: string; unit: string } | null;
       const quote = row.supplier_quotes as unknown as {
         id: string;
@@ -1141,7 +1106,8 @@ export async function calculateScenariosAction(
         supplier_name: string;
         suppliers?: { name: string } | { name: string }[] | null;
       } | null;
-      if (!mat || !quote || excludedMaterialIds.has(mat.id)) continue;
+      const materialId = mat?.id ?? row.matched_material_id ?? null;
+      if (!materialId || !quote || excludedMaterialIds.has(materialId)) continue;
 
       const displayName = getSupplierDisplayName(quote);
       const supplierKey = quote.supplier_id ?? displayName;
@@ -1151,6 +1117,7 @@ export async function calculateScenariosAction(
       const preco_efetivo = effectiveUnitPrice(preco_negociado, Number(row.preco_unit));
       const preco_normalizado = normalizedPrice(preco_efetivo, Number(row.conversion_factor));
 
+      const matchStatus = row.match_status as 'automatico' | 'manual' | 'ia_suggested';
       const offer: Offer = {
         quote_item_id: row.id,
         supplier_name: displayName,
@@ -1161,10 +1128,11 @@ export async function calculateScenariosAction(
         conversion_factor: Number(row.conversion_factor),
         preco_normalizado,
         quantidade_pdf: Number(row.quantidade),
+        match_status: matchStatus,
       };
 
       // PDF nunca expande a lista de compra — só anexa preços a materiais do BOM.
-      const existing = materialOffers.get(mat.id);
+      const existing = materialOffers.get(materialId);
       if (!existing) continue;
       existing.offers.push(offer);
     }
@@ -1204,6 +1172,7 @@ export async function calculateScenariosAction(
           preco_normalizado: o.preco_normalizado,
           total_normalizado: o.preco_normalizado * net_qty,
           quantidade_pdf: o.quantidade_pdf,
+          match_status: o.match_status,
         })),
       };
 
@@ -1537,10 +1506,10 @@ export async function getConciliationPayloadBySessionAction(
       : await getCatalogMaterialsAction(sessionId);
 
     const budgetMaterials = mats.success ? mats.data.materials : [];
-    const excludedMaterialIds = await getSuppliesExcludedMaterialIds(
+    const excludedMaterialIds = await getSessionExcludedMaterialIds(
       supabase,
-      userId,
-      sessionId
+      sessionId,
+      userId
     );
     const materialMap = new Map<string, SessionConciliationMaterialRow>();
     const unlinked: (SupplierQuoteItemWithMaterial & { supplier_name: string })[] = [];

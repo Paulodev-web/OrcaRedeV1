@@ -622,24 +622,21 @@ function ScenarioIdealView({
     return m;
   }, [ideal.lines]);
 
-  const filteredIdealItems = useMemo(() => {
-    if (selectedSupplierSlug === 'all') return items;
-
-    return items.filter((item) => {
-      const line = lineByMaterialId.get(item.material_id);
-      if (!line?.supplier_name) return false;
-      return slugifyFileName(line.supplier_name) === selectedSupplierSlug;
-    });
-  }, [items, lineByMaterialId, selectedSupplierSlug]);
+  // Mantém todas as linhas do BOM; o filtro por fornecedor só altera resumo/total (export PDF).
+  const filteredIdealItems = items;
 
   const filteredIdealTotal = useMemo(() => {
     if (selectedSupplierSlug === 'all') return ideal.total;
 
-    return filteredIdealItems.reduce((sum, item) => {
-      const line = lineByMaterialId.get(item.material_id);
-      return sum + (line?.line_total ?? 0);
+    return items.reduce((sum, item) => {
+      if (item.net_qty <= 0) return sum;
+      const offer = item.all_offers.find(
+        (o) => slugifyFileName(o.supplier_name) === selectedSupplierSlug
+      );
+      if (!offer) return sum;
+      return sum + offer.preco_normalizado * item.net_qty;
     }, 0);
-  }, [filteredIdealItems, ideal.total, lineByMaterialId, selectedSupplierSlug]);
+  }, [items, ideal.total, selectedSupplierSlug]);
 
   const runExport = useCallback(async () => {
     setIsExporting(true);
@@ -880,6 +877,20 @@ function ScenarioIdealView({
         totalLabel="Total Cenário Ideal:"
         totalValue={filteredIdealTotal}
         getRowSummary={(item) => {
+          if (selectedSupplierSlug !== 'all') {
+            const offer = item.all_offers.find(
+              (o) => slugifyFileName(o.supplier_name) === selectedSupplierSlug
+            );
+            if (!offer) {
+              return { supplierLabel: 'Sem cotação deste fornecedor', unitPrice: 0, lineTotal: 0 };
+            }
+            const lineTotal = offer.preco_normalizado * item.net_qty;
+            return {
+              supplierLabel: offer.supplier_name,
+              unitPrice: offer.preco_normalizado,
+              lineTotal,
+            };
+          }
           const line = lineByMaterialId.get(item.material_id);
           return {
             supplierLabel: line?.supplier_name ?? '',
@@ -888,6 +899,18 @@ function ScenarioIdealView({
           };
         }}
         renderRowBadge={(item) => {
+          if (selectedSupplierSlug !== 'all') {
+            const hasSupplierOffer = item.all_offers.some(
+              (o) => slugifyFileName(o.supplier_name) === selectedSupplierSlug
+            );
+            if (!hasSupplierOffer && item.net_qty > 0) {
+              return (
+                <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-red-700 bg-red-100 border border-red-200 px-1.5 py-0.5 rounded-full">
+                  Sem preço neste fornecedor
+                </span>
+              );
+            }
+          }
           const line = lineByMaterialId.get(item.material_id);
           if (!line || line.status === 'pending' || line.status === 'no_demand') return null;
           if (line.status === 'validated') {
@@ -1424,6 +1447,13 @@ export default function SessionScenariosView({
     [scenarios.scenarioB.items, idealSelections]
   );
 
+  const materialsWithoutQuoteCount = useMemo(
+    () =>
+      scenarios.scenarioB.items.filter((item) => item.net_qty > 0 && item.all_offers.length === 0)
+        .length,
+    [scenarios.scenarioB.items]
+  );
+
   const handleValidateAll = useCallback(() => {
     const rows: IdealSelectionRow[] = [];
     for (const item of scenarios.scenarioB.items) {
@@ -1517,6 +1547,22 @@ export default function SessionScenariosView({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6">
+      {materialsWithoutQuoteCount > 0 && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
+          <div className="text-sm text-amber-900">
+            <p className="font-medium">
+              {materialsWithoutQuoteCount} material(is) do orçamento consolidado sem cotação nesta
+              sessão
+            </p>
+            <p className="mt-0.5 text-amber-800">
+              A lista segue o mesmo escopo do Painel Consolidado. Importe ou concilie PDFs dos
+              fornecedores para preencher preços — itens só no PDF sem vínculo não entram na coluna.
+            </p>
+          </div>
+        </div>
+      )}
+
       <ScenarioSummaryCards scenarios={filteredScenarios} isFiltered={filteredScenarios.isFiltered} />
 
       <SuggestionCards scenarios={scenarios} />

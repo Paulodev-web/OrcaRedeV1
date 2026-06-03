@@ -7,10 +7,8 @@ import { resolveSupplierForQuote } from '@/services/suppliers/resolveSupplierFor
 import { autoMatchQuoteItems } from '@/services/suppliers/autoMatchQuoteItems';
 import { semanticMatch } from '@/services/ai/semanticMatch';
 import type { UnconciliatedItem, SystemMaterial } from '@/types/supplierExtract';
-import {
-  getSuppliesExcludedMaterialIds,
-  isMaterialActiveInSupplies,
-} from '@/services/supplies/materialSuppliesFilter';
+import { loadConsolidatedBudgetMaterialsFromDb } from '@/services/supplies/budgetMaterialQuantities';
+import { getSuppliesExcludedMaterialIds } from '@/services/supplies/materialSuppliesFilter';
 
 const CONFIDENCE_AUTO_APPLY_THRESHOLD = 80;
 
@@ -41,41 +39,16 @@ async function loadSystemMaterials(
   const excludedIds = await getSuppliesExcludedMaterialIds(supabase, userId, sessionId);
 
   if (budgetId) {
-    const { data: groupMaterials } = await supabase
-      .from('post_item_group_materials')
-      .select(`
-        materials (id, code, name, unit, active_in_supplies),
-        post_item_groups!inner (
-          budget_posts!inner (budget_id)
-        )
-      `)
-      .eq('post_item_groups.budget_posts.budget_id', budgetId);
-
-    const { data: looseMaterials } = await supabase
-      .from('post_materials')
-      .select(`
-        materials (id, code, name, unit, active_in_supplies),
-        budget_posts!inner (budget_id)
-      `)
-      .eq('budget_posts.budget_id', budgetId);
-
-    const seen = new Set<string>();
-    const materials: SystemMaterial[] = [];
-    for (const row of [...(groupMaterials ?? []), ...(looseMaterials ?? [])]) {
-      const mat = row.materials as unknown as (SystemMaterial & {
-        active_in_supplies?: boolean | null;
-      }) | null;
-      if (
-        mat &&
-        isMaterialActiveInSupplies(mat) &&
-        !excludedIds.has(mat.id) &&
-        !seen.has(mat.id)
-      ) {
-        seen.add(mat.id);
-        materials.push({ id: mat.id, code: mat.code, name: mat.name, unit: mat.unit });
-      }
-    }
-    return materials;
+    const map = await loadConsolidatedBudgetMaterialsFromDb(supabase, budgetId, {
+      sessionId,
+      userId,
+    });
+    return Array.from(map.values()).map((m) => ({
+      id: m.id,
+      code: m.code,
+      name: m.name,
+      unit: m.unit,
+    }));
   }
 
   const { data } = await supabase
