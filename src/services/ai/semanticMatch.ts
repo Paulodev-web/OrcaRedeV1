@@ -68,6 +68,8 @@ function buildPrompt(
 
 Fornecedor: ${supplierName}
 
+Os materiais internos abaixo são candidatos pré-selecionados para este lote. Se nenhum for tecnicamente válido para um item, omita-o do resultado.
+
 ## Itens do fornecedor (a parear):
 ${itemsBlock}
 

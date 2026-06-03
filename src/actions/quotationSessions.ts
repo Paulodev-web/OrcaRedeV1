@@ -324,6 +324,11 @@ export async function retryExtractionJobsAction(
         started_at: null,
         finished_at: null,
         estimated_time: null,
+        quote_id: null,
+        pipeline_phase: null,
+        match_batch_index: 0,
+        match_total_batches: null,
+        pipeline_context: null,
       })
       .in('id', jobIds)
       .eq('user_id', userId);

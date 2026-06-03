@@ -77,6 +77,7 @@ export default function SessionExtractionRealtime({
   const [curationQuoteId, setCurationQuoteId] = useState<string | null>(null);
   const [curationSupplier, setCurationSupplier] = useState('');
   const [retryingErrors, setRetryingErrors] = useState(false);
+  const [resumingJobId, setResumingJobId] = useState<string | null>(null);
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
 
   const hadProcessingRef = useRef(false);
@@ -263,6 +264,59 @@ export default function SessionExtractionRealtime({
     }
   };
 
+  const continueJob = async (jobId: string) => {
+    const res = await fetch('/api/process-pdfs/continue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ job_id: jobId }),
+    });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new Error(body.error ?? `Falha ao retomar job (${res.status}).`);
+    }
+  };
+
+  const isJobStuck = useCallback((job: ExtractionJobRow): boolean => {
+    if (job.status !== 'processing' || !job.started_at) return false;
+    const startedMs = new Date(job.started_at).getTime();
+    return Date.now() - startedMs > 3 * 60 * 1000;
+  }, []);
+
+  const handleResumeJob = async (jobId: string) => {
+    if (disabled || resumingJobId) return;
+    setResumingJobId(jobId);
+    try {
+      await continueJob(jobId);
+      toast.success('Processamento retomado.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro ao retomar processamento.';
+      toast.error(message);
+    } finally {
+      setResumingJobId(null);
+    }
+  };
+
+  const autoResumeAttemptedRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (disabled) return;
+
+    const stuckJobs = jobs.filter(
+      (j) =>
+        j.status === 'processing' &&
+        j.started_at &&
+        Date.now() - new Date(j.started_at).getTime() > 60_000 &&
+        !autoResumeAttemptedRef.current.has(j.id)
+    );
+
+    for (const job of stuckJobs) {
+      autoResumeAttemptedRef.current.add(job.id);
+      void continueJob(job.id).catch((err) => {
+        console.warn('[SessionExtractionRealtime] auto-resume falhou', job.id, err);
+      });
+    }
+  }, [jobs, disabled]);
+
   const handleDeletePdf = async (params: { jobId?: string; quoteId?: string; label: string }) => {
     if (disabled || deletingKey) return;
     const opKey = params.jobId ?? params.quoteId ?? '';
@@ -397,6 +451,21 @@ export default function SessionExtractionRealtime({
                 <span className="text-xs uppercase text-gray-500">{j.status}</span>
                 {j.estimated_time != null && (
                   <span className="text-xs text-gray-400">~{j.estimated_time}s</span>
+                )}
+                {!disabled && isJobStuck(j) && (
+                  <button
+                    type="button"
+                    onClick={() => void handleResumeJob(j.id)}
+                    disabled={resumingJobId === j.id}
+                    className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-[#64ABDE]/60 bg-white px-2 py-1 text-xs font-medium text-[#1D3140] hover:bg-[#64ABDE]/10 disabled:opacity-50"
+                  >
+                    {resumingJobId === j.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RotateCcw className="h-3.5 w-3.5" />
+                    )}
+                    Retomar processamento
+                  </button>
                 )}
               </li>
             ))}

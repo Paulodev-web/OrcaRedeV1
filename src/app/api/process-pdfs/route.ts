@@ -1,12 +1,15 @@
-import { after, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import {
   createSupabaseServerClient,
   createSupabaseServiceRoleClient,
   requireAuthUserId,
 } from '@/lib/supabaseServer';
-import { runExtractionJob } from '@/services/suppliers/runExtractionJob';
+import { chainExtractionStep } from '@/services/suppliers/chainExtractionStep';
+import { runExtractionPipelineStep } from '@/services/suppliers/runExtractionPipelineStep';
 
 export const runtime = 'nodejs';
+/** Um step por invocação — compatível com Vercel Hobby (até 60s). */
+export const maxDuration = 60;
 
 async function markJobErrorServiceRole(jobId: string, message: string): Promise<void> {
   try {
@@ -108,6 +111,10 @@ export async function POST(request: Request) {
         status: 'processing',
         started_at: new Date().toISOString(),
         error_message: null,
+        pipeline_phase: null,
+        match_batch_index: 0,
+        match_total_batches: null,
+        pipeline_context: null,
       })
       .eq('id', jobId)
       .eq('status', 'pending')
@@ -123,7 +130,10 @@ export async function POST(request: Request) {
 
     processingClaimed = true;
 
-    after(() => runExtractionJob(jobId!));
+    const stepResult = await runExtractionPipelineStep(jobId);
+    if (stepResult.hasMore) {
+      chainExtractionStep(jobId);
+    }
 
     return NextResponse.json({ status: 'queued', job_id: jobId }, { status: 202 });
   } catch (err: unknown) {

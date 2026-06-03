@@ -73,7 +73,7 @@ Um dump de referência (`backup_producao.sql` no mesmo diretório de arquivos SQ
 
 **Armazenamento**: bucket Supabase Storage `plans` — upload e URL pública em [`AppContext`](src/contexts/AppContext.tsx) (`supabase.storage.from('plans')`), coluna `plan_image_url` em `budgets`.
 
-**Importação de orçamentos de fornecedor (PDF)**: bucket Supabase Storage `fornecedores_pdfs` — o cliente faz upload com o [`supabaseClient`](src/lib/supabaseClient.ts) (JWT no navegador); o processamento no servidor usa **caminho estável** (`file_path`) — fila de jobs chama [`POST /api/process-pdfs`](src/app/api/process-pdfs/route.ts), que baixa o objeto e usa [`runExtractionJob`](src/services/suppliers/runExtractionJob.ts). A Server Action [`extractSupplierDataAction`](src/actions/supplierIngestion.ts) usa o mesmo padrão (download por `filePath`) para o fluxo **importação única** em [`SupplierPdfImporter`](src/components/SupplierPdfImporter.tsx).
+**Importação de orçamentos de fornecedor (PDF)**: bucket Supabase Storage `fornecedores_pdfs` — o cliente faz upload com o [`supabaseClient`](src/lib/supabaseClient.ts) (JWT no navegador); o processamento no servidor usa **caminho estável** (`file_path`) — fila de jobs chama [`POST /api/process-pdfs`](src/app/api/process-pdfs/route.ts) + [`POST /api/process-pdfs/continue`](src/app/api/process-pdfs/continue/route.ts), que executam [`runExtractionPipelineStep`](src/services/suppliers/runExtractionPipelineStep.ts). A Server Action [`extractSupplierDataAction`](src/actions/supplierIngestion.ts) usa o mesmo padrão (download por `filePath`) para o fluxo **importação única** em [`SupplierPdfImporter`](src/components/SupplierPdfImporter.tsx).
 
 **Acompanhamento de obra (visualização pública)** — [`src/app/obra/[...slug]/page.tsx`](src/app/obra/[...slug]/page.tsx) normaliza o slug e renderiza [`PublicWorkView`](src/components/PublicWorkViewPremium.tsx) (importado como `PublicWorkView` na página). O componente consulta o cliente Supabase:
 
@@ -118,7 +118,7 @@ A maioria chama `createSupabaseServerClient()` e, em sucesso, `revalidatePath('/
 | [`supplierQuotes.ts`](src/actions/supplierQuotes.ts) | Cotações, auto-match (memória + semântica via serviços), conciliação por sessão, cenários A/B, curadoria. `revalidatePath` em `/fornecedores` e rotas de sessão quando aplicável. |
 | [`quotationSessions.ts`](src/actions/quotationSessions.ts) | CRUD de `quotation_sessions`, listagem com estatísticas, jobs de extração por sessão. |
 
-**Route Handler** [`src/app/api/process-pdfs/route.ts`](src/app/api/process-pdfs/route.ts): `POST` com `{ job_id }` — autentica o usuário, carrega o job em `extraction_jobs`, executa [`runExtractionJob`](src/services/suppliers/runExtractionJob.ts) (download PDF, Gemini, persistência da cotação, auto-match e match semântico opcional). Usa `createSupabaseServiceRoleClient` em fallbacks de erro e `after()` do Next para trabalho assíncrono quando necessário.
+**Route Handler** [`src/app/api/process-pdfs/route.ts`](src/app/api/process-pdfs/route.ts): `POST` com `{ job_id }` — autentica o usuário, reivindica o job (`processing`), executa **um step** de [`runExtractionPipelineStep`](src/services/suppliers/runExtractionPipelineStep.ts) (extração + L1 na primeira invocação) e encadeia os próximos steps via [`POST /api/process-pdfs/continue`](src/app/api/process-pdfs/continue/route.ts) (`chainExtractionStep`, header `Authorization: Bearer INTERNAL_JOB_SECRET`). `maxDuration = 60` por invocação (Vercel Hobby). Retomada manual/automática pela UI chama `continue` com sessão do usuário.
 
 ### 5.2 O que permanece no cliente (`AppContext` + `supabaseClient`)
 
@@ -146,8 +146,11 @@ A maioria chama `createSupabaseServerClient()` e, em sucesso, `revalidatePath('/
 - [`exportService.ts`](src/services/exportService.ts) — exportação (Excel/CSV) para fornecedores a partir do painel consolidado.
 - [`materialImportService.ts`](src/services/materialImportService.ts) — processamento de planilha e RPC `import_materials_ignore_duplicates` no cliente.
 - [`services/ai/geminiSupplierQuote.ts`](src/services/ai/geminiSupplierQuote.ts) — extração estruturada de propostas (PDF inline no Gemini, resposta JSON).
-- [`services/ai/semanticMatch.ts`](src/services/ai/semanticMatch.ts) — sugestões de match semântico (filas de extração).
-- [`services/suppliers/runExtractionJob.ts`](src/services/suppliers/runExtractionJob.ts) — pipeline de um job: download, Gemini, persistência, auto-match, IA semântica conforme confiança.
+- [`services/ai/semanticMatch.ts`](src/services/ai/semanticMatch.ts) — uma chamada Gemini por lote de itens + candidatos pré-filtrados.
+- [`services/suppliers/runSemanticMatchLevel2.ts`](src/services/suppliers/runSemanticMatchLevel2.ts) — Nível 2 em lotes; `runSingleSemanticMatchBatch` (1 lote por invocação no pipeline multi-step), pré-filtro [`materialMatchCandidates.ts`](src/services/suppliers/materialMatchCandidates.ts).
+- [`services/suppliers/runExtractionPipelineStep.ts`](src/services/suppliers/runExtractionPipelineStep.ts) — orchestrator multi-step: `extract` → `match` (1 lote) → `finalize`; estado em `extraction_jobs.pipeline_phase`, `match_batch_index`, `pipeline_context`.
+- [`services/suppliers/chainExtractionStep.ts`](src/services/suppliers/chainExtractionStep.ts) — dispara `POST /api/process-pdfs/continue` (fire-and-forget).
+- [`services/suppliers/runExtractionJob.ts`](src/services/suppliers/runExtractionJob.ts) — wrapper legado (loop local de steps); produção usa as rotas API.
 - [`services/suppliers/persistSupplierQuoteFromExtraction.ts`](src/services/suppliers/persistSupplierQuoteFromExtraction.ts), [`services/suppliers/autoMatchQuoteItems.ts`](src/services/suppliers/autoMatchQuoteItems.ts) — persistência e cruzamento com `supplier_material_mappings`.
 
 Camada de serviço **não** substitui Server Actions; centraliza lógica reutilizável chamada a partir de actions, API routes e, no cliente, onde já existia o padrão.
@@ -220,29 +223,39 @@ Fluxo principal: **sessões de cotação** agrupam várias propostas; upload em 
 
 **Acesso ao módulo**: no portal administrativo ([`AdminPortal`](src/components/AdminPortal.tsx)), o tile **Fornecedores** faz `router.push('/fornecedores')` (não passa pelo `AppShell` de catálogo/canvas).
 
-### 10.2 Lote assíncrono (fila de extração)
+### 10.2 Lote assíncrono (fila de extração — pipeline multi-step)
 
 1. O usuário cria ou abre uma sessão e envia um ou mais PDFs (dropzone). O cliente faz **upload** para `fornecedores_pdfs` e registra linhas em **`extraction_jobs`** (status `pending` / `processing` / `completed` / `error`).
 2. O cliente dispara **`POST /api/process-pdfs`** com `{ job_id }` — sem enviar o binário no JSON.
-3. O servidor autentica, carrega o job, executa [`runExtractionJob`](src/services/suppliers/runExtractionJob.ts): download do Storage, **`extractSupplierQuoteWithGemini`**, gravação em `supplier_quotes` / `supplier_quote_items`, `autoMatchQuoteItems`, depois match semântico (Gemini) quando aplicável; atualiza o job e associa `quote_id`.
-4. A UI assina **`extraction_jobs`** via **Supabase Realtime** na sessão (`SessionExtractionRealtime`); **Sonner** toasts quando a fila conclui.
+3. O servidor autentica, reivindica o job e executa **step 1** (`extract`: download, Gemini, persistência, L1). Grava `pipeline_phase`, `match_total_batches` e `pipeline_context` (snapshot de IDs por lote L2).
+4. Cada step subsequente roda em **`POST /api/process-pdfs/continue`**: `match` (1 lote Gemini por invocação, lotes de 5 itens no modo step) → `finalize` (`completed`). Encadeamento server-side via `INTERNAL_JOB_SECRET` (configurar na Vercel Production + Preview).
+5. A UI assina **`extraction_jobs`** via **Supabase Realtime**; jobs `processing` há >3 min exibem **Retomar processamento**; auto-retomada após 1 min se a chain falhar.
+
+**Variável de ambiente obrigatória em produção:** `INTERNAL_JOB_SECRET` — string aleatória longa; usada no header `Authorization: Bearer …` entre invocações do pipeline.
 
 ```mermaid
 sequenceDiagram
   participant UI as BatchDropzoneManager
   participant St as Storage fornecedores_pdfs
   participant DB as extraction_jobs
-  participant API as POST /api/process-pdfs
+  participant Start as POST_process-pdfs
+  participant Cont as POST_continue
   participant AI as Gemini
 
   UI->>St: upload(file)
   St-->>UI: path
   UI->>DB: insert job(pending)
-  UI->>API: { job_id }
-  API->>St: download(path)
-  API->>AI: PDF inline + prompt
-  AI-->>API: JSON items
-  API->>DB: job(completed) + supplier_quotes
+  UI->>Start: { job_id }
+  Start->>St: download(path)
+  Start->>AI: PDF inline extract
+  Start->>DB: phase=match, quote_id
+  Start->>Cont: chain
+  loop cada lote L2
+    Cont->>AI: semantic match batch
+    Cont->>DB: match_batch_index++
+    Cont->>Cont: chain
+  end
+  Cont->>DB: status completed
 ```
 
 ### 10.3 Importação única (Server Action)
@@ -251,7 +264,8 @@ Para testes ou fluxo legado: **`extractSupplierDataAction({ filePath })`** em [`
 
 ### 10.4 Conciliação e domínio de dados
 
-- **Escopo da fonte da verdade**: `runExtractionJob` carrega materiais do orçamento (`post_item_group_materials` / `post_materials`) se `budget_id` da sessão estiver definido; senão, catálogo `materials` do usuário — ver [`loadSystemMaterials`](src/services/suppliers/runExtractionJob.ts).
+- **Escopo da fonte da verdade**: `runSemanticMatchLevel2` carrega materiais do orçamento consolidado ([`budgetMaterialQuantities`](src/services/supplies/budgetMaterialQuantities.ts)) se `budget_id` da sessão estiver definido; senão, catálogo `materials` do usuário.
+- **Match L2**: pipeline multi-step — lotes de **5 itens** no modo step ([`extractionPipelineConfig`](src/lib/extractionPipelineConfig.ts)); cada lote em invocação separada (~60s max). Config legado monolítico: [`suppliesSemanticMatchConfig`](src/lib/suppliesSemanticMatchConfig.ts) (15 itens).
 - **Match**: `supplier_material_mappings` (memória); colunas `match_level`, `match_method` (`exact_memory`, `semantic_ai`, `manual`) e `match_status` incluindo `ia_suggested`; tabela **`semantic_match_suggestions`** para auditoria.
 - **Histórico de preços**: view `supplier_price_history` (preço normalizado; exclui itens só em sugestão IA não validada — ver migrações).
 

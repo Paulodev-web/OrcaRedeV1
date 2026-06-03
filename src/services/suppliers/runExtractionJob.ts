@@ -1,16 +1,7 @@
 import { revalidatePath } from 'next/cache';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseServiceRoleClient } from '@/lib/supabaseServer';
-import { extractSupplierQuoteWithGemini } from '@/services/ai/geminiSupplierQuote';
-import { persistSupplierQuoteFromExtraction } from '@/services/suppliers/persistSupplierQuoteFromExtraction';
-import { resolveSupplierForQuote } from '@/services/suppliers/resolveSupplierForQuote';
-import { autoMatchQuoteItems } from '@/services/suppliers/autoMatchQuoteItems';
-import { semanticMatch } from '@/services/ai/semanticMatch';
-import type { UnconciliatedItem, SystemMaterial } from '@/types/supplierExtract';
-import { loadConsolidatedBudgetMaterialsFromDb } from '@/services/supplies/budgetMaterialQuantities';
-import { getSuppliesExcludedMaterialIds } from '@/services/supplies/materialSuppliesFilter';
-
-const CONFIDENCE_AUTO_APPLY_THRESHOLD = 80;
+import { runExtractionPipelineStep } from '@/services/suppliers/runExtractionPipelineStep';
 
 async function markJobError(
   supabase: SupabaseClient,
@@ -28,121 +19,8 @@ async function markJobError(
 }
 
 /**
- * Carrega materiais do sistema conforme escopo da sessão (RDN01).
- */
-async function loadSystemMaterials(
-  supabase: SupabaseClient,
-  userId: string,
-  budgetId: string | null,
-  sessionId?: string | null
-): Promise<SystemMaterial[]> {
-  const excludedIds = await getSuppliesExcludedMaterialIds(supabase, userId, sessionId);
-
-  if (budgetId) {
-    const map = await loadConsolidatedBudgetMaterialsFromDb(supabase, budgetId, {
-      sessionId,
-      userId,
-    });
-    return Array.from(map.values()).map((m) => ({
-      id: m.id,
-      code: m.code,
-      name: m.name,
-      unit: m.unit,
-    }));
-  }
-
-  const { data } = await supabase
-    .from('materials')
-    .select('id, code, name, unit')
-    .eq('user_id', userId)
-    .eq('active_in_supplies', true);
-
-  return ((data ?? []) as SystemMaterial[]).filter((m) => !excludedIds.has(m.id));
-}
-
-/**
- * Nível 2 — IA Semântica: envia itens pendentes ao Gemini para pareamento.
- * Aplica automaticamente sugestões com confiança > threshold.
- * Persiste todas as sugestões para auditoria.
- */
-async function runSemanticMatchLevel2(
-  supabase: SupabaseClient,
-  userId: string,
-  quoteId: string,
-  supplierName: string,
-  budgetId: string | null,
-  sessionId: string | null
-): Promise<{ matched: number; total: number }> {
-  const { data: pendingItems } = await supabase
-    .from('supplier_quote_items')
-    .select('id, descricao, unidade, quantidade, preco_unit')
-    .eq('quote_id', quoteId)
-    .eq('match_status', 'sem_match');
-
-  if (!pendingItems || pendingItems.length === 0) {
-    return { matched: 0, total: 0 };
-  }
-
-  const systemMaterials = await loadSystemMaterials(supabase, userId, budgetId, sessionId);
-  if (systemMaterials.length === 0) {
-    return { matched: 0, total: pendingItems.length };
-  }
-
-  const unconciliated: UnconciliatedItem[] = pendingItems.map((it) => ({
-    id: it.id,
-    descricao: it.descricao,
-    unidade: it.unidade,
-    quantidade: it.quantidade,
-    preco_unit: it.preco_unit,
-  }));
-
-  const result = await semanticMatch(unconciliated, systemMaterials, supplierName);
-  if (!result.success) {
-    console.warn('[runExtractionJob] semanticMatch falhou:', result.error);
-    return { matched: 0, total: pendingItems.length };
-  }
-
-  let matchedCount = 0;
-
-  for (const suggestion of result.suggestions) {
-    await supabase.from('semantic_match_suggestions').insert({
-      supplier_quote_item_id: suggestion.supplierItemId,
-      suggested_material_id: suggestion.materialId,
-      suggested_conversion_factor: suggestion.conversionFactor,
-      confidence_score: suggestion.confidenceScore,
-      rationale: suggestion.rationale ?? null,
-      status: 'suggested',
-      model: 'gemini-2.5-flash',
-    });
-
-    if (suggestion.confidenceScore >= CONFIDENCE_AUTO_APPLY_THRESHOLD) {
-      const { error: updateError } = await supabase
-        .from('supplier_quote_items')
-        .update({
-          matched_material_id: suggestion.materialId,
-          conversion_factor: suggestion.conversionFactor,
-          match_status: 'ia_suggested',
-          match_level: 2,
-          match_method: 'semantic_ai',
-          match_confidence: suggestion.confidenceScore,
-        })
-        .eq('id', suggestion.supplierItemId);
-
-      if (!updateError) {
-        matchedCount++;
-      }
-    }
-  }
-
-  return { matched: matchedCount, total: pendingItems.length };
-}
-
-/**
- * Pipeline completo de processamento de job:
- * 1. Extração PDF → JSON bruto
- * 2. Persistência inicial (status: sem_match)
- * 3. Nível 1: autoMatch (memória exata)
- * 4. Nível 2: semanticMatch (IA) para pendentes
+ * @deprecated Use runExtractionPipelineStep via /api/process-pdfs e /api/process-pdfs/continue.
+ * Mantido para compatibilidade local — executa steps em loop síncrono.
  */
 export async function runExtractionJob(jobId: string): Promise<void> {
   let supabase: SupabaseClient;
@@ -154,171 +32,19 @@ export async function runExtractionJob(jobId: string): Promise<void> {
   }
 
   try {
-    const { data: job, error: jobError } = await supabase
-      .from('extraction_jobs')
-      .select(
-        `
-        id,
-        user_id,
-        session_id,
-        file_path,
-        status,
-        supplier_id,
-        quote_id,
-        quotation_sessions (
-          id,
-          budget_id,
-          status
-        )
-      `
-      )
-      .eq('id', jobId)
-      .single();
+    let iterations = 0;
+    const maxIterations = 200;
 
-    if (jobError || !job) {
-      console.error('[runExtractionJob] job não encontrado:', jobId, jobError?.message);
-      return;
+    while (iterations < maxIterations) {
+      iterations++;
+      const { hasMore } = await runExtractionPipelineStep(jobId);
+
+      if (!hasMore) {
+        return;
+      }
     }
 
-    if (job.status === 'completed') {
-      return;
-    }
-
-    if (job.status !== 'processing') {
-      console.warn('[runExtractionJob] status inesperado, ignorando:', job.status, jobId);
-      return;
-    }
-
-    const sessionRaw = job.quotation_sessions as unknown;
-    const session = (
-      Array.isArray(sessionRaw) ? sessionRaw[0] : sessionRaw
-    ) as {
-      id: string;
-      budget_id: string | null;
-      status: string;
-    } | null;
-
-    if (!session) {
-      await markJobError(supabase, jobId, 'Sessão inválida.');
-      return;
-    }
-
-    if (session.status === 'completed') {
-      await markJobError(
-        supabase,
-        jobId,
-        'Esta sessão está encerrada; não é possível processar novos arquivos.'
-      );
-      return;
-    }
-
-    const userId = job.user_id as string;
-
-    // === Passo 1: Download do PDF como Buffer ===
-    const { data: blob, error: downloadError } = await supabase.storage
-      .from('fornecedores_pdfs')
-      .download(job.file_path);
-
-    if (downloadError || !blob) {
-      const msg = `Erro ao baixar o PDF: ${downloadError?.message ?? 'arquivo não encontrado'}`;
-      await markJobError(supabase, jobId, msg);
-      return;
-    }
-
-    const buffer = Buffer.from(await blob.arrayBuffer());
-
-    if (buffer.length < 200) {
-      await markJobError(supabase, jobId, 'O arquivo PDF parece estar vazio ou corrompido.');
-      return;
-    }
-
-    const estimatedSeconds = Math.max(20, Math.round(buffer.length / 50_000));
-    await supabase.from('extraction_jobs').update({ estimated_time: estimatedSeconds }).eq('id', jobId);
-
-    // === Passo 2: Extração multimodal via Gemini (PDF nativo) ===
-    const gemini = await extractSupplierQuoteWithGemini(buffer);
-    if (!gemini.success) {
-      await markJobError(supabase, jobId, gemini.error);
-      return;
-    }
-
-    const supplierId = job.supplier_id as string | null;
-    if (!supplierId) {
-      await markJobError(
-        supabase,
-        jobId,
-        'Selecione um fornecedor cadastrado antes de processar o PDF.'
-      );
-      return;
-    }
-
-    const resolved = await resolveSupplierForQuote(supabase, userId, supplierId);
-    if ('error' in resolved) {
-      await markJobError(supabase, jobId, resolved.error);
-      return;
-    }
-
-    // === Passo 3: Persistência inicial (status: sem_match) ===
-    const persist = await persistSupplierQuoteFromExtraction(supabase, {
-      userId,
-      budgetId: session.budget_id,
-      sessionId: session.id,
-      supplierId: resolved.id,
-      pdfPath: job.file_path,
-      observacoesGerais: gemini.data.observacoesGerais,
-      quoteDate: gemini.data.quoteDate,
-      items: gemini.data.items,
-    });
-
-    if ('error' in persist) {
-      await markJobError(supabase, jobId, persist.error);
-      return;
-    }
-
-    await supabase
-      .from('extraction_jobs')
-      .update({
-        status: 'completed',
-        quote_id: persist.quoteId,
-        finished_at: new Date().toISOString(),
-      })
-      .eq('id', jobId);
-
-    // === Passo 4: Nível 1 — Auto-match (memória exata) ===
-    const level1 = await autoMatchQuoteItems(supabase, userId, persist.quoteId).catch((err) => {
-      console.warn('[runExtractionJob] Nível 1 auto-match falhou:', err);
-      return { matched: 0, total: 0 };
-    });
-
-    console.log(
-      `[runExtractionJob] Nível 1 (memória): ${level1.matched}/${level1.total} itens vinculados`
-    );
-
-    // === Passo 5: Nível 2 — Match semântico (IA) para pendentes ===
-    const level2 = await runSemanticMatchLevel2(
-      supabase,
-      userId,
-      persist.quoteId,
-      resolved.name,
-      session.budget_id,
-      session.id
-    ).catch((err) => {
-      console.warn('[runExtractionJob] Nível 2 semantic-match falhou:', err);
-      return { matched: 0, total: 0 };
-    });
-
-    console.log(
-      `[runExtractionJob] Nível 2 (IA): ${level2.matched}/${level2.total} itens vinculados`
-    );
-
-    console.log(
-      `[runExtractionJob] Pipeline concluído para job ${jobId} — ` +
-        `Total: L1=${level1.matched} + L2=${level2.matched} matches automáticos`
-    );
-
-    revalidatePath(`/fornecedores/sessao/${session.id}/cenarios`);
-    revalidatePath(`/fornecedores/sessao/${session.id}/conciliacao`);
-    revalidatePath(`/fornecedores/sessao/${session.id}`);
+    await markJobError(supabase, jobId, 'Pipeline excedeu o limite de iterações.');
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro inesperado ao processar o PDF.';
     console.error('[runExtractionJob]', jobId, err);
