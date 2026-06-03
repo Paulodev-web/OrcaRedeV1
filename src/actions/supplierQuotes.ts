@@ -419,21 +419,34 @@ export interface BudgetMaterialOption {
 export async function getBudgetMaterialsAction(
   budgetId: string,
   sessionId?: string | null
-): Promise<ActionResult<{ materials: BudgetMaterialOption[] }>> {
+): Promise<
+  ActionResult<{
+    materials: BudgetMaterialOption[];
+    budget_consolidated_count: number;
+    excluded_material_ids: string[];
+  }>
+> {
   try {
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
 
-    const map = await loadConsolidatedBudgetMaterialsFromDb(supabase, budgetId, {
-      sessionId,
-      userId,
-    });
+    const map = await loadConsolidatedBudgetMaterialsFromDb(supabase, budgetId);
+    const excludedMaterialIds = sessionId
+      ? await getSessionExcludedMaterialIds(supabase, sessionId, userId)
+      : new Set<string>();
 
     const materials: BudgetMaterialOption[] = Array.from(map.values())
       .map((m) => ({ id: m.id, code: m.code, name: m.name, unit: m.unit }))
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 
-    return { success: true, data: { materials } };
+    return {
+      success: true,
+      data: {
+        materials,
+        budget_consolidated_count: materials.length,
+        excluded_material_ids: Array.from(excludedMaterialIds),
+      },
+    };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao buscar materiais do orçamento.';
     return { success: false, error: message };
@@ -446,12 +459,16 @@ export async function getBudgetMaterialsAction(
 // ---------------------------------------------------------------------------
 export async function getCatalogMaterialsAction(
   sessionId?: string | null
-): Promise<ActionResult<{ materials: BudgetMaterialOption[] }>> {
+): Promise<
+  ActionResult<{
+    materials: BudgetMaterialOption[];
+    budget_consolidated_count: number;
+    excluded_material_ids: string[];
+  }>
+> {
   try {
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
-    const excludedIds = await getSuppliesExcludedMaterialIds(supabase, userId, sessionId);
-
     const { data, error } = await supabase
       .from('materials')
       .select('id, code, name, unit')
@@ -463,16 +480,24 @@ export async function getCatalogMaterialsAction(
       return { success: false, error: error.message };
     }
 
-    const materials: BudgetMaterialOption[] = (data ?? [])
-      .filter((m) => !excludedIds.has(m.id))
-      .map((m) => ({
-        id: m.id,
-        code: m.code,
-        name: m.name,
-        unit: m.unit,
-      }));
+    const materials: BudgetMaterialOption[] = (data ?? []).map((m) => ({
+      id: m.id,
+      code: m.code,
+      name: m.name,
+      unit: m.unit,
+    }));
+    const sessionExcluded = sessionId
+      ? await getSessionExcludedMaterialIds(supabase, sessionId, userId)
+      : new Set<string>();
 
-    return { success: true, data: { materials } };
+    return {
+      success: true,
+      data: {
+        materials,
+        budget_consolidated_count: materials.length,
+        excluded_material_ids: Array.from(sessionExcluded),
+      },
+    };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao buscar catálogo de materiais.';
     return { success: false, error: message };
@@ -954,6 +979,8 @@ export interface ScenarioItem {
   required_qty: number;
   stock_qty: number;
   net_qty: number;
+  /** Oculto da sessão de compras (✓), mas permanece na lista consolidada. */
+  is_session_excluded?: boolean;
   best_supplier: string;
   best_price_normalized: number;
   best_total: number;
@@ -993,6 +1020,8 @@ export interface ScenariosResult {
     saving_vs_cheapest_a: number;
   };
   budget_total_reference: number;
+  budget_consolidated_count: number;
+  excluded_material_ids: string[];
 }
 
 export async function calculateScenariosAction(
@@ -1003,10 +1032,7 @@ export async function calculateScenariosAction(
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
 
-    const budgetQtyMap = await loadBudgetMaterialQuantities(supabase, budgetId, {
-      sessionId,
-      userId,
-    });
+    const budgetQtyMap = await loadBudgetMaterialQuantities(supabase, budgetId);
 
     let query = supabase
       .from('supplier_quote_items')
@@ -1107,7 +1133,7 @@ export async function calculateScenariosAction(
         suppliers?: { name: string } | { name: string }[] | null;
       } | null;
       const materialId = mat?.id ?? row.matched_material_id ?? null;
-      if (!materialId || !quote || excludedMaterialIds.has(materialId)) continue;
+      if (!materialId || !quote) continue;
 
       const displayName = getSupplierDisplayName(quote);
       const supplierKey = quote.supplier_id ?? displayName;
@@ -1142,7 +1168,8 @@ export async function calculateScenariosAction(
 
     for (const [, entry] of materialOffers) {
       const stock = stockMap.get(entry.material.id) ?? 0;
-      const net_qty = Math.max(entry.required_qty - stock, 0);
+      const isExcluded = excludedMaterialIds.has(entry.material.id);
+      const net_qty = isExcluded ? 0 : Math.max(entry.required_qty - stock, 0);
 
       const hasOffers = entry.offers.length > 0;
       const best = hasOffers
@@ -1159,6 +1186,7 @@ export async function calculateScenariosAction(
         required_qty: entry.required_qty,
         stock_qty: stock,
         net_qty,
+        is_session_excluded: isExcluded,
         best_supplier: best?.supplier_name ?? '',
         best_price_normalized: best?.preco_normalizado ?? 0,
         best_total: (best?.preco_normalizado ?? 0) * net_qty,
@@ -1177,7 +1205,7 @@ export async function calculateScenariosAction(
       };
 
       scenarioBItems.push(item);
-      if (net_qty > 0 && hasOffers) {
+      if (!isExcluded && net_qty > 0 && hasOffers) {
         scenarioBTotal += item.best_total;
       }
     }
@@ -1189,6 +1217,7 @@ export async function calculateScenariosAction(
     >();
 
     for (const [, entry] of materialOffers) {
+      if (excludedMaterialIds.has(entry.material.id)) continue;
       const stock = stockMap.get(entry.material.id) ?? 0;
       const net_qty = Math.max(entry.required_qty - stock, 0);
       if (net_qty === 0) continue;
@@ -1234,6 +1263,8 @@ export async function calculateScenariosAction(
           saving_vs_cheapest_a: savingVsA,
         },
         budget_total_reference: cheapestATotal,
+        budget_consolidated_count: scenarioBItems.length,
+        excluded_material_ids: Array.from(excludedMaterialIds),
       },
     };
   } catch (err: unknown) {
@@ -1405,6 +1436,7 @@ export interface SessionConciliationMaterialRow {
   material_name: string;
   material_code: string;
   material_unit: string;
+  is_session_excluded?: boolean;
   linked_items: (SupplierQuoteItemWithMaterial & { supplier_name: string; suggestion_id?: string | null })[];
 }
 
@@ -1425,6 +1457,8 @@ export async function getConciliationPayloadBySessionAction(
   budgetMaterials: BudgetMaterialOption[];
   supplier_column_order: string[];
   quotes_summary: SessionConciliationQuoteSummary[];
+  budget_consolidated_count: number;
+  excluded_material_ids: string[];
 }>> {
   try {
     const supabase = await createSupabaseServerClient();
@@ -1482,6 +1516,8 @@ export async function getConciliationPayloadBySessionAction(
           budgetMaterials: mats.success ? mats.data.materials : [],
           supplier_column_order: [],
           quotes_summary: [],
+          budget_consolidated_count: mats.success ? mats.data.budget_consolidated_count : 0,
+          excluded_material_ids: mats.success ? mats.data.excluded_material_ids : [],
         },
       };
     }
@@ -1506,11 +1542,9 @@ export async function getConciliationPayloadBySessionAction(
       : await getCatalogMaterialsAction(sessionId);
 
     const budgetMaterials = mats.success ? mats.data.materials : [];
-    const excludedMaterialIds = await getSessionExcludedMaterialIds(
-      supabase,
-      sessionId,
-      userId
-    );
+    const budget_consolidated_count = mats.success ? mats.data.budget_consolidated_count : 0;
+    const excluded_material_ids = mats.success ? mats.data.excluded_material_ids : [];
+    const excludedMaterialIds = new Set(excluded_material_ids);
     const materialMap = new Map<string, SessionConciliationMaterialRow>();
     const unlinked: (SupplierQuoteItemWithMaterial & { supplier_name: string })[] = [];
 
@@ -1520,15 +1554,12 @@ export async function getConciliationPayloadBySessionAction(
         material_name: bm.name,
         material_code: bm.code,
         material_unit: bm.unit,
+        is_session_excluded: excludedMaterialIds.has(bm.id),
         linked_items: [],
       });
     }
 
     for (const row of rawItems ?? []) {
-      if (row.matched_material_id && excludedMaterialIds.has(row.matched_material_id)) {
-        continue;
-      }
-
       const materialRow = Array.isArray(row.materials) ? row.materials[0] : row.materials;
       const suggestions = (row.semantic_match_suggestions ?? []) as {
         id: string; rationale?: string; status: string;
@@ -1536,13 +1567,6 @@ export async function getConciliationPayloadBySessionAction(
       }[];
       const suggestion = suggestions.find((s) => s.status === 'suggested') ?? suggestions[0];
       const rejectedSuggestion = suggestions.find((s) => s.status === 'rejected');
-
-      if (
-        rejectedSuggestion?.suggested_material_id &&
-        excludedMaterialIds.has(rejectedSuggestion.suggested_material_id)
-      ) {
-        continue;
-      }
 
       const item: SupplierQuoteItemWithMaterial & { supplier_name: string; suggestion_id?: string | null } = {
         id: row.id,
@@ -1573,14 +1597,7 @@ export async function getConciliationPayloadBySessionAction(
       if (row.matched_material_id && materialMap.has(row.matched_material_id)) {
         materialMap.get(row.matched_material_id)!.linked_items.push(item);
       } else if (row.matched_material_id) {
-        const matEntry: SessionConciliationMaterialRow = {
-          material_id: row.matched_material_id,
-          material_name: materialRow?.name ?? '(material desconhecido)',
-          material_code: materialRow?.code ?? '',
-          material_unit: materialRow?.unit ?? '',
-          linked_items: [item],
-        };
-        materialMap.set(row.matched_material_id, matEntry);
+        unlinked.push(item);
       } else if (
         rejectedSuggestion?.suggested_material_id &&
         materialMap.has(rejectedSuggestion.suggested_material_id)
@@ -1618,13 +1635,13 @@ export async function getConciliationPayloadBySessionAction(
     return {
       success: true,
       data: {
-        materials: Array.from(materialMap.values()).filter(
-          (row) => !excludedMaterialIds.has(row.material_id)
-        ),
+        materials: Array.from(materialMap.values()),
         unlinked_items: unlinked,
         budgetMaterials,
         supplier_column_order,
         quotes_summary,
+        budget_consolidated_count,
+        excluded_material_ids,
       },
     };
   } catch (err: unknown) {

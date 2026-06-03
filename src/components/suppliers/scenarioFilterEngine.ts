@@ -313,6 +313,7 @@ export function deriveFilteredScenarios(
   const sortedItems = sortItems(finalItems, sortBy, enabledQuoteIds);
 
   return {
+    ...base,
     scenarioA,
     scenarioB: {
       items: base.scenarioB.items,

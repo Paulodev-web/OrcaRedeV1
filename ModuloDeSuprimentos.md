@@ -66,8 +66,8 @@ O módulo é uma esteira de **inteligência de compras**: ingestão de cotaçõe
 - **RDN03 — Tolerância matemática**  
   A IA marca `alerta` quando `quantidade * preco_unit` diverge do `total_item` (prompt em `geminiSupplierQuote.ts`).
 
-- **RDN04 — Lista de compra e quantidades (somente orçamento)**  
-  Com `budget_id` na sessão, a **lista de compra** (Tabela de Avaliação, cenários A/B, Cenário Ideal e exportações) contém **exclusivamente** materiais ativos do BOM do orçamento, com **Nec.** / **Compra** agregados de `post_item_group_materials` + `post_materials` ([`loadBudgetMaterialQuantities`](src/services/supplies/budgetMaterialQuantities.ts)). PDFs **não criam linhas novas** — apenas conciliam preços a materiais já orçados. Conciliação manual, memória De/Para e aceite de sugestão IA devem vincular só a materiais do BOM ([`assertMaterialInBudgetScope`](src/services/supplies/budgetMaterialQuantities.ts)). Linha apagada com **✓** em Compra = necessidade do orçamento coberta pelo **estoque** (`net_qty === 0`).
+- **RDN04 — Lista consolidada do orçamento (paridade com Painel Consolidado)**  
+  Com `budget_id` na sessão, **Conciliação**, **Tabela de Avaliação**, **Cenário Ideal** e cenários A/B exibem a **lista completa** de materiais únicos do orçamento (mesma agregação de `post_item_group_materials` + `post_materials` que o Painel Consolidado — [`loadFullConsolidatedBudgetMaterials`](src/services/supplies/budgetMaterialQuantities.ts)). PDFs **não criam linhas novas** no consolidado; apenas conciliam preços a materiais já orçados. Vínculos manuais/IA devem respeitar o BOM ([`assertMaterialInBudgetScope`](src/services/supplies/budgetMaterialQuantities.ts)). **`session_material_exclusions`** (ação ✓ na tabela) **não remove** a linha: o material permanece visível com badge “Excluído da sessão”; totais de compra ignoram itens excluídos. **✓** em Compra (sem exclusão) = necessidade coberta pelo **estoque** (`net_qty === 0`).
 
 - **Cascata de match**  
   Memória exata → sugestão semântica (pode gerar `match_status = ia_suggested`) → aceite manual; metadados em `match_level`, `match_method`, `semantic_match_suggestions`.

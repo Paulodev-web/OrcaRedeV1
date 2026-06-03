@@ -275,10 +275,11 @@ function StockEditor({
 // Summary cards
 // ---------------------------------------------------------------------------
 function ScenarioSummaryCards({ scenarios, isFiltered }: { scenarios: ScenariosResult; isFiltered?: boolean }) {
-  const { scenarioA, scenarioB, budget_total_reference } = scenarios;
+  const { scenarioA, scenarioB, budget_total_reference, budget_consolidated_count } = scenarios;
   const bestSupplier = scenarioA[0];
   const hasSaving = scenarioB.saving_vs_cheapest_a > 0;
-  const itemsWithDemand = scenarioB.items.filter((i) => i.net_qty > 0).length;
+  const consolidatedTotal = budget_consolidated_count || scenarioB.items.length;
+  const itemsWithDemand = scenarioB.items.filter((i) => i.net_qty > 0 && !i.is_session_excluded).length;
   const totalStock = scenarioB.items.reduce((s, i) => s + i.stock_qty, 0);
 
   return (
@@ -311,7 +312,8 @@ function ScenarioSummaryCards({ scenarios, isFiltered }: { scenarios: ScenariosR
                   <span className="font-semibold">{bestSupplier.supplier_name}</span>
                 </p>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {bestSupplier.items_covered}/{bestSupplier.total_items} itens cobertos
+                  {bestSupplier.items_covered}/{consolidatedTotal} itens cobertos (de {itemsWithDemand} com
+                  compra)
                 </p>
               </div>
             </>
@@ -335,8 +337,10 @@ function ScenarioSummaryCards({ scenarios, isFiltered }: { scenarios: ScenariosR
           <p className="text-xs text-gray-500 mb-1">Melhor por Item</p>
           <p className="text-3xl font-bold text-[#1D3140] tracking-tight">{formatCurrency(scenarioB.total_normalizado)}</p>
           <div className="mt-3 pt-3 border-t border-slate-200">
-            <p className="text-sm text-slate-600">{itemsWithDemand} materiais</p>
-            <p className="text-xs text-gray-500 mt-0.5">com necessidade de compra</p>
+            <p className="text-sm text-slate-600">{consolidatedTotal} materiais no orçamento</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {itemsWithDemand} com necessidade de compra
+            </p>
           </div>
         </div>
 
@@ -871,16 +875,25 @@ function ScenarioIdealView({
 
       <p className="text-sm text-slate-600">
         Exibindo{' '}
-        <span className="font-semibold text-[#1D3140]">
-          {filteredIdealItems.filter((i) => i.net_qty > 0).length}
-        </span>{' '}
-        material(is) com necessidade de compra
-        {filteredIdealItems.length !== filteredIdealItems.filter((i) => i.net_qty > 0).length && (
-          <>
+        <span className="font-semibold text-[#1D3140]">{filteredIdealItems.length}</span> material(is) do
+        orçamento consolidado
+        {filteredIdealItems.filter((i) => i.net_qty > 0 && !i.is_session_excluded).length !==
+          filteredIdealItems.length && (
+          <span className="text-slate-500">
             {' '}
-            (de <span className="font-semibold text-[#1D3140]">{filteredIdealItems.length}</span> do
-            orçamento consolidado)
-          </>
+            ·{' '}
+            <span className="font-semibold text-[#1D3140]">
+              {filteredIdealItems.filter((i) => i.net_qty > 0 && !i.is_session_excluded).length}
+            </span>{' '}
+            com necessidade de compra
+          </span>
+        )}
+        {scenarios.excluded_material_ids.length > 0 && (
+          <span className="text-slate-500">
+            {' '}
+            · <span className="font-semibold text-[#1D3140]">{scenarios.excluded_material_ids.length}</span>{' '}
+            excluído(s) da sessão
+          </span>
         )}
         {selectedSupplierSlug !== 'all' && (
           <span className="text-slate-500"> · filtro por fornecedor ativo no export PDF</span>
@@ -917,6 +930,21 @@ function ScenarioIdealView({
           };
         }}
         renderRowBadge={(item) => {
+          if (item.is_session_excluded) {
+            return (
+              <span className="mt-1 inline-flex text-[10px] font-medium text-slate-600 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-full">
+                Excluído da sessão
+              </span>
+            );
+          }
+          const line = lineByMaterialId.get(item.material_id);
+          if (line?.status === 'no_demand') {
+            return (
+              <span className="mt-1 inline-flex text-[10px] font-medium text-green-700 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded-full">
+                Coberto por estoque
+              </span>
+            );
+          }
           if (selectedSupplierSlug !== 'all') {
             const hasSupplierOffer = item.all_offers.some(
               (o) => slugifyFileName(o.supplier_name) === selectedSupplierSlug
@@ -929,8 +957,7 @@ function ScenarioIdealView({
               );
             }
           }
-          const line = lineByMaterialId.get(item.material_id);
-          if (!line || line.status === 'pending' || line.status === 'no_demand') return null;
+          if (!line || line.status === 'pending') return null;
           if (line.status === 'validated') {
             return (
               <span className="mt-1 inline-flex flex-wrap items-center gap-1">
@@ -1025,7 +1052,7 @@ function RankingView({
           <Target className="h-4 w-4" />
           Cenário Ideal
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-            {scenarios.scenarioB.items.filter((i) => i.net_qty > 0).length}
+            {scenarios.budget_consolidated_count || scenarios.scenarioB.items.length}
           </span>
           {idealUnvalidated > 0 && (
             <span className="ml-1 inline-flex items-center px-1.5 py-0.5 bg-amber-100 text-amber-800 text-xs rounded-full border border-amber-200">
@@ -1610,7 +1637,7 @@ export default function SessionScenariosView({
           <button type="button" onClick={() => setActiveTab('tabelona')} className={tabBtnClass(activeTab === 'tabelona')}>
             <Table2 className="h-4 w-4" /> Tabela de Avaliação
             <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-              {filteredScenarios.filteredItems.length}
+              {scenarios.budget_consolidated_count || scenarios.scenarioB.items.length}
             </span>
           </button>
           <button type="button" onClick={() => setActiveTab('ranking')} className={tabBtnClass(activeTab === 'ranking')}>
@@ -1622,7 +1649,7 @@ export default function SessionScenariosView({
           {activeTab === 'tabelona' && (
             <ScenarioComparisonTable
               items={filteredScenarios.filteredItems}
-              totalItemCount={scenarios.scenarioB.items.length}
+              totalItemCount={scenarios.budget_consolidated_count || scenarios.scenarioB.items.length}
               isFiltered={filteredScenarios.isFiltered}
               quotes={quotesWithOffers}
               enabledQuoteIds={effectiveFilterState.enabledQuoteIds}

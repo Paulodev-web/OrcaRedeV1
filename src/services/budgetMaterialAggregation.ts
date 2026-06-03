@@ -2,7 +2,7 @@ import type { BudgetDetails } from '@/types';
 
 /**
  * Lista consolidada no cliente (Painel Consolidado).
- * Paridade server-side: loadConsolidatedBudgetMaterialsFromDb em
+ * Paridade server-side: loadFullConsolidatedBudgetMaterials em
  * src/services/supplies/budgetMaterialQuantities.ts
  */
 

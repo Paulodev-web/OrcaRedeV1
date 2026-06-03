@@ -17,9 +17,19 @@ type MaterialRef = {
   unit: string;
 };
 
+function placeholderMaterialRef(materialId: string): MaterialRef {
+  return {
+    id: materialId,
+    code: '',
+    name: 'Material sem nome',
+    unit: '',
+  };
+}
+
 /**
  * Agrega quantidades do orçamento por material_id (grupos + avulsos).
  * Mesma regra do Painel Consolidado — sem filtro active_in_supplies.
+ * Linhas sem join em `materials` ainda entram (placeholder), paridade com o painel.
  */
 export function aggregateBudgetMaterialQuantities(
   groupRows: { material_id: string; quantity: number; materials: MaterialRef | null }[],
@@ -43,8 +53,7 @@ export function aggregateBudgetMaterialQuantities(
   };
 
   for (const row of [...groupRows, ...looseRows]) {
-    const mat = row.materials;
-    if (!mat) continue;
+    const mat = row.materials ?? placeholderMaterialRef(row.material_id);
     addQuantity(row.material_id, Number(row.quantity) || 0, mat);
   }
 
@@ -66,18 +75,18 @@ function normalizeRows(rows: RawRow[]) {
 }
 
 export interface LoadConsolidatedBudgetMaterialsOptions {
+  /** @deprecated Exclusões de sessão não removem mais linhas da lista consolidada. */
   sessionId?: string | null;
   userId?: string;
 }
 
 /**
- * BOM do orçamento no DB — paridade com Painel Consolidado.
- * Exclusões: apenas session_material_exclusions quando sessionId + userId informados.
+ * Lista completa do orçamento consolidado (paridade com Painel Consolidado).
+ * Não remove `session_material_exclusions` — use getSessionExcludedMaterialIds para UI/compra.
  */
-export async function loadConsolidatedBudgetMaterialsFromDb(
+export async function loadFullConsolidatedBudgetMaterials(
   supabase: SupabaseClient,
-  budgetId: string,
-  options?: LoadConsolidatedBudgetMaterialsOptions
+  budgetId: string
 ): Promise<Map<string, BudgetMaterialQuantityRow>> {
   const { data: groupMaterials, error: gmError } = await supabase
     .from('post_item_group_materials')
@@ -106,41 +115,37 @@ export async function loadConsolidatedBudgetMaterialsFromDb(
     throw new Error(errMsg);
   }
 
-  const map = aggregateBudgetMaterialQuantities(
+  return aggregateBudgetMaterialQuantities(
     normalizeRows((groupMaterials ?? []) as unknown as RawRow[]),
     normalizeRows((looseMaterials ?? []) as unknown as RawRow[])
   );
-
-  if (options?.sessionId && options?.userId) {
-    const sessionExcluded = await getSessionExcludedMaterialIds(
-      supabase,
-      options.sessionId,
-      options.userId
-    );
-    for (const materialId of sessionExcluded) {
-      map.delete(materialId);
-    }
-  }
-
-  return map;
 }
 
-/** Fonte da verdade para Nec. / cenários. */
+/** @alias loadFullConsolidatedBudgetMaterials */
+export async function loadConsolidatedBudgetMaterialsFromDb(
+  supabase: SupabaseClient,
+  budgetId: string,
+  _options?: LoadConsolidatedBudgetMaterialsOptions
+): Promise<Map<string, BudgetMaterialQuantityRow>> {
+  return loadFullConsolidatedBudgetMaterials(supabase, budgetId);
+}
+
+/** Fonte da verdade para Nec. / cenários — lista completa do orçamento. */
 export async function loadBudgetMaterialQuantities(
   supabase: SupabaseClient,
   budgetId: string,
-  options?: LoadConsolidatedBudgetMaterialsOptions
+  _options?: LoadConsolidatedBudgetMaterialsOptions
 ): Promise<Map<string, BudgetMaterialQuantityRow>> {
-  return loadConsolidatedBudgetMaterialsFromDb(supabase, budgetId, options);
+  return loadFullConsolidatedBudgetMaterials(supabase, budgetId);
 }
 
-/** IDs de materiais ativos presentes no BOM do orçamento. */
+/** IDs de materiais presentes no BOM consolidado do orçamento (lista completa). */
 export async function getBudgetMaterialIdSet(
   supabase: SupabaseClient,
   budgetId: string,
-  options?: { sessionId?: string | null; userId?: string }
+  _options?: { sessionId?: string | null; userId?: string }
 ): Promise<Set<string>> {
-  const map = await loadBudgetMaterialQuantities(supabase, budgetId, options);
+  const map = await loadFullConsolidatedBudgetMaterials(supabase, budgetId);
   return new Set(map.keys());
 }
 
@@ -165,12 +170,12 @@ export async function assertMaterialInBudgetScope(
   supabase: SupabaseClient,
   budgetId: string | null | undefined,
   materialId: string,
-  options?: { sessionId?: string | null; userId?: string }
+  _options?: { sessionId?: string | null; userId?: string }
 ): Promise<BudgetMaterialScopeResult> {
   if (!budgetId) return { ok: true };
-  const allowed = options?.sessionId && options?.userId
-    ? (await getBudgetMaterialIdSet(supabase, budgetId, options)).has(materialId)
-    : await isMaterialInBudget(supabase, budgetId, materialId);
+  const allowed = await isMaterialInBudget(supabase, budgetId, materialId);
   if (!allowed) return { ok: false, error: OFF_BUDGET_MATCH_ERROR };
   return { ok: true };
 }
+
+export { getSessionExcludedMaterialIds };

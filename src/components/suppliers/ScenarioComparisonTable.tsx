@@ -428,7 +428,7 @@ export default function ScenarioComparisonTable({
             de <span className="font-semibold text-[#1D3140]">{totalItemCount}</span>
           </>
         ) : null}{' '}
-        material(is)
+        material(is) do orçamento consolidado
         {withPurchaseCount !== items.length && (
           <span className="text-slate-500">
             {' '}
@@ -500,7 +500,8 @@ export default function ScenarioComparisonTable({
             <tbody className="bg-white divide-y divide-gray-100">
               {rows.map((row, idx) => {
                 const { item, minPrice, winnerQuoteId, winnerLabel, hasNoCoverage } = row;
-                const isFullyStocked = item.net_qty === 0;
+                const isFullyStocked = item.net_qty === 0 && !item.is_session_excluded;
+                const isSessionExcluded = !!item.is_session_excluded;
                 const isEvenRow = idx % 2 === 0;
                 const rowBg = isEvenRow ? 'bg-white' : 'bg-gray-50/50';
                 const offerMap = new Map(item.all_offers.map((o) => [o.quote_id, o]));
@@ -513,20 +514,25 @@ export default function ScenarioComparisonTable({
                   <tr
                     key={item.material_id}
                     onClick={() => onMaterialClick?.(item)}
-                    className={`hover:bg-[#64ABDE]/5 transition-colors cursor-pointer ${isFullyStocked ? 'opacity-50' : ''} ${rowBg}`}
+                    className={`hover:bg-[#64ABDE]/5 transition-colors cursor-pointer ${isFullyStocked || isSessionExcluded ? 'opacity-50' : ''} ${rowBg}`}
                   >
                     <td className={`sticky left-0 z-10 px-4 py-2.5 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] ${rowBg}`}>
                       <p className="font-medium text-[#1D3140] truncate max-w-[200px]" title={item.material_name}>
                         {item.material_name}
                       </p>
                       <p className="text-xs text-gray-400 font-mono">{item.material_code}</p>
+                      {isSessionExcluded && (
+                        <span className="mt-0.5 inline-flex text-[10px] font-medium text-slate-600 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-full">
+                          Excluído da sessão
+                        </span>
+                      )}
                     </td>
                     <td className="px-2 py-2.5 text-right text-gray-600 text-xs">{formatNumber(item.required_qty)}</td>
                     <td className="px-2 py-2.5 text-right text-gray-400 text-xs">
                       {item.stock_qty > 0 ? formatNumber(item.stock_qty) : '—'}
                     </td>
-                    <td className={`px-2 py-2.5 text-right text-xs font-medium ${isFullyStocked ? 'text-green-600' : 'text-[#1D3140]'}`}>
-                      {isFullyStocked ? '✓' : formatNumber(item.net_qty)}
+                    <td className={`px-2 py-2.5 text-right text-xs font-medium ${isFullyStocked ? 'text-green-600' : isSessionExcluded ? 'text-slate-400' : 'text-[#1D3140]'}`}>
+                      {isSessionExcluded ? '—' : isFullyStocked ? '✓' : formatNumber(item.net_qty)}
                     </td>
                     {visibleQuotes.map((q) => {
                       const offer = offerMap.get(q.id);

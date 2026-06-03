@@ -53,14 +53,12 @@ export default function ScenarioItemExpandableTable({
 }: Props) {
   const supplierQuotesMode = priceDisplay === 'supplierQuotes';
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const activeItems = items.filter((i) => i.net_qty > 0);
 
-  if (activeItems.length === 0) {
+  if (items.length === 0) {
     return (
       emptyMessage ?? (
         <div className="flex flex-col items-center justify-center h-32 text-sm text-gray-400">
-          <p>Todos os materiais estão cobertos pelo estoque.</p>
-          <p className="text-xs mt-1">Ou nenhum item corresponde aos filtros ativos.</p>
+          <p>Nenhum material no orçamento consolidado.</p>
         </div>
       )
     );
@@ -92,11 +90,13 @@ export default function ScenarioItemExpandableTable({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-100">
-            {activeItems.map((item, idx) => {
+            {items.map((item, idx) => {
               const isExpanded = expandedId === item.material_id;
               const hasMultiple = item.all_offers.length > 1;
               const hasNoOffers = item.all_offers.length === 0;
               const isEvenRow = idx % 2 === 0;
+              const isNoPurchase =
+                item.is_session_excluded || item.net_qty <= 0;
               const summary = getRowSummary(item);
               const highlightedQuoteId = highlightQuoteId?.(item.material_id) ?? null;
 
@@ -109,7 +109,7 @@ export default function ScenarioItemExpandableTable({
                         : isEvenRow
                           ? 'bg-white hover:bg-gray-50'
                           : 'bg-gray-50/50 hover:bg-gray-100'
-                    }`}
+                    } ${isNoPurchase ? 'opacity-55' : ''}`}
                   >
                     <td className="px-4 py-3">
                       <p className="text-sm font-medium text-[#1D3140]">{item.material_name}</p>
@@ -119,7 +119,11 @@ export default function ScenarioItemExpandableTable({
                       {renderRowBadge?.(item)}
                     </td>
                     <td className="px-4 py-3 text-right text-sm text-gray-600">
-                      {formatNumber(item.net_qty)}
+                      {item.is_session_excluded
+                        ? '—'
+                        : item.net_qty <= 0
+                          ? '✓'
+                          : formatNumber(item.net_qty)}
                     </td>
                     <td className="px-4 py-3">
                       {summary.supplierLabel ? (
@@ -129,7 +133,7 @@ export default function ScenarioItemExpandableTable({
                             {summary.supplierLabel}
                           </span>
                         </span>
-                      ) : hasNoOffers && onManualQuoteRequest ? (
+                      ) : hasNoOffers && onManualQuoteRequest && !item.is_session_excluded && item.net_qty > 0 ? (
                         <button
                           type="button"
                           onClick={() => onManualQuoteRequest(item)}
@@ -138,7 +142,9 @@ export default function ScenarioItemExpandableTable({
                           Cotação manual
                         </button>
                       ) : (
-                        <span className="text-xs text-amber-600">Sem cotação</span>
+                        <span className="text-xs text-amber-600">
+                          {item.is_session_excluded ? '—' : 'Sem cotação'}
+                        </span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -155,7 +161,7 @@ export default function ScenarioItemExpandableTable({
                       </p>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      {(hasMultiple || (hasNoOffers && onManualQuoteRequest)) && (
+                      {(hasMultiple || (hasNoOffers && onManualQuoteRequest && item.net_qty > 0 && !item.is_session_excluded)) && (
                         <button
                           type="button"
                           onClick={() =>
@@ -172,157 +178,76 @@ export default function ScenarioItemExpandableTable({
                       )}
                     </td>
                   </tr>
-                  {isExpanded && hasNoOffers && onManualQuoteRequest && (
-                    <tr>
-                      <td colSpan={6} className="bg-[#64ABDE]/10 px-4 py-4">
-                        <p className="text-sm text-gray-600 mb-2">
-                          Nenhuma oferta de fornecedor para este material.
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => onManualQuoteRequest(item)}
-                          className="text-sm font-medium text-[#64ABDE] hover:text-[#1D3140] hover:underline"
-                        >
-                          Adicionar cotação manual
-                        </button>
-                      </td>
-                    </tr>
-                  )}
-                  {isExpanded && !hasNoOffers && (
-                    <tr>
-                      <td colSpan={6} className="bg-[#64ABDE]/10 px-4 pb-4 pt-0">
-                        <div className="mt-2 overflow-hidden rounded-lg border border-[#64ABDE]/30">
-                          <table className="min-w-full divide-y divide-[#64ABDE]/20">
-                            <thead className="bg-[#64ABDE]/15">
-                              <tr>
-                                <th className="px-3 py-2 text-left text-xs font-medium uppercase text-[#1D3140]">
-                                  Fornecedor
-                                </th>
-                                {!supplierQuotesMode && (
-                                  <>
-                                    <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">
-                                      Preço no PDF
-                                    </th>
-                                    <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">
-                                      Fator
-                                    </th>
-                                  </>
-                                )}
-                                <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">
-                                  Preço unit.
-                                  {item.material_unit ? (
-                                    <span className="font-normal normal-case text-gray-500">
-                                      {' '}
-                                      /{item.material_unit}
-                                    </span>
-                                  ) : null}
-                                </th>
-                                <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">
-                                  Total
-                                </th>
-                                {onOfferSelect && (
-                                  <th className="px-3 py-2 text-center text-xs font-medium uppercase text-[#1D3140] w-24">
-                                    Ação
-                                  </th>
-                                )}
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[#64ABDE]/10 bg-white">
-                              {item.all_offers
-                                .slice()
-                                .sort((a, b) => a.preco_normalizado - b.preco_normalizado)
-                                .map((offer, i) => {
-                                  const isBest = i === 0;
-                                  const isHighlighted =
-                                    highlightedQuoteId === offer.quote_id;
-                                  const isNegotiated = offer.preco_negociado != null;
-                                  const pdfUnitNorm = originalNormalizedPrice(
+                  {isExpanded && (
+                    <tr className="bg-[#64ABDE]/5">
+                      <td colSpan={6} className="px-4 py-3">
+                        {hasNoOffers && onManualQuoteRequest ? (
+                          <button
+                            type="button"
+                            onClick={() => onManualQuoteRequest(item)}
+                            className="text-sm font-medium text-[#64ABDE] hover:text-[#1D3140] hover:underline"
+                          >
+                            + Adicionar cotação manual
+                          </button>
+                        ) : (
+                          <div className="space-y-2">
+                            {item.all_offers.map((offer) => {
+                              const isHighlighted = offer.quote_id === highlightedQuoteId;
+                              const unitDisplay = supplierQuotesMode
+                                ? offer.preco_normalizado
+                                : originalNormalizedPrice(
                                     offer.preco_unit,
                                     offer.conversion_factor
                                   );
-                                  return (
-                                    <tr
-                                      key={offer.quote_id}
-                                      className={`${
-                                        isHighlighted
-                                          ? 'bg-blue-50 ring-1 ring-inset ring-blue-400'
-                                          : isBest
-                                            ? 'bg-green-50'
-                                            : 'hover:bg-gray-50'
-                                      } ${onOfferSelect ? 'cursor-pointer' : ''}`}
-                                      onClick={
-                                        onOfferSelect
-                                          ? () =>
-                                              onOfferSelect(
-                                                item.material_id,
-                                                offer.quote_id
-                                              )
-                                          : undefined
-                                      }
-                                    >
-                                      <td className="px-3 py-2 text-xs font-medium text-gray-800">
-                                        {isBest && (
-                                          <Award className="inline h-3 w-3 text-green-600 mr-1" />
-                                        )}
-                                        {offer.supplier_name}
-                                      </td>
-                                      {!supplierQuotesMode && (
-                                        <>
-                                          <td className="px-3 py-2 text-xs text-right text-gray-600">
-                                            {formatCurrency(offer.preco_unit)}
-                                          </td>
-                                          <td className="px-3 py-2 text-xs text-right text-gray-400">
-                                            {formatNumber(offer.conversion_factor)}×
-                                          </td>
-                                        </>
+                              const lineTotal = offer.preco_normalizado * item.net_qty;
+
+                              return (
+                                <div
+                                  key={offer.quote_item_id}
+                                  className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm ${
+                                    isHighlighted
+                                      ? 'border-[#64ABDE] bg-[#64ABDE]/10'
+                                      : 'border-gray-200 bg-white'
+                                  }`}
+                                >
+                                  <span className="font-medium text-[#1D3140]">
+                                    {offer.supplier_name}
+                                  </span>
+                                  <div className="flex items-center gap-4">
+                                    <span className="text-gray-600">
+                                      {formatCurrency(unitDisplay)}
+                                      {!supplierQuotesMode && offer.conversion_factor !== 1 && (
+                                        <span className="text-xs text-gray-400 ml-1">
+                                          (norm. {formatCurrency(offer.preco_normalizado)})
+                                        </span>
                                       )}
-                                      <td
-                                        className={`px-3 py-2 text-xs text-right font-semibold ${
-                                          isBest ? 'text-green-700' : 'text-gray-700'
+                                    </span>
+                                    {item.net_qty > 0 && (
+                                      <span className="font-semibold text-[#64ABDE]">
+                                        {formatCurrency(lineTotal)}
+                                      </span>
+                                    )}
+                                    {onOfferSelect && item.net_qty > 0 && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          onOfferSelect(item.material_id, offer.quote_id)
+                                        }
+                                        className={`text-xs font-medium px-2 py-1 rounded ${
+                                          isHighlighted
+                                            ? 'bg-[#64ABDE] text-white'
+                                            : 'text-[#64ABDE] hover:bg-[#64ABDE]/10'
                                         }`}
                                       >
-                                        {formatCurrency(offer.preco_normalizado)}
-                                        {isNegotiated && (
-                                          <span className="block text-[10px] font-normal text-blue-600">
-                                            Negociado
-                                          </span>
-                                        )}
-                                        {supplierQuotesMode &&
-                                          isNegotiated &&
-                                          pdfUnitNorm !== offer.preco_normalizado && (
-                                            <span className="block text-[10px] font-normal text-gray-400 line-through">
-                                              {formatCurrency(pdfUnitNorm)}
-                                            </span>
-                                          )}
-                                        {supplierQuotesMode && offer.conversion_factor !== 1 && (
-                                          <span className="block text-[10px] font-normal text-gray-400">
-                                            PDF: {formatCurrency(offer.preco_unit)} · fator{' '}
-                                            {formatNumber(offer.conversion_factor)}×
-                                          </span>
-                                        )}
-                                      </td>
-                                      <td className="px-3 py-2 text-xs text-right text-gray-700">
-                                        {formatCurrency(offer.total_normalizado)}
-                                      </td>
-                                      {onOfferSelect && (
-                                        <td className="px-3 py-2 text-center text-xs">
-                                          {isHighlighted ? (
-                                            <span className="font-medium text-blue-700">
-                                              Selecionado
-                                            </span>
-                                          ) : (
-                                            <span className="text-[#64ABDE] hover:underline">
-                                              Validar
-                                            </span>
-                                          )}
-                                        </td>
-                                      )}
-                                    </tr>
-                                  );
-                                })}
-                            </tbody>
-                          </table>
-                        </div>
+                                        {isHighlighted ? 'Selecionado' : 'Selecionar'}
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </td>
                     </tr>
                   )}
@@ -330,21 +255,13 @@ export default function ScenarioItemExpandableTable({
               );
             })}
           </tbody>
-          <tfoot className="bg-gray-50 sticky bottom-0">
-            <tr className="border-t-2 border-gray-200">
-              <td
-                colSpan={4}
-                className="px-4 py-3 text-sm font-semibold text-gray-700 text-right"
-              >
-                {totalLabel}
-              </td>
-              <td className="px-4 py-3 text-right text-sm font-bold text-[#1D3140]">
-                {formatCurrency(totalValue)}
-              </td>
-              <td />
-            </tr>
-          </tfoot>
         </table>
+      </div>
+      <div className="flex justify-end pt-2 border-t border-gray-100">
+        <p className="text-sm text-gray-600">
+          {totalLabel}{' '}
+          <span className="font-bold text-[#1D3140]">{formatCurrency(totalValue)}</span>
+        </p>
       </div>
     </div>
   );

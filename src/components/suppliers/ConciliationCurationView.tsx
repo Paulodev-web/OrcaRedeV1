@@ -45,6 +45,8 @@ export type SessionConciliationPayload = {
   budgetMaterials: BudgetMaterialOption[];
   supplier_column_order: string[];
   quotes_summary: SessionConciliationQuoteSummary[];
+  budget_consolidated_count: number;
+  excluded_material_ids: string[];
 };
 
 interface Props {
@@ -358,12 +360,22 @@ export default function ConciliationCurationView({
   const [activeSupplier, setActiveSupplier] = useState<string>(
     () => initialPayload?.supplier_column_order[0] ?? '',
   );
+  const [budgetConsolidatedCount, setBudgetConsolidatedCount] = useState(
+    () => initialPayload?.budget_consolidated_count ?? initialPayload?.materials.length ?? 0,
+  );
+  const [excludedCount, setExcludedCount] = useState(
+    () => initialPayload?.excluded_material_ids.length ?? 0,
+  );
 
   useEffect(() => {
     if (initialPayload) {
       setMaterials(initialPayload.materials);
       setUnlinked(initialPayload.unlinked_items);
       setSupplierColumnOrder(initialPayload.supplier_column_order);
+      setBudgetConsolidatedCount(
+        initialPayload.budget_consolidated_count ?? initialPayload.materials.length,
+      );
+      setExcludedCount(initialPayload.excluded_material_ids.length);
       setLoadError(null);
       setActiveSupplier((prev) => {
         if (initialPayload.supplier_column_order.includes(prev)) return prev;
@@ -438,6 +450,10 @@ export default function ConciliationCurationView({
           setMaterials(res.data.materials);
           setUnlinked(res.data.unlinked_items);
           setSupplierColumnOrder(res.data.supplier_column_order);
+          setBudgetConsolidatedCount(
+            res.data.budget_consolidated_count ?? res.data.materials.length,
+          );
+          setExcludedCount(res.data.excluded_material_ids.length);
           setLoadError(null);
           setLastRefreshedAt(
             new Intl.DateTimeFormat('pt-BR', {
@@ -623,7 +639,9 @@ export default function ConciliationCurationView({
         </div>
         <p className="mt-2 text-sm text-slate-600">
           Exibindo{' '}
-          <span className="font-semibold text-[#1D3140]">{filteredMaterials.length}</span>
+          <span className="font-semibold text-[#1D3140]">
+            {searchFilter ? filteredMaterials.length : budgetConsolidatedCount || materials.length}
+          </span>
           {searchFilter && materials.length !== filteredMaterials.length ? (
             <>
               {' '}
@@ -631,6 +649,13 @@ export default function ConciliationCurationView({
             </>
           ) : null}{' '}
           material(is) do orçamento consolidado
+          {excludedCount > 0 && (
+            <span className="text-slate-500">
+              {' '}
+              · <span className="font-semibold text-[#1D3140]">{excludedCount}</span> excluído(s) da
+              sessão
+            </span>
+          )}
           {unlinked.length > 0 && (
             <span className="text-slate-500">
               {' '}
@@ -676,7 +701,10 @@ export default function ConciliationCurationView({
                   (it) => it.supplier_name === activeSupplier,
                 ) as LinkedItem[];
                 return (
-                  <tr key={mat.material_id} className="transition-colors hover:bg-gray-50/50">
+                  <tr
+                    key={mat.material_id}
+                    className={`transition-colors hover:bg-gray-50/50 ${mat.is_session_excluded ? 'opacity-60' : ''}`}
+                  >
                     <td className="sticky left-0 z-10 border-r border-gray-200 bg-white px-4 py-3 align-top shadow-[1px_0_0_0_#e5e7eb]">
                       <p className="break-words text-sm font-semibold leading-snug text-[#1D3140]">
                         {mat.material_name}
@@ -686,6 +714,11 @@ export default function ConciliationCurationView({
                         {mat.material_unit && <span className="ml-1 text-gray-300">·</span>}
                         <span className="ml-1">{mat.material_unit}</span>
                       </p>
+                      {mat.is_session_excluded && (
+                        <span className="mt-1 inline-flex text-[10px] font-medium text-slate-600 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-full">
+                          Excluído da sessão
+                        </span>
+                      )}
                     </td>
                     <td className="min-w-0 px-4 py-3 align-top">
                       <SupplierCell
