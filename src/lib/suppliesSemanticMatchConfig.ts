@@ -16,6 +16,9 @@ export const CONFIDENCE_AUTO_APPLY_THRESHOLD = 80;
 /** Retentativas por lote em falha transitória do Gemini. */
 export const DEFAULT_SEMANTIC_MATCH_BATCH_RETRY = 1;
 
+/** Modelo Gemini para match semântico na conciliação (melhor que flash na extração). */
+export const DEFAULT_SEMANTIC_MATCH_GEMINI_MODEL = 'gemini-2.5-pro';
+
 /** BOM considerada "grande" — força lote menor. */
 export const LARGE_BOM_MATERIAL_COUNT = 250;
 
@@ -68,4 +71,9 @@ export function getSemanticMatchBatchRetry(): number {
     process.env.SEMANTIC_MATCH_BATCH_RETRY,
     DEFAULT_SEMANTIC_MATCH_BATCH_RETRY
   );
+}
+
+export function getSemanticMatchGeminiModel(): string {
+  const fromEnv = process.env.SEMANTIC_MATCH_GEMINI_MODEL?.trim();
+  return fromEnv || DEFAULT_SEMANTIC_MATCH_GEMINI_MODEL;
 }

@@ -15,10 +15,9 @@ import {
   CONFIDENCE_AUTO_APPLY_THRESHOLD,
   getSemanticMatchBatchRetry,
   getSemanticMatchBatchSize,
+  getSemanticMatchGeminiModel,
   getSemanticMatchMaxCandidates,
 } from '@/lib/suppliesSemanticMatchConfig';
-
-const GEMINI_MODEL = 'gemini-2.5-flash';
 
 export interface SemanticMatchLevel2Result {
   matched: number;
@@ -101,7 +100,7 @@ async function persistBatchSuggestions(
       confidence_score: s.confidenceScore,
       rationale: s.rationale ?? null,
       status: 'suggested' as const,
-      model: GEMINI_MODEL,
+      model: getSemanticMatchGeminiModel(),
     }));
 
   if (rows.length === 0) return;

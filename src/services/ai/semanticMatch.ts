@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getSemanticMatchGeminiModel } from '@/lib/suppliesSemanticMatchConfig';
 import type {
   UnconciliatedItem,
   SystemMaterial,
@@ -133,7 +134,7 @@ export async function semanticMatch(
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash',
+    model: getSemanticMatchGeminiModel(),
     generationConfig: {
       responseMimeType: 'application/json',
     },
