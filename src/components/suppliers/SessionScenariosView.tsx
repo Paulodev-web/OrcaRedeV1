@@ -869,6 +869,24 @@ function ScenarioIdealView({
         </div>
       </div>
 
+      <p className="text-sm text-slate-600">
+        Exibindo{' '}
+        <span className="font-semibold text-[#1D3140]">
+          {filteredIdealItems.filter((i) => i.net_qty > 0).length}
+        </span>{' '}
+        material(is) com necessidade de compra
+        {filteredIdealItems.length !== filteredIdealItems.filter((i) => i.net_qty > 0).length && (
+          <>
+            {' '}
+            (de <span className="font-semibold text-[#1D3140]">{filteredIdealItems.length}</span> do
+            orçamento consolidado)
+          </>
+        )}
+        {selectedSupplierSlug !== 'all' && (
+          <span className="text-slate-500"> · filtro por fornecedor ativo no export PDF</span>
+        )}
+      </p>
+
       <ScenarioItemExpandableTable
         items={filteredIdealItems}
         priceDisplay="supplierQuotes"
@@ -1006,6 +1024,9 @@ function RankingView({
         <button type="button" onClick={() => setRankingTab('Ideal')} className={tabBtnClass(rankingTab === 'Ideal')}>
           <Target className="h-4 w-4" />
           Cenário Ideal
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+            {scenarios.scenarioB.items.filter((i) => i.net_qty > 0).length}
+          </span>
           {idealUnvalidated > 0 && (
             <span className="ml-1 inline-flex items-center px-1.5 py-0.5 bg-amber-100 text-amber-800 text-xs rounded-full border border-amber-200">
               {idealUnvalidated} sug.
@@ -1588,6 +1609,9 @@ export default function SessionScenariosView({
         <div className="flex shrink-0 border-b border-gray-200 bg-white/80">
           <button type="button" onClick={() => setActiveTab('tabelona')} className={tabBtnClass(activeTab === 'tabelona')}>
             <Table2 className="h-4 w-4" /> Tabela de Avaliação
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+              {filteredScenarios.filteredItems.length}
+            </span>
           </button>
           <button type="button" onClick={() => setActiveTab('ranking')} className={tabBtnClass(activeTab === 'ranking')}>
             <Trophy className="h-4 w-4" /> Ranking (Cenários A e B)
@@ -1598,6 +1622,8 @@ export default function SessionScenariosView({
           {activeTab === 'tabelona' && (
             <ScenarioComparisonTable
               items={filteredScenarios.filteredItems}
+              totalItemCount={scenarios.scenarioB.items.length}
+              isFiltered={filteredScenarios.isFiltered}
               quotes={quotesWithOffers}
               enabledQuoteIds={effectiveFilterState.enabledQuoteIds}
               onMaterialClick={handleMaterialClick}

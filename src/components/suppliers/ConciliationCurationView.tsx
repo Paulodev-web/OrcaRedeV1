@@ -621,6 +621,24 @@ export default function ConciliationCurationView({
             onChange={(e) => setSearchFilter(e.target.value)}
           />
         </div>
+        <p className="mt-2 text-sm text-slate-600">
+          Exibindo{' '}
+          <span className="font-semibold text-[#1D3140]">{filteredMaterials.length}</span>
+          {searchFilter && materials.length !== filteredMaterials.length ? (
+            <>
+              {' '}
+              de <span className="font-semibold text-[#1D3140]">{materials.length}</span>
+            </>
+          ) : null}{' '}
+          material(is) do orçamento consolidado
+          {unlinked.length > 0 && (
+            <span className="text-slate-500">
+              {' '}
+              · <span className="font-semibold text-[#1D3140]">{unlinked.length}</span> item(ns) do
+              PDF sem vínculo
+            </span>
+          )}
+        </p>
       </div>
 
       {loadError && (

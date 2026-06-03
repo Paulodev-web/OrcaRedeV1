@@ -220,6 +220,9 @@ interface Props {
   onRemoveMaterial?: (item: ScenarioItem) => void;
   isRemovingMaterial?: boolean;
   onManualQuoteRequest?: (item: ScenarioItem) => void;
+  /** Total no BOM antes de filtros do painel (opcional). */
+  totalItemCount?: number;
+  isFiltered?: boolean;
 }
 
 export default function ScenarioComparisonTable({
@@ -236,6 +239,8 @@ export default function ScenarioComparisonTable({
   onRemoveMaterial,
   isRemovingMaterial = false,
   onManualQuoteRequest,
+  totalItemCount,
+  isFiltered = false,
 }: Props) {
   const quoteMap = useMemo(() => new Map(quotes.map((q) => [q.id, q])), [quotes]);
   const availableQuoteIds = useMemo(() => new Set(quotes.map((q) => q.id)), [quotes]);
@@ -408,8 +413,30 @@ export default function ScenarioComparisonTable({
     );
   }
 
+  const withPurchaseCount = useMemo(
+    () => items.filter((item) => item.net_qty > 0).length,
+    [items]
+  );
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <p className="shrink-0 text-sm text-slate-600">
+        Exibindo <span className="font-semibold text-[#1D3140]">{items.length}</span>
+        {isFiltered && totalItemCount != null && totalItemCount !== items.length ? (
+          <>
+            {' '}
+            de <span className="font-semibold text-[#1D3140]">{totalItemCount}</span>
+          </>
+        ) : null}{' '}
+        material(is)
+        {withPurchaseCount !== items.length && (
+          <span className="text-slate-500">
+            {' '}
+            · <span className="font-semibold text-[#1D3140]">{withPurchaseCount}</span> com necessidade de
+            compra
+          </span>
+        )}
+      </p>
       <p className="shrink-0 text-xs text-gray-500">
         Nec. e Compra vêm do orçamento de engenharia (menos estoque). Colunas de preço são das cotações dos
         fornecedores — não da lista de preços do orçamento. Validação principal no Cenário Ideal (Ranking); aqui
