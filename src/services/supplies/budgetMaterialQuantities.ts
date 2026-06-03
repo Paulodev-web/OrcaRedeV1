@@ -1,5 +1,10 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  consolidateMaterialsFromBudgetDetails,
+  type ConsolidatedMaterialRow,
+} from '@/services/budgetMaterialAggregation';
+import type { BudgetDetails, BudgetPostDetail } from '@/types';
 import { getSessionExcludedMaterialIds } from '@/services/supplies/materialSuppliesFilter';
 
 export interface BudgetMaterialQuantityRow {
@@ -8,6 +13,39 @@ export interface BudgetMaterialQuantityRow {
   name: string;
   unit: string;
   required_qty: number;
+}
+
+const BUDGET_POSTS_PAGE_SIZE = 2000;
+
+/** Mesmo select aninhado do Painel Consolidado / fetchBudgetDetails. */
+const BUDGET_POSTS_WITH_MATERIALS_SELECT = `
+  id, name, custom_name, counter, x_coord, y_coord,
+  post_types ( id, name, code, price ),
+  post_item_groups (
+    id, name, template_id,
+    post_item_group_materials (
+      material_id, quantity, price_at_addition,
+      materials ( id, code, name, unit, price )
+    )
+  ),
+  post_materials (
+    id, post_id, material_id, quantity, price_at_addition,
+    materials ( id, code, name, unit, price )
+  )
+`;
+
+function consolidatedRowsToMap(rows: ConsolidatedMaterialRow[]): Map<string, BudgetMaterialQuantityRow> {
+  const map = new Map<string, BudgetMaterialQuantityRow>();
+  for (const row of rows) {
+    map.set(row.materialId, {
+      id: row.materialId,
+      code: row.codigo,
+      name: row.nome,
+      unit: row.unidade,
+      required_qty: row.quantidade,
+    });
+  }
+  return map;
 }
 
 type MaterialRef = {
@@ -28,8 +66,7 @@ function placeholderMaterialRef(materialId: string): MaterialRef {
 
 /**
  * Agrega quantidades do orçamento por material_id (grupos + avulsos).
- * Mesma regra do Painel Consolidado — sem filtro active_in_supplies.
- * Linhas sem join em `materials` ainda entram (placeholder), paridade com o painel.
+ * Usado em testes e fallbacks; produção prefere consolidateMaterialsFromBudgetDetails.
  */
 export function aggregateBudgetMaterialQuantities(
   groupRows: { material_id: string; quantity: number; materials: MaterialRef | null }[],
@@ -60,20 +97,6 @@ export function aggregateBudgetMaterialQuantities(
   return map;
 }
 
-type RawRow = {
-  material_id: string;
-  quantity: number;
-  materials: MaterialRef | MaterialRef[] | null;
-};
-
-function normalizeRows(rows: RawRow[]) {
-  return rows.map((row) => ({
-    material_id: row.material_id,
-    quantity: row.quantity,
-    materials: Array.isArray(row.materials) ? row.materials[0] ?? null : row.materials,
-  }));
-}
-
 export interface LoadConsolidatedBudgetMaterialsOptions {
   /** @deprecated Exclusões de sessão não removem mais linhas da lista consolidada. */
   sessionId?: string | null;
@@ -81,44 +104,44 @@ export interface LoadConsolidatedBudgetMaterialsOptions {
 }
 
 /**
- * Lista completa do orçamento consolidado (paridade com Painel Consolidado).
- * Não remove `session_material_exclusions` — use getSessionExcludedMaterialIds para UI/compra.
+ * Lista completa do orçamento consolidado — mesma regra do Painel Consolidado.
+ * Carrega postes com materiais aninhados (evita corte de 1000 linhas em query plana).
  */
 export async function loadFullConsolidatedBudgetMaterials(
   supabase: SupabaseClient,
   budgetId: string
 ): Promise<Map<string, BudgetMaterialQuantityRow>> {
-  const { data: groupMaterials, error: gmError } = await supabase
-    .from('post_item_group_materials')
-    .select(`
-      material_id,
-      quantity,
-      materials (id, code, name, unit),
-      post_item_groups!inner (
-        budget_posts!inner (budget_id)
-      )
-    `)
-    .eq('post_item_groups.budget_posts.budget_id', budgetId);
+  const { data: budgetRow, error: budgetError } = await supabase
+    .from('budgets')
+    .select('id, project_name, status, render_version')
+    .eq('id', budgetId)
+    .single();
 
-  const { data: looseMaterials, error: lmError } = await supabase
-    .from('post_materials')
-    .select(`
-      material_id,
-      quantity,
-      materials (id, code, name, unit),
-      budget_posts!inner (budget_id)
-    `)
-    .eq('budget_posts.budget_id', budgetId);
-
-  if (gmError || lmError) {
-    const errMsg = gmError?.message ?? lmError?.message ?? 'Erro ao buscar materiais do orçamento.';
-    throw new Error(errMsg);
+  if (budgetError) {
+    throw new Error(budgetError.message ?? 'Erro ao buscar orçamento.');
   }
 
-  return aggregateBudgetMaterialQuantities(
-    normalizeRows((groupMaterials ?? []) as unknown as RawRow[]),
-    normalizeRows((looseMaterials ?? []) as unknown as RawRow[])
-  );
+  const { data: postsData, error: postsError } = await supabase
+    .from('budget_posts')
+    .select(BUDGET_POSTS_WITH_MATERIALS_SELECT)
+    .eq('budget_id', budgetId)
+    .order('counter', { ascending: true })
+    .limit(BUDGET_POSTS_PAGE_SIZE);
+
+  if (postsError) {
+    throw new Error(postsError.message ?? 'Erro ao buscar postes do orçamento.');
+  }
+
+  const posts = (postsData ?? []) as unknown as BudgetPostDetail[];
+  const budgetDetails: BudgetDetails = {
+    id: budgetRow.id,
+    name: budgetRow.project_name ?? '',
+    status: budgetRow.status === 'Finalizado' ? 'Finalizado' : 'Em Andamento',
+    render_version: budgetRow.render_version ?? undefined,
+    posts,
+  };
+
+  return consolidatedRowsToMap(consolidateMaterialsFromBudgetDetails(budgetDetails));
 }
 
 /** @alias loadFullConsolidatedBudgetMaterials */
