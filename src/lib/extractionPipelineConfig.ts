@@ -12,12 +12,14 @@ export function getInternalJobSecret(): string | undefined {
 }
 
 export function getPipelineContinueUrl(): string {
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ||
+    process.env.VERCEL_PROJECT_PRODUCTION_URL?.replace(/\/$/, '');
+  if (appUrl) {
+    return `${appUrl.startsWith('http') ? appUrl : `https://${appUrl}`}/api/process-pdfs/continue`;
+  }
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}/api/process-pdfs/continue`;
-  }
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '');
-  if (appUrl) {
-    return `${appUrl}/api/process-pdfs/continue`;
   }
   return 'http://localhost:3000/api/process-pdfs/continue';
 }

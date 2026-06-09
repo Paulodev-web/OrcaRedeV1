@@ -1,3 +1,4 @@
+import { after } from 'next/server';
 import { NextResponse } from 'next/server';
 import {
   createSupabaseServerClient,
@@ -83,7 +84,9 @@ export async function POST(request: Request) {
 
     const stepResult = await runExtractionPipelineStep(jobId);
     if (stepResult.hasMore) {
-      chainExtractionStep(jobId);
+      after(async () => {
+        await chainExtractionStep(jobId);
+      });
     }
 
     return NextResponse.json({ ok: true, job_id: jobId, has_more: stepResult.hasMore });

@@ -1,3 +1,4 @@
+import { after } from 'next/server';
 import { NextResponse } from 'next/server';
 import {
   createSupabaseServerClient,
@@ -131,8 +132,11 @@ export async function POST(request: Request) {
     processingClaimed = true;
 
     const stepResult = await runExtractionPipelineStep(jobId);
-    if (stepResult.hasMore) {
-      chainExtractionStep(jobId);
+    if (stepResult.hasMore && jobId) {
+      const chainJobId = jobId;
+      after(async () => {
+        await chainExtractionStep(chainJobId);
+      });
     }
 
     return NextResponse.json({ status: 'queued', job_id: jobId }, { status: 202 });
