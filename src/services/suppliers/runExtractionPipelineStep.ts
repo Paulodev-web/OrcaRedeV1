@@ -1,9 +1,6 @@
 import { revalidatePath } from 'next/cache';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseServiceRoleClient } from '@/lib/supabaseServer';
-import { extractSupplierQuoteWithGemini } from '@/services/ai/geminiSupplierQuote';
-import { persistSupplierQuoteFromExtraction } from '@/services/suppliers/persistSupplierQuoteFromExtraction';
-import { resolveSupplierForQuote } from '@/services/suppliers/resolveSupplierForQuote';
 import { autoMatchQuoteItems } from '@/services/suppliers/autoMatchQuoteItems';
 import {
   buildSemanticMatchPipelineContext,
@@ -11,7 +8,7 @@ import {
   type SemanticMatchPipelineContext,
 } from '@/services/suppliers/runSemanticMatchLevel2';
 
-export type PipelinePhase = 'extract' | 'match' | 'finalize';
+export type PipelinePhase = 'extract' | 'post_extract' | 'match' | 'finalize';
 
 export interface PipelineContextJson {
   supplierName: string;
@@ -131,14 +128,17 @@ async function recoverMatchPhaseFromExistingQuote(
   return { hasMore: true };
 }
 
-async function runExtractPhase(
+async function runPostExtractPhase(
   supabase: SupabaseClient,
   jobId: string,
   job: Record<string, unknown>
 ): Promise<PipelineStepResult> {
-  const existingQuoteId = job.quote_id as string | null;
-  if (existingQuoteId) {
-    return recoverMatchPhaseFromExistingQuote(supabase, jobId, job, existingQuoteId);
+  const userId = job.user_id as string;
+  const quoteId = job.quote_id as string | null;
+
+  if (!quoteId) {
+    console.warn('[runExtractionPipelineStep] post_extract sem quote_id; aguardando Edge', jobId);
+    return { hasMore: false };
   }
 
   const sessionRaw = job.quotation_sessions as unknown;
@@ -147,7 +147,6 @@ async function runExtractPhase(
   ) as {
     id: string;
     budget_id: string | null;
-    status: string;
   } | null;
 
   if (!session) {
@@ -155,77 +154,15 @@ async function runExtractPhase(
     return { hasMore: false };
   }
 
-  if (session.status === 'completed') {
-    await markJobError(
-      supabase,
-      jobId,
-      'Esta sessão está encerrada; não é possível processar novos arquivos.'
-    );
-    return { hasMore: false };
-  }
+  const { data: quote } = await supabase
+    .from('supplier_quotes')
+    .select('supplier_name')
+    .eq('id', quoteId)
+    .single();
 
-  const userId = job.user_id as string;
-  const filePath = job.file_path as string;
+  const supplierName = quote?.supplier_name ?? 'Fornecedor';
 
-  const { data: blob, error: downloadError } = await supabase.storage
-    .from('fornecedores_pdfs')
-    .download(filePath);
-
-  if (downloadError || !blob) {
-    const msg = `Erro ao baixar o PDF: ${downloadError?.message ?? 'arquivo não encontrado'}`;
-    await markJobError(supabase, jobId, msg);
-    return { hasMore: false };
-  }
-
-  const buffer = Buffer.from(await blob.arrayBuffer());
-
-  if (buffer.length < 200) {
-    await markJobError(supabase, jobId, 'O arquivo PDF parece estar vazio ou corrompido.');
-    return { hasMore: false };
-  }
-
-  const estimatedSeconds = Math.max(20, Math.round(buffer.length / 50_000));
-  await supabase.from('extraction_jobs').update({ estimated_time: estimatedSeconds }).eq('id', jobId);
-
-  const gemini = await extractSupplierQuoteWithGemini(buffer);
-  if (!gemini.success) {
-    await markJobError(supabase, jobId, gemini.error);
-    return { hasMore: false };
-  }
-
-  const supplierId = job.supplier_id as string | null;
-  if (!supplierId) {
-    await markJobError(
-      supabase,
-      jobId,
-      'Selecione um fornecedor cadastrado antes de processar o PDF.'
-    );
-    return { hasMore: false };
-  }
-
-  const resolved = await resolveSupplierForQuote(supabase, userId, supplierId);
-  if ('error' in resolved) {
-    await markJobError(supabase, jobId, resolved.error);
-    return { hasMore: false };
-  }
-
-  const persist = await persistSupplierQuoteFromExtraction(supabase, {
-    userId,
-    budgetId: session.budget_id,
-    sessionId: session.id,
-    supplierId: resolved.id,
-    pdfPath: filePath,
-    observacoesGerais: gemini.data.observacoesGerais,
-    quoteDate: gemini.data.quoteDate,
-    items: gemini.data.items,
-  });
-
-  if ('error' in persist) {
-    await markJobError(supabase, jobId, persist.error);
-    return { hasMore: false };
-  }
-
-  const level1 = await autoMatchQuoteItems(supabase, userId, persist.quoteId).catch((err) => {
+  const level1 = await autoMatchQuoteItems(supabase, userId, quoteId).catch((err) => {
     console.warn('[runExtractionPipelineStep] Nível 1 auto-match falhou:', err);
     return { matched: 0, total: 0 };
   });
@@ -237,8 +174,8 @@ async function runExtractPhase(
   const matchCtx = await buildSemanticMatchPipelineContext(
     supabase,
     userId,
-    persist.quoteId,
-    resolved.name,
+    quoteId,
+    supplierName,
     session.budget_id,
     session.id,
     { stepMode: true }
@@ -248,7 +185,7 @@ async function runExtractPhase(
   const totalBatches = batchItemIds.length;
 
   const pipelineContext: PipelineContextJson = {
-    supplierName: resolved.name,
+    supplierName,
     budgetId: session.budget_id,
     sessionId: session.id,
     batchItemIds,
@@ -258,7 +195,7 @@ async function runExtractPhase(
     await supabase
       .from('extraction_jobs')
       .update({
-        quote_id: persist.quoteId,
+        quote_id: quoteId,
         pipeline_phase: 'finalize',
         match_batch_index: 0,
         match_total_batches: 0,
@@ -273,7 +210,7 @@ async function runExtractPhase(
   await supabase
     .from('extraction_jobs')
     .update({
-      quote_id: persist.quoteId,
+      quote_id: quoteId,
       pipeline_phase: 'match',
       match_batch_index: 0,
       match_total_batches: totalBatches,
@@ -282,10 +219,33 @@ async function runExtractPhase(
     .eq('id', jobId);
 
   console.log(
-    `[runExtractionPipelineStep] Extração concluída; ${totalBatches} lotes L2 agendados`
+    `[runExtractionPipelineStep] Pós-extração concluída; ${totalBatches} lotes L2 agendados`
   );
 
   return { hasMore: true };
+}
+
+async function runExtractPhase(
+  supabase: SupabaseClient,
+  jobId: string,
+  job: Record<string, unknown>
+): Promise<PipelineStepResult> {
+  const existingQuoteId = job.quote_id as string | null;
+  if (existingQuoteId) {
+    return recoverMatchPhaseFromExistingQuote(supabase, jobId, job, existingQuoteId);
+  }
+
+  if (!job.quote_id) {
+    console.warn('[runExtractionPipelineStep] extract aguardando Edge Function', jobId);
+    return { hasMore: false };
+  }
+
+  await markJobError(
+    supabase,
+    jobId,
+    'Extração deve ser executada na Edge Function. Reprocesse o PDF.'
+  );
+  return { hasMore: false };
 }
 
 async function runMatchPhase(
@@ -439,6 +399,8 @@ export async function runExtractionPipelineStep(jobId: string): Promise<Pipeline
     switch (phase) {
       case 'extract':
         return runExtractPhase(supabase, jobId, job);
+      case 'post_extract':
+        return runPostExtractPhase(supabase, jobId, job);
       case 'match':
         return runMatchPhase(supabase, jobId, job);
       case 'finalize':

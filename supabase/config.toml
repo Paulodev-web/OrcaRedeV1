@@ -1,0 +1,13 @@
+# Supabase local config — timeout da Edge Function de extração (segundos).
+# Em produção, confirme também no Dashboard se necessário.
+
+[functions.extract-supplier-pdf]
+verify_jwt = false
+
+[edge_runtime]
+policy = "per_worker"
+inspector_port = 8083
+
+# Request timeout for edge functions (max depends on plan; 150s is typical)
+[functions]
+# Note: per-function timeout may also be set via Dashboard → Edge Functions → Settings

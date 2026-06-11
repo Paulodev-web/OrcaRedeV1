@@ -8,7 +8,19 @@ export const STEP_MODE_SEMANTIC_MATCH_BATCH_SIZE = 5;
 export const STEP_MODE_SEMANTIC_MATCH_MAX_CANDIDATES = 30;
 
 export function getInternalJobSecret(): string | undefined {
-  return process.env.INTERNAL_JOB_SECRET?.trim() || undefined;
+  return (
+    process.env.INTERNAL_JOB_SECRET?.trim() ||
+    process.env.ORCAREDE_JOB_SECRET?.trim() ||
+    undefined
+  );
+}
+
+export function getSupabaseExtractFunctionUrl(): string | undefined {
+  const base =
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '') ||
+    process.env.SUPABASE_URL?.replace(/\/$/, '');
+  if (!base) return undefined;
+  return `${base}/functions/v1/extract-supplier-pdf`;
 }
 
 export function getPipelineContinueUrl(): string {

@@ -18,10 +18,15 @@ async function authorizeContinueRequest(
   jobId: string
 ): Promise<{ authorized: boolean; error?: string }> {
   const secret = getInternalJobSecret();
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   const authHeader = request.headers.get('authorization');
   const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
   if (secret && bearerToken === secret) {
+    return { authorized: true };
+  }
+
+  if (serviceRoleKey && bearerToken === serviceRoleKey) {
     return { authorized: true };
   }
 

@@ -5,10 +5,11 @@ import { getInternalJobSecret, getPipelineContinueUrl } from '@/lib/extractionPi
  * Deve ser chamado via `after()` na rota — fetch solto morre ao encerrar a lambda.
  */
 export async function chainExtractionStep(jobId: string): Promise<void> {
-  const secret = getInternalJobSecret();
+  const secret =
+    getInternalJobSecret() || process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (!secret) {
     console.error(
-      '[chainExtractionStep] INTERNAL_JOB_SECRET não configurado; pipeline não continuará para job',
+      '[chainExtractionStep] INTERNAL_JOB_SECRET ou SUPABASE_SERVICE_ROLE_KEY não configurado; pipeline não continuará para job',
       jobId
     );
     return;

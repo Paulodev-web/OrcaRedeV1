@@ -5,8 +5,7 @@ import {
   createSupabaseServiceRoleClient,
   requireAuthUserId,
 } from '@/lib/supabaseServer';
-import { chainExtractionStep } from '@/services/suppliers/chainExtractionStep';
-import { runExtractionPipelineStep } from '@/services/suppliers/runExtractionPipelineStep';
+import { invokeExtractOnEdge } from '@/services/suppliers/invokeExtractOnEdge';
 
 export const runtime = 'nodejs';
 /** Um step por invocação — compatível com Vercel Hobby (até 60s). */
@@ -131,13 +130,10 @@ export async function POST(request: Request) {
 
     processingClaimed = true;
 
-    const stepResult = await runExtractionPipelineStep(jobId);
-    if (stepResult.hasMore && jobId) {
-      const chainJobId = jobId;
-      after(async () => {
-        await chainExtractionStep(chainJobId);
-      });
-    }
+    const chainJobId = jobId;
+    after(async () => {
+      await invokeExtractOnEdge(chainJobId);
+    });
 
     return NextResponse.json({ status: 'queued', job_id: jobId }, { status: 202 });
   } catch (err: unknown) {
