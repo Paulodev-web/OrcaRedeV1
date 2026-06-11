@@ -818,31 +818,6 @@ function ScenarioIdealView({
         </div>
       )}
 
-      {ideal.unvalidatedCount > 0 && (
-        <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-amber-800">
-            <p className="font-medium">
-              {ideal.unvalidatedCount} item(ns) com sugestão automática (menor preço)
-            </p>
-            <p className="text-amber-600 mt-0.5">
-              Expanda a linha e clique em um fornecedor para validar, ou use &quot;Validar todos&quot;.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {ideal.pendingCount > 0 && (
-        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-red-800">
-            <p className="font-medium">
-              {ideal.pendingCount} material(is) sem cotação para compra
-            </p>
-          </div>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
           <p className="text-xs font-semibold uppercase text-blue-700">Total Cenário Ideal</p>
@@ -1495,13 +1470,6 @@ export default function SessionScenariosView({
     [scenarios.scenarioB.items, idealSelections]
   );
 
-  const materialsWithoutQuoteCount = useMemo(
-    () =>
-      scenarios.scenarioB.items.filter((item) => item.net_qty > 0 && item.all_offers.length === 0)
-        .length,
-    [scenarios.scenarioB.items]
-  );
-
   const handleValidateAll = useCallback(() => {
     const rows: IdealSelectionRow[] = [];
     for (const item of scenarios.scenarioB.items) {
@@ -1595,22 +1563,6 @@ export default function SessionScenariosView({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6">
-      {materialsWithoutQuoteCount > 0 && (
-        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
-          <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
-          <div className="text-sm text-amber-900">
-            <p className="font-medium">
-              {materialsWithoutQuoteCount} material(is) do orçamento consolidado sem cotação nesta
-              sessão
-            </p>
-            <p className="mt-0.5 text-amber-800">
-              A lista segue o mesmo escopo do Painel Consolidado. Importe ou concilie PDFs dos
-              fornecedores para preencher preços — itens só no PDF sem vínculo não entram na coluna.
-            </p>
-          </div>
-        </div>
-      )}
-
       <ScenarioSummaryCards scenarios={filteredScenarios} isFiltered={filteredScenarios.isFiltered} />
 
       <SuggestionCards scenarios={scenarios} />
