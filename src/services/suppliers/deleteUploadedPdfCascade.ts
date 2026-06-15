@@ -161,22 +161,16 @@ export async function deleteUploadedPdfCascade(
   }
 
   if (resolvedQuoteId) {
-    const quoteDelete = supabase
+    // Exclusão cirúrgica por id — não usar pdf_path para evitar deletar cotações de outros PDFs com mesmo caminho
+    const { error: quotesError } = await supabase
       .from('supplier_quotes')
       .delete()
       .eq('user_id', userId)
-      .eq('session_id', sessionId);
-
-    if (filePath) {
-      const { error: quotesError } = await quoteDelete.or(
-        `id.eq.${resolvedQuoteId},pdf_path.eq.${filePath}`
-      );
-      if (quotesError) return { error: quotesError.message };
-    } else {
-      const { error: quotesError } = await quoteDelete.eq('id', resolvedQuoteId);
-      if (quotesError) return { error: quotesError.message };
-    }
+      .eq('session_id', sessionId)
+      .eq('id', resolvedQuoteId);
+    if (quotesError) return { error: quotesError.message };
   } else if (filePath) {
+    // Sem quoteId conhecido: limpeza de órfãos pelo caminho do arquivo
     const { error: quotesError } = await supabase
       .from('supplier_quotes')
       .delete()

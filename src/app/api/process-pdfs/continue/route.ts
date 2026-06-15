@@ -52,9 +52,11 @@ async function authorizeContinueRequest(
 }
 
 export async function POST(request: Request) {
+  let jobId: string | undefined;
+
   try {
     const body = (await request.json()) as { job_id?: string };
-    const jobId = body.job_id;
+    jobId = body.job_id;
 
     if (!jobId || typeof jobId !== 'string') {
       return NextResponse.json({ error: 'job_id é obrigatório.' }, { status: 400 });
@@ -89,8 +91,9 @@ export async function POST(request: Request) {
 
     const stepResult = await runExtractionPipelineStep(jobId);
     if (stepResult.hasMore) {
+      const resolvedJobId = jobId;
       after(async () => {
-        await chainExtractionStep(jobId);
+        await chainExtractionStep(resolvedJobId);
       });
     }
 
@@ -98,6 +101,16 @@ export async function POST(request: Request) {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro inesperado ao continuar o job.';
     console.error('[process-pdfs/continue]', err);
+    if (jobId) {
+      try {
+        const supabase = createSupabaseServiceRoleClient();
+        await supabase
+          .from('extraction_jobs')
+          .update({ status: 'error', error_message: message, finished_at: new Date().toISOString() })
+          .eq('id', jobId)
+          .eq('status', 'processing');
+      } catch {}
+    }
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

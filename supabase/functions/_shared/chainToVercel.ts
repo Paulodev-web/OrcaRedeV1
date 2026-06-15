@@ -11,15 +11,21 @@ function getChainAuthToken(): string | undefined {
 
 export async function chainToVercelContinue(
   jobId: string,
-  authTokenOverride?: string
+  authTokenOverride?: string,
+  continueUrlOverride?: string
 ): Promise<void> {
   const secret = authTokenOverride?.trim() || getChainAuthToken();
   const continueUrl =
-    Deno.env.get('PIPELINE_CONTINUE_URL')?.trim() ||
-    'https://orcaredeteste.vercel.app/api/process-pdfs/continue';
+    continueUrlOverride?.trim() ||
+    Deno.env.get('PIPELINE_CONTINUE_URL')?.trim();
 
   if (!secret) {
     console.error('[chainToVercel] nenhum token de chain configurado; job', jobId);
+    return;
+  }
+
+  if (!continueUrl) {
+    console.error('[chainToVercel] PIPELINE_CONTINUE_URL não configurada e pipeline_continue_url não recebido; job', jobId);
     return;
   }
 

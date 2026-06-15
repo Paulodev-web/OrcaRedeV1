@@ -22,6 +22,11 @@ import ExtractionCurationModal from '@/components/suppliers/ExtractionCurationMo
 import { getSupplierDisplayName } from '@/lib/supplierDisplay';
 import { storageFileNameFromPath } from '@/lib/quoteDisplay';
 import { MAX_PDFS_PER_QUOTATION } from '@/lib/suppliesLimits';
+import {
+  EXTRACT_AUTO_RESUME_MS,
+  EXTRACT_STUCK_ERROR_MS,
+  EXTRACT_UI_STUCK_MS,
+} from '@/lib/extractionPipelineConfig';
 
 interface QuoteRow {
   id: string;
@@ -43,6 +48,16 @@ interface Props {
 function fileLabel(path: string): string {
   const label = storageFileNameFromPath(path) || path.split('/').pop() || path;
   return label.length > 48 ? `${label.slice(0, 44)}…` : label;
+}
+
+function phaseLabel(phase: string): string {
+  switch (phase) {
+    case 'extract': return 'extraindo';
+    case 'post_extract': return 'pós-extração';
+    case 'match': return 'conciliando';
+    case 'finalize': return 'finalizando';
+    default: return phase;
+  }
 }
 
 const DELETE_PDF_CONFIRM_MESSAGE =
@@ -276,17 +291,37 @@ export default function SessionExtractionRealtime({
     }
   };
 
+  const jobNeedsExtractReinvoke = useCallback((job: ExtractionJobRow): boolean => {
+    return job.status === 'processing' && !job.quote_id;
+  }, []);
+
+  const resumeJobPipeline = useCallback(
+    async (job: ExtractionJobRow) => {
+      if (jobNeedsExtractReinvoke(job)) {
+        await enqueueJob(job.id);
+      } else {
+        await continueJob(job.id);
+      }
+    },
+    [jobNeedsExtractReinvoke],
+  );
+
   const isJobStuck = useCallback((job: ExtractionJobRow): boolean => {
     if (job.status !== 'processing' || !job.started_at) return false;
     const startedMs = new Date(job.started_at).getTime();
-    return Date.now() - startedMs > 3 * 60 * 1000;
+    return Date.now() - startedMs > EXTRACT_UI_STUCK_MS;
   }, []);
 
-  const handleResumeJob = async (jobId: string) => {
+  const isExtractTimedOut = useCallback((job: ExtractionJobRow): boolean => {
+    if (job.status !== 'processing' || job.quote_id || !job.started_at) return false;
+    return Date.now() - new Date(job.started_at).getTime() > EXTRACT_STUCK_ERROR_MS;
+  }, []);
+
+  const handleResumeJob = async (job: ExtractionJobRow) => {
     if (disabled || resumingJobId) return;
-    setResumingJobId(jobId);
+    setResumingJobId(job.id);
     try {
-      await continueJob(jobId);
+      await resumeJobPipeline(job);
       toast.success('Processamento retomado.');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro ao retomar processamento.';
@@ -296,7 +331,8 @@ export default function SessionExtractionRealtime({
     }
   };
 
-  const autoResumeAttemptedRef = useRef<Set<string>>(new Set());
+  const autoResumeCountRef = useRef<Map<string, number>>(new Map());
+  const extractTimeoutAttemptedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (disabled) return;
@@ -305,17 +341,33 @@ export default function SessionExtractionRealtime({
       (j) =>
         j.status === 'processing' &&
         j.started_at &&
-        Date.now() - new Date(j.started_at).getTime() > 60_000 &&
-        !autoResumeAttemptedRef.current.has(j.id)
+        Date.now() - new Date(j.started_at).getTime() > EXTRACT_AUTO_RESUME_MS &&
+        (autoResumeCountRef.current.get(j.id) ?? 0) < 3
     );
 
     for (const job of stuckJobs) {
-      autoResumeAttemptedRef.current.add(job.id);
-      void continueJob(job.id).catch((err) => {
-        console.warn('[SessionExtractionRealtime] auto-resume falhou', job.id, err);
+      const attempt = (autoResumeCountRef.current.get(job.id) ?? 0) + 1;
+      autoResumeCountRef.current.set(job.id, attempt);
+      void resumeJobPipeline(job).catch((err) => {
+        console.warn('[SessionExtractionRealtime] auto-resume falhou', job.id, `tentativa ${attempt}`, err);
       });
     }
-  }, [jobs, disabled]);
+  }, [jobs, disabled, resumeJobPipeline]);
+
+  useEffect(() => {
+    if (disabled) return;
+
+    const timedOut = jobs.filter(
+      (j) => isExtractTimedOut(j) && !extractTimeoutAttemptedRef.current.has(j.id)
+    );
+
+    for (const job of timedOut) {
+      extractTimeoutAttemptedRef.current.add(job.id);
+      void continueJob(job.id).catch((err) => {
+        console.warn('[SessionExtractionRealtime] extract timeout falhou', job.id, err);
+      });
+    }
+  }, [jobs, disabled, isExtractTimedOut]);
 
   const handleDeletePdf = async (params: { jobId?: string; quoteId?: string; label: string }) => {
     if (disabled || deletingKey) return;
@@ -448,14 +500,16 @@ export default function SessionExtractionRealtime({
                 <span className="flex-1 min-w-0 font-medium text-gray-800 truncate">
                   {fileLabel(j.file_path)}
                 </span>
-                <span className="text-xs uppercase text-gray-500">{j.status}</span>
+                <span className="text-xs uppercase text-gray-500">
+                  {j.pipeline_phase ? phaseLabel(j.pipeline_phase) : j.status}
+                </span>
                 {j.estimated_time != null && (
                   <span className="text-xs text-gray-400">~{j.estimated_time}s</span>
                 )}
                 {!disabled && isJobStuck(j) && (
                   <button
                     type="button"
-                    onClick={() => void handleResumeJob(j.id)}
+                    onClick={() => void handleResumeJob(j)}
                     disabled={resumingJobId === j.id}
                     className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-[#64ABDE]/60 bg-white px-2 py-1 text-xs font-medium text-[#1D3140] hover:bg-[#64ABDE]/10 disabled:opacity-50"
                   >
@@ -465,6 +519,27 @@ export default function SessionExtractionRealtime({
                       <RotateCcw className="h-3.5 w-3.5" />
                     )}
                     Retomar processamento
+                  </button>
+                )}
+                {!disabled && isJobStuck(j) && (
+                  <button
+                    type="button"
+                    title="Excluir PDF"
+                    disabled={deletingKey === j.id}
+                    onClick={() =>
+                      void handleDeletePdf({
+                        jobId: j.id,
+                        label: fileLabel(j.file_path),
+                      })
+                    }
+                    className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-red-200 bg-white px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    {deletingKey === j.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
+                    Excluir
                   </button>
                 )}
               </li>

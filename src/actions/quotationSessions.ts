@@ -281,6 +281,7 @@ export type ExtractionJobRow = {
   error_message: string | null;
   estimated_time: number | null;
   quote_id: string | null;
+  pipeline_phase: 'extract' | 'post_extract' | 'match' | 'finalize' | null;
   started_at: string | null;
   finished_at: string | null;
   created_at: string;

@@ -47,7 +47,7 @@ export async function listExtractionJobsBySessionRead(
     const { data, error } = await supabase
       .from('extraction_jobs')
       .select(
-        'id, session_id, file_path, supplier_name, status, error_message, estimated_time, quote_id, started_at, finished_at, created_at, updated_at'
+        'id, session_id, file_path, supplier_name, status, error_message, estimated_time, quote_id, pipeline_phase, started_at, finished_at, created_at, updated_at'
       )
       .eq('session_id', sessionId)
       .eq('user_id', userId)

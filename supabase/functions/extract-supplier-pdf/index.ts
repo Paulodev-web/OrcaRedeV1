@@ -37,10 +37,15 @@ Deno.serve(async (req: Request) => {
   let jobId: string | undefined;
 
   try {
-    const body = (await req.json()) as { job_id?: string; chain_token?: string };
+    const body = (await req.json()) as {
+      job_id?: string;
+      chain_token?: string;
+      pipeline_continue_url?: string;
+    };
     jobId = body.job_id;
     const chainToken =
       body.chain_token?.trim() || req.headers.get('x-orcarede-chain-pass')?.trim();
+    const pipelineContinueUrl = body.pipeline_continue_url?.trim();
 
     if (!jobId || typeof jobId !== 'string') {
       return new Response(JSON.stringify({ error: 'job_id é obrigatório.' }), {
@@ -62,6 +67,7 @@ Deno.serve(async (req: Request) => {
         file_path,
         status,
         supplier_id,
+        quote_id,
         quotation_sessions (
           id,
           budget_id,
@@ -83,6 +89,17 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({ error: 'Job não está em processamento.' }),
         { status: 409, headers: JSON_HEADERS }
+      );
+    }
+
+    // Idempotência: cotação já extraída → pular Gemini e encadear /continue direto
+    const existingQuoteId = (job as Record<string, unknown>).quote_id as string | null;
+    if (existingQuoteId) {
+      console.log('[extract-supplier-pdf] quote_id já existe, pulando extração', jobId, existingQuoteId);
+      await chainToVercelContinue(jobId, chainToken, pipelineContinueUrl);
+      return new Response(
+        JSON.stringify({ ok: true, job_id: jobId, quote_id: existingQuoteId, skipped: true }),
+        { status: 200, headers: JSON_HEADERS }
       );
     }
 
@@ -202,7 +219,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    await chainToVercelContinue(jobId, chainToken);
+    await chainToVercelContinue(jobId, chainToken, pipelineContinueUrl);
 
     return new Response(
       JSON.stringify({
