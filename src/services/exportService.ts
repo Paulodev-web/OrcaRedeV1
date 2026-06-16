@@ -1,5 +1,4 @@
 import * as XLSX from 'xlsx';
-import type { ExtraCostItem } from '@/types';
 
 export interface MaterialExport {
   materialId: string;
@@ -13,96 +12,41 @@ export interface MaterialExport {
 
 export interface ExportOptions {
   budgetName: string;
-  /** Preço de venda final (com margem) — usado no resumo. */
   totalCost: number;
   totalPosts: number;
   totalUniqueMaterials: number;
   exportDate: string;
-  custoMateriais: number;
-  custoExtras: number;
-  custoBase: number;
-  marginPercent: number;
-  marginValue: number;
-  finalPrice: number;
-  extraItems: ExtraCostItem[];
 }
 
 const formatarNumero = (numero: number, casasDecimais: number = 2): string => {
   return numero.toFixed(casasDecimais).replace('.', ',');
 };
 
-const rowMateriais = (m: MaterialExport) => ({
-  'Código': m.codigo || '-',
-  'Material': m.nome,
-  'Unidade': m.unidade || '-',
-  'Quantidade Total': formatarNumero(m.quantidade),
-  'Preço Unitário (R$)': formatarNumero(m.precoUnit),
-  'Subtotal (R$)': formatarNumero(m.subtotal),
-});
-
 export const exportToExcel = (materiais: MaterialExport[], options: ExportOptions): void => {
-  const materialsData: Record<string, string>[] = materiais.map((m) => rowMateriais(m));
+  const materialsData = materiais.map(material => ({
+    'Código': material.codigo || '-',
+    'Material': material.nome,
+    'Unidade': material.unidade || '-',
+    'Quantidade Total': formatarNumero(material.quantidade),
+    'Preço Unitário (R$)': formatarNumero(material.precoUnit),
+    'Subtotal (R$)': formatarNumero(material.subtotal),
+  }));
 
   materialsData.push({
     'Código': '',
-    'Material': '— Subtotal materiais —',
+    'Material': 'TOTAL',
     'Unidade': '',
     'Quantidade Total': '',
     'Preço Unitário (R$)': '',
-    'Subtotal (R$)': formatarNumero(options.custoMateriais),
-  });
-
-  if (options.extraItems.length > 0) {
-    for (const ex of options.extraItems) {
-      materialsData.push({
-        'Código': 'EXTRA',
-        'Material': ex.description?.trim() || '(sem descrição)',
-        'Unidade': '-',
-        'Quantidade Total': '1',
-        'Preço Unitário (R$)': formatarNumero(ex.value),
-        'Subtotal (R$)': formatarNumero(ex.value),
-      });
-    }
-  }
-
-  materialsData.push({
-    'Código': '',
-    'Material': 'CUSTO BASE (materiais + extras)',
-    'Unidade': '',
-    'Quantidade Total': '',
-    'Preço Unitário (R$)': '',
-    'Subtotal (R$)': formatarNumero(options.custoBase),
-  });
-
-  materialsData.push({
-    'Código': '',
-    'Material': `MARGEM APLICADA (${formatarNumero(options.marginPercent, 2)}%)`,
-    'Unidade': '',
-    'Quantidade Total': '',
-    'Preço Unitário (R$)': '',
-    'Subtotal (R$)': formatarNumero(options.marginValue),
-  });
-
-  materialsData.push({
-    'Código': '',
-    'Material': 'PREÇO DE VENDA (total)',
-    'Unidade': '',
-    'Quantidade Total': '',
-    'Preço Unitário (R$)': '',
-    'Subtotal (R$)': formatarNumero(options.finalPrice),
-  });
+    'Subtotal (R$)': formatarNumero(options.totalCost),
+  } as any);
 
   const infoData = [
     ['Orçamento', options.budgetName],
     ['Data de Exportação', options.exportDate],
     ['Total de Postes', options.totalPosts],
     ['Materiais Únicos', options.totalUniqueMaterials],
-    ['Custo de materiais (R$)', `R$ ${formatarNumero(options.custoMateriais)}`],
-    ['Custos extras (R$)', `R$ ${formatarNumero(options.custoExtras)}`],
-    ['Custo base (R$)', `R$ ${formatarNumero(options.custoBase)}`],
-    ['Margem (%)', formatarNumero(options.marginPercent, 2)],
-    ['Valor da margem (R$)', `R$ ${formatarNumero(options.marginValue)}`],
-    ['Preço de venda (R$)', `R$ ${formatarNumero(options.finalPrice)}`],
+    ['Custo Total', `R$ ${formatarNumero(options.totalCost)}`],
   ];
 
   const workbook = XLSX.utils.book_new();
@@ -122,7 +66,7 @@ export const exportToExcel = (materiais: MaterialExport[], options: ExportOption
 
 export const exportToCSV = (materiais: MaterialExport[], options: ExportOptions): void => {
   const headers = ['Código', 'Material', 'Unidade', 'Quantidade Total', 'Preço Unitário (R$)', 'Subtotal (R$)'];
-  const rows: string[][] = materiais.map((material) => [
+  const rows = materiais.map(material => [
     material.codigo || '-',
     material.nome,
     material.unidade || '-',
@@ -130,41 +74,15 @@ export const exportToCSV = (materiais: MaterialExport[], options: ExportOptions)
     formatarNumero(material.precoUnit),
     formatarNumero(material.subtotal),
   ]);
-
-  rows.push(['', '— Subtotal materiais —', '', '', '', formatarNumero(options.custoMateriais)]);
-
-  for (const ex of options.extraItems) {
-    rows.push([
-      'EXTRA',
-      ex.description?.trim() || '(sem descrição)',
-      '-',
-      '1',
-      formatarNumero(ex.value),
-      formatarNumero(ex.value),
-    ]);
-  }
-
-  rows.push(['', 'CUSTO BASE (materiais + extras)', '', '', '', formatarNumero(options.custoBase)]);
-  rows.push([
-    '',
-    `MARGEM APLICADA (${formatarNumero(options.marginPercent, 2)}%)`,
-    '',
-    '',
-    '',
-    formatarNumero(options.marginValue),
-  ]);
-  rows.push(['', 'PREÇO DE VENDA (total)', '', '', '', formatarNumero(options.finalPrice)]);
-
+  rows.push(['', '', '', '', '', '']);
+  rows.push(['', 'TOTAL', '', '', '', formatarNumero(options.totalCost)]);
   rows.push(['', '', '', '', '', '']);
   rows.push(['Informações do Orçamento', '', '', '', '', '']);
   rows.push(['Orçamento', options.budgetName, '', '', '', '']);
   rows.push(['Data de Exportação', options.exportDate, '', '', '', '']);
   rows.push(['Total de Postes', options.totalPosts.toString(), '', '', '', '']);
   rows.push(['Materiais Únicos', options.totalUniqueMaterials.toString(), '', '', '', '']);
-  rows.push(['Custo de materiais (R$)', `R$ ${formatarNumero(options.custoMateriais)}`, '', '', '', '']);
-  rows.push(['Custos extras (R$)', `R$ ${formatarNumero(options.custoExtras)}`, '', '', '', '']);
-  rows.push(['Custo base (R$)', `R$ ${formatarNumero(options.custoBase)}`, '', '', '', '']);
-  rows.push(['Preço de venda (R$)', `R$ ${formatarNumero(options.finalPrice)}`, '', '', '', '']);
+  rows.push(['Custo Total', `R$ ${formatarNumero(options.totalCost)}`, '', '', '', '']);
 
   const csvContent = [headers.join(','), ...rows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
   const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -181,33 +99,17 @@ export const exportToCSV = (materiais: MaterialExport[], options: ExportOptions)
 };
 
 export const exportToExcelForSuppliers = (materiais: MaterialExport[], options: ExportOptions): void => {
-  const materialsData: Record<string, string>[] = materiais.map((material) => ({
+  const materialsData = materiais.map(material => ({
     'Código': material.codigo || '-',
     'Material': material.nome,
     'Unidade': material.unidade || '-',
     'Quantidade Total': formatarNumero(material.quantidade),
   }));
-
-  if (options.extraItems.length > 0) {
-    for (const ex of options.extraItems) {
-      materialsData.push({
-        'Código': 'EXTRA',
-        'Material': `[Custo extra — fornecer cotação] ${ex.description?.trim() || '(sem descrição)'}`,
-        'Unidade': '-',
-        'Quantidade Total': '1',
-      });
-    }
-  }
-
-  const infoData: (string | number)[][] = [
+  const infoData = [
     ['Orçamento', options.budgetName],
     ['Data de Exportação', options.exportDate],
     ['Total de Postes', options.totalPosts],
     ['Materiais Únicos', options.totalUniqueMaterials],
-    [
-      'Nota',
-      'Itens EXTRA são referências — valores não incluídos (cotação manual).',
-    ],
   ];
   const workbook = XLSX.utils.book_new();
   const materialsWorksheet = XLSX.utils.json_to_sheet(materialsData);
@@ -222,29 +124,18 @@ export const exportToExcelForSuppliers = (materiais: MaterialExport[], options: 
 
 export const exportToCSVForSuppliers = (materiais: MaterialExport[], options: ExportOptions): void => {
   const headers = ['Código', 'Material', 'Unidade', 'Quantidade Total'];
-  const rows: string[][] = materiais.map((material) => [
+  const rows = materiais.map(material => [
     material.codigo || '-',
     material.nome,
     material.unidade || '-',
     formatarNumero(material.quantidade),
   ]);
-
-  for (const ex of options.extraItems) {
-    rows.push([
-      'EXTRA',
-      `[Custo extra — cotação] ${ex.description?.trim() || '(sem descrição)'}`,
-      '-',
-      '1',
-    ]);
-  }
-
   rows.push(['', '', '', '']);
   rows.push(['Informações do Orçamento', '', '', '']);
   rows.push(['Orçamento', options.budgetName, '', '']);
   rows.push(['Data de Exportação', options.exportDate, '', '']);
   rows.push(['Total de Postes', options.totalPosts.toString(), '', '']);
   rows.push(['Materiais Únicos', options.totalUniqueMaterials.toString(), '', '']);
-  rows.push(['Nota', 'Extras sem valores — apenas descrição para cotação.', '', '']);
   const csvContent = [headers.join(','), ...rows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
   const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');

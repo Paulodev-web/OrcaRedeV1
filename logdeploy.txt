@@ -1,0 +1,1281 @@
+10:07:34.639 Running build in Washington, D.C., USA (East) – iad1
+10:07:34.640 Build machine configuration: 2 cores, 8 GB
+10:07:34.797 Cloning github.com/Paulodev-web/OrcaRedeV1 (Branch: main, Commit: a86cb6c)
+10:07:34.798 Previous build caches not available.
+10:07:35.428 Cloning completed: 630.000ms
+10:07:35.787 Running "vercel build"
+10:07:35.812 Vercel CLI 54.14.0
+10:07:36.537 Installing dependencies...
+10:07:43.734 npm warn deprecated rimraf@2.7.1: Rimraf versions prior to v4 are no longer supported
+10:07:43.986 npm warn deprecated lodash.isequal@4.5.0: This package is deprecated. Use require('node:util').isDeepStrictEqual instead.
+10:07:44.566 npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+10:07:44.704 npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+10:07:47.279 npm warn deprecated fstream@1.0.12: This package is no longer supported.
+10:07:47.748 npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
+10:07:48.954 npm warn deprecated uuid@8.3.2: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
+10:08:05.286 
+10:08:05.287 added 575 packages in 29s
+10:08:05.287 
+10:08:05.288 165 packages are looking for funding
+10:08:05.289   run `npm fund` for details
+10:08:05.380 Detected Next.js version: 16.2.1
+10:08:05.392 Running "npm run build"
+10:08:05.529 
+10:08:05.530 > orcared@0.1.0 build
+10:08:05.530 > next build
+10:08:05.530 
+10:08:06.192   Applying modifyConfig from Vercel
+10:08:06.199 Attention: Next.js now collects completely anonymous telemetry regarding usage.
+10:08:06.199 This information is used to shape Next.js' roadmap and prioritize features.
+10:08:06.200 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+10:08:06.200 https://nextjs.org/telemetry
+10:08:06.200 
+10:08:06.223 ▲ Next.js 16.2.1 (Turbopack)
+10:08:06.224 
+10:08:06.237 ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+10:08:06.272   Creating an optimized production build ...
+10:08:32.116 
+10:08:32.117 > Build error occurred
+10:08:32.132 Error: Turbopack build failed with 59 errors:
+10:08:32.132 ./src/components/EngineerPortal.tsx:230:5
+10:08:32.132 Expected ',', got ')'
+10:08:32.132   228 |           };
+10:08:32.133   229 |         })
+10:08:32.133 > 230 |     );
+10:08:32.133       |     ^
+10:08:32.133   231 |
+10:08:32.133   232 |     return workTrackings;
+10:08:32.134   233 |   } catch (error) {
+10:08:32.134 
+10:08:32.134 Parsing ecmascript source code failed
+10:08:32.134 
+10:08:32.135 Import traces:
+10:08:32.135   Client Component Browser:
+10:08:32.135     ./src/components/EngineerPortal.tsx [Client Component Browser]
+10:08:32.135     ./src/components/AppShell.tsx [Client Component Browser]
+10:08:32.136     ./src/components/AppShell.tsx [Server Component]
+10:08:32.136     ./src/app/page.tsx [Server Component]
+10:08:32.136 
+10:08:32.136   Client Component SSR:
+10:08:32.136     ./src/components/EngineerPortal.tsx [Client Component SSR]
+10:08:32.137     ./src/components/AppShell.tsx [Client Component SSR]
+10:08:32.137     ./src/components/AppShell.tsx [Server Component]
+10:08:32.137     ./src/app/page.tsx [Server Component]
+10:08:32.137 
+10:08:32.137 
+10:08:32.138 ./src/app/tools/andamento-obra/admin/page.tsx:5:1
+10:08:32.138 Module not found: Can't resolve './AdminPanel'
+10:08:32.138   3 | import { createSupabaseServerClient } from '@/lib/supabaseServer';
+10:08:32.139   4 | import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
+10:08:32.139 > 5 | import { AdminPanel } from './AdminPanel';
+10:08:32.139     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.139   6 |
+10:08:32.140   7 | export const metadata: Metadata = {
+10:08:32.141   8 |   title: 'Admin — Andamento de Obra',
+10:08:32.141 
+10:08:32.141 
+10:08:32.141 
+10:08:32.142 https://nextjs.org/docs/messages/module-not-found
+10:08:32.142 
+10:08:32.142 
+10:08:32.143 ./src/components/precificacao/PrecificacaoCalculator.tsx:16:1
+10:08:32.143 Module not found: Can't resolve './BudgetImportSelect'
+10:08:32.143   14 | } from '@/lib/pricingMath';
+10:08:32.144   15 | import { consolidateMaterialsFromBudgetDetails } from '@/services/budgetMaterialAggregation';
+10:08:32.144 > 16 | import { BudgetImportSelect } from './BudgetImportSelect';
+10:08:32.146      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.146   17 | import { CostItemsTable } from './CostItemsTable';
+10:08:32.146   18 | import { ServicePricingSummary } from './ServicePricingSummary';
+10:08:32.153   19 | import { ServiceValueInput } from './ServiceValueInput';
+10:08:32.154 
+10:08:32.154 
+10:08:32.154 
+10:08:32.154 Import trace:
+10:08:32.154   Server Component:
+10:08:32.154     ./src/components/precificacao/PrecificacaoCalculator.tsx
+10:08:32.155     ./src/app/tools/precificacao/nova/page.tsx
+10:08:32.155 
+10:08:32.155 https://nextjs.org/docs/messages/module-not-found
+10:08:32.155 
+10:08:32.155 
+10:08:32.156 ./src/app/tools/andamento-obra/notificacoes/page.tsx:6:1
+10:08:32.156 Module not found: Can't resolve './NotificationsFullList'
+10:08:32.156   4 | import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
+10:08:32.159   5 | import { getNotificationsForUser } from '@/services/notifications/getNotificationsForUser';
+10:08:32.159 > 6 | import { NotificationsFullList } from './NotificationsFullList';
+10:08:32.159     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.160   7 |
+10:08:32.160   8 | export const metadata: Metadata = {
+10:08:32.160   9 |   title: 'Notificações — Andamento de Obra',
+10:08:32.161 
+10:08:32.161 
+10:08:32.161 
+10:08:32.161 https://nextjs.org/docs/messages/module-not-found
+10:08:32.161 
+10:08:32.162 
+10:08:32.162 ./src/services/people/ensureEngineerProfile.ts:5:1
+10:08:32.162 Module not found: Can't resolve './getCurrentUserProfile'
+10:08:32.162   3 | import { createSupabaseServiceRoleClient } from '@/lib/supabaseServer';
+10:08:32.163   4 | import type { CurrentUserProfile } from '@/types/people';
+10:08:32.163 > 5 | import { getCurrentUserProfile } from './getCurrentUserProfile';
+10:08:32.163     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.163   6 |
+10:08:32.163   7 | /**
+10:08:32.164   8 |  * Garante profile de engenheiro após sync/restore do banco (profiles podem sumir).
+10:08:32.164 
+10:08:32.164 
+10:08:32.164 
+10:08:32.165 Import trace:
+10:08:32.165   Server Component:
+10:08:32.165     ./src/services/people/ensureEngineerProfile.ts
+10:08:32.165     ./src/app/tools/andamento-obra/pessoas/page.tsx
+10:08:32.165 
+10:08:32.165 https://nextjs.org/docs/messages/module-not-found
+10:08:32.166 
+10:08:32.166 
+10:08:32.166 ./src/app/tools/andamento-obra/obras/[workId]/chat/page.tsx:7:1
+10:08:32.166 Module not found: Can't resolve '@/actions/workMessages'
+10:08:32.168    5 | import { getWorkMessages } from '@/services/works/getWorkMessages';
+10:08:32.168    6 | import { getAttachmentSignedUrls } from '@/services/works/getAttachmentSignedUrls';
+10:08:32.169 >  7 | import { markMessagesAsRead } from '@/actions/workMessages';
+10:08:32.169      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.169    8 | import { ChatRoom } from '@/components/andamento-obra/works/chat/ChatRoom';
+10:08:32.169    9 | import type { WorkMessageSenderRole } from '@/types/works';
+10:08:32.169   10 |
+10:08:32.170 
+10:08:32.170 Import map: aliased to relative './src/actions/workMessages' inside of [project]/
+10:08:32.170 
+10:08:32.170 
+10:08:32.170 https://nextjs.org/docs/messages/module-not-found
+10:08:32.170 
+10:08:32.171 
+10:08:32.171 ./src/app/tools/andamento-obra/pessoas/page.tsx:7:1
+10:08:32.171 Module not found: Can't resolve '@/components/andamento-obra/people/PeoplePage'
+10:08:32.171    5 | import { getManagers } from '@/services/people/getManagers';
+10:08:32.171    6 | import { getCrewMembers } from '@/services/people/getCrewMembers';
+10:08:32.172 >  7 | import { PeoplePage } from '@/components/andamento-obra/people/PeoplePage';
+10:08:32.172      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.172    8 |
+10:08:32.172    9 | export const metadata: Metadata = {
+10:08:32.172   10 |   title: 'Pessoas — Andamento de Obra',
+10:08:32.173 
+10:08:32.173 Import map: aliased to relative './src/components/andamento-obra/people/PeoplePage' inside of [project]/
+10:08:32.173 
+10:08:32.173 
+10:08:32.173 https://nextjs.org/docs/messages/module-not-found
+10:08:32.173 
+10:08:32.174 
+10:08:32.174 ./src/app/tools/andamento-obra/obras/[workId]/layout.tsx:13:1
+10:08:32.174 Module not found: Can't resolve '@/components/andamento-obra/works/WorkHeader'
+10:08:32.174   11 | import { getInstallationsCountByWork } from '@/services/works/getInstallationsCountByWork';
+10:08:32.174   12 | import { getManagers } from '@/services/people/getManagers';
+10:08:32.175 > 13 | import { WorkHeader } from '@/components/andamento-obra/works/WorkHeader';
+10:08:32.175      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.183   14 | import { WorkTabsNav } from '@/components/andamento-obra/works/WorkTabsNav';
+10:08:32.183   15 |
+10:08:32.183   16 | interface LayoutProps {
+10:08:32.183 
+10:08:32.183 Import map: aliased to relative './src/components/andamento-obra/works/WorkHeader' inside of [project]/
+10:08:32.183 
+10:08:32.183 
+10:08:32.183 https://nextjs.org/docs/messages/module-not-found
+10:08:32.184 
+10:08:32.184 
+10:08:32.185 ./src/app/tools/andamento-obra/obras/[workId]/layout.tsx:14:1
+10:08:32.185 Module not found: Can't resolve '@/components/andamento-obra/works/WorkTabsNav'
+10:08:32.185   12 | import { getManagers } from '@/services/people/getManagers';
+10:08:32.185   13 | import { WorkHeader } from '@/components/andamento-obra/works/WorkHeader';
+10:08:32.186 > 14 | import { WorkTabsNav } from '@/components/andamento-obra/works/WorkTabsNav';
+10:08:32.186      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.186   15 |
+10:08:32.186   16 | interface LayoutProps {
+10:08:32.186   17 |   children: ReactNode;
+10:08:32.186 
+10:08:32.187 Import map: aliased to relative './src/components/andamento-obra/works/WorkTabsNav' inside of [project]/
+10:08:32.187 
+10:08:32.187 
+10:08:32.187 https://nextjs.org/docs/messages/module-not-found
+10:08:32.187 
+10:08:32.187 
+10:08:32.188 ./src/app/tools/andamento-obra/page.tsx:11:1
+10:08:32.188 Module not found: Can't resolve '@/components/andamento-obra/works/WorksHomeView'
+10:08:32.188    9 | import { categorizeWorks } from '@/services/works/categorizeWorks';
+10:08:32.188   10 | import { getManagers } from '@/services/people/getManagers';
+10:08:32.188 > 11 | import { WorksHomeView } from '@/components/andamento-obra/works/WorksHomeView';
+10:08:32.188      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.188   12 | import { PENDING_DAILY_LOG_RED_THRESHOLD_HOURS } from '@/types/works';
+10:08:32.188   13 |
+10:08:32.188   14 | export const metadata: Metadata = {
+10:08:32.189 
+10:08:32.189 Import map: aliased to relative './src/components/andamento-obra/works/WorksHomeView' inside of [project]/
+10:08:32.189 
+10:08:32.189 
+10:08:32.189 https://nextjs.org/docs/messages/module-not-found
+10:08:32.189 
+10:08:32.189 
+10:08:32.189 ./src/app/tools/andamento-obra/obras/[workId]/chat/page.tsx:8:1
+10:08:32.189 Module not found: Can't resolve '@/components/andamento-obra/works/chat/ChatRoom'
+10:08:32.190    6 | import { getAttachmentSignedUrls } from '@/services/works/getAttachmentSignedUrls';
+10:08:32.190    7 | import { markMessagesAsRead } from '@/actions/workMessages';
+10:08:32.190 >  8 | import { ChatRoom } from '@/components/andamento-obra/works/chat/ChatRoom';
+10:08:32.190      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.190    9 | import type { WorkMessageSenderRole } from '@/types/works';
+10:08:32.190   10 |
+10:08:32.190   11 | interface ChatPageProps {
+10:08:32.191 
+10:08:32.191 Import map: aliased to relative './src/components/andamento-obra/works/chat/ChatRoom' inside of [project]/
+10:08:32.191 
+10:08:32.191 
+10:08:32.191 https://nextjs.org/docs/messages/module-not-found
+10:08:32.191 
+10:08:32.192 
+10:08:32.192 ./src/app/tools/andamento-obra/obras/[workId]/diario/page.tsx:7:1
+10:08:32.192 Module not found: Can't resolve '@/components/andamento-obra/works/diario/DailyLogList'
+10:08:32.192    5 | import { getWorkDailyLogs } from '@/services/works/getWorkDailyLogs';
+10:08:32.193    6 | import { getDailyLogSignedUrls } from '@/services/works/getDailyLogSignedUrls';
+10:08:32.193 >  7 | import { DailyLogList } from '@/components/andamento-obra/works/diario/DailyLogList';
+10:08:32.193      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.193    8 | import type { WorkMemberRole } from '@/types/works';
+10:08:32.193    9 |
+10:08:32.193   10 | interface DiarioPageProps {
+10:08:32.194 
+10:08:32.194 Import map: aliased to relative './src/components/andamento-obra/works/diario/DailyLogList' inside of [project]/
+10:08:32.194 
+10:08:32.194 
+10:08:32.194 https://nextjs.org/docs/messages/module-not-found
+10:08:32.194 
+10:08:32.194 
+10:08:32.195 ./src/app/tools/andamento-obra/obras/[workId]/progresso/page.tsx:8:1
+10:08:32.195 Module not found: Can't resolve '@/components/andamento-obra/works/progresso/MilestonesList'
+10:08:32.195    6 | ...ort { getWorkMilestonesWithEvents } from '@/services/works/getWorkMilestonesWithEvents';
+10:08:32.195    7 | ...ort { ProgressOverview } from '@/components/andamento-obra/works/progresso/ProgressOver...
+10:08:32.195 >  8 | ...ort { MilestonesList } from '@/components/andamento-obra/works/progresso/MilestonesList';
+10:08:32.195      |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.196    9 | ...ort type { WorkMemberRole } from '@/types/works';
+10:08:32.196   10 | ...
+10:08:32.196   11 | ...erface ProgressoPageProps {
+10:08:32.196 
+10:08:32.196 Import map: aliased to relative './src/components/andamento-obra/works/progresso/MilestonesList' inside of [project]/
+10:08:32.196 
+10:08:32.196 
+10:08:32.196 https://nextjs.org/docs/messages/module-not-found
+10:08:32.196 
+10:08:32.196 
+10:08:32.198 ./src/app/tools/andamento-obra/obras/[workId]/progresso/page.tsx:7:1
+10:08:32.198 Module not found: Can't resolve '@/components/andamento-obra/works/progresso/ProgressOverview'
+10:08:32.198    5 | ...t { getWorkProgressData } from '@/services/works/getWorkProgressData';
+10:08:32.199    6 | ...t { getWorkMilestonesWithEvents } from '@/services/works/getWorkMilestonesWithEvents';
+10:08:32.199 >  7 | ...t { ProgressOverview } from '@/components/andamento-obra/works/progresso/ProgressOvervi...
+10:08:32.199      |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.199    8 | ...t { MilestonesList } from '@/components/andamento-obra/works/progresso/MilestonesList';
+10:08:32.199    9 | ...t type { WorkMemberRole } from '@/types/works';
+10:08:32.199   10 | ...
+10:08:32.200 
+10:08:32.200 Import map: aliased to relative './src/components/andamento-obra/works/progresso/ProgressOverview' inside of [project]/
+10:08:32.200 
+10:08:32.200 
+10:08:32.200 https://nextjs.org/docs/messages/module-not-found
+10:08:32.201 
+10:08:32.201 
+10:08:32.201 ./src/app/fornecedores/sessao/[sessionId]/page.tsx:9:1
+10:08:32.201 Module not found: Can't resolve '@/components/suppliers/CompleteSessionButton'
+10:08:32.201    7 | import { getSupplierDisplayName } from '@/lib/supplierDisplay';
+10:08:32.201    8 | import SessionWorkspace from '@/components/suppliers/SessionWorkspace';
+10:08:32.202 >  9 | import CompleteSessionButton from '@/components/suppliers/CompleteSessionButton';
+10:08:32.202      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.202   10 | import SuppliesHeader from '@/components/suppliers/SuppliesHeader';
+10:08:32.202   11 | import { suppliesPageColumnClass } from '@/lib/suppliesLayout';
+10:08:32.202   12 |
+10:08:32.203 
+10:08:32.203 Import map: aliased to relative './src/components/suppliers/CompleteSessionButton' inside of [project]/
+10:08:32.203 
+10:08:32.203 
+10:08:32.203 https://nextjs.org/docs/messages/module-not-found
+10:08:32.204 
+10:08:32.204 
+10:08:32.204 ./src/app/fornecedores/page.tsx:3:1
+10:08:32.204 Module not found: Can't resolve '@/components/suppliers/FornecedoresHub'
+10:08:32.204   1 | import { createSupabaseServerClient } from '@/lib/supabaseServer';
+10:08:32.204   2 | import { listQuotationSessionsWithStatsAction } from '@/actions/quotationSessions';
+10:08:32.205 > 3 | import FornecedoresHub from '@/components/suppliers/FornecedoresHub';
+10:08:32.205     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.205   4 | import SuppliesHeader from '@/components/suppliers/SuppliesHeader';
+10:08:32.205   5 | import type { BudgetOption } from '@/types';
+10:08:32.205   6 |
+10:08:32.205 
+10:08:32.205 Import map: aliased to relative './src/components/suppliers/FornecedoresHub' inside of [project]/
+10:08:32.205 
+10:08:32.205 
+10:08:32.206 https://nextjs.org/docs/messages/module-not-found
+10:08:32.206 
+10:08:32.206 
+10:08:32.206 ./src/app/fornecedores/sessao/[sessionId]/page.tsx:8:1
+10:08:32.206 Module not found: Can't resolve '@/components/suppliers/SessionWorkspace'
+10:08:32.206    6 | } from '@/lib/quotationSessionReads';
+10:08:32.206    7 | import { getSupplierDisplayName } from '@/lib/supplierDisplay';
+10:08:32.206 >  8 | import SessionWorkspace from '@/components/suppliers/SessionWorkspace';
+10:08:32.207      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.207    9 | import CompleteSessionButton from '@/components/suppliers/CompleteSessionButton';
+10:08:32.207   10 | import SuppliesHeader from '@/components/suppliers/SuppliesHeader';
+10:08:32.207   11 | import { suppliesPageColumnClass } from '@/lib/suppliesLayout';
+10:08:32.207 
+10:08:32.207 Import map: aliased to relative './src/components/suppliers/SessionWorkspace' inside of [project]/
+10:08:32.207 
+10:08:32.207 
+10:08:32.207 https://nextjs.org/docs/messages/module-not-found
+10:08:32.207 
+10:08:32.207 
+10:08:32.207 ./src/components/suppliers/ConciliationCurationView.tsx:29:1
+10:08:32.208 Module not found: Can't resolve '@/components/ui/dialog'
+10:08:32.208   27 |   type SupplierQuoteItemWithMaterial,
+10:08:32.208   28 | } from '@/actions/supplierQuotes';
+10:08:32.208 > 29 | import {
+10:08:32.208      | ^^^^^^^
+10:08:32.208 > 30 |   Dialog,
+10:08:32.209      | ^^^^^^^^^
+10:08:32.209 > 31 |   DialogContent,
+10:08:32.209      | ^^^^^^^^^^^^^^^^
+10:08:32.209 > 32 |   DialogHeader,
+10:08:32.209      | ^^^^^^^^^^^^^^^
+10:08:32.209 > 33 |   DialogTitle,
+10:08:32.209      | ^^^^^^^^^^^^^^
+10:08:32.209 > 34 |   DialogDescription,
+10:08:32.209      | ^^^^^^^^^^^^^^^^^^^^
+10:08:32.209 > 35 | } from '@/components/ui/dialog';
+10:08:32.210      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.210   36 | import { onPortalPrimaryButtonSmClass } from '@/lib/branding';
+10:08:32.210   37 | import { suppliesTableBorderedScrollClass } from '@/lib/suppliesLayout';
+10:08:32.210   38 |
+10:08:32.210 
+10:08:32.210 Import map: aliased to relative './src/components/ui/dialog' inside of [project]/
+10:08:32.210 
+10:08:32.210 
+10:08:32.210 Import trace:
+10:08:32.210   Server Component:
+10:08:32.211     ./src/components/suppliers/ConciliationCurationView.tsx
+10:08:32.211     ./src/app/fornecedores/sessao/[sessionId]/conciliacao/page.tsx
+10:08:32.211 
+10:08:32.211 https://nextjs.org/docs/messages/module-not-found
+10:08:32.212 
+10:08:32.213 
+10:08:32.213 ./src/components/suppliers/ManualQuoteDialog.tsx:5:1
+10:08:32.213 Module not found: Can't resolve '@/components/ui/dialog'
+10:08:32.213    3 | import { useCallback, useEffect, useState } from 'react';
+10:08:32.213    4 | import { Loader2, Plus, Search } from 'lucide-react';
+10:08:32.213 >  5 | import {
+10:08:32.213      | ^^^^^^^
+10:08:32.214 >  6 |   Dialog,
+10:08:32.214      | ^^^^^^^^^
+10:08:32.214 >  7 |   DialogContent,
+10:08:32.214      | ^^^^^^^^^^^^^^^^
+10:08:32.214 >  8 |   DialogDescription,
+10:08:32.214      | ^^^^^^^^^^^^^^^^^^^^
+10:08:32.214 >  9 |   DialogHeader,
+10:08:32.214      | ^^^^^^^^^^^^^^^
+10:08:32.214 > 10 |   DialogTitle,
+10:08:32.215      | ^^^^^^^^^^^^^^
+10:08:32.215 > 11 | } from '@/components/ui/dialog';
+10:08:32.215      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.215   12 | import { listSuppliersAction } from '@/actions/suppliers';
+10:08:32.216   13 | import { saveManualSessionQuoteItemAction } from '@/actions/supplierQuotes';
+10:08:32.216   14 | import type { Supplier } from '@/types';
+10:08:32.216 
+10:08:32.216 Import map: aliased to relative './src/components/ui/dialog' inside of [project]/
+10:08:32.216 
+10:08:32.217 
+10:08:32.217 Import traces:
+10:08:32.217   Client Component Browser:
+10:08:32.218     ./src/components/suppliers/ManualQuoteDialog.tsx [Client Component Browser]
+10:08:32.218     ./src/components/suppliers/SessionScenariosView.tsx [Client Component Browser]
+10:08:32.218     ./src/components/suppliers/SessionScenariosView.tsx [Server Component]
+10:08:32.220     ./src/app/fornecedores/sessao/[sessionId]/cenarios/page.tsx [Server Component]
+10:08:32.220 
+10:08:32.221   Client Component SSR:
+10:08:32.221     ./src/components/suppliers/ManualQuoteDialog.tsx [Client Component SSR]
+10:08:32.221     ./src/components/suppliers/SessionScenariosView.tsx [Client Component SSR]
+10:08:32.221     ./src/components/suppliers/SessionScenariosView.tsx [Server Component]
+10:08:32.222     ./src/app/fornecedores/sessao/[sessionId]/cenarios/page.tsx [Server Component]
+10:08:32.222 
+10:08:32.222 https://nextjs.org/docs/messages/module-not-found
+10:08:32.222 
+10:08:32.223 
+10:08:32.223 ./src/components/suppliers/MaterialDetailModal.tsx:5:1
+10:08:32.223 Module not found: Can't resolve '@/components/ui/dialog'
+10:08:32.223    3 | import React, { useMemo } from 'react';
+10:08:32.224    4 | import { Award, Package, TrendingUp, TrendingDown, AlertCircle, Info } from 'lucide-react';
+10:08:32.224 >  5 | import {
+10:08:32.224      | ^^^^^^^
+10:08:32.225 >  6 |   Dialog,
+10:08:32.225      | ^^^^^^^^^
+10:08:32.225 >  7 |   DialogContent,
+10:08:32.226      | ^^^^^^^^^^^^^^^^
+10:08:32.226 >  8 |   DialogHeader,
+10:08:32.226      | ^^^^^^^^^^^^^^^
+10:08:32.226 >  9 |   DialogTitle,
+10:08:32.228      | ^^^^^^^^^^^^^^
+10:08:32.228 > 10 |   DialogDescription,
+10:08:32.228      | ^^^^^^^^^^^^^^^^^^^^
+10:08:32.228 > 11 | } from '@/components/ui/dialog';
+10:08:32.229      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.229   12 | import type { ScenarioItem } from '@/actions/supplierQuotes';
+10:08:32.229   13 | import { getSupplierDisplayName } from '@/lib/supplierDisplay';
+10:08:32.229   14 | import { computeItemMetrics } from './scenarioFilterEngine';
+10:08:32.230 
+10:08:32.230 Import map: aliased to relative './src/components/ui/dialog' inside of [project]/
+10:08:32.230 
+10:08:32.230 
+10:08:32.230 Import traces:
+10:08:32.231   Client Component Browser:
+10:08:32.231     ./src/components/suppliers/MaterialDetailModal.tsx [Client Component Browser]
+10:08:32.231     ./src/components/suppliers/SessionScenariosView.tsx [Client Component Browser]
+10:08:32.231     ./src/components/suppliers/SessionScenariosView.tsx [Server Component]
+10:08:32.232     ./src/app/fornecedores/sessao/[sessionId]/cenarios/page.tsx [Server Component]
+10:08:32.232 
+10:08:32.232   Client Component SSR:
+10:08:32.232     ./src/components/suppliers/MaterialDetailModal.tsx [Client Component SSR]
+10:08:32.232     ./src/components/suppliers/SessionScenariosView.tsx [Client Component SSR]
+10:08:32.233     ./src/components/suppliers/SessionScenariosView.tsx [Server Component]
+10:08:32.233     ./src/app/fornecedores/sessao/[sessionId]/cenarios/page.tsx [Server Component]
+10:08:32.233 
+10:08:32.233 https://nextjs.org/docs/messages/module-not-found
+10:08:32.234 
+10:08:32.234 
+10:08:32.234 ./src/components/suppliers/SupplierFormModal.tsx:5:1
+10:08:32.234 Module not found: Can't resolve '@/components/ui/dialog'
+10:08:32.235    3 | import { useEffect, useState } from 'react';
+10:08:32.235    4 | import { Loader2 } from 'lucide-react';
+10:08:32.235 >  5 | import {
+10:08:32.235      | ^^^^^^^
+10:08:32.236 >  6 |   Dialog,
+10:08:32.236      | ^^^^^^^^^
+10:08:32.236 >  7 |   DialogContent,
+10:08:32.236      | ^^^^^^^^^^^^^^^^
+10:08:32.237 >  8 |   DialogHeader,
+10:08:32.237      | ^^^^^^^^^^^^^^^
+10:08:32.237 >  9 |   DialogTitle,
+10:08:32.237      | ^^^^^^^^^^^^^^
+10:08:32.238 > 10 |   DialogDescription,
+10:08:32.238      | ^^^^^^^^^^^^^^^^^^^^
+10:08:32.238 > 11 | } from '@/components/ui/dialog';
+10:08:32.238      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.239   12 | import {
+10:08:32.239   13 |   createSupplierAction,
+10:08:32.239   14 |   updateSupplierAction,
+10:08:32.239 
+10:08:32.240 Import map: aliased to relative './src/components/ui/dialog' inside of [project]/
+10:08:32.240 
+10:08:32.240 
+10:08:32.240 Import traces:
+10:08:32.241   Client Component Browser:
+10:08:32.241     ./src/components/suppliers/SupplierFormModal.tsx [Client Component Browser]
+10:08:32.241     ./src/components/suppliers/SupplierListView.tsx [Client Component Browser]
+10:08:32.241     ./src/components/suppliers/SupplierListView.tsx [Server Component]
+10:08:32.242     ./src/app/fornecedores/cadastro/page.tsx [Server Component]
+10:08:32.242 
+10:08:32.242   Client Component SSR:
+10:08:32.242     ./src/components/suppliers/SupplierFormModal.tsx [Client Component SSR]
+10:08:32.243     ./src/components/suppliers/SupplierListView.tsx [Client Component SSR]
+10:08:32.243     ./src/components/suppliers/SupplierListView.tsx [Server Component]
+10:08:32.243     ./src/app/fornecedores/cadastro/page.tsx [Server Component]
+10:08:32.243 
+10:08:32.243 https://nextjs.org/docs/messages/module-not-found
+10:08:32.244 
+10:08:32.244 
+10:08:32.244 ./src/components/suppliers/SupplierPdfHistoryModal.tsx:6:1
+10:08:32.244 Module not found: Can't resolve '@/components/ui/dialog'
+10:08:32.245    4 | import Link from 'next/link';
+10:08:32.245    5 | import { ExternalLink, FileText, Loader2 } from 'lucide-react';
+10:08:32.245 >  6 | import {
+10:08:32.245      | ^^^^^^^
+10:08:32.246 >  7 |   Dialog,
+10:08:32.246      | ^^^^^^^^^
+10:08:32.246 >  8 |   DialogContent,
+10:08:32.246      | ^^^^^^^^^^^^^^^^
+10:08:32.247 >  9 |   DialogDescription,
+10:08:32.247      | ^^^^^^^^^^^^^^^^^^^^
+10:08:32.247 > 10 |   DialogHeader,
+10:08:32.247      | ^^^^^^^^^^^^^^^
+10:08:32.248 > 11 |   DialogTitle,
+10:08:32.248      | ^^^^^^^^^^^^^^
+10:08:32.248 > 12 | } from '@/components/ui/dialog';
+10:08:32.248      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.249   13 | import {
+10:08:32.249   14 |   getSupplierPdfSignedUrlAction,
+10:08:32.249   15 |   listSupplierPdfHistoryAction,
+10:08:32.249 
+10:08:32.250 Import map: aliased to relative './src/components/ui/dialog' inside of [project]/
+10:08:32.250 
+10:08:32.250 
+10:08:32.250 Import traces:
+10:08:32.250   Client Component Browser:
+10:08:32.251     ./src/components/suppliers/SupplierPdfHistoryModal.tsx [Client Component Browser]
+10:08:32.251     ./src/components/suppliers/SupplierListView.tsx [Client Component Browser]
+10:08:32.251     ./src/components/suppliers/SupplierListView.tsx [Server Component]
+10:08:32.252     ./src/app/fornecedores/cadastro/page.tsx [Server Component]
+10:08:32.252 
+10:08:32.252   Client Component SSR:
+10:08:32.252     ./src/components/suppliers/SupplierPdfHistoryModal.tsx [Client Component SSR]
+10:08:32.252     ./src/components/suppliers/SupplierListView.tsx [Client Component SSR]
+10:08:32.253     ./src/components/suppliers/SupplierListView.tsx [Server Component]
+10:08:32.253     ./src/app/fornecedores/cadastro/page.tsx [Server Component]
+10:08:32.253 
+10:08:32.253 https://nextjs.org/docs/messages/module-not-found
+10:08:32.254 
+10:08:32.254 
+10:08:32.254 ./src/app/tools/andamento-obra/notificacoes/page.tsx:5:1
+10:08:32.254 Module not found: Can't resolve '@/services/notifications/getNotificationsForUser'
+10:08:32.255   3 | import { createSupabaseServerClient } from '@/lib/supabaseServer';
+10:08:32.255   4 | import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
+10:08:32.255 > 5 | import { getNotificationsForUser } from '@/services/notifications/getNotificationsForUser';
+10:08:32.255     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.256   6 | import { NotificationsFullList } from './NotificationsFullList';
+10:08:32.256   7 |
+10:08:32.256   8 | export const metadata: Metadata = {
+10:08:32.256 
+10:08:32.257 Import map: aliased to relative './src/services/notifications/getNotificationsForUser' inside of [project]/
+10:08:32.257 
+10:08:32.257 
+10:08:32.257 https://nextjs.org/docs/messages/module-not-found
+10:08:32.257 
+10:08:32.258 
+10:08:32.258 ./src/app/tools/andamento-obra/page.tsx:6:1
+10:08:32.258 Module not found: Can't resolve '@/services/notifications/getNotificationsForUser'
+10:08:32.258   4 | import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
+10:08:32.259   5 | import { getWorksForEngineer } from '@/services/works/getWorksForEngineer';
+10:08:32.259 > 6 | import { getNotificationsForUser } from '@/services/notifications/getNotificationsForUser';
+10:08:32.259     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.259   7 | import { getUnreadCountsForWorks } from '@/services/works/getUnreadCountsForWorks';
+10:08:32.260   8 | import { getWorkPendingApprovals } from '@/services/works/getWorkPendingApprovals';
+10:08:32.260   9 | import { categorizeWorks } from '@/services/works/categorizeWorks';
+10:08:32.260 
+10:08:32.260 Import map: aliased to relative './src/services/notifications/getNotificationsForUser' inside of [project]/
+10:08:32.261 
+10:08:32.261 
+10:08:32.261 https://nextjs.org/docs/messages/module-not-found
+10:08:32.261 
+10:08:32.262 
+10:08:32.262 ./src/app/tools/andamento-obra/pessoas/page.tsx:6:1
+10:08:32.264 Module not found: Can't resolve '@/services/people/getCrewMembers'
+10:08:32.264   4 | import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
+10:08:32.264   5 | import { getManagers } from '@/services/people/getManagers';
+10:08:32.264 > 6 | import { getCrewMembers } from '@/services/people/getCrewMembers';
+10:08:32.265     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.265   7 | import { PeoplePage } from '@/components/andamento-obra/people/PeoplePage';
+10:08:32.265   8 |
+10:08:32.265   9 | export const metadata: Metadata = {
+10:08:32.266 
+10:08:32.266 Import map: aliased to relative './src/services/people/getCrewMembers' inside of [project]/
+10:08:32.266 
+10:08:32.266 
+10:08:32.267 https://nextjs.org/docs/messages/module-not-found
+10:08:32.267 
+10:08:32.267 
+10:08:32.267 ./src/app/tools/andamento-obra/obras/[workId]/layout.tsx:12:1
+10:08:32.268 Module not found: Can't resolve '@/services/people/getManagers'
+10:08:32.268   10 | import { getPendingMilestonesCount } from '@/services/works/getPendingMilestonesCount';
+10:08:32.268   11 | import { getInstallationsCountByWork } from '@/services/works/getInstallationsCountByWork';
+10:08:32.268 > 12 | import { getManagers } from '@/services/people/getManagers';
+10:08:32.269      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.269   13 | import { WorkHeader } from '@/components/andamento-obra/works/WorkHeader';
+10:08:32.269   14 | import { WorkTabsNav } from '@/components/andamento-obra/works/WorkTabsNav';
+10:08:32.269   15 |
+10:08:32.270 
+10:08:32.270 Import map: aliased to relative './src/services/people/getManagers' inside of [project]/
+10:08:32.270 
+10:08:32.270 
+10:08:32.270 https://nextjs.org/docs/messages/module-not-found
+10:08:32.271 
+10:08:32.271 
+10:08:32.271 ./src/app/tools/andamento-obra/page.tsx:10:1
+10:08:32.271 Module not found: Can't resolve '@/services/people/getManagers'
+10:08:32.272    8 | import { getWorkPendingApprovals } from '@/services/works/getWorkPendingApprovals';
+10:08:32.272    9 | import { categorizeWorks } from '@/services/works/categorizeWorks';
+10:08:32.272 > 10 | import { getManagers } from '@/services/people/getManagers';
+10:08:32.272      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.273   11 | import { WorksHomeView } from '@/components/andamento-obra/works/WorksHomeView';
+10:08:32.273   12 | import { PENDING_DAILY_LOG_RED_THRESHOLD_HOURS } from '@/types/works';
+10:08:32.273   13 |
+10:08:32.273 
+10:08:32.274 Import map: aliased to relative './src/services/people/getManagers' inside of [project]/
+10:08:32.274 
+10:08:32.274 
+10:08:32.274 https://nextjs.org/docs/messages/module-not-found
+10:08:32.274 
+10:08:32.275 
+10:08:32.275 ./src/app/tools/andamento-obra/pessoas/page.tsx:5:1
+10:08:32.275 Module not found: Can't resolve '@/services/people/getManagers'
+10:08:32.275   3 | import { createSupabaseServerClient } from '@/lib/supabaseServer';
+10:08:32.276   4 | import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
+10:08:32.276 > 5 | import { getManagers } from '@/services/people/getManagers';
+10:08:32.276     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.276   6 | import { getCrewMembers } from '@/services/people/getCrewMembers';
+10:08:32.277   7 | import { PeoplePage } from '@/components/andamento-obra/people/PeoplePage';
+10:08:32.277   8 |
+10:08:32.277 
+10:08:32.277 Import map: aliased to relative './src/services/people/getManagers' inside of [project]/
+10:08:32.278 
+10:08:32.284 
+10:08:32.284 https://nextjs.org/docs/messages/module-not-found
+10:08:32.285 
+10:08:32.285 
+10:08:32.285 ./src/app/tools/andamento-obra/page.tsx:9:1
+10:08:32.285 Module not found: Can't resolve '@/services/works/categorizeWorks'
+10:08:32.286    7 | import { getUnreadCountsForWorks } from '@/services/works/getUnreadCountsForWorks';
+10:08:32.286    8 | import { getWorkPendingApprovals } from '@/services/works/getWorkPendingApprovals';
+10:08:32.286 >  9 | import { categorizeWorks } from '@/services/works/categorizeWorks';
+10:08:32.286      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.287   10 | import { getManagers } from '@/services/people/getManagers';
+10:08:32.287   11 | import { WorksHomeView } from '@/components/andamento-obra/works/WorksHomeView';
+10:08:32.287   12 | import { PENDING_DAILY_LOG_RED_THRESHOLD_HOURS } from '@/types/works';
+10:08:32.287 
+10:08:32.288 Import map: aliased to relative './src/services/works/categorizeWorks' inside of [project]/
+10:08:32.288 
+10:08:32.288 
+10:08:32.288 https://nextjs.org/docs/messages/module-not-found
+10:08:32.289 
+10:08:32.289 
+10:08:32.289 ./src/app/tools/andamento-obra/obras/[workId]/chat/page.tsx:6:1
+10:08:32.289 Module not found: Can't resolve '@/services/works/getAttachmentSignedUrls'
+10:08:32.289   4 | import { getWorkById } from '@/services/works/getWorkById';
+10:08:32.290   5 | import { getWorkMessages } from '@/services/works/getWorkMessages';
+10:08:32.290 > 6 | import { getAttachmentSignedUrls } from '@/services/works/getAttachmentSignedUrls';
+10:08:32.290     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.290   7 | import { markMessagesAsRead } from '@/actions/workMessages';
+10:08:32.291   8 | import { ChatRoom } from '@/components/andamento-obra/works/chat/ChatRoom';
+10:08:32.291   9 | import type { WorkMessageSenderRole } from '@/types/works';
+10:08:32.291 
+10:08:32.291 Import map: aliased to relative './src/services/works/getAttachmentSignedUrls' inside of [project]/
+10:08:32.291 
+10:08:32.292 
+10:08:32.292 https://nextjs.org/docs/messages/module-not-found
+10:08:32.292 
+10:08:32.292 
+10:08:32.293 ./src/app/tools/andamento-obra/obras/[workId]/diario/page.tsx:6:1
+10:08:32.293 Module not found: Can't resolve '@/services/works/getDailyLogSignedUrls'
+10:08:32.293   4 | import { getWorkById } from '@/services/works/getWorkById';
+10:08:32.293   5 | import { getWorkDailyLogs } from '@/services/works/getWorkDailyLogs';
+10:08:32.293 > 6 | import { getDailyLogSignedUrls } from '@/services/works/getDailyLogSignedUrls';
+10:08:32.294     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.294   7 | import { DailyLogList } from '@/components/andamento-obra/works/diario/DailyLogList';
+10:08:32.294   8 | import type { WorkMemberRole } from '@/types/works';
+10:08:32.294   9 |
+10:08:32.295 
+10:08:32.295 Import map: aliased to relative './src/services/works/getDailyLogSignedUrls' inside of [project]/
+10:08:32.295 
+10:08:32.295 
+10:08:32.295 https://nextjs.org/docs/messages/module-not-found
+10:08:32.296 
+10:08:32.296 
+10:08:32.296 ./src/app/tools/andamento-obra/obras/[workId]/layout.tsx:11:1
+10:08:32.296 Module not found: Can't resolve '@/services/works/getInstallationsCountByWork'
+10:08:32.297    9 | import { getUnreadDailyLogsCount } from '@/services/works/getUnreadDailyLogsCount';
+10:08:32.297   10 | import { getPendingMilestonesCount } from '@/services/works/getPendingMilestonesCount';
+10:08:32.297 > 11 | import { getInstallationsCountByWork } from '@/services/works/getInstallationsCountByWork';
+10:08:32.297      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.298   12 | import { getManagers } from '@/services/people/getManagers';
+10:08:32.298   13 | import { WorkHeader } from '@/components/andamento-obra/works/WorkHeader';
+10:08:32.298   14 | import { WorkTabsNav } from '@/components/andamento-obra/works/WorkTabsNav';
+10:08:32.298 
+10:08:32.298 Import map: aliased to relative './src/services/works/getInstallationsCountByWork' inside of [project]/
+10:08:32.299 
+10:08:32.299 
+10:08:32.299 https://nextjs.org/docs/messages/module-not-found
+10:08:32.299 
+10:08:32.300 
+10:08:32.300 ./src/app/tools/andamento-obra/obras/[workId]/layout.tsx:10:1
+10:08:32.300 Module not found: Can't resolve '@/services/works/getPendingMilestonesCount'
+10:08:32.300    8 | import { getUnreadMessagesCount } from '@/services/works/getUnreadMessagesCount';
+10:08:32.300    9 | import { getUnreadDailyLogsCount } from '@/services/works/getUnreadDailyLogsCount';
+10:08:32.301 > 10 | import { getPendingMilestonesCount } from '@/services/works/getPendingMilestonesCount';
+10:08:32.301      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.301   11 | import { getInstallationsCountByWork } from '@/services/works/getInstallationsCountByWork';
+10:08:32.301   12 | import { getManagers } from '@/services/people/getManagers';
+10:08:32.302   13 | import { WorkHeader } from '@/components/andamento-obra/works/WorkHeader';
+10:08:32.302 
+10:08:32.302 Import map: aliased to relative './src/services/works/getPendingMilestonesCount' inside of [project]/
+10:08:32.302 
+10:08:32.303 
+10:08:32.303 https://nextjs.org/docs/messages/module-not-found
+10:08:32.303 
+10:08:32.303 
+10:08:32.303 ./src/app/tools/andamento-obra/page.tsx:7:1
+10:08:32.304 Module not found: Can't resolve '@/services/works/getUnreadCountsForWorks'
+10:08:32.304    5 | import { getWorksForEngineer } from '@/services/works/getWorksForEngineer';
+10:08:32.304    6 | import { getNotificationsForUser } from '@/services/notifications/getNotificationsForUser';
+10:08:32.304 >  7 | import { getUnreadCountsForWorks } from '@/services/works/getUnreadCountsForWorks';
+10:08:32.305      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.305    8 | import { getWorkPendingApprovals } from '@/services/works/getWorkPendingApprovals';
+10:08:32.305    9 | import { categorizeWorks } from '@/services/works/categorizeWorks';
+10:08:32.305   10 | import { getManagers } from '@/services/people/getManagers';
+10:08:32.307 
+10:08:32.307 Import map: aliased to relative './src/services/works/getUnreadCountsForWorks' inside of [project]/
+10:08:32.307 
+10:08:32.307 
+10:08:32.308 https://nextjs.org/docs/messages/module-not-found
+10:08:32.308 
+10:08:32.308 
+10:08:32.308 ./src/app/tools/andamento-obra/obras/[workId]/layout.tsx:9:1
+10:08:32.309 Module not found: Can't resolve '@/services/works/getUnreadDailyLogsCount'
+10:08:32.309    7 | import { getWorkProjectPostsCount } from '@/services/works/getWorkProjectPostsCount';
+10:08:32.309    8 | import { getUnreadMessagesCount } from '@/services/works/getUnreadMessagesCount';
+10:08:32.310 >  9 | import { getUnreadDailyLogsCount } from '@/services/works/getUnreadDailyLogsCount';
+10:08:32.310      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.310   10 | import { getPendingMilestonesCount } from '@/services/works/getPendingMilestonesCount';
+10:08:32.310   11 | import { getInstallationsCountByWork } from '@/services/works/getInstallationsCountByWork';
+10:08:32.310   12 | import { getManagers } from '@/services/people/getManagers';
+10:08:32.311 
+10:08:32.311 Import map: aliased to relative './src/services/works/getUnreadDailyLogsCount' inside of [project]/
+10:08:32.311 
+10:08:32.311 
+10:08:32.312 https://nextjs.org/docs/messages/module-not-found
+10:08:32.312 
+10:08:32.312 
+10:08:32.312 ./src/app/tools/andamento-obra/obras/[workId]/layout.tsx:8:1
+10:08:32.313 Module not found: Can't resolve '@/services/works/getUnreadMessagesCount'
+10:08:32.313    6 | import { getWorkMilestones } from '@/services/works/getWorkMilestones';
+10:08:32.313    7 | import { getWorkProjectPostsCount } from '@/services/works/getWorkProjectPostsCount';
+10:08:32.313 >  8 | import { getUnreadMessagesCount } from '@/services/works/getUnreadMessagesCount';
+10:08:32.314      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.314    9 | import { getUnreadDailyLogsCount } from '@/services/works/getUnreadDailyLogsCount';
+10:08:32.314   10 | import { getPendingMilestonesCount } from '@/services/works/getPendingMilestonesCount';
+10:08:32.314   11 | import { getInstallationsCountByWork } from '@/services/works/getInstallationsCountByWork';
+10:08:32.315 
+10:08:32.315 Import map: aliased to relative './src/services/works/getUnreadMessagesCount' inside of [project]/
+10:08:32.315 
+10:08:32.315 
+10:08:32.316 https://nextjs.org/docs/messages/module-not-found
+10:08:32.316 
+10:08:32.316 
+10:08:32.316 ./src/app/tools/andamento-obra/obras/[workId]/chat/page.tsx:4:1
+10:08:32.316 Module not found: Can't resolve '@/services/works/getWorkById'
+10:08:32.317   2 | import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
+10:08:32.317   3 | import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
+10:08:32.317 > 4 | import { getWorkById } from '@/services/works/getWorkById';
+10:08:32.317     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.318   5 | import { getWorkMessages } from '@/services/works/getWorkMessages';
+10:08:32.318   6 | import { getAttachmentSignedUrls } from '@/services/works/getAttachmentSignedUrls';
+10:08:32.318   7 | import { markMessagesAsRead } from '@/actions/workMessages';
+10:08:32.318 
+10:08:32.319 Import map: aliased to relative './src/services/works/getWorkById' inside of [project]/
+10:08:32.319 
+10:08:32.319 
+10:08:32.319 https://nextjs.org/docs/messages/module-not-found
+10:08:32.319 
+10:08:32.320 
+10:08:32.320 ./src/app/tools/andamento-obra/obras/[workId]/diario/page.tsx:4:1
+10:08:32.320 Module not found: Can't resolve '@/services/works/getWorkById'
+10:08:32.320   2 | import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
+10:08:32.321   3 | import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
+10:08:32.321 > 4 | import { getWorkById } from '@/services/works/getWorkById';
+10:08:32.321     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.321   5 | import { getWorkDailyLogs } from '@/services/works/getWorkDailyLogs';
+10:08:32.321   6 | import { getDailyLogSignedUrls } from '@/services/works/getDailyLogSignedUrls';
+10:08:32.322   7 | import { DailyLogList } from '@/components/andamento-obra/works/diario/DailyLogList';
+10:08:32.322 
+10:08:32.322 Import map: aliased to relative './src/services/works/getWorkById' inside of [project]/
+10:08:32.322 
+10:08:32.323 
+10:08:32.323 https://nextjs.org/docs/messages/module-not-found
+10:08:32.323 
+10:08:32.323 
+10:08:32.327 ./src/app/tools/andamento-obra/obras/[workId]/layout.tsx:5:1
+10:08:32.328 Module not found: Can't resolve '@/services/works/getWorkById'
+10:08:32.328   3 | import { createSupabaseServerClient } from '@/lib/supabaseServer';
+10:08:32.328   4 | import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
+10:08:32.329 > 5 | import { getWorkById } from '@/services/works/getWorkById';
+10:08:32.329     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.329   6 | import { getWorkMilestones } from '@/services/works/getWorkMilestones';
+10:08:32.329   7 | import { getWorkProjectPostsCount } from '@/services/works/getWorkProjectPostsCount';
+10:08:32.330   8 | import { getUnreadMessagesCount } from '@/services/works/getUnreadMessagesCount';
+10:08:32.330 
+10:08:32.330 Import map: aliased to relative './src/services/works/getWorkById' inside of [project]/
+10:08:32.331 
+10:08:32.331 
+10:08:32.331 https://nextjs.org/docs/messages/module-not-found
+10:08:32.339 
+10:08:32.339 
+10:08:32.340 ./src/app/tools/andamento-obra/obras/[workId]/progresso/page.tsx:4:1
+10:08:32.340 Module not found: Can't resolve '@/services/works/getWorkById'
+10:08:32.340   2 | import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
+10:08:32.340   3 | import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
+10:08:32.341 > 4 | import { getWorkById } from '@/services/works/getWorkById';
+10:08:32.341     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.341   5 | import { getWorkProgressData } from '@/services/works/getWorkProgressData';
+10:08:32.341   6 | import { getWorkMilestonesWithEvents } from '@/services/works/getWorkMilestonesWithEvents';
+10:08:32.342   7 | import { ProgressOverview } from '@/components/andamento-obra/works/progresso/ProgressOverv...
+10:08:32.342 
+10:08:32.342 Import map: aliased to relative './src/services/works/getWorkById' inside of [project]/
+10:08:32.342 
+10:08:32.342 
+10:08:32.343 https://nextjs.org/docs/messages/module-not-found
+10:08:32.343 
+10:08:32.343 
+10:08:32.343 ./src/app/tools/andamento-obra/obras/[workId]/diario/page.tsx:5:1
+10:08:32.344 Module not found: Can't resolve '@/services/works/getWorkDailyLogs'
+10:08:32.344   3 | import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
+10:08:32.344   4 | import { getWorkById } from '@/services/works/getWorkById';
+10:08:32.344 > 5 | import { getWorkDailyLogs } from '@/services/works/getWorkDailyLogs';
+10:08:32.345     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.345   6 | import { getDailyLogSignedUrls } from '@/services/works/getDailyLogSignedUrls';
+10:08:32.345   7 | import { DailyLogList } from '@/components/andamento-obra/works/diario/DailyLogList';
+10:08:32.345   8 | import type { WorkMemberRole } from '@/types/works';
+10:08:32.346 
+10:08:32.346 Import map: aliased to relative './src/services/works/getWorkDailyLogs' inside of [project]/
+10:08:32.346 
+10:08:32.346 
+10:08:32.347 https://nextjs.org/docs/messages/module-not-found
+10:08:32.347 
+10:08:32.347 
+10:08:32.347 ./src/app/tools/andamento-obra/obras/[workId]/chat/page.tsx:5:1
+10:08:32.348 Module not found: Can't resolve '@/services/works/getWorkMessages'
+10:08:32.348   3 | import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
+10:08:32.348   4 | import { getWorkById } from '@/services/works/getWorkById';
+10:08:32.349 > 5 | import { getWorkMessages } from '@/services/works/getWorkMessages';
+10:08:32.349     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.349   6 | import { getAttachmentSignedUrls } from '@/services/works/getAttachmentSignedUrls';
+10:08:32.349   7 | import { markMessagesAsRead } from '@/actions/workMessages';
+10:08:32.350   8 | import { ChatRoom } from '@/components/andamento-obra/works/chat/ChatRoom';
+10:08:32.350 
+10:08:32.350 Import map: aliased to relative './src/services/works/getWorkMessages' inside of [project]/
+10:08:32.350 
+10:08:32.351 
+10:08:32.351 https://nextjs.org/docs/messages/module-not-found
+10:08:32.351 
+10:08:32.351 
+10:08:32.352 ./src/app/tools/andamento-obra/obras/[workId]/layout.tsx:6:1
+10:08:32.352 Module not found: Can't resolve '@/services/works/getWorkMilestones'
+10:08:32.352   4 | import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
+10:08:32.352   5 | import { getWorkById } from '@/services/works/getWorkById';
+10:08:32.353 > 6 | import { getWorkMilestones } from '@/services/works/getWorkMilestones';
+10:08:32.353     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.353   7 | import { getWorkProjectPostsCount } from '@/services/works/getWorkProjectPostsCount';
+10:08:32.353   8 | import { getUnreadMessagesCount } from '@/services/works/getUnreadMessagesCount';
+10:08:32.354   9 | import { getUnreadDailyLogsCount } from '@/services/works/getUnreadDailyLogsCount';
+10:08:32.354 
+10:08:32.354 Import map: aliased to relative './src/services/works/getWorkMilestones' inside of [project]/
+10:08:32.354 
+10:08:32.355 
+10:08:32.355 https://nextjs.org/docs/messages/module-not-found
+10:08:32.355 
+10:08:32.355 
+10:08:32.355 ./src/app/tools/andamento-obra/obras/[workId]/progresso/page.tsx:6:1
+10:08:32.357 Module not found: Can't resolve '@/services/works/getWorkMilestonesWithEvents'
+10:08:32.357   4 | ...mport { getWorkById } from '@/services/works/getWorkById';
+10:08:32.357   5 | ...mport { getWorkProgressData } from '@/services/works/getWorkProgressData';
+10:08:32.358 > 6 | ...mport { getWorkMilestonesWithEvents } from '@/services/works/getWorkMilestonesWithEvents';
+10:08:32.358     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.358   7 | ...mport { ProgressOverview } from '@/components/andamento-obra/works/progresso/ProgressOve...
+10:08:32.359   8 | ...mport { MilestonesList } from '@/components/andamento-obra/works/progresso/MilestonesList';
+10:08:32.359   9 | ...mport type { WorkMemberRole } from '@/types/works';
+10:08:32.359 
+10:08:32.359 Import map: aliased to relative './src/services/works/getWorkMilestonesWithEvents' inside of [project]/
+10:08:32.360 
+10:08:32.360 
+10:08:32.360 https://nextjs.org/docs/messages/module-not-found
+10:08:32.360 
+10:08:32.361 
+10:08:32.361 ./src/app/tools/andamento-obra/page.tsx:8:1
+10:08:32.361 Module not found: Can't resolve '@/services/works/getWorkPendingApprovals'
+10:08:32.361    6 | import { getNotificationsForUser } from '@/services/notifications/getNotificationsForUser';
+10:08:32.362    7 | import { getUnreadCountsForWorks } from '@/services/works/getUnreadCountsForWorks';
+10:08:32.362 >  8 | import { getWorkPendingApprovals } from '@/services/works/getWorkPendingApprovals';
+10:08:32.362      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.362    9 | import { categorizeWorks } from '@/services/works/categorizeWorks';
+10:08:32.363   10 | import { getManagers } from '@/services/people/getManagers';
+10:08:32.363   11 | import { WorksHomeView } from '@/components/andamento-obra/works/WorksHomeView';
+10:08:32.363 
+10:08:32.363 Import map: aliased to relative './src/services/works/getWorkPendingApprovals' inside of [project]/
+10:08:32.364 
+10:08:32.364 
+10:08:32.364 https://nextjs.org/docs/messages/module-not-found
+10:08:32.364 
+10:08:32.365 
+10:08:32.365 ./src/app/tools/andamento-obra/obras/[workId]/progresso/page.tsx:5:1
+10:08:32.365 Module not found: Can't resolve '@/services/works/getWorkProgressData'
+10:08:32.365   3 | import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
+10:08:32.366   4 | import { getWorkById } from '@/services/works/getWorkById';
+10:08:32.366 > 5 | import { getWorkProgressData } from '@/services/works/getWorkProgressData';
+10:08:32.366     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.366   6 | import { getWorkMilestonesWithEvents } from '@/services/works/getWorkMilestonesWithEvents';
+10:08:32.367   7 | import { ProgressOverview } from '@/components/andamento-obra/works/progresso/ProgressOverv...
+10:08:32.367   8 | import { MilestonesList } from '@/components/andamento-obra/works/progresso/MilestonesList';
+10:08:32.367 
+10:08:32.367 Import map: aliased to relative './src/services/works/getWorkProgressData' inside of [project]/
+10:08:32.368 
+10:08:32.379 
+10:08:32.385 https://nextjs.org/docs/messages/module-not-found
+10:08:32.387 
+10:08:32.388 
+10:08:32.388 ./src/app/tools/andamento-obra/obras/[workId]/layout.tsx:7:1
+10:08:32.388 Module not found: Can't resolve '@/services/works/getWorkProjectPostsCount'
+10:08:32.388    5 | import { getWorkById } from '@/services/works/getWorkById';
+10:08:32.389    6 | import { getWorkMilestones } from '@/services/works/getWorkMilestones';
+10:08:32.389 >  7 | import { getWorkProjectPostsCount } from '@/services/works/getWorkProjectPostsCount';
+10:08:32.392      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.392    8 | import { getUnreadMessagesCount } from '@/services/works/getUnreadMessagesCount';
+10:08:32.393    9 | import { getUnreadDailyLogsCount } from '@/services/works/getUnreadDailyLogsCount';
+10:08:32.393   10 | import { getPendingMilestonesCount } from '@/services/works/getPendingMilestonesCount';
+10:08:32.393 
+10:08:32.393 Import map: aliased to relative './src/services/works/getWorkProjectPostsCount' inside of [project]/
+10:08:32.394 
+10:08:32.394 
+10:08:32.394 https://nextjs.org/docs/messages/module-not-found
+10:08:32.394 
+10:08:32.395 
+10:08:32.395 ./src/app/tools/andamento-obra/page.tsx:5:1
+10:08:32.395 Module not found: Can't resolve '@/services/works/getWorksForEngineer'
+10:08:32.395   3 | import { createSupabaseServerClient } from '@/lib/supabaseServer';
+10:08:32.395   4 | import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
+10:08:32.396 > 5 | import { getWorksForEngineer } from '@/services/works/getWorksForEngineer';
+10:08:32.396     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.396   6 | import { getNotificationsForUser } from '@/services/notifications/getNotificationsForUser';
+10:08:32.397   7 | import { getUnreadCountsForWorks } from '@/services/works/getUnreadCountsForWorks';
+10:08:32.397   8 | import { getWorkPendingApprovals } from '@/services/works/getWorkPendingApprovals';
+10:08:32.397 
+10:08:32.397 Import map: aliased to relative './src/services/works/getWorksForEngineer' inside of [project]/
+10:08:32.397 
+10:08:32.398 
+10:08:32.398 https://nextjs.org/docs/messages/module-not-found
+10:08:32.405 
+10:08:32.406 
+10:08:32.406 ./src/app/tools/andamento-obra/page.tsx:12:1
+10:08:32.406 Module not found: Can't resolve '@/types/works'
+10:08:32.407   10 | import { getManagers } from '@/services/people/getManagers';
+10:08:32.407   11 | import { WorksHomeView } from '@/components/andamento-obra/works/WorksHomeView';
+10:08:32.407 > 12 | import { PENDING_DAILY_LOG_RED_THRESHOLD_HOURS } from '@/types/works';
+10:08:32.407      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.408   13 |
+10:08:32.408   14 | export const metadata: Metadata = {
+10:08:32.408   15 |   title: 'Andamento de Obra — OrcaRede',
+10:08:32.408 
+10:08:32.409 Import map: aliased to relative './src/types/works' inside of [project]/
+10:08:32.409 
+10:08:32.409 
+10:08:32.409 https://nextjs.org/docs/messages/module-not-found
+10:08:32.410 
+10:08:32.410 
+10:08:32.410 ./src/services/ai/semanticMatch.ts:1:1
+10:08:32.410 Module not found: Can't resolve '@google/generative-ai'
+10:08:32.411 > 1 | import { GoogleGenerativeAI } from '@google/generative-ai';
+10:08:32.411     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.411   2 | import { getSemanticMatchGeminiModel } from '@/lib/suppliesSemanticMatchConfig';
+10:08:32.411   3 | import type {
+10:08:32.412   4 |   UnconciliatedItem,
+10:08:32.412 
+10:08:32.412 
+10:08:32.412 
+10:08:32.412 Import trace:
+10:08:32.413   App Route:
+10:08:32.413     ./src/services/ai/semanticMatch.ts
+10:08:32.413     ./src/services/suppliers/runSemanticMatchLevel2.ts
+10:08:32.414     ./src/services/suppliers/runExtractionPipelineStep.ts
+10:08:32.414     ./src/app/api/process-pdfs/continue/route.ts
+10:08:32.414 
+10:08:32.414 https://nextjs.org/docs/messages/module-not-found
+10:08:32.414 
+10:08:32.415 
+10:08:32.415 ./src/components/precificacao/PrecificacaoCalculator.tsx:6:1
+10:08:32.415 Module not found: Can't resolve 'sonner'
+10:08:32.415   4 | import { useRouter } from 'next/navigation';
+10:08:32.416   5 | import { useEffect, useMemo, useState } from 'react';
+10:08:32.416 > 6 | import { toast } from 'sonner';
+10:08:32.416     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.416   7 | import { savePricingBudgetAction } from '@/actions/pricingBudgets';
+10:08:32.417   8 | import { useApp } from '@/contexts/AppContext';
+10:08:32.417   9 | import { useAuth } from '@/contexts/AuthContext';
+10:08:32.417 
+10:08:32.417 
+10:08:32.417 
+10:08:32.418 Import trace:
+10:08:32.418   Server Component:
+10:08:32.418     ./src/components/precificacao/PrecificacaoCalculator.tsx
+10:08:32.418     ./src/app/tools/precificacao/nova/page.tsx
+10:08:32.419 
+10:08:32.419 https://nextjs.org/docs/messages/module-not-found
+10:08:32.419 
+10:08:32.419 
+10:08:32.420 ./src/components/precificacao/PricingDashboardClient.tsx:6:1
+10:08:32.420 Module not found: Can't resolve 'sonner'
+10:08:32.420   4 | import { useRouter } from 'next/navigation';
+10:08:32.421   5 | import { useMemo, useState, useTransition } from 'react';
+10:08:32.421 > 6 | import { toast } from 'sonner';
+10:08:32.421     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.421   7 | import {
+10:08:32.422   8 |   Calculator,
+10:08:32.422   9 |   Download,
+10:08:32.422 
+10:08:32.422 
+10:08:32.422 
+10:08:32.423 Import trace:
+10:08:32.424   Server Component:
+10:08:32.424     ./src/components/precificacao/PricingDashboardClient.tsx
+10:08:32.424     ./src/app/tools/precificacao/page.tsx
+10:08:32.425 
+10:08:32.425 https://nextjs.org/docs/messages/module-not-found
+10:08:32.425 
+10:08:32.425 
+10:08:32.426 ./src/app/api/process-pdfs/continue/route.ts:3:1
+10:08:32.426 Export createSupabaseServiceRoleClient doesn't exist in target module
+10:08:32.426    1 | import { after } from 'next/server';
+10:08:32.426    2 | import { NextResponse } from 'next/server';
+10:08:32.427 >  3 | import {
+10:08:32.427      | ^^^^^^^
+10:08:32.427 >  4 |   createSupabaseServerClient,
+10:08:32.427      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.427 >  5 |   createSupabaseServiceRoleClient,
+10:08:32.428      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.428 >  6 |   requireAuthUserId,
+10:08:32.428      | ^^^^^^^^^^^^^^^^^^^^
+10:08:32.428 >  7 | } from '@/lib/supabaseServer';
+10:08:32.429      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.429    8 | import { getInternalJobSecret } from '@/lib/extractionPipelineConfig';
+10:08:32.429    9 | import { chainExtractionStep } from '@/services/suppliers/chainExtractionStep';
+10:08:32.429   10 | import { runExtractionPipelineStep } from '@/services/suppliers/runExtractionPipelineStep';
+10:08:32.430 
+10:08:32.430 The export createSupabaseServiceRoleClient was not found in module [project]/src/lib/supabaseServer.ts [app-route] (ecmascript).
+10:08:32.430 Did you mean to import createSupabaseServerClient?
+10:08:32.430 All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+10:08:32.430 
+10:08:32.431 
+10:08:32.431 ./src/app/api/process-pdfs/route.ts:3:1
+10:08:32.431 Export createSupabaseServiceRoleClient doesn't exist in target module
+10:08:32.431    1 | import { after } from 'next/server';
+10:08:32.432    2 | import { NextResponse } from 'next/server';
+10:08:32.432 >  3 | import {
+10:08:32.432      | ^^^^^^^
+10:08:32.432 >  4 |   createSupabaseServerClient,
+10:08:32.433      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.433 >  5 |   createSupabaseServiceRoleClient,
+10:08:32.433      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.433 >  6 |   requireAuthUserId,
+10:08:32.433      | ^^^^^^^^^^^^^^^^^^^^
+10:08:32.434 >  7 | } from '@/lib/supabaseServer';
+10:08:32.434      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.434    8 | import { invokeExtractOnEdge } from '@/services/suppliers/invokeExtractOnEdge';
+10:08:32.434    9 |
+10:08:32.435   10 | export const runtime = 'nodejs';
+10:08:32.435 
+10:08:32.435 The export createSupabaseServiceRoleClient was not found in module [project]/src/lib/supabaseServer.ts [app-route] (ecmascript).
+10:08:32.435 Did you mean to import createSupabaseServerClient?
+10:08:32.436 All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+10:08:32.436 
+10:08:32.436 
+10:08:32.436 ./src/services/people/ensureEngineerProfile.ts:3:1
+10:08:32.436 Export createSupabaseServiceRoleClient doesn't exist in target module
+10:08:32.437   1 | import 'server-only';
+10:08:32.437   2 | import type { SupabaseClient } from '@supabase/supabase-js';
+10:08:32.437 > 3 | import { createSupabaseServiceRoleClient } from '@/lib/supabaseServer';
+10:08:32.437     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.438   4 | import type { CurrentUserProfile } from '@/types/people';
+10:08:32.438   5 | import { getCurrentUserProfile } from './getCurrentUserProfile';
+10:08:32.438   6 |
+10:08:32.438 
+10:08:32.439 The export createSupabaseServiceRoleClient was not found in module [project]/src/lib/supabaseServer.ts [app-rsc] (ecmascript).
+10:08:32.439 Did you mean to import createSupabaseServerClient?
+10:08:32.439 All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+10:08:32.439 
+10:08:32.440 Import trace:
+10:08:32.440   Server Component:
+10:08:32.440     ./src/services/people/ensureEngineerProfile.ts
+10:08:32.440     ./src/app/tools/andamento-obra/pessoas/page.tsx
+10:08:32.441 
+10:08:32.441 
+10:08:32.441 ./src/services/suppliers/deleteUploadedPdfCascade.ts:2:1
+10:08:32.441 Export createSupabaseServiceRoleClient doesn't exist in target module
+10:08:32.442   1 | import type { SupabaseClient } from '@supabase/supabase-js';
+10:08:32.442 > 2 | import {
+10:08:32.442     | ^^^^^^^
+10:08:32.442 > 3 |   createSupabaseServerClient,
+10:08:32.442     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.443 > 4 |   createSupabaseServiceRoleClient,
+10:08:32.443     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.443 > 5 |   requireAuthUserId,
+10:08:32.443     | ^^^^^^^^^^^^^^^^^^^^
+10:08:32.444 > 6 | } from '@/lib/supabaseServer';
+10:08:32.444     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.444   7 |
+10:08:32.444   8 | const STORAGE_BUCKET = 'fornecedores_pdfs';
+10:08:32.445   9 |
+10:08:32.445 
+10:08:32.445 The export createSupabaseServiceRoleClient was not found in module [project]/src/lib/supabaseServer.ts [app-rsc] (ecmascript).
+10:08:32.445 Did you mean to import createSupabaseServerClient?
+10:08:32.446 All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+10:08:32.446 
+10:08:32.446 Import trace:
+10:08:32.446   Server Component:
+10:08:32.447     ./src/services/suppliers/deleteUploadedPdfCascade.ts
+10:08:32.447     ./src/actions/quotationSessions.ts
+10:08:32.447     ./src/app/fornecedores/page.tsx
+10:08:32.447 
+10:08:32.448 
+10:08:32.448 ./src/services/suppliers/runExtractionPipelineStep.ts:3:1
+10:08:32.448 Export createSupabaseServiceRoleClient doesn't exist in target module
+10:08:32.448   1 | import { revalidatePath } from 'next/cache';
+10:08:32.449   2 | import type { SupabaseClient } from '@supabase/supabase-js';
+10:08:32.449 > 3 | import { createSupabaseServiceRoleClient } from '@/lib/supabaseServer';
+10:08:32.449     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.449   4 | import {
+10:08:32.449   5 |   EXTRACT_STUCK_ERROR_MS,
+10:08:32.450   6 |   EXTRACT_TIMEOUT_ERROR_MESSAGE,
+10:08:32.450 
+10:08:32.450 The export createSupabaseServiceRoleClient was not found in module [project]/src/lib/supabaseServer.ts [app-route] (ecmascript).
+10:08:32.450 Did you mean to import createSupabaseServerClient?
+10:08:32.451 All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+10:08:32.451 
+10:08:32.451 Import trace:
+10:08:32.451   App Route:
+10:08:32.452     ./src/services/suppliers/runExtractionPipelineStep.ts
+10:08:32.452     ./src/app/api/process-pdfs/continue/route.ts
+10:08:32.452 
+10:08:32.452 
+10:08:32.453 ./src/components/suppliers/ConciliationCurationView.tsx:36:1
+10:08:32.453 Export onPortalPrimaryButtonSmClass doesn't exist in target module
+10:08:32.453   34 |   DialogDescription,
+10:08:32.453   35 | } from '@/components/ui/dialog';
+10:08:32.454 > 36 | import { onPortalPrimaryButtonSmClass } from '@/lib/branding';
+10:08:32.454      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.454   37 | import { suppliesTableBorderedScrollClass } from '@/lib/suppliesLayout';
+10:08:32.455   38 |
+10:08:32.455   39 | const fmtCurrency = (v: number) =>
+10:08:32.455 
+10:08:32.456 The export onPortalPrimaryButtonSmClass was not found in module [project]/src/lib/branding.ts [app-client] (ecmascript).
+10:08:32.456 Did you mean to import ON_ENGENHARIA_LOGO_SRC?
+10:08:32.456 All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+10:08:32.456 
+10:08:32.457 Import trace:
+10:08:32.457   Server Component:
+10:08:32.457     ./src/components/suppliers/ConciliationCurationView.tsx
+10:08:32.457     ./src/app/fornecedores/sessao/[sessionId]/conciliacao/page.tsx
+10:08:32.458 
+10:08:32.458 
+10:08:32.458 ./src/components/suppliers/ConciliationCurationView.tsx:36:1
+10:08:32.458 Export onPortalPrimaryButtonSmClass doesn't exist in target module
+10:08:32.459   34 |   DialogDescription,
+10:08:32.459   35 | } from '@/components/ui/dialog';
+10:08:32.459 > 36 | import { onPortalPrimaryButtonSmClass } from '@/lib/branding';
+10:08:32.460      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10:08:32.461   37 | import { suppliesTableBorderedScrollClass } from '@/lib/suppliesLayout';
+10:08:32.461   38 |
+10:08:32.461   39 | const fmtCurrency = (v: number) =>
+10:08:32.461 
+10:08:32.462 The export onPortalPrimaryButtonSmClass was not found in module [project]/src/lib/branding.ts [app-ssr] (ecmascript).
+10:08:32.462 Did you mean to import ON_ENGENHARIA_LOGO_SRC?
+10:08:32.462 All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+10:08:32.463 
+10:08:32.463 Import trace:
+10:08:32.463   Server Component:
+10:08:32.463     ./src/components/suppliers/ConciliationCurationView.tsx
+10:08:32.464     ./src/app/fornecedores/sessao/[sessionId]/conciliacao/page.tsx
+10:08:32.464 
+10:08:32.464 
+10:08:32.464     at <unknown> (./src/components/EngineerPortal.tsx:230:5)
+10:08:32.465     at <unknown> (./src/app/tools/andamento-obra/admin/page.tsx:5:1)
+10:08:32.465     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.465     at <unknown> (./src/components/precificacao/PrecificacaoCalculator.tsx:16:1)
+10:08:32.465     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.466     at <unknown> (./src/app/tools/andamento-obra/notificacoes/page.tsx:6:1)
+10:08:32.466     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.466     at <unknown> (./src/services/people/ensureEngineerProfile.ts:5:1)
+10:08:32.466     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.467     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/chat/page.tsx:7:1)
+10:08:32.467     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.467     at <unknown> (./src/app/tools/andamento-obra/pessoas/page.tsx:7:1)
+10:08:32.468     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.468     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/layout.tsx:13:1)
+10:08:32.468     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.468     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/layout.tsx:14:1)
+10:08:32.469     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.469     at <unknown> (./src/app/tools/andamento-obra/page.tsx:11:1)
+10:08:32.469     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.469     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/chat/page.tsx:8:1)
+10:08:32.470     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.470     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/diario/page.tsx:7:1)
+10:08:32.470     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.470     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/progresso/page.tsx:8:1)
+10:08:32.470     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.471     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/progresso/page.tsx:7:1)
+10:08:32.471     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.471     at <unknown> (./src/app/fornecedores/sessao/[sessionId]/page.tsx:9:1)
+10:08:32.471     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.472     at <unknown> (./src/app/fornecedores/page.tsx:3:1)
+10:08:32.472     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.472     at <unknown> (./src/app/fornecedores/sessao/[sessionId]/page.tsx:8:1)
+10:08:32.472     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.473     at <unknown> (./src/components/suppliers/ConciliationCurationView.tsx:29:1)
+10:08:32.473     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.473     at <unknown> (./src/components/suppliers/ManualQuoteDialog.tsx:5:1)
+10:08:32.473     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.473     at <unknown> (./src/components/suppliers/MaterialDetailModal.tsx:5:1)
+10:08:32.474     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.474     at <unknown> (./src/components/suppliers/SupplierFormModal.tsx:5:1)
+10:08:32.474     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.474     at <unknown> (./src/components/suppliers/SupplierPdfHistoryModal.tsx:6:1)
+10:08:32.475     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.475     at <unknown> (./src/app/tools/andamento-obra/notificacoes/page.tsx:5:1)
+10:08:32.475     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.475     at <unknown> (./src/app/tools/andamento-obra/page.tsx:6:1)
+10:08:32.476     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.476     at <unknown> (./src/app/tools/andamento-obra/pessoas/page.tsx:6:1)
+10:08:32.476     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.476     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/layout.tsx:12:1)
+10:08:32.477     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.477     at <unknown> (./src/app/tools/andamento-obra/page.tsx:10:1)
+10:08:32.477     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.477     at <unknown> (./src/app/tools/andamento-obra/pessoas/page.tsx:5:1)
+10:08:32.477     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.478     at <unknown> (./src/app/tools/andamento-obra/page.tsx:9:1)
+10:08:32.478     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.478     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/chat/page.tsx:6:1)
+10:08:32.478     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.479     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/diario/page.tsx:6:1)
+10:08:32.479     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.479     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/layout.tsx:11:1)
+10:08:32.479     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.480     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/layout.tsx:10:1)
+10:08:32.480     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.480     at <unknown> (./src/app/tools/andamento-obra/page.tsx:7:1)
+10:08:32.480     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.480     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/layout.tsx:9:1)
+10:08:32.481     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.481     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/layout.tsx:8:1)
+10:08:32.481     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.481     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/chat/page.tsx:4:1)
+10:08:32.482     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.482     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/diario/page.tsx:4:1)
+10:08:32.482     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.482     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/layout.tsx:5:1)
+10:08:32.482     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.483     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/progresso/page.tsx:4:1)
+10:08:32.483     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.483     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/diario/page.tsx:5:1)
+10:08:32.483     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.484     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/chat/page.tsx:5:1)
+10:08:32.484     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.484     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/layout.tsx:6:1)
+10:08:32.484     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.485     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/progresso/page.tsx:6:1)
+10:08:32.485     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.485     at <unknown> (./src/app/tools/andamento-obra/page.tsx:8:1)
+10:08:32.485     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.486     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/progresso/page.tsx:5:1)
+10:08:32.486     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.486     at <unknown> (./src/app/tools/andamento-obra/obras/[workId]/layout.tsx:7:1)
+10:08:32.486     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.486     at <unknown> (./src/app/tools/andamento-obra/page.tsx:5:1)
+10:08:32.487     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.487     at <unknown> (./src/app/tools/andamento-obra/page.tsx:12:1)
+10:08:32.489     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.489     at <unknown> (./src/services/ai/semanticMatch.ts:1:1)
+10:08:32.490     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.490     at <unknown> (./src/components/precificacao/PrecificacaoCalculator.tsx:6:1)
+10:08:32.490     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.490     at <unknown> (./src/components/precificacao/PricingDashboardClient.tsx:6:1)
+10:08:32.490     at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+10:08:32.491     at <unknown> (./src/app/api/process-pdfs/continue/route.ts:3:1)
+10:08:32.491     at <unknown> (./src/app/api/process-pdfs/route.ts:3:1)
+10:08:32.491     at <unknown> (./src/services/people/ensureEngineerProfile.ts:3:1)
+10:08:32.491     at <unknown> (./src/services/suppliers/deleteUploadedPdfCascade.ts:2:1)
+10:08:32.491     at <unknown> (./src/services/suppliers/runExtractionPipelineStep.ts:3:1)
+10:08:32.492     at <unknown> (./src/components/suppliers/ConciliationCurationView.tsx:36:1)
+10:08:32.492     at <unknown> (./src/components/suppliers/ConciliationCurationView.tsx:36:1)
+10:08:32.516 Error: Command "npm run build" exited with 1

@@ -4,8 +4,17 @@ import { Copy, Check, X, Loader2 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { AlertDialog } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Orcamento, Poste, TipoFixacao, BudgetPostDetail } from '@/types';
 import { getPostDisplayName } from '@/lib/utils';
+
+const EMPTY_FIXACAO_VALUE = '__no_tipo_fixacao__';
 
 interface PainelContextoProps {
   orcamento: Orcamento;
@@ -217,17 +226,25 @@ export function PainelContexto({ orcamento, selectedPoste, selectedPostDetail, o
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Tipo de Fixação
             </label>
-            <select
-              value={selectedPoste.tipoFixacao || ''}
-              onChange={(e) => onUpdatePoste(selectedPoste.id, { tipoFixacao: e.target.value as TipoFixacao })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            <Select
+              value={selectedPoste.tipoFixacao || EMPTY_FIXACAO_VALUE}
+              onValueChange={(value) =>
+                onUpdatePoste(selectedPoste.id, {
+                  tipoFixacao: (value === EMPTY_FIXACAO_VALUE ? '' : value) as TipoFixacao,
+                })
+              }
             >
-              <option value="">Selecione o tipo de fixação</option>
-              <option value="Direto">Direto</option>
-              <option value="Cruzeta">Cruzeta</option>
-              <option value="Suporte">Suporte</option>
-              <option value="Outro">Outro</option>
-            </select>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecione o tipo de fixação" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={EMPTY_FIXACAO_VALUE}>Selecione o tipo de fixação</SelectItem>
+                <SelectItem value="Direto">Direto</SelectItem>
+                <SelectItem value="Cruzeta">Cruzeta</SelectItem>
+                <SelectItem value="Suporte">Suporte</SelectItem>
+                <SelectItem value="Outro">Outro</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         )}
       </div>

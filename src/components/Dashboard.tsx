@@ -5,10 +5,20 @@ import { useApp } from '@/contexts/AppContext';
 import { CriarOrcamentoModal } from '@/components/modals/CriarOrcamentoModal';
 import { FolderModal } from '@/components/modals/FolderModal';
 import { AlertDialog } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { Orcamento, BudgetFolder } from '@/types';
 import { deleteBudgetAction, duplicateBudgetAction, finalizeBudgetAction } from '@/actions/budgets';
 import { addFolderAction, updateFolderAction, deleteFolderAction, moveBudgetToFolderAction, moveFolderToFolderAction } from '@/actions/folders';
+
+const STATUS_FILTER_ALL = 'all';
+const CONCESSIONARIA_FILTER_ALL = 'all';
 
 export function Dashboard() {
   const { 
@@ -1018,15 +1028,19 @@ export function Dashboard() {
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">
                   Status do Projeto
                 </label>
-                <select
+                <Select
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as 'all' | 'Em Andamento' | 'Finalizado')}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-sm"
+                  onValueChange={(value: 'all' | 'Em Andamento' | 'Finalizado') => setStatusFilter(value)}
                 >
-                  <option value="all">Todos os Status</option>
-                  <option value="Em Andamento">Em Andamento</option>
-                  <option value="Finalizado">Finalizado</option>
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Todos os Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={STATUS_FILTER_ALL}>Todos os Status</SelectItem>
+                    <SelectItem value="Em Andamento">Em Andamento</SelectItem>
+                    <SelectItem value="Finalizado">Finalizado</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Concessionária */}
@@ -1034,18 +1048,19 @@ export function Dashboard() {
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">
                   Concessionária
                 </label>
-                <select
-                  value={concessionariaFilter}
-                  onChange={(e) => setConcessionariaFilter(e.target.value)}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-sm"
-                >
-                  <option value="all">Todas as Concessionárias</option>
-                  {concessionarias.map((conc) => (
-                    <option key={conc.id} value={conc.id}>
-                      {conc.sigla} - {conc.nome}
-                    </option>
-                  ))}
-                </select>
+                <Select value={concessionariaFilter} onValueChange={setConcessionariaFilter}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Todas as Concessionárias" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={CONCESSIONARIA_FILTER_ALL}>Todas as Concessionárias</SelectItem>
+                    {concessionarias.map((conc) => (
+                      <SelectItem key={conc.id} value={conc.id}>
+                        {conc.sigla} - {conc.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Botão Limpar */}

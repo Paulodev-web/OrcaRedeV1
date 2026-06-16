@@ -1,6 +1,6 @@
 ﻿"use client";
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
-import { Material, GrupoItem, Concessionaria, Orcamento, BudgetPostDetail, BudgetDetails, ExtraCostItem, PostType, BudgetFolder } from '@/types';
+import { Material, GrupoItem, Concessionaria, Orcamento, BudgetPostDetail, BudgetDetails, PostType, BudgetFolder } from '@/types';
 import { gruposItens as initialGrupos, concessionarias, orcamentos as initialOrcamentos } from '@/data/mockData';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from './AuthContext';
@@ -75,8 +75,6 @@ interface AppContextType {
   
   // Função para atualizar preços consolidados
   updateConsolidatedMaterialPrice: (budgetId: string, materialId: string, newPrice: number) => Promise<void>;
-  updateBudgetMargin: (budgetId: string, margin: number) => Promise<void>;
-  updateBudgetExtras: (budgetId: string, extras: ExtraCostItem[]) => Promise<void>;
   
   // Funções para concessionárias e grupos
   fetchUtilityCompanies: () => Promise<void>;
@@ -164,27 +162,6 @@ async function fetchAllRecords(
   }
 
   return allRecords;
-}
-
-function normalizeProfitMargin(raw: unknown): number {
-  const n = Number(raw);
-  if (!Number.isFinite(n) || n < 0) return 0;
-  return n;
-}
-
-function normalizeExtraCostItems(raw: unknown): ExtraCostItem[] {
-  if (!raw || !Array.isArray(raw)) return [];
-  return raw
-    .map((item) => {
-      if (!item || typeof item !== 'object') return null;
-      const o = item as Record<string, unknown>;
-      const id = typeof o.id === 'string' && o.id ? o.id : typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `extra_${Math.random().toString(36).slice(2)}`;
-      const description = typeof o.description === 'string' ? o.description : '';
-      const v = Number(o.value);
-      const value = Number.isFinite(v) && v >= 0 ? v : 0;
-      return { id, description, value };
-    })
-    .filter((x): x is ExtraCostItem => x !== null);
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -351,7 +328,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       
       // Buscar TODOS os orçamentos usando a função helper de paginação
-      const data = await fetchAllRecords('budgets', '*, plan_image_url, folder_id', 'created_at', false, { user_id: user.id });
+      const data = await fetchAllRecords(
+        'budgets',
+        'id, project_name, company_id, client_name, city, status, updated_at, plan_image_url, folder_id',
+        'created_at',
+        false,
+        { user_id: user.id }
+      );
 
 
 
@@ -548,9 +531,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           created_at,
           updated_at,
           plan_image_url,
-          render_version,
-          profit_margin_percent,
-          extra_cost_items
+          render_version
         `)
         .eq('id', budgetId)
         .single();
@@ -709,8 +690,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updated_at: budgetData.updated_at || undefined,
         plan_image_url: budgetData.plan_image_url || undefined,
         render_version: budgetData.render_version || 1,
-        profit_margin_percent: normalizeProfitMargin((budgetData as { profit_margin_percent?: unknown }).profit_margin_percent),
-        extra_cost_items: normalizeExtraCostItems((budgetData as { extra_cost_items?: unknown }).extra_cost_items),
         posts: postsFormatted
       };
 
@@ -1840,8 +1819,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       
       // Função para atualizar preços consolidados
       updateConsolidatedMaterialPrice,
-      updateBudgetMargin,
-      updateBudgetExtras,
       
       // Funções para concessionárias e grupos
       fetchUtilityCompanies,

@@ -4,7 +4,17 @@ import { X, Loader2, Search, Plus, Minus, Package, Folder, ArrowUpDown, ArrowUp,
 import { useApp } from '@/contexts/AppContext';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { AlertDialog } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Material } from '@/types';
+
+const EMPTY_POST_TYPE_VALUE = '__no_post_type__';
+const EMPTY_SOURCE_POST_VALUE = '__no_source_post__';
 
 // ErrorBoundary específico para o modal
 class ModalErrorBoundary extends React.Component<
@@ -557,22 +567,26 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
                       </div>
                     ) : (
                       <>
-                        <select
-                          id="postType"
-                          value={selectedPostType}
-                          onChange={(e) => setSelectedPostType(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          required
+                        <Select
+                          value={selectedPostType || EMPTY_POST_TYPE_VALUE}
+                          onValueChange={(value) =>
+                            setSelectedPostType(value === EMPTY_POST_TYPE_VALUE ? '' : value)
+                          }
                           disabled={isSubmitting}
                         >
-                          <option value="">Selecione um tipo de poste</option>
-                          {postTypes.map((postType) => (
-                            <option key={postType.id} value={postType.id}>
-                              {postType.name} {postType.code && `(${postType.code})`} - R$ {postType.price.toFixed(2)}
-                              {postType.height_m && ` - ${postType.height_m}m`}
-                            </option>
-                          ))}
-                        </select>
+                          <SelectTrigger id="postType" className="w-full">
+                            <SelectValue placeholder="Selecione um tipo de poste" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={EMPTY_POST_TYPE_VALUE}>Selecione um tipo de poste</SelectItem>
+                            {postTypes.map((postType) => (
+                              <SelectItem key={postType.id} value={postType.id}>
+                                {postType.name} {postType.code && `(${postType.code})`} - R$ {postType.price.toFixed(2)}
+                                {postType.height_m && ` - ${postType.height_m}m`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         {selectedPostType && selectedSourcePostId && (
                           <p className="mt-2 text-sm text-green-600 flex items-center">
                             <Copy className="h-4 w-4 mr-1" />
@@ -623,20 +637,25 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
                       </div>
                     ) : (
                       <>
-                        <select
-                          id="sourcePost"
-                          value={selectedSourcePostId}
-                          onChange={(e) => setSelectedSourcePostId(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-3"
+                        <Select
+                          value={selectedSourcePostId || EMPTY_SOURCE_POST_VALUE}
+                          onValueChange={(value) =>
+                            setSelectedSourcePostId(value === EMPTY_SOURCE_POST_VALUE ? '' : value)
+                          }
                         >
-                          <option value="">Selecione um poste...</option>
-                          {budgetDetails.posts.map((post) => (
-                            <option key={post.id} value={post.id}>
-                              {post.name} - {post.post_types?.name || 'Sem tipo'}
-                              {' '}({post.post_item_groups.length} grupos, {post.post_materials.length} materiais)
-                            </option>
-                          ))}
-                        </select>
+                          <SelectTrigger id="sourcePost" className="w-full mb-3">
+                            <SelectValue placeholder="Selecione um poste..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={EMPTY_SOURCE_POST_VALUE}>Selecione um poste...</SelectItem>
+                            {budgetDetails.posts.map((post) => (
+                              <SelectItem key={post.id} value={post.id}>
+                                {post.name} - {post.post_types?.name || 'Sem tipo'}
+                                {' '}({post.post_item_groups.length} grupos, {post.post_materials.length} materiais)
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
 
                         {selectedSourcePostId && (
                           <button
