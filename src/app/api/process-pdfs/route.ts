@@ -51,6 +51,7 @@ export async function POST(request: Request) {
         status,
         supplier_name,
         quote_id,
+        started_at,
         quotation_sessions (
           id,
           budget_id,
@@ -95,7 +96,19 @@ export async function POST(request: Request) {
     }
 
     if (job.status === 'processing') {
-      return NextResponse.json({ error: 'Job já está em processamento.' }, { status: 409 });
+      if (job.quote_id) {
+        return NextResponse.json({ error: 'Job já está em processamento.' }, { status: 409 });
+      }
+
+      const chainJobId = jobId;
+      after(() => {
+        invokeExtractOnEdge(chainJobId);
+      });
+
+      return NextResponse.json(
+        { status: 'queued', job_id: jobId, reinvoke: true },
+        { status: 202 }
+      );
     }
 
     if (job.status !== 'pending') {
@@ -131,8 +144,8 @@ export async function POST(request: Request) {
     processingClaimed = true;
 
     const chainJobId = jobId;
-    after(async () => {
-      await invokeExtractOnEdge(chainJobId);
+    after(() => {
+      invokeExtractOnEdge(chainJobId);
     });
 
     return NextResponse.json({ status: 'queued', job_id: jobId }, { status: 202 });

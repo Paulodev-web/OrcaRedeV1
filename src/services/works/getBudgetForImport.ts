@@ -209,7 +209,8 @@ async function fetchAndRemapConnections(
     supabase
       .from('tracked_posts')
       .select('id, original_post_id')
-      .eq('tracking_id', trackingId),
+      .eq('tracking_id', trackingId)
+      .eq('is_visible', true),
   ]);
 
   const connections = (connectionsData ?? []) as ConnectionRow[];

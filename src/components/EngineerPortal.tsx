@@ -43,8 +43,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ON_ENGENHARIA_LOGO_SRC } from '@/lib/branding';
-import { deleteWorkTrackingAction } from '@/actions/workTrackings';
+import { hideTrackedPostAction, deleteWorkTrackingAction } from '@/actions/workTrackings';
 import { updateBudgetAction } from '@/actions/budgets';
+import { calculateWeightedProgress, syncWorkTrackingToSupabase } from '@/lib/tracking/syncWorkTracking';
+import {
+  computeMaxPostNumber,
+  getDbPostId,
+  getPostClientId,
+  toValidUuid,
+} from '@/lib/tracking/trackingUtils';
 
 function getTrackingDisplayName(tracking: WorkTracking): string {
   return tracking.budget_data?.project_name?.trim() || tracking.name;
@@ -53,54 +60,6 @@ function getTrackingDisplayName(tracking: WorkTracking): string {
 type ViewMode = 'dashboard' | 'select-budget' | 'tracking-detail';
 
 const DEMO_TRACKING_ID = 'tracking-demo-1';
-
-/** Converte string para UUID válido (determinístico) para sync com Supabase */
-function toValidUuid(str: string): string {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  if (uuidRegex.test(str)) return str;
-  let h = 0;
-  for (let i = 0; i < str.length; i++) h = ((h << 5) - h + str.charCodeAt(i)) | 0;
-  const h2 = Math.imul(h, 31);
-  const h3 = Math.imul(h2, 31);
-  const hex = [
-    (h >>> 0).toString(16).padStart(8, '0'),
-    (h2 >>> 0).toString(16).padStart(8, '0').slice(-8),
-    (h3 >>> 0).toString(16).padStart(8, '0').slice(-8),
-    ((h ^ h2 ^ h3) >>> 0).toString(16).padStart(8, '0').slice(-8),
-  ].join('');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(12, 15)}-8${hex.slice(15, 18)}-${hex.slice(18, 30)}`;
-}
-
-function calculateWeightedProgress(tracking: Partial<WorkTracking>): number {
-  const ratio = (installed: number, planned?: number) => {
-    if (!planned || planned <= 0) return 0;
-    return Math.min(installed / planned, 1);
-  };
-
-  const plannedMt = tracking.planned_mt_meters ?? 0;
-  const plannedBt = tracking.planned_bt_meters ?? 0;
-  const plannedPoles = tracking.planned_poles ?? 0;
-  const plannedEquip = tracking.planned_equipment ?? 0;
-  const plannedLighting = tracking.planned_public_lighting ?? 0;
-
-  const hasAnyGoal = [plannedMt, plannedBt, plannedPoles, plannedEquip, plannedLighting].some((v) => v > 0);
-  if (!hasAnyGoal) return tracking.progress_percentage ?? 0;
-
-  const mtInstalledMeters = (tracking.mt_extension_km ?? 0) * 1000;
-  const btInstalledMeters = (tracking.bt_extension_km ?? 0) * 1000;
-  const polesInstalled = tracking.poles_installed ?? 0;
-  const equipInstalled = tracking.equipment_installed ?? 0;
-  const lightingInstalled = tracking.public_lighting_installed ?? 0;
-
-  const progress =
-    ratio(polesInstalled, plannedPoles) * 40 +
-    ratio(mtInstalledMeters, plannedMt) * 15 +
-    ratio(btInstalledMeters, plannedBt) * 25 +
-    ratio(equipInstalled, plannedEquip) * 10 +
-    ratio(lightingInstalled, plannedLighting) * 10;
-
-  return Math.max(0, Math.min(100, Math.round(progress)));
-}
 
 // Carregar dados do Supabase
 const loadWorkTrackings = async (
@@ -130,7 +89,7 @@ const loadWorkTrackings = async (
 
     if (includeNetworkDetails && trackingIds.length > 0) {
       const [postsResult, connectionsResult] = await Promise.all([
-        supabase.from('tracked_posts').select('*').in('tracking_id', trackingIds).order('name'),
+        supabase.from('tracked_posts').select('*').in('tracking_id', trackingIds).eq('is_visible', true).order('name'),
         supabase.from('post_connections').select('*').in('tracking_id', trackingIds),
       ]);
 
@@ -188,6 +147,7 @@ const loadWorkTrackings = async (
         },
         tracked_posts: postsData.map((post) => ({
           id: post.id,
+          client_id: post.client_id || post.id,
           tracking_id: row.public_id ?? row.id,
           original_post_id: post.original_post_id || post.id,
           name: post.name,
@@ -195,6 +155,7 @@ const loadWorkTrackings = async (
           x_coord: Number(post.x_coord),
           y_coord: Number(post.y_coord),
           status: post.status as TrackedPost['status'],
+          is_visible: post.is_visible !== false,
           installation_date: post.installation_date || undefined,
           completion_date: post.completion_date || undefined,
           notes: post.notes || undefined,
@@ -302,6 +263,9 @@ export function EngineerPortal() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasBootstrappedRef = useRef(false);
   const hydratedTrackingDetailsRef = useRef(new Set<string>());
+  const syncGenerationRef = useRef(0);
+  const deletedPostIdsRef = useRef(new Set<string>());
+  const nextPostNumberRef = useRef(new Map<string, number>());
 
   useEffect(() => {
     if (hasBootstrappedRef.current) return;
@@ -342,130 +306,32 @@ export function EngineerPortal() {
   }, [budgets, workTrackings.length]);
 
   // Sincronizar obras, postes e conexões com Supabase (único ponto de persistência)
-  // Debounce evita race: múltiplas alterações rápidas não disparam syncs paralelos que apagariam postes
+  // Debounce + syncGeneration evita race: sync em voo não re-upserta postes apagados
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-    const syncToSupabase = async () => {
+    const generation = ++syncGenerationRef.current;
+    const timeoutId = setTimeout(async () => {
       for (const t of workTrackings) {
-        if (!t.budget_id) continue; // budget_id obrigatório no banco
-        try {
-          // 1. Upsert da obra (timeline e imagens são gerenciados diretamente no Supabase)
-
-          // Progresso real ponderado: Poste 40%, MT 15%, BT 25%, Equip 10%, Ilum 10%
-          const syncProgress = calculateWeightedProgress(t);
-
-          // Nome da obra e cliente vêm do orçamento
-          const workName = t.budget_data?.project_name ?? t.name;
-          const clientName = t.budget_data?.client_name ?? null;
-
-          const { data: workData, error: workError } = await supabase.from('work_trackings').upsert(
-            {
-              public_id: t.id,
-              budget_id: t.budget_id,
-              name: workName,
-              status: t.status,
-              network_extension_km: t.network_extension_km ?? 0,
-              progress_percentage: syncProgress,
-              start_date: t.start_date || null,
-              estimated_completion: t.estimated_completion || null,
-              actual_completion: t.actual_completion || null,
-              planned_network_meters: t.planned_network_meters ?? null,
-              planned_mt_meters: t.planned_mt_meters ?? null,
-              mt_extension_km: t.mt_extension_km ?? 0,
-              planned_bt_meters: t.planned_bt_meters ?? null,
-              bt_extension_km: t.bt_extension_km ?? 0,
-              planned_poles: t.planned_poles ?? null,
-              poles_installed: t.poles_installed ?? 0,
-              planned_equipment: t.planned_equipment ?? null,
-              equipment_installed: t.equipment_installed ?? 0,
-              planned_public_lighting: t.planned_public_lighting ?? null,
-              public_lighting_installed: t.public_lighting_installed ?? 0,
-              plan_image_url: t.budget_data?.plan_image_url ?? null,
-              client_logo_url: t.budget_data?.client_logo_url ?? null,
-              client_name: clientName,
-              city: t.budget_data?.city ?? null,
-              current_focus_title: t.current_focus_title ?? null,
-              current_focus_description: t.current_focus_description ?? null,
-              project_description: t.project_description ?? null,
-              responsible_person: t.responsible_person ?? null,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: 'public_id' }
-          ).select('id').single();
-
-          if (workError) throw workError;
-          const trackingId = workData?.id;
-          if (!trackingId) continue;
-
-          const postIdMap = new Map<string, string>();
-          (t.tracked_posts || []).forEach(p => postIdMap.set(p.id, toValidUuid(p.id)));
-
-          // 2. Inserir/atualizar postes (upsert - nunca delete em massa)
-          if (t.tracked_posts?.length > 0) {
-            const postsToUpsert = t.tracked_posts.map(post => ({
-              id: postIdMap.get(post.id)!,
-              client_id: post.id,
-              tracking_id: trackingId,
-              original_post_id: toValidUuid(post.original_post_id || post.id),
-              name: post.name,
-              custom_name: post.custom_name || null,
-              x_coord: post.x_coord,
-              y_coord: post.y_coord,
-              status: post.status,
-              installation_date: post.installation_date || null,
-              completion_date: post.completion_date || null,
-              notes: post.notes || null,
-              updated_at: new Date().toISOString(),
-            }));
-            await supabase.from('tracked_posts').upsert(postsToUpsert, { onConflict: 'id' });
-          }
-
-          // 3. Inserir/atualizar conexões (só upsert - nunca delete em massa; exclusão só no clique direito na linha)
-          if (t.post_connections?.length > 0) {
-            const pairKey = (a: string, b: string, type: string) => `${[a, b].sort().join('|')}|${type}`;
-            const seenPairs = new Set<string>();
-            const deduped = t.post_connections.filter(conn => {
-              const key = pairKey(conn.from_post_id, conn.to_post_id, conn.connection_type ?? 'blue');
-              if (seenPairs.has(key)) return false;
-              seenPairs.add(key);
-              return true;
-            });
-            const connectionsToUpsert = deduped.map(conn => {
-              const fromId = postIdMap.get(conn.from_post_id) ?? toValidUuid(conn.from_post_id);
-              const toId = postIdMap.get(conn.to_post_id) ?? toValidUuid(conn.to_post_id);
-              return {
-                id: toValidUuid(conn.id),
-                client_id: `${conn.connection_type ?? 'blue'}:${conn.id}`,
-                tracking_id: trackingId,
-                from_post_id: fromId,
-                to_post_id: toId,
-                connection_type: (conn.connection_type ?? 'blue') as 'blue' | 'green',
-                status: 'Pendente',
-              };
-            });
-            // Garantir IDs únicos: se houver colisão, usar índice
-            const seen = new Set<string>();
-            connectionsToUpsert.forEach((c) => {
-              if (seen.has(c.id)) {
-                (c as any).id = crypto.randomUUID();
-              }
-              seen.add(c.id);
-            });
-            const { error: connError } = await supabase.from('post_connections').upsert(connectionsToUpsert, { onConflict: 'id' });
-            if (connError) {
-              console.error('Erro ao salvar conexões de rede:', connError);
-              alertDialog.showError('Erro ao salvar linhas de rede', connError.message);
-            }
-          }
-        } catch (e) {
-          console.warn('Sync obra/postes para Supabase:', e);
-        }
+        if (generation !== syncGenerationRef.current) return;
+        if (!t.budget_id) continue;
+        await syncWorkTrackingToSupabase(supabase, t, {
+          deletedPostIds: deletedPostIdsRef.current,
+          syncGeneration: generation,
+          getCurrentGeneration: () => syncGenerationRef.current,
+          onConnectionError: (message) => {
+            alertDialog.showError('Erro ao salvar linhas de rede', message);
+          },
+        });
       }
-    };
-    syncToSupabase();
     }, 1500);
     return () => clearTimeout(timeoutId);
   }, [workTrackings, timelineMilestones, workImages]);
+
+  // Reset hidratação ao sair do detalhe da obra
+  useEffect(() => {
+    if (currentView !== 'tracking-detail') {
+      hydratedTrackingDetailsRef.current.clear();
+    }
+  }, [currentView]);
 
   const activeTracking = useMemo(
     () => workTrackings.find((tracking) => tracking.id === activeTrackingId) || null,
@@ -494,12 +360,13 @@ export function EngineerPortal() {
         }
 
         const [postsResult, connectionsResult] = await Promise.all([
-          supabase.from('tracked_posts').select('*').eq('tracking_id', trackingRow.id).order('name'),
+          supabase.from('tracked_posts').select('*').eq('tracking_id', trackingRow.id).eq('is_visible', true).order('name'),
           supabase.from('post_connections').select('*').eq('tracking_id', trackingRow.id),
         ]);
 
-        const trackedPosts = (postsResult.data || []).map((post) => ({
+        const trackedPostsFromDb: TrackedPost[] = (postsResult.data || []).map((post) => ({
           id: post.id,
+          client_id: post.client_id || post.id,
           tracking_id: trackingRow.public_id ?? trackingRow.id,
           original_post_id: post.original_post_id || post.id,
           name: post.name,
@@ -507,6 +374,7 @@ export function EngineerPortal() {
           x_coord: Number(post.x_coord),
           y_coord: Number(post.y_coord),
           status: post.status as TrackedPost['status'],
+          is_visible: post.is_visible !== false,
           installation_date: post.installation_date || undefined,
           completion_date: post.completion_date || undefined,
           notes: post.notes || undefined,
@@ -530,16 +398,36 @@ export function EngineerPortal() {
           };
         });
 
+        const dbPostIds = new Set(trackedPostsFromDb.map((p) => p.id));
+        const dbClientIds = new Set(trackedPostsFromDb.map((p) => getPostClientId(p)));
+
         setWorkTrackings((prev) =>
-          prev.map((tracking) =>
-            tracking.id === activeTrackingId
-              ? {
-                  ...tracking,
-                  tracked_posts: trackedPosts,
-                  post_connections: postConnections,
-                }
-              : tracking
-          )
+          prev.map((tracking) => {
+            if (tracking.id !== activeTrackingId) return tracking;
+
+            const localPending = (tracking.tracked_posts || []).filter((p) => {
+              const clientId = getPostClientId(p);
+              return (
+                clientId.startsWith('tracked-') &&
+                !dbPostIds.has(p.id) &&
+                !dbClientIds.has(clientId)
+              );
+            });
+
+            const mergedPosts = [...trackedPostsFromDb, ...localPending];
+            nextPostNumberRef.current.set(activeTrackingId, computeMaxPostNumber(mergedPosts) + 1);
+
+            const dbConnIds = new Set(postConnections.map((c) => c.id));
+            const localPendingConns = (tracking.post_connections || []).filter(
+              (c) => !dbConnIds.has(c.id)
+            );
+
+            return {
+              ...tracking,
+              tracked_posts: mergedPosts,
+              post_connections: [...postConnections, ...localPendingConns],
+            };
+          })
         );
 
         hydratedTrackingDetailsRef.current.add(activeTrackingId);
@@ -571,30 +459,30 @@ export function EngineerPortal() {
 
   /** Adicionar poste no mapa: clique direito no canvas. */
   const handleCanvasRightClickAddPoste = (coords: { x: number; y: number }) => {
-    if (!activeTracking) return;
-    // Calcular próximo número baseado no maior número já usado em "Poste N"
-    const postNumberRegex = /^Poste\s+(\d+)$/i;
-    let maxNumber = 0;
-    for (const p of activeTracking.tracked_posts || []) {
-      const match = postNumberRegex.exec(p.name || '');
-      if (match) {
-        const num = parseInt(match[1], 10);
-        if (num > maxNumber) maxNumber = num;
-      }
+    if (!activeTracking || isLoadingDetails) return;
+
+    const trackingId = activeTracking.id;
+    let nextNumber = nextPostNumberRef.current.get(trackingId);
+    if (nextNumber === undefined) {
+      nextNumber = computeMaxPostNumber(activeTracking.tracked_posts || []) + 1;
     }
-    const nextNumber = maxNumber + 1;
+
     const newId = `tracked-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const newPost: TrackedPost = {
       id: newId,
+      client_id: newId,
       tracking_id: activeTracking.id,
       original_post_id: newId,
       name: `Poste ${nextNumber}`,
       x_coord: coords.x,
       y_coord: coords.y,
       status: 'Pendente',
+      is_visible: true,
       photos: [],
       materials: [],
     };
+    nextPostNumberRef.current.set(trackingId, nextNumber + 1);
+
     updateTracking(activeTracking.id, (t) => {
       const newPosts = [...(t.tracked_posts || []), newPost];
       return {
@@ -609,12 +497,27 @@ export function EngineerPortal() {
   /** Excluir poste do mapa: clique direito no ícone. Único lugar que apaga poste do banco. */
   const handleDeletePosteFromMap = async (posteId: string) => {
     if (!activeTracking) return;
-    const dbPostId = toValidUuid(posteId);
-    await supabase.from('tracked_posts').delete().eq('id', dbPostId);
-    await supabase.from('post_connections').delete().eq('from_post_id', dbPostId);
-    await supabase.from('post_connections').delete().eq('to_post_id', dbPostId);
+
+    const post = activeTracking.tracked_posts?.find(
+      (p) => p.id === posteId || getPostClientId(p) === posteId
+    );
+    const dbPostId = post ? getDbPostId(post) : toValidUuid(posteId);
+    deletedPostIdsRef.current.add(posteId);
+    deletedPostIdsRef.current.add(dbPostId);
+    syncGenerationRef.current += 1;
+
+    const result = await hideTrackedPostAction(activeTracking.id, posteId);
+    if (!result.success) {
+      deletedPostIdsRef.current.delete(posteId);
+      deletedPostIdsRef.current.delete(dbPostId);
+      alertDialog.showError('Não foi possível remover o poste do mapa', result.error || 'Tente novamente.');
+      return;
+    }
+
     updateTracking(activeTracking.id, (t) => {
-      const newPosts = (t.tracked_posts || []).filter((p) => p.id !== posteId);
+      const newPosts = (t.tracked_posts || []).filter(
+        (p) => p.id !== posteId && getPostClientId(p) !== posteId
+      );
       const newConnections = (t.post_connections || []).filter(
         (c) => c.from_post_id !== posteId && c.to_post_id !== posteId
       );
@@ -1102,107 +1005,15 @@ export function EngineerPortal() {
 
   /** Persiste a obra atual no Supabase (inclui totais planejados MT/BT/postes e extensões). */
   const persistTrackingToSupabase = async (t: WorkTracking): Promise<boolean> => {
-    if (!t.budget_id) return false;
-    try {
-      // Timeline e imagens são persistidos diretamente nas funções saveTimeline() e saveWorkImages()
-      const syncProgress = calculateWeightedProgress(t);
-      const workName = t.budget_data?.project_name ?? t.name;
-      const clientName = t.budget_data?.client_name ?? null;
-
-      const { data: workData, error: workError } = await supabase.from('work_trackings').upsert(
-        {
-          public_id: t.id,
-          budget_id: t.budget_id,
-          name: workName,
-          status: t.status,
-          network_extension_km: t.network_extension_km ?? 0,
-          progress_percentage: syncProgress,
-          start_date: t.start_date || null,
-          estimated_completion: t.estimated_completion || null,
-          actual_completion: t.actual_completion || null,
-          planned_network_meters: t.planned_network_meters ?? null,
-          planned_mt_meters: t.planned_mt_meters ?? null,
-          mt_extension_km: t.mt_extension_km ?? 0,
-          planned_bt_meters: t.planned_bt_meters ?? null,
-          bt_extension_km: t.bt_extension_km ?? 0,
-          planned_poles: t.planned_poles ?? null,
-          poles_installed: t.poles_installed ?? 0,
-          planned_equipment: t.planned_equipment ?? null,
-          equipment_installed: t.equipment_installed ?? 0,
-          planned_public_lighting: t.planned_public_lighting ?? null,
-          public_lighting_installed: t.public_lighting_installed ?? 0,
-          plan_image_url: t.budget_data?.plan_image_url ?? null,
-          client_logo_url: t.budget_data?.client_logo_url ?? null,
-          client_name: clientName,
-          city: t.budget_data?.city ?? null,
-          current_focus_title: t.current_focus_title ?? null,
-          current_focus_description: t.current_focus_description ?? null,
-          project_description: t.project_description ?? null,
-          responsible_person: t.responsible_person ?? null,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'public_id' }
-      ).select('id').single();
-
-      if (workError) throw workError;
-      const trackingId = workData?.id;
-      if (!trackingId) return false;
-
-      const postIdMap = new Map<string, string>();
-      (t.tracked_posts || []).forEach((p) => postIdMap.set(p.id, toValidUuid(p.id)));
-
-      // Nunca apagar postes/conexões em massa - só upsert. Exclusão só no clique direito.
-      if (t.tracked_posts?.length > 0) {
-        const postsToUpsert = t.tracked_posts.map((post) => ({
-          id: postIdMap.get(post.id)!,
-          client_id: post.id,
-          tracking_id: trackingId,
-          original_post_id: toValidUuid(post.original_post_id || post.id),
-          name: post.name,
-          custom_name: post.custom_name || null,
-          x_coord: post.x_coord,
-          y_coord: post.y_coord,
-          status: post.status,
-          installation_date: post.installation_date || null,
-          completion_date: post.completion_date || null,
-          notes: post.notes || null,
-          updated_at: new Date().toISOString(),
-        }));
-        await supabase.from('tracked_posts').upsert(postsToUpsert, { onConflict: 'id' });
-      }
-
-      if (t.post_connections?.length > 0) {
-        const pairKey = (a: string, b: string, type: string) => `${[a, b].sort().join('|')}|${type}`;
-        const seenPairs = new Set<string>();
-        const deduped = t.post_connections.filter((conn: any) => {
-          const key = pairKey(conn.from_post_id, conn.to_post_id, conn.connection_type ?? 'blue');
-          if (seenPairs.has(key)) return false;
-          seenPairs.add(key);
-          return true;
-        });
-        const connectionsToUpsert = deduped.map((conn: any) => ({
-          id: toValidUuid(conn.id),
-          client_id: `${(conn.connection_type ?? 'blue') as 'blue' | 'green'}:${conn.id}`,
-          tracking_id: trackingId,
-          from_post_id: postIdMap.get(conn.from_post_id) ?? toValidUuid(conn.from_post_id),
-          to_post_id: postIdMap.get(conn.to_post_id) ?? toValidUuid(conn.to_post_id),
-          connection_type: (conn.connection_type ?? 'blue') as 'blue' | 'green',
-          status: 'Pendente',
-        }));
-        const seen = new Set<string>();
-        connectionsToUpsert.forEach((c: any) => {
-          if (seen.has(c.id)) c.id = crypto.randomUUID();
-          seen.add(c.id);
-        });
-        const { error: connErr } = await supabase.from('post_connections').upsert(connectionsToUpsert, { onConflict: 'id' });
-        if (connErr) console.error('Erro ao salvar conexões (persistTracking):', connErr);
-      }
-
-      return true;
-    } catch (e) {
-      console.warn('Persistência no Supabase:', e);
-      return false;
-    }
+    const generation = ++syncGenerationRef.current;
+    return syncWorkTrackingToSupabase(supabase, t, {
+      deletedPostIds: deletedPostIdsRef.current,
+      syncGeneration: generation,
+      getCurrentGeneration: () => syncGenerationRef.current,
+      onConnectionError: (message) => {
+        console.error('Erro ao salvar conexões (persistTracking):', message);
+      },
+    });
   };
 
   const handleSaveChanges = async () => {

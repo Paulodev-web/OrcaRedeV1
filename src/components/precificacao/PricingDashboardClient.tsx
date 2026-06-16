@@ -1,6 +1,7 @@
 "use client";
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import {
@@ -49,6 +50,7 @@ function downloadFilenameFromResponse(response: Response, fallback: string): str
 }
 
 export function PricingDashboardClient({ initialItems }: PricingDashboardClientProps) {
+  const router = useRouter();
   const [items, setItems] = useState(initialItems);
   const [search, setSearch] = useState('');
   const [exportingId, setExportingId] = useState<string | null>(null);
@@ -139,7 +141,7 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
           </p>
           <h1 className="mt-1 text-2xl font-bold text-[#1D3140]">Dashboard de Precificação</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Orçamentos precificados salvos como cards para consulta e exportação.
+            Orçamentos precificados salvos como cards. Clique em um card para editar.
           </p>
         </div>
 
@@ -207,7 +209,19 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
             const exporting = exportingId === item.id;
 
             return (
-              <article key={item.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-[#64ABDE]/40 hover:shadow-md">
+              <article
+                key={item.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => router.push(`/tools/precificacao/editar/${item.id}`)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    router.push(`/tools/precificacao/editar/${item.id}`);
+                  }
+                }}
+                className="cursor-pointer rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-[#64ABDE]/40 hover:shadow-md"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <h2 className="truncate text-base font-semibold text-[#1D3140]" title={item.budgetName}>
@@ -252,12 +266,19 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
                   </div>
                 </div>
 
-                <p className="mt-3 text-xs text-gray-500">Atualizado em {formatDate(item.updatedAt)}</p>
+                <p className="mt-3 text-xs text-gray-500">
+                  Atualizado em {formatDate(item.updatedAt)}
+                  <span className="mx-1">·</span>
+                  <span className="text-[#64ABDE]">Clique para editar</span>
+                </p>
 
-                <div className="mt-4 flex gap-2">
+                <div className="mt-4 flex gap-2" onClick={(event) => event.stopPropagation()}>
                   <button
                     type="button"
-                    onClick={() => handleExport(item)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleExport(item);
+                    }}
                     disabled={exporting}
                     className="inline-flex h-9 flex-1 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
                   >
@@ -266,7 +287,10 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleExport(item)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleExport(item);
+                    }}
                     disabled={exporting}
                     className="inline-flex h-9 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:text-[#1D3140] disabled:cursor-not-allowed disabled:opacity-60"
                     title="Baixar Excel"
@@ -275,7 +299,10 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDelete(item)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleDelete(item);
+                    }}
                     disabled={deleting}
                     className="inline-flex h-9 w-10 items-center justify-center rounded-lg border border-red-100 bg-white text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
                     title="Excluir card"

@@ -18,8 +18,12 @@ import { CostItemsTable } from './CostItemsTable';
 import { ServicePricingSummary } from './ServicePricingSummary';
 import { ServiceValueInput } from './ServiceValueInput';
 import { TaxInput } from './TaxInput';
-import type { CostItem, PricingInputMode, PricingSaveMode } from './types';
+import type { CostItem, PricingInputMode, PricingSaveMode, SavedPricingBudget } from './types';
 import { computeCostItemTotal } from './types';
+
+interface PrecificacaoCalculatorProps {
+  initialSaved?: SavedPricingBudget;
+}
 
 function parseNonNegativeNumber(value: string): number {
   const parsed = Number.parseFloat(value);
@@ -50,8 +54,9 @@ function createCostItem(): CostItem {
   };
 }
 
-export function PrecificacaoCalculator() {
+export function PrecificacaoCalculator({ initialSaved }: PrecificacaoCalculatorProps) {
   const router = useRouter();
+  const isEditMode = Boolean(initialSaved);
   const { user, loading: loadingAuth } = useAuth();
   const {
     budgets,
@@ -64,12 +69,14 @@ export function PrecificacaoCalculator() {
     fetchBudgetDetails,
   } = useApp();
 
-  const [selectedBudgetId, setSelectedBudgetId] = useState('');
-  const [valorServicoInput, setValorServicoInput] = useState(0);
-  const [lucroPercentInput, setLucroPercentInput] = useState(0);
-  const [pricingInputMode, setPricingInputMode] = useState<PricingInputMode>('valor');
-  const [costItems, setCostItems] = useState<CostItem[]>([]);
-  const [impostoPercent, setImpostoPercent] = useState(0);
+  const [selectedBudgetId, setSelectedBudgetId] = useState(() => initialSaved?.budgetId ?? '');
+  const [valorServicoInput, setValorServicoInput] = useState(() => initialSaved?.valorServicoInput ?? 0);
+  const [lucroPercentInput, setLucroPercentInput] = useState(() => initialSaved?.lucroPercentInput ?? 0);
+  const [pricingInputMode, setPricingInputMode] = useState<PricingInputMode>(
+    () => initialSaved?.pricingInputMode ?? 'valor'
+  );
+  const [costItems, setCostItems] = useState<CostItem[]>(() => initialSaved?.costItems ?? []);
+  const [impostoPercent, setImpostoPercent] = useState(() => initialSaved?.impostoPercent ?? 0);
   const [savingMode, setSavingMode] = useState<PricingSaveMode | null>(null);
   const [isExportingExcel, setIsExportingExcel] = useState(false);
 
@@ -211,7 +218,9 @@ export function PrecificacaoCalculator() {
     setSavingMode(null);
 
     if (result.success) {
-      toast.success('Precificação salva no dashboard.');
+      toast.success(
+        isEditMode ? 'Precificação atualizada no dashboard.' : 'Precificação salva no dashboard.'
+      );
       router.push('/tools/precificacao');
       return;
     }
@@ -284,11 +293,15 @@ export function PrecificacaoCalculator() {
             Módulo de Precificação
           </Link>
           <span className="mx-1">/</span>
-          <span className="text-gray-600">Nova precificação</span>
+          <span className="text-gray-600">{isEditMode ? 'Editar precificação' : 'Nova precificação'}</span>
         </p>
-        <h1 className="mt-1 text-2xl font-bold text-[#1D3140]">Nova Precificação</h1>
+        <h1 className="mt-1 text-2xl font-bold text-[#1D3140]">
+          {isEditMode ? 'Editar Precificação' : 'Nova Precificação'}
+        </h1>
         <p className="mt-1 text-sm text-gray-500">
-          Vincule um orçamento, defina o valor ou lucro desejado, adicione custos e salve no dashboard.
+          {isEditMode
+            ? 'Altere valores, custos ou impostos e salve para atualizar o card no dashboard.'
+            : 'Vincule um orçamento, defina o valor ou lucro desejado, adicione custos e salve no dashboard.'}
           {selectedBudgetName ? ` Orçamento selecionado: ${selectedBudgetName}.` : ''}
         </p>
         </div>

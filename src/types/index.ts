@@ -209,6 +209,8 @@ export interface PostConnection {
 
 export interface TrackedPost {
   id: string;
+  /** Identificador estável do cliente (ex: tracked-1739...); preservado após hidratação do DB */
+  client_id?: string;
   tracking_id: string;
   original_post_id: string;
   name: string;
@@ -216,6 +218,8 @@ export interface TrackedPost {
   x_coord: number;
   y_coord: number;
   status: 'Pendente' | 'Em Andamento' | 'Concluído' | 'Problemas';
+  /** false = oculto do mapa (soft-delete); default true */
+  is_visible?: boolean;
   installation_date?: string;
   completion_date?: string;
   notes?: string;

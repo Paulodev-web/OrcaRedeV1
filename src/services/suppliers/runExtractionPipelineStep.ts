@@ -1,6 +1,11 @@
 import { revalidatePath } from 'next/cache';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseServiceRoleClient } from '@/lib/supabaseServer';
+import {
+  EXTRACT_STUCK_ERROR_MS,
+  EXTRACT_TIMEOUT_ERROR_MESSAGE,
+} from '@/lib/extractionPipelineConfig';
+import { invokeExtractOnEdge } from '@/services/suppliers/invokeExtractOnEdge';
 import { autoMatchQuoteItems } from '@/services/suppliers/autoMatchQuoteItems';
 import {
   buildSemanticMatchPipelineContext,
@@ -225,6 +230,12 @@ async function runPostExtractPhase(
   return { hasMore: true };
 }
 
+function getJobStartedAgeMs(job: Record<string, unknown>): number | null {
+  const startedAt = job.started_at as string | null | undefined;
+  if (!startedAt) return null;
+  return Date.now() - new Date(startedAt).getTime();
+}
+
 async function runExtractPhase(
   supabase: SupabaseClient,
   jobId: string,
@@ -235,16 +246,14 @@ async function runExtractPhase(
     return recoverMatchPhaseFromExistingQuote(supabase, jobId, job, existingQuoteId);
   }
 
-  if (!job.quote_id) {
-    console.warn('[runExtractionPipelineStep] extract aguardando Edge Function', jobId);
+  const ageMs = getJobStartedAgeMs(job);
+  if (ageMs !== null && ageMs > EXTRACT_STUCK_ERROR_MS) {
+    await markJobError(supabase, jobId, EXTRACT_TIMEOUT_ERROR_MESSAGE);
     return { hasMore: false };
   }
 
-  await markJobError(
-    supabase,
-    jobId,
-    'Extração deve ser executada na Edge Function. Reprocesse o PDF.'
-  );
+  console.log('[runExtractionPipelineStep] reinvocando Edge para extração', jobId);
+  invokeExtractOnEdge(jobId);
   return { hasMore: false };
 }
 
@@ -366,6 +375,7 @@ export async function runExtractionPipelineStep(jobId: string): Promise<Pipeline
         match_batch_index,
         match_total_batches,
         pipeline_context,
+        started_at,
         quotation_sessions (
           id,
           budget_id,
