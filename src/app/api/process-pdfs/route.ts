@@ -37,6 +37,7 @@ export async function POST(request: Request) {
     if (!jobId || typeof jobId !== 'string') {
       return NextResponse.json({ error: 'job_id é obrigatório.' }, { status: 400 });
     }
+    console.log('[process-pdfs] POST recebido', { jobId });
 
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
@@ -96,19 +97,15 @@ export async function POST(request: Request) {
     }
 
     if (job.status === 'processing') {
-      if (job.quote_id) {
-        return NextResponse.json({ error: 'Job já está em processamento.' }, { status: 409 });
-      }
-
-      const chainJobId = jobId;
-      after(() => {
-        invokeExtractOnEdge(chainJobId);
+      // Never re-invoke the edge function for already-processing jobs.
+      // Re-invoking while the edge is still running causes simultaneous Gemini calls → duplicate quotes.
+      // Recovery for stuck post-extract jobs is handled client-side via /continue (safe, idempotent).
+      console.log('[process-pdfs] job already processing — ignoring reinvoke request', {
+        jobId,
+        quote_id: job.quote_id ?? null,
+        pipeline_phase: (job as Record<string, unknown>).pipeline_phase ?? null,
       });
-
-      return NextResponse.json(
-        { status: 'queued', job_id: jobId, reinvoke: true },
-        { status: 202 }
-      );
+      return NextResponse.json({ error: 'Job já está em processamento.' }, { status: 409 });
     }
 
     if (job.status !== 'pending') {
@@ -142,6 +139,7 @@ export async function POST(request: Request) {
     }
 
     processingClaimed = true;
+    console.log('[process-pdfs] job claimed, invocando edge function', { jobId });
 
     const chainJobId = jobId;
     after(() => {
