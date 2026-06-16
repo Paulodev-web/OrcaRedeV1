@@ -1,0 +1,559 @@
+﻿'use client';
+
+import React, { useEffect, useRef, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  AlertTriangle,
+  ArrowRight,
+  FileText,
+  Loader2,
+  RotateCcw,
+  Save,
+  Upload,
+} from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { extractSupplierDataAction, type SupplierItem } from '@/actions/supplierIngestion';
+import { getSupplierAction } from '@/actions/suppliers';
+import { createSupplierQuoteAction, runAutoMatchAction } from '@/actions/supplierQuotes';
+import { supabase } from '@/lib/supabaseClient';
+import SupplierPickerModal from '@/components/suppliers/SupplierPickerModal';
+import type { BudgetOption } from '@/types';
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+
+const formatNumber = (value: number) =>
+  new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+
+/** Valor sentinela para compatibilidade com Radix Select (evita `value=""`). */
+const BUDGET_SELECT_EMPTY = '__no_budget__';
+
+interface Props {
+  budgets: BudgetOption[];
+  /** Quando true, omite o título de página e suaviza cards internos (uso dentro do shell de suprimentos). */
+  embedded?: boolean;
+}
+
+export default function SupplierPdfImporter({ budgets, embedded = false }: Props) {
+  const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Campos obrigatórios antes do upload
+  const [selectedBudgetId, setSelectedBudgetId] = useState<string>('');
+  const [supplierId, setSupplierId] = useState<string | null>(null);
+  const [supplierDisplayName, setSupplierDisplayName] = useState<string>('');
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  // Upload e extração
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [pdfPath, setPdfPath] = useState<string | null>(null);
+  const [items, setItems] = useState<SupplierItem[] | null>(null);
+  const [observacoes, setObservacoes] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(null), 12000);
+    return () => clearTimeout(t);
+  }, [error]);
+
+  // Salvamento final
+  const [isSaving, setIsSaving] = useState(false);
+
+  const canUpload = selectedBudgetId !== '';
+  const alertCount = items?.filter((item) => item.alerta).length ?? 0;
+  const selectedBudgetName = budgets.find((b) => b.id === selectedBudgetId)?.name;
+
+  const cardSurface = embedded
+    ? 'rounded-lg border border-gray-100 bg-gray-50/60'
+    : 'rounded-lg border border-transparent bg-white shadow';
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setSelectedFile(file);
+    setError(null);
+  };
+
+  const handleProcess = () => {
+    if (!selectedFile || !canUpload) return;
+    setError(null);
+
+    startTransition(async () => {
+      console.log('[SupplierPdfImporter] Antes do upload', {
+        nome: selectedFile.name,
+        tamanhoBytes: selectedFile.size,
+      });
+
+      const filePath = `fornecedores/${Date.now()}_${selectedFile.name}`;
+
+      const { data, error: uploadError } = await supabase.storage
+        .from('fornecedores_pdfs')
+        .upload(filePath, selectedFile, { upsert: true });
+
+      if (uploadError || !data) {
+        console.error('[SupplierPdfImporter] Upload Supabase falhou', uploadError);
+        setError(`Falha no upload: ${uploadError?.message ?? 'erro desconhecido'}`);
+        return;
+      }
+
+      console.log('[SupplierPdfImporter] Upload OK, path:', data.path);
+      setPdfPath(data.path);
+
+      const result = await extractSupplierDataAction({ filePath: data.path });
+
+      console.log('[SupplierPdfImporter] Resultado da Server Action:', result);
+
+      if (result.success) {
+        setItems(result.items);
+        setObservacoes(result.observacoesGerais);
+      } else {
+        setError(result.error);
+      }
+    });
+  };
+
+  const persistQuote = async (resolvedSupplierId: string) => {
+    if (!items || !pdfPath || !selectedBudgetId) return;
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const createResult = await createSupplierQuoteAction({
+        budget_id: selectedBudgetId,
+        supplier_id: resolvedSupplierId,
+        pdf_path: pdfPath,
+        observacoes_gerais: observacoes ?? '',
+        items,
+      });
+
+      if (!createResult.success) {
+        setError(createResult.error);
+        setIsSaving(false);
+        return;
+      }
+
+      const { quoteId } = createResult.data;
+
+      // 2. Roda auto-match contra a memória De/Para (falhas não bloqueiam a navegação)
+      await runAutoMatchAction(quoteId).catch((err) => {
+        console.warn('[SupplierPdfImporter] Auto-match falhou (não bloqueante):', err);
+      });
+
+      // 3. Abre a aba Conciliar na mesma página
+      router.push(
+        `/fornecedores/trabalho?tab=conciliar&quoteId=${encodeURIComponent(quoteId)}`
+      );
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro ao salvar cotação.';
+      setError(message);
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveQuote = () => {
+    if (!items || !pdfPath || !selectedBudgetId) return;
+    if (supplierId) {
+      void persistQuote(supplierId);
+      return;
+    }
+    setPickerOpen(true);
+  };
+
+  const handleReset = () => {
+    setSelectedFile(null);
+    setPdfPath(null);
+    setItems(null);
+    setObservacoes(null);
+    setError(null);
+    setSupplierId(null);
+    setSupplierDisplayName('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  return (
+    <div className="flex flex-col gap-6 h-full">
+      {/* ------------------------------------------------------------------ */}
+      {/* Header                                                              */}
+      {/* ------------------------------------------------------------------ */}
+      {!embedded && (
+        <div className="flex items-center justify-between flex-shrink-0">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Importar Proposta de Fornecedor</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Faça upload de um orçamento em PDF para extrair, revisar e salvar os itens automaticamente.
+            </p>
+          </div>
+          {items && (
+            <button
+              type="button"
+              onClick={handleReset}
+              className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+            >
+              <RotateCcw className="h-4 w-4" />
+              <span>Novo Upload</span>
+            </button>
+          )}
+        </div>
+      )}
+      {embedded && items && (
+        <div className="flex justify-end flex-shrink-0">
+          <button
+            type="button"
+            onClick={handleReset}
+            className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <RotateCcw className="h-4 w-4" />
+            <span>Novo Upload</span>
+          </button>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Banner de erro                                                      */}
+      {/* ------------------------------------------------------------------ */}
+      {error && (
+        <div className="flex items-start justify-between p-4 bg-red-50 border border-red-200 rounded-lg flex-shrink-0">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+          <button
+            onClick={() => setError(null)}
+            className="text-red-400 hover:text-red-600 ml-4 text-sm"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Formulário de contexto: orçamento + fornecedor                      */}
+      {/* ------------------------------------------------------------------ */}
+      <div className={`${cardSurface} flex-shrink-0`}>
+        <div className="p-6">
+          <h2 className="text-base font-semibold text-[#1D3140] mb-4">
+            1. Contexto da cotação
+          </h2>
+          <div>
+            <label
+              htmlFor="budget-select"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Orçamento / Obra <span className="text-red-500">*</span>
+            </label>
+            <Select
+              value={selectedBudgetId ? selectedBudgetId : BUDGET_SELECT_EMPTY}
+              onValueChange={(v) =>
+                setSelectedBudgetId(v === BUDGET_SELECT_EMPTY ? '' : v)
+              }
+              disabled={!!items || isPending}
+            >
+              <SelectTrigger id="budget-select" className="w-full">
+                <SelectValue placeholder="Selecione o orçamento..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={BUDGET_SELECT_EMPTY}>
+                  Selecione o orçamento...
+                </SelectItem>
+                {budgets.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="mt-2 text-xs text-gray-500">
+              O fornecedor será escolhido ao salvar a cotação (cadastro em Fornecedores).
+            </p>
+          </div>
+
+          {items && selectedBudgetName && supplierDisplayName && (
+            <p className="mt-3 text-xs text-gray-500">
+              Proposta vinculada a:{' '}
+              <span className="font-medium text-gray-700">{selectedBudgetName}</span>
+              {' — '}
+              Fornecedor:{' '}
+              <span className="font-medium text-gray-700">{supplierDisplayName}</span>
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Bloco de upload — oculto após extração                             */}
+      {/* ------------------------------------------------------------------ */}
+      {!items && (
+        <div className={`${cardSurface} flex-shrink-0`}>
+          <div className="p-6">
+            <h2 className="text-base font-semibold text-[#1D3140] mb-4">2. Arquivo PDF</h2>
+
+            {/* Zona de drop */}
+            <label
+              htmlFor="pdf-upload"
+              className={[
+                'flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-lg transition-colors',
+                canUpload
+                  ? selectedFile
+                    ? 'border-[#64ABDE] bg-[#64ABDE]/10 cursor-pointer'
+                    : 'border-gray-300 bg-gray-50 hover:bg-gray-100 hover:border-gray-400 cursor-pointer'
+                  : 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60',
+              ].join(' ')}
+            >
+              {selectedFile ? (
+                <div className="flex flex-col items-center gap-2">
+                  <FileText className="h-10 w-10 text-[#64ABDE]" />
+                  <p className="text-sm font-medium text-[#1D3140]">{selectedFile.name}</p>
+                  <p className="text-xs text-[#64ABDE]">
+                    {(selectedFile.size / 1024).toFixed(1)} KB
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2">
+                  <Upload className="h-10 w-10 text-gray-400" />
+                  <p className="text-sm font-medium text-gray-600">
+                    {canUpload
+                      ? 'Clique para selecionar ou arraste o PDF aqui'
+                      : 'Preencha o orçamento e o fornecedor primeiro'}
+                  </p>
+                  <p className="text-xs text-gray-400">Somente arquivos .pdf</p>
+                </div>
+              )}
+              <input
+                id="pdf-upload"
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,application/pdf"
+                className="hidden"
+                onChange={handleFileChange}
+                disabled={!canUpload || isPending}
+              />
+            </label>
+
+            {/* Ações */}
+            <div className="flex items-center justify-end gap-3 mt-4">
+              {selectedFile && !isPending && (
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+                >
+                  Limpar
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleProcess}
+                disabled={!selectedFile || !canUpload || isPending}
+                className="flex items-center gap-2 px-5 py-2 bg-[#64ABDE] text-white rounded-md hover:brightness-95 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Lendo PDF e processando com IA...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-4 w-4" />
+                    <span>Processar PDF</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Tabela de revisão + botão de salvar                                */}
+      {/* ------------------------------------------------------------------ */}
+      {items && (
+        <div className={`${cardSurface} flex-1 flex flex-col overflow-hidden`}>
+          {/* Cabeçalho da tabela */}
+          <div className="p-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+            <div>
+              <h2 className="text-base font-semibold text-[#1D3140]">
+                3. Revisão dos itens extraídos
+              </h2>
+              <p className="text-sm text-gray-500 mt-0.5">
+                {items.length} {items.length === 1 ? 'item encontrado' : 'itens encontrados'}
+                {alertCount > 0 && (
+                  <span className="ml-2 inline-flex items-center gap-1 text-amber-600 font-medium">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    <span>
+                      {alertCount}{' '}
+                      {alertCount === 1 ? 'inconsistência detectada' : 'inconsistências detectadas'}
+                    </span>
+                  </span>
+                )}
+              </p>
+            </div>
+            {alertCount > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-md text-xs text-amber-700">
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                <span>Linhas marcadas possuem qtd × preço ≠ total</span>
+              </div>
+            )}
+          </div>
+
+          {/* Observações gerais */}
+          {observacoes && observacoes.trim().length > 0 && (
+            <div className="px-4 pb-4 flex-shrink-0 border-b border-gray-100">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 mt-3">
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                  Observações do orçamento
+                </h3>
+                <div className="text-sm text-gray-800 whitespace-pre-wrap">{observacoes}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Tabela rolável */}
+          <div className="flex-1 overflow-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50 sticky top-0 z-10">
+                <tr>
+                  <th className="px-4 py-3 w-8" />
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Descrição
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                    Unidade
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
+                    Quantidade
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
+                    Preço Unit.
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
+                    Total
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                    IPI %
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                    ST
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {items.map((item, index) => (
+                  <tr
+                    key={index}
+                    className={
+                      item.alerta
+                        ? 'bg-amber-50 hover:bg-amber-100 transition-colors'
+                        : 'hover:bg-gray-50 transition-colors'
+                    }
+                  >
+                    <td className="px-4 py-3 text-center">
+                      {item.alerta && (
+                        <AlertTriangle
+                          className="h-4 w-4 text-red-500 mx-auto"
+                          aria-label="Qtd × Preço Unit. ≠ Total"
+                        />
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900 max-w-xs">
+                      <span className="line-clamp-2" title={item.descricao}>
+                        {item.descricao}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                      {item.unidade}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900 text-right whitespace-nowrap">
+                      {formatNumber(item.quantidade)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900 text-right whitespace-nowrap">
+                      {formatCurrency(item.preco_unit)}
+                    </td>
+                    <td
+                      className={`px-4 py-3 text-sm font-medium text-right whitespace-nowrap ${
+                        item.alerta ? 'text-red-600' : 'text-gray-900'
+                      }`}
+                    >
+                      {formatCurrency(item.total_item)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 text-right whitespace-nowrap">
+                      {item.ipi_percent > 0 ? `${formatNumber(item.ipi_percent)}%` : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-center">
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                          item.st_incluso
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-gray-100 text-gray-500'
+                        }`}
+                      >
+                        {item.st_incluso ? 'Sim' : 'Não'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Footer: total + botão de salvar */}
+          <div className="border-t bg-gray-50 px-6 py-4 flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center gap-6 text-sm">
+              <span className="text-gray-500">Total geral:</span>
+              <span className="font-semibold text-gray-900">
+                {formatCurrency(items.reduce((acc, item) => acc + item.total_item, 0))}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSaveQuote}
+              disabled={isSaving}
+              className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Salvando...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  <span>Salvar Cotação e Iniciar Conciliação</span>
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <SupplierPickerModal
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        fileLabel={selectedFile?.name}
+        onConfirm={(id, _applyAll) => {
+          void (async () => {
+            const res = await getSupplierAction(id);
+            if (res.success) {
+              setSupplierDisplayName(res.data.name);
+            }
+            setSupplierId(id);
+            setPickerOpen(false);
+            void persistQuote(id);
+          })();
+        }}
+      />
+    </div>
+  );
+}

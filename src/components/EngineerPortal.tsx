@@ -36,59 +36,23 @@ import { CanvasVisual } from './CanvasVisual';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { ON_ENGENHARIA_LOGO_SRC } from '@/lib/branding';
-import { deleteWorkTrackingAction } from '@/actions/workTrackings';
+import { hideTrackedPostAction, deleteWorkTrackingAction } from '@/actions/workTrackings';
+import { updateBudgetAction } from '@/actions/budgets';
+import { calculateWeightedProgress, syncWorkTrackingToSupabase } from '@/lib/tracking/syncWorkTracking';
+import {
+  computeMaxPostNumber,
+  getDbPostId,
+  getPostClientId,
+  toValidUuid,
+} from '@/lib/tracking/trackingUtils';
+
+function getTrackingDisplayName(tracking: WorkTracking): string {
+  return tracking.budget_data?.project_name?.trim() || tracking.name;
+}
 
 type ViewMode = 'dashboard' | 'select-budget' | 'tracking-detail';
 
 const DEMO_TRACKING_ID = 'tracking-demo-1';
-
-/** Converte string para UUID válido (determinístico) para sync com Supabase */
-function toValidUuid(str: string): string {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  if (uuidRegex.test(str)) return str;
-  let h = 0;
-  for (let i = 0; i < str.length; i++) h = ((h << 5) - h + str.charCodeAt(i)) | 0;
-  const h2 = Math.imul(h, 31);
-  const h3 = Math.imul(h2, 31);
-  const hex = [
-    (h >>> 0).toString(16).padStart(8, '0'),
-    (h2 >>> 0).toString(16).padStart(8, '0').slice(-8),
-    (h3 >>> 0).toString(16).padStart(8, '0').slice(-8),
-    ((h ^ h2 ^ h3) >>> 0).toString(16).padStart(8, '0').slice(-8),
-  ].join('');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(12, 15)}-8${hex.slice(15, 18)}-${hex.slice(18, 30)}`;
-}
-
-function calculateWeightedProgress(tracking: Partial<WorkTracking>): number {
-  const ratio = (installed: number, planned?: number) => {
-    if (!planned || planned <= 0) return 0;
-    return Math.min(installed / planned, 1);
-  };
-
-  const plannedMt = tracking.planned_mt_meters ?? 0;
-  const plannedBt = tracking.planned_bt_meters ?? 0;
-  const plannedPoles = tracking.planned_poles ?? 0;
-  const plannedEquip = tracking.planned_equipment ?? 0;
-  const plannedLighting = tracking.planned_public_lighting ?? 0;
-
-  const hasAnyGoal = [plannedMt, plannedBt, plannedPoles, plannedEquip, plannedLighting].some((v) => v > 0);
-  if (!hasAnyGoal) return tracking.progress_percentage ?? 0;
-
-  const mtInstalledMeters = (tracking.mt_extension_km ?? 0) * 1000;
-  const btInstalledMeters = (tracking.bt_extension_km ?? 0) * 1000;
-  const polesInstalled = tracking.poles_installed ?? 0;
-  const equipInstalled = tracking.equipment_installed ?? 0;
-  const lightingInstalled = tracking.public_lighting_installed ?? 0;
-
-  const progress =
-    ratio(polesInstalled, plannedPoles) * 40 +
-    ratio(mtInstalledMeters, plannedMt) * 15 +
-    ratio(btInstalledMeters, plannedBt) * 25 +
-    ratio(equipInstalled, plannedEquip) * 10 +
-    ratio(lightingInstalled, plannedLighting) * 10;
-
-  return Math.max(0, Math.min(100, Math.round(progress)));
-}
 
 // Carregar dados do Supabase
 const loadWorkTrackings = async (): Promise<WorkTracking[]> => {
@@ -117,6 +81,90 @@ const loadWorkTrackings = async (): Promise<WorkTracking[]> => {
             supabase.from('post_connections').select('*').eq('tracking_id', row.id),
           ]);
 
+    if (includeNetworkDetails && trackingIds.length > 0) {
+      const [postsResult, connectionsResult] = await Promise.all([
+        supabase.from('tracked_posts').select('*').in('tracking_id', trackingIds).eq('is_visible', true).order('name'),
+        supabase.from('post_connections').select('*').in('tracking_id', trackingIds),
+      ]);
+
+      (postsResult.data || []).forEach((post) => {
+        const list = postsByTracking.get(post.tracking_id) || [];
+        list.push(post);
+        postsByTracking.set(post.tracking_id, list);
+      });
+      (connectionsResult.data || []).forEach((connection: any) => {
+        const list = connectionsByTracking.get(connection.tracking_id) || [];
+        list.push(connection);
+        connectionsByTracking.set(connection.tracking_id, list);
+      });
+    }
+
+    const workTrackings: WorkTracking[] = filteredRows.map((row) => {
+      const budget = budgetById.get(row.budget_id ?? '');
+      const postsData = includeNetworkDetails ? postsByTracking.get(row.id) || [] : [];
+      const connectionsData = includeNetworkDetails ? connectionsByTracking.get(row.id) || [] : [];
+
+      return {
+        id: row.public_id ?? row.id,
+        budget_id: row.budget_id ?? '',
+        name: row.name ?? '',
+        status: row.status ?? 'Planejado',
+        network_extension_km: row.network_extension_km ?? 0,
+        planned_network_meters: row.planned_network_meters ?? undefined,
+        planned_mt_meters: row.planned_mt_meters ?? undefined,
+        mt_extension_km: row.mt_extension_km ?? 0,
+        planned_bt_meters: row.planned_bt_meters ?? undefined,
+        bt_extension_km: row.bt_extension_km ?? 0,
+        planned_poles: row.planned_poles ?? undefined,
+        poles_installed: row.poles_installed ?? 0,
+        planned_equipment: row.planned_equipment ?? undefined,
+        equipment_installed: row.equipment_installed ?? 0,
+        planned_public_lighting: row.planned_public_lighting ?? undefined,
+        public_lighting_installed: row.public_lighting_installed ?? 0,
+        start_date: row.start_date ?? undefined,
+        estimated_completion: row.estimated_completion ?? undefined,
+        actual_completion: row.actual_completion ?? undefined,
+        progress_percentage: row.progress_percentage ?? 0,
+        render_version: (row.render_version ?? 2) as 1 | 2,
+        current_focus_title: row.current_focus_title ?? undefined,
+        current_focus_description: row.current_focus_description ?? undefined,
+        project_description: row.project_description ?? undefined,
+        responsible_person: row.responsible_person ?? undefined,
+        created_at: row.created_at ?? new Date().toISOString(),
+        updated_at: row.updated_at ?? new Date().toISOString(),
+        budget_data: {
+          project_name: budget?.nome ?? row.name ?? '',
+          plan_image_url: budget?.imagemPlanta ?? row.plan_image_url ?? undefined,
+          client_name: budget?.clientName ?? row.client_name ?? undefined,
+          city: budget?.city ?? row.city ?? undefined,
+          client_logo_url: row.client_logo_url ?? undefined,
+        },
+        tracked_posts: postsData.map((post) => ({
+          id: post.id,
+          client_id: post.client_id || post.id,
+          tracking_id: row.public_id ?? row.id,
+          original_post_id: post.original_post_id || post.id,
+          name: post.name,
+          custom_name: post.custom_name || undefined,
+          x_coord: Number(post.x_coord),
+          y_coord: Number(post.y_coord),
+          status: post.status as TrackedPost['status'],
+          is_visible: post.is_visible !== false,
+          installation_date: post.installation_date || undefined,
+          completion_date: post.completion_date || undefined,
+          notes: post.notes || undefined,
+          photos: [],
+          materials: [],
+        })),
+        post_connections: connectionsData.map((connection: any) => {
+          const explicitType =
+            connection.connection_type === 'green'
+              ? 'green'
+              : connection.connection_type === 'blue'
+                ? 'blue'
+                : null;
+          const encoded = typeof connection.client_id === 'string' ? connection.client_id : '';
+          const parsedType = explicitType ?? (encoded.startsWith('green:') ? 'green' : 'blue');
           return {
             id: row.public_id ?? row.id,
             budget_id: row.budget_id ?? '',
@@ -258,7 +306,11 @@ export function EngineerPortal() {
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const hasLoadedFromBudgetsRef = useRef(false);
+  const hasBootstrappedRef = useRef(false);
+  const hydratedTrackingDetailsRef = useRef(new Set<string>());
+  const syncGenerationRef = useRef(0);
+  const deletedPostIdsRef = useRef(new Set<string>());
+  const nextPostNumberRef = useRef(new Map<string, number>());
 
   useEffect(() => {
     fetchBudgets();
@@ -408,135 +460,139 @@ export function EngineerPortal() {
   }, [budgets]);
 
   // Sincronizar obras, postes e conexões com Supabase (único ponto de persistência)
-  // Debounce evita race: múltiplas alterações rápidas não disparam syncs paralelos que apagariam postes
+  // Debounce + syncGeneration evita race: sync em voo não re-upserta postes apagados
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-    const syncToSupabase = async () => {
+    const generation = ++syncGenerationRef.current;
+    const timeoutId = setTimeout(async () => {
       for (const t of workTrackings) {
-        if (!t.budget_id) continue; // budget_id obrigatório no banco
-        try {
-          // 1. Upsert da obra (timeline e imagens são gerenciados diretamente no Supabase)
-
-          // Progresso real ponderado: Poste 40%, MT 15%, BT 25%, Equip 10%, Ilum 10%
-          const syncProgress = calculateWeightedProgress(t);
-
-          // Nome da obra e cliente vêm do orçamento
-          const workName = t.budget_data?.project_name ?? t.name;
-          const clientName = t.budget_data?.client_name ?? null;
-
-          const { data: workData, error: workError } = await supabase.from('work_trackings').upsert(
-            {
-              public_id: t.id,
-              budget_id: t.budget_id,
-              name: workName,
-              status: t.status,
-              network_extension_km: t.network_extension_km ?? 0,
-              progress_percentage: syncProgress,
-              start_date: t.start_date || null,
-              estimated_completion: t.estimated_completion || null,
-              actual_completion: t.actual_completion || null,
-              planned_network_meters: t.planned_network_meters ?? null,
-              planned_mt_meters: t.planned_mt_meters ?? null,
-              mt_extension_km: t.mt_extension_km ?? 0,
-              planned_bt_meters: t.planned_bt_meters ?? null,
-              bt_extension_km: t.bt_extension_km ?? 0,
-              planned_poles: t.planned_poles ?? null,
-              poles_installed: t.poles_installed ?? 0,
-              planned_equipment: t.planned_equipment ?? null,
-              equipment_installed: t.equipment_installed ?? 0,
-              planned_public_lighting: t.planned_public_lighting ?? null,
-              public_lighting_installed: t.public_lighting_installed ?? 0,
-              plan_image_url: t.budget_data?.plan_image_url ?? null,
-              client_logo_url: t.budget_data?.client_logo_url ?? null,
-              client_name: clientName,
-              city: t.budget_data?.city ?? null,
-              current_focus_title: t.current_focus_title ?? null,
-              current_focus_description: t.current_focus_description ?? null,
-              project_description: t.project_description ?? null,
-              responsible_person: t.responsible_person ?? null,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: 'public_id' }
-          ).select('id').single();
-
-          if (workError) throw workError;
-          const trackingId = workData?.id;
-          if (!trackingId) continue;
-
-          const postIdMap = new Map<string, string>();
-          (t.tracked_posts || []).forEach(p => postIdMap.set(p.id, toValidUuid(p.id)));
-
-          // 2. Inserir/atualizar postes (upsert - nunca delete em massa)
-          if (t.tracked_posts?.length > 0) {
-            const postsToUpsert = t.tracked_posts.map(post => ({
-              id: postIdMap.get(post.id)!,
-              client_id: post.id,
-              tracking_id: trackingId,
-              original_post_id: toValidUuid(post.original_post_id || post.id),
-              name: post.name,
-              custom_name: post.custom_name || null,
-              x_coord: post.x_coord,
-              y_coord: post.y_coord,
-              status: post.status,
-              installation_date: post.installation_date || null,
-              completion_date: post.completion_date || null,
-              notes: post.notes || null,
-              updated_at: new Date().toISOString(),
-            }));
-            await supabase.from('tracked_posts').upsert(postsToUpsert, { onConflict: 'id' });
-          }
-
-          // 3. Inserir/atualizar conexões (só upsert - nunca delete em massa; exclusão só no clique direito na linha)
-          if (t.post_connections?.length > 0) {
-            const pairKey = (a: string, b: string) => [a, b].sort().join('|');
-            const seenPairs = new Set<string>();
-            const deduped = t.post_connections.filter(conn => {
-              const key = pairKey(conn.from_post_id, conn.to_post_id);
-              if (seenPairs.has(key)) return false;
-              seenPairs.add(key);
-              return true;
-            });
-            const connectionsToUpsert = deduped.map(conn => {
-              const fromId = postIdMap.get(conn.from_post_id) ?? toValidUuid(conn.from_post_id);
-              const toId = postIdMap.get(conn.to_post_id) ?? toValidUuid(conn.to_post_id);
-              return {
-                id: toValidUuid(conn.id),
-                client_id: `${conn.connection_type ?? 'blue'}:${conn.id}`,
-                tracking_id: trackingId,
-                from_post_id: fromId,
-                to_post_id: toId,
-                connection_type: (conn.connection_type ?? 'blue') as 'blue' | 'green',
-                status: 'Pendente',
-              };
-            });
-            // Garantir IDs únicos: se houver colisão, usar índice
-            const seen = new Set<string>();
-            connectionsToUpsert.forEach((c) => {
-              if (seen.has(c.id)) {
-                (c as any).id = crypto.randomUUID();
-              }
-              seen.add(c.id);
-            });
-            const { error: connError } = await supabase.from('post_connections').upsert(connectionsToUpsert, { onConflict: 'id' });
-            if (connError) {
-              console.error('Erro ao salvar conexões de rede:', connError);
-              alertDialog.showError('Erro ao salvar linhas de rede', connError.message);
-            }
-          }
-        } catch (e) {
-          console.warn('Sync obra/postes para Supabase:', e);
-        }
+        if (generation !== syncGenerationRef.current) return;
+        if (!t.budget_id) continue;
+        await syncWorkTrackingToSupabase(supabase, t, {
+          deletedPostIds: deletedPostIdsRef.current,
+          syncGeneration: generation,
+          getCurrentGeneration: () => syncGenerationRef.current,
+          onConnectionError: (message) => {
+            alertDialog.showError('Erro ao salvar linhas de rede', message);
+          },
+        });
       }
-    };
-    syncToSupabase();
     }, 1500);
     return () => clearTimeout(timeoutId);
   }, [workTrackings, timelineMilestones, workImages]);
+
+  // Reset hidratação ao sair do detalhe da obra
+  useEffect(() => {
+    if (currentView !== 'tracking-detail') {
+      hydratedTrackingDetailsRef.current.clear();
+    }
+  }, [currentView]);
 
   const activeTracking = useMemo(
     () => workTrackings.find((tracking) => tracking.id === activeTrackingId) || null,
     [workTrackings, activeTrackingId]
   );
+
+  // Hidrata postes/conexões apenas quando o usuário abre o detalhe da obra.
+  useEffect(() => {
+    if (!activeTrackingId || currentView !== 'tracking-detail') return;
+    if (hydratedTrackingDetailsRef.current.has(activeTrackingId)) return;
+
+    const hydrateTrackingDetails = async () => {
+      setIsLoadingDetails(true);
+      console.time(`EngineerPortal: hydrate tracking ${activeTrackingId}`);
+      try {
+        const { data: trackingRow, error: trackingError } = await supabase
+          .from('work_trackings')
+          .select('id, public_id')
+          .or(`public_id.eq.${activeTrackingId},id.eq.${activeTrackingId}`)
+          .limit(1)
+          .single();
+
+        if (trackingError || !trackingRow) {
+          console.warn('Não foi possível resolver tracking para hidratação:', trackingError);
+          return;
+        }
+
+        const [postsResult, connectionsResult] = await Promise.all([
+          supabase.from('tracked_posts').select('*').eq('tracking_id', trackingRow.id).eq('is_visible', true).order('name'),
+          supabase.from('post_connections').select('*').eq('tracking_id', trackingRow.id),
+        ]);
+
+        const trackedPostsFromDb: TrackedPost[] = (postsResult.data || []).map((post) => ({
+          id: post.id,
+          client_id: post.client_id || post.id,
+          tracking_id: trackingRow.public_id ?? trackingRow.id,
+          original_post_id: post.original_post_id || post.id,
+          name: post.name,
+          custom_name: post.custom_name || undefined,
+          x_coord: Number(post.x_coord),
+          y_coord: Number(post.y_coord),
+          status: post.status as TrackedPost['status'],
+          is_visible: post.is_visible !== false,
+          installation_date: post.installation_date || undefined,
+          completion_date: post.completion_date || undefined,
+          notes: post.notes || undefined,
+          photos: [],
+          materials: [],
+        }));
+        const postConnections = (connectionsResult.data || []).map((connection: any) => {
+          const explicitType =
+            connection.connection_type === 'green'
+              ? 'green'
+              : connection.connection_type === 'blue'
+                ? 'blue'
+                : null;
+          const encoded = typeof connection.client_id === 'string' ? connection.client_id : '';
+          const parsedType = explicitType ?? (encoded.startsWith('green:') ? 'green' : 'blue');
+          return {
+            id: connection.id,
+            from_post_id: connection.from_post_id,
+            to_post_id: connection.to_post_id,
+            connection_type: parsedType as 'blue' | 'green',
+          };
+        });
+
+        const dbPostIds = new Set(trackedPostsFromDb.map((p) => p.id));
+        const dbClientIds = new Set(trackedPostsFromDb.map((p) => getPostClientId(p)));
+
+        setWorkTrackings((prev) =>
+          prev.map((tracking) => {
+            if (tracking.id !== activeTrackingId) return tracking;
+
+            const localPending = (tracking.tracked_posts || []).filter((p) => {
+              const clientId = getPostClientId(p);
+              return (
+                clientId.startsWith('tracked-') &&
+                !dbPostIds.has(p.id) &&
+                !dbClientIds.has(clientId)
+              );
+            });
+
+            const mergedPosts = [...trackedPostsFromDb, ...localPending];
+            nextPostNumberRef.current.set(activeTrackingId, computeMaxPostNumber(mergedPosts) + 1);
+
+            const dbConnIds = new Set(postConnections.map((c) => c.id));
+            const localPendingConns = (tracking.post_connections || []).filter(
+              (c) => !dbConnIds.has(c.id)
+            );
+
+            return {
+              ...tracking,
+              tracked_posts: mergedPosts,
+              post_connections: [...postConnections, ...localPendingConns],
+            };
+          })
+        );
+
+        hydratedTrackingDetailsRef.current.add(activeTrackingId);
+      } finally {
+        setIsLoadingDetails(false);
+        console.timeEnd(`EngineerPortal: hydrate tracking ${activeTrackingId}`);
+      }
+    };
+
+    hydrateTrackingDetails();
+  }, [activeTrackingId, currentView]);
 
   /** Postes no formato do CanvasVisual; exibe todos os postes do banco. */
   const trackingPostsForCanvas = useMemo((): (BudgetPostDetail & { status?: string })[] => {
@@ -557,20 +613,30 @@ export function EngineerPortal() {
 
   /** Adicionar poste no mapa: clique direito no canvas. */
   const handleCanvasRightClickAddPoste = (coords: { x: number; y: number }) => {
-    if (!activeTracking) return;
-    const currentOnMap = activeTracking.tracked_posts?.length ?? 0;
+    if (!activeTracking || isLoadingDetails) return;
+
+    const trackingId = activeTracking.id;
+    let nextNumber = nextPostNumberRef.current.get(trackingId);
+    if (nextNumber === undefined) {
+      nextNumber = computeMaxPostNumber(activeTracking.tracked_posts || []) + 1;
+    }
+
     const newId = `tracked-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const newPost: TrackedPost = {
       id: newId,
+      client_id: newId,
       tracking_id: activeTracking.id,
       original_post_id: newId,
       name: `Poste ${currentOnMap + 1}`,
       x_coord: coords.x,
       y_coord: coords.y,
       status: 'Pendente',
+      is_visible: true,
       photos: [],
       materials: [],
     };
+    nextPostNumberRef.current.set(trackingId, nextNumber + 1);
+
     updateTracking(activeTracking.id, (t) => {
       const newPosts = [...(t.tracked_posts || []), newPost];
       return {
@@ -585,12 +651,27 @@ export function EngineerPortal() {
   /** Excluir poste do mapa: clique direito no ícone. Único lugar que apaga poste do banco. */
   const handleDeletePosteFromMap = async (posteId: string) => {
     if (!activeTracking) return;
-    const dbPostId = toValidUuid(posteId);
-    await supabase.from('tracked_posts').delete().eq('id', dbPostId);
-    await supabase.from('post_connections').delete().eq('from_post_id', dbPostId);
-    await supabase.from('post_connections').delete().eq('to_post_id', dbPostId);
+
+    const post = activeTracking.tracked_posts?.find(
+      (p) => p.id === posteId || getPostClientId(p) === posteId
+    );
+    const dbPostId = post ? getDbPostId(post) : toValidUuid(posteId);
+    deletedPostIdsRef.current.add(posteId);
+    deletedPostIdsRef.current.add(dbPostId);
+    syncGenerationRef.current += 1;
+
+    const result = await hideTrackedPostAction(activeTracking.id, posteId);
+    if (!result.success) {
+      deletedPostIdsRef.current.delete(posteId);
+      deletedPostIdsRef.current.delete(dbPostId);
+      alertDialog.showError('Não foi possível remover o poste do mapa', result.error || 'Tente novamente.');
+      return;
+    }
+
     updateTracking(activeTracking.id, (t) => {
-      const newPosts = (t.tracked_posts || []).filter((p) => p.id !== posteId);
+      const newPosts = (t.tracked_posts || []).filter(
+        (p) => p.id !== posteId && getPostClientId(p) !== posteId
+      );
       const newConnections = (t.post_connections || []).filter(
         (c) => c.from_post_id !== posteId && c.to_post_id !== posteId
       );
@@ -677,7 +758,7 @@ export function EngineerPortal() {
   const handleDeleteWorkTracking = (tracking: WorkTracking) => {
     alertDialog.showConfirm(
       'Excluir obra em acompanhamento?',
-      `A obra "${tracking.name}" será removida permanentemente, incluindo postes e linhas no mapa. A página pública deixará de existir. Esta ação não pode ser desfeita.`,
+      `A obra "${getTrackingDisplayName(tracking)}" será removida permanentemente, incluindo postes e linhas no mapa. A página pública deixará de existir. Esta ação não pode ser desfeita.`,
       async () => {
         const result = await deleteWorkTrackingAction(tracking.id);
         if (!result.success) {
@@ -1077,117 +1158,57 @@ export function EngineerPortal() {
 
   /** Persiste a obra atual no Supabase (inclui totais planejados MT/BT/postes e extensões). */
   const persistTrackingToSupabase = async (t: WorkTracking): Promise<boolean> => {
-    if (!t.budget_id) return false;
-    try {
-      // Timeline e imagens são persistidos diretamente nas funções saveTimeline() e saveWorkImages()
-      const syncProgress = calculateWeightedProgress(t);
-      const workName = t.budget_data?.project_name ?? t.name;
-      const clientName = t.budget_data?.client_name ?? null;
-
-      const { data: workData, error: workError } = await supabase.from('work_trackings').upsert(
-        {
-          public_id: t.id,
-          budget_id: t.budget_id,
-          name: workName,
-          status: t.status,
-          network_extension_km: t.network_extension_km ?? 0,
-          progress_percentage: syncProgress,
-          start_date: t.start_date || null,
-          estimated_completion: t.estimated_completion || null,
-          actual_completion: t.actual_completion || null,
-          planned_network_meters: t.planned_network_meters ?? null,
-          planned_mt_meters: t.planned_mt_meters ?? null,
-          mt_extension_km: t.mt_extension_km ?? 0,
-          planned_bt_meters: t.planned_bt_meters ?? null,
-          bt_extension_km: t.bt_extension_km ?? 0,
-          planned_poles: t.planned_poles ?? null,
-          poles_installed: t.poles_installed ?? 0,
-          planned_equipment: t.planned_equipment ?? null,
-          equipment_installed: t.equipment_installed ?? 0,
-          planned_public_lighting: t.planned_public_lighting ?? null,
-          public_lighting_installed: t.public_lighting_installed ?? 0,
-          plan_image_url: t.budget_data?.plan_image_url ?? null,
-          client_logo_url: t.budget_data?.client_logo_url ?? null,
-          client_name: clientName,
-          city: t.budget_data?.city ?? null,
-          current_focus_title: t.current_focus_title ?? null,
-          current_focus_description: t.current_focus_description ?? null,
-          project_description: t.project_description ?? null,
-          responsible_person: t.responsible_person ?? null,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'public_id' }
-      ).select('id').single();
-
-      if (workError) throw workError;
-      const trackingId = workData?.id;
-      if (!trackingId) return false;
-
-      const postIdMap = new Map<string, string>();
-      (t.tracked_posts || []).forEach((p) => postIdMap.set(p.id, toValidUuid(p.id)));
-
-      // Nunca apagar postes/conexões em massa - só upsert. Exclusão só no clique direito.
-      if (t.tracked_posts?.length > 0) {
-        const postsToUpsert = t.tracked_posts.map((post) => ({
-          id: postIdMap.get(post.id)!,
-          client_id: post.id,
-          tracking_id: trackingId,
-          original_post_id: toValidUuid(post.original_post_id || post.id),
-          name: post.name,
-          custom_name: post.custom_name || null,
-          x_coord: post.x_coord,
-          y_coord: post.y_coord,
-          status: post.status,
-          installation_date: post.installation_date || null,
-          completion_date: post.completion_date || null,
-          notes: post.notes || null,
-          updated_at: new Date().toISOString(),
-        }));
-        await supabase.from('tracked_posts').upsert(postsToUpsert, { onConflict: 'id' });
-      }
-
-      if (t.post_connections?.length > 0) {
-        const pairKey = (a: string, b: string) => [a, b].sort().join('|');
-        const seenPairs = new Set<string>();
-        const deduped = t.post_connections.filter((conn: any) => {
-          const key = pairKey(conn.from_post_id, conn.to_post_id);
-          if (seenPairs.has(key)) return false;
-          seenPairs.add(key);
-          return true;
-        });
-        const connectionsToUpsert = deduped.map((conn: any) => ({
-          id: toValidUuid(conn.id),
-          client_id: `${(conn.connection_type ?? 'blue') as 'blue' | 'green'}:${conn.id}`,
-          tracking_id: trackingId,
-          from_post_id: postIdMap.get(conn.from_post_id) ?? toValidUuid(conn.from_post_id),
-          to_post_id: postIdMap.get(conn.to_post_id) ?? toValidUuid(conn.to_post_id),
-          connection_type: (conn.connection_type ?? 'blue') as 'blue' | 'green',
-          status: 'Pendente',
-        }));
-        const seen = new Set<string>();
-        connectionsToUpsert.forEach((c: any) => {
-          if (seen.has(c.id)) c.id = crypto.randomUUID();
-          seen.add(c.id);
-        });
-        const { error: connErr } = await supabase.from('post_connections').upsert(connectionsToUpsert, { onConflict: 'id' });
-        if (connErr) console.error('Erro ao salvar conexões (persistTracking):', connErr);
-      }
-
-      return true;
-    } catch (e) {
-      console.warn('Persistência no Supabase:', e);
-      return false;
-    }
+    const generation = ++syncGenerationRef.current;
+    return syncWorkTrackingToSupabase(supabase, t, {
+      deletedPostIds: deletedPostIdsRef.current,
+      syncGeneration: generation,
+      getCurrentGeneration: () => syncGenerationRef.current,
+      onConnectionError: (message) => {
+        console.error('Erro ao salvar conexões (persistTracking):', message);
+      },
+    });
   };
 
   const handleSaveChanges = async () => {
     if (!activeTracking) return;
-    
+
+    const budgetName = activeTracking.budget_data?.project_name?.trim();
+    if (!budgetName) {
+      alertDialog.showError('Campo obrigatório', 'Informe o nome do orçamento antes de salvar.');
+      return;
+    }
+
     setIsSavingChanges(true);
-    
+
     try {
-      // Persistência explícita no Supabase (totais planejados MT/BT/postes, extensões, status, datas, etc.)
-      const persisted = await persistTrackingToSupabase(activeTracking);
+      if (activeTracking.budget_id) {
+        const budgetResult = await updateBudgetAction(activeTracking.budget_id, {
+          project_name: budgetName,
+        });
+        if (!budgetResult.success) {
+          alertDialog.showError(
+            'Erro ao salvar orçamento',
+            budgetResult.error || 'Não foi possível atualizar o nome do orçamento.'
+          );
+          return;
+        }
+        await fetchBudgets();
+      }
+
+      const trackingToSave: WorkTracking = {
+        ...activeTracking,
+        name: budgetName,
+        budget_data: {
+          ...activeTracking.budget_data,
+          project_name: budgetName,
+        },
+      };
+
+      setWorkTrackings((prev) =>
+        prev.map((t) => (t.id === trackingToSave.id ? trackingToSave : t))
+      );
+
+      const persisted = await persistTrackingToSupabase(trackingToSave);
       if (!persisted) {
         alertDialog.showError('Erro ao Salvar', 'Não foi possível salvar no servidor. Tente novamente.');
         return;
@@ -1195,12 +1216,11 @@ export function EngineerPortal() {
 
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
-      
+
       alertDialog.showSuccess(
         'Alterações salvas',
-        'Dados da obra (incluindo totais planejados e extensões) foram gravados no servidor.'
+        'Nome do orçamento, descrição e demais dados da obra foram gravados no servidor.'
       );
-      
     } catch {
       alertDialog.showError('Erro ao Salvar', 'Ocorreu um erro ao salvar as alterações.');
     } finally {
@@ -1578,7 +1598,7 @@ export function EngineerPortal() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3">
-                      <h4 className="text-lg font-semibold text-gray-900">{tracking.name}</h4>
+                      <h4 className="text-lg font-semibold text-gray-900">{getTrackingDisplayName(tracking)}</h4>
                       <span className={`px-3 py-1 text-xs rounded-full border ${getStatusColor(tracking.status)}`}>
                         {tracking.status}
                       </span>
@@ -1691,7 +1711,7 @@ export function EngineerPortal() {
       <div className="space-y-6">
         <div className="flex items-center justify-between bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
           <div>
-            <h1 className="text-2xl font-bold text-[#1D3140]">{activeTracking.name}</h1>
+            <h1 className="text-2xl font-bold text-[#1D3140]">{getTrackingDisplayName(activeTracking)}</h1>
             <p className="text-gray-600 mt-1">
               Cliente: {activeTracking.budget_data.client_name} • {activeTracking.budget_data.city}
             </p>
@@ -2065,7 +2085,7 @@ export function EngineerPortal() {
               <CanvasVisual
                 orcamento={{
                   id: activeTracking.budget_id,
-                  nome: activeTracking.name,
+                  nome: getTrackingDisplayName(activeTracking),
                   concessionariaId: '',
                   dataModificacao: activeTracking.updated_at,
                   status: 'Em Andamento',
@@ -2076,7 +2096,7 @@ export function EngineerPortal() {
                 }}
                 budgetDetails={{
                   id: activeTracking.budget_id,
-                  name: activeTracking.name,
+                  name: getTrackingDisplayName(activeTracking),
                   client_name: activeTracking.budget_data.client_name,
                   city: activeTracking.budget_data.city,
                   render_version: pdfRenderVersion,
@@ -2156,6 +2176,50 @@ export function EngineerPortal() {
 
             {/* Informações Detalhadas */}
             <div className="space-y-4">
+              <div className="pb-4 border-b border-gray-200">
+                <h4 className="text-sm font-medium text-gray-700 mb-1">Orçamento (Página do Cliente)</h4>
+                <p className="text-xs text-gray-500 mb-3">
+                  Nome e descrição exibidos no topo da página pública da obra.
+                </p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Nome do orçamento</label>
+                    <input
+                      type="text"
+                      value={activeTracking.budget_data?.project_name || ''}
+                      onChange={(e) =>
+                        updateTracking(activeTracking.id, (t) => ({
+                          ...t,
+                          budget_data: {
+                            ...t.budget_data,
+                            project_name: e.target.value,
+                          },
+                          updated_at: new Date().toISOString(),
+                        }))
+                      }
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                      placeholder="Ex: Rede MT/BT — Bairro Centro"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Descrição do projeto</label>
+                    <textarea
+                      value={activeTracking.project_description || ''}
+                      onChange={(e) =>
+                        updateTracking(activeTracking.id, (t) => ({
+                          ...t,
+                          project_description: e.target.value,
+                          updated_at: new Date().toISOString(),
+                        }))
+                      }
+                      rows={4}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                      placeholder="Ex: Painel executivo com avanço físico da obra, evolução da rede e marcos de entrega..."
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Status da Obra</label>
                 <select 

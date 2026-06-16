@@ -5,6 +5,7 @@ import { gruposItens as initialGrupos, concessionarias, orcamentos as initialOrc
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from './AuthContext';
 import { processAndUploadMaterials } from '@/services/materialImportService';
+import { syncMaterialPriceAction } from '@/actions/materials';
 
 interface AppContextType {
   materiais: Material[];
@@ -253,6 +254,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         descricao: item.name || '',
         precoUnit: parseFloat(item.price) || 0,
         unidade: item.unit || '',
+        priceSourceSupplierName: item.price_source_supplier_name ?? null,
+        priceSourceSupplierId: item.price_source_supplier_id ?? null,
+        priceSourceQuoteId: item.price_source_quote_id ?? null,
+        priceSourceSessionId: item.price_source_session_id ?? null,
+        priceSourceUpdatedAt: item.price_source_updated_at ?? null,
       }));
 
       // Remover duplicatas baseado no ID (manter apenas o primeiro)
@@ -605,7 +611,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         `)
         .eq('budget_id', budgetId)
         .order('counter', { ascending: true })
-        .limit(500); // ⚡ Usar limit ao invés de range
+        .limit(2000);
       console.timeEnd('⏱️ Posts query');
 
       if (postsError) {
@@ -1529,118 +1535,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateBudgetMargin = async (budgetId: string, margin: number) => {
-    if (!Number.isFinite(margin) || margin < 0) {
-      throw new Error('Margem inválida');
+  // Função para atualizar preços consolidados (orçamento + catálogo base)
+  const updateConsolidatedMaterialPrice = async (
+    budgetId: string,
+    materialId: string,
+    newPrice: number
+  ) => {
+    const result = await syncMaterialPriceAction(budgetId, materialId, newPrice);
+
+    if (!result.success) {
+      throw new Error(result.error);
     }
-    const { error } = await supabase
-      .from('budgets')
-      .update({ profit_margin_percent: margin })
-      .eq('id', budgetId);
-    if (error) throw error;
-    setBudgetDetails((prev) => {
-      if (!prev || prev.id !== budgetId) return prev;
-      return { ...prev, profit_margin_percent: margin };
-    });
-  };
 
-  const updateBudgetExtras = async (budgetId: string, extras: ExtraCostItem[]) => {
-    for (const e of extras) {
-      if (!Number.isFinite(e.value) || e.value < 0) {
-        throw new Error('Valores de custos extras não podem ser negativos');
-      }
-    }
-    const { error } = await supabase.from('budgets').update({ extra_cost_items: extras }).eq('id', budgetId);
-    if (error) throw error;
-    setBudgetDetails((prev) => {
-      if (!prev || prev.id !== budgetId) return prev;
-      return { ...prev, extra_cost_items: extras };
-    });
-  };
-
-  // Função para atualizar preços consolidados de um material em todo o orçamento
-  const updateConsolidatedMaterialPrice = async (budgetId: string, materialId: string, newPrice: number) => {
-    try {
-      // Validar preço
-      if (newPrice < 0) {
-        throw new Error('Preço não pode ser negativo');
-      }
-
-      // Buscar todos os postes do orçamento
-      const { data: posts, error: postsError } = await supabase
-        .from('budget_posts')
-        .select('id')
-        .eq('budget_id', budgetId)
-        .range(0, 500); // Limite de 500 postes por orçamento (otimizado)
-
-      if (postsError) throw postsError;
-      if (!posts || posts.length === 0) return;
-
-      const postIds = posts.map(p => p.id);
-
-      // Buscar todos os IDs de post_item_groups dos postes
-      const { data: postGroups, error: groupsError } = await supabase
-        .from('post_item_groups')
-        .select('id')
-        .in('budget_post_id', postIds)
-        .range(0, 2000); // Limite de 2000 grupos (500 postes x ~4 grupos média)
-
-      if (!groupsError && postGroups && postGroups.length > 0) {
-        const groupIds = postGroups.map(g => g.id);
-
-        // Atualizar price_at_addition em post_item_group_materials
-        await supabase
-          .from('post_item_group_materials')
-          .update({ price_at_addition: newPrice })
-          .eq('material_id', materialId)
-          .in('post_item_group_id', groupIds);
-      }
-
-      // Atualizar price_at_addition em post_materials (materiais avulsos)
-      await supabase
-        .from('post_materials')
-        .update({ price_at_addition: newPrice })
-        .eq('material_id', materialId)
-        .in('post_id', postIds);
-
-      // Atualizar o estado budgetDetails localmente
-      setBudgetDetails(prev => {
-        if (!prev) return prev;
-
-        return {
-          ...prev,
-          posts: prev.posts.map(post => ({
-            ...post,
-            post_item_groups: post.post_item_groups.map(group => ({
-              ...group,
-              post_item_group_materials: group.post_item_group_materials.map(material => {
-                if (material.material_id === materialId) {
-                  return {
-                    ...material,
-                    price_at_addition: newPrice
-                  };
-                }
-                return material;
-              })
-            })),
-            post_materials: post.post_materials.map(material => {
-              if (material.material_id === materialId) {
-                return {
-                  ...material,
-                  price_at_addition: newPrice
-                };
-              }
-              return material;
-            })
-          }))
-        };
-      });
-
-      console.log('✅ Preço atualizado:', { materialId, newPrice });
-    } catch (error) {
-      console.error('❌ Erro ao atualizar preço:', error);
-      throw error;
-    }
+    await Promise.all([fetchBudgetDetails(budgetId), fetchMaterials(true)]);
   };
 
   // Funções para concessionárias

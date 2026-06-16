@@ -89,7 +89,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
         
         if (!error && row) {
           const [pr, cr] = await Promise.all([
-            supabase.from('tracked_posts').select('*').eq('tracking_id', row.id).order('name'),
+            supabase.from('tracked_posts').select('*').eq('tracking_id', row.id).eq('is_visible', true).order('name'),
             supabase.from('post_connections').select('*').eq('tracking_id', row.id),
           ]);
           
