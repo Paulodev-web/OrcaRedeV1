@@ -1,6 +1,18 @@
 /** Limite por invocação no Vercel Hobby (sem Pro). */
 export const PIPELINE_MAX_DURATION = 60;
 
+/** Jobs em extract sem quote_id: marcar error após este tempo. */
+export const EXTRACT_STUCK_ERROR_MS = 10 * 60 * 1000;
+
+/** UI: botão "Retomar" após este tempo em processing. */
+export const EXTRACT_UI_STUCK_MS = 3 * 60 * 1000;
+
+/** Auto-retomada na UI após este tempo. */
+export const EXTRACT_AUTO_RESUME_MS = 60 * 1000;
+
+export const EXTRACT_TIMEOUT_ERROR_MESSAGE =
+  'Processamento expirou (extração não concluída). Use "Tentar processar novamente" ou exclua.';
+
 /** Lote menor por step para caber em ~60s por invocação. */
 export const STEP_MODE_SEMANTIC_MATCH_BATCH_SIZE = 5;
 
