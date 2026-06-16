@@ -348,6 +348,38 @@ export async function retryExtractionJobsAction(
   }
 }
 
+export async function markExtractionJobsErrorAction(
+  jobIds: string[],
+  errorMessage: string,
+): Promise<ActionResult<void>> {
+  try {
+    if (!jobIds.length) return { success: true, data: undefined };
+
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const { error } = await supabase
+      .from('extraction_jobs')
+      .update({
+        status: 'error',
+        error_message: errorMessage,
+        finished_at: new Date().toISOString(),
+      })
+      .in('id', jobIds)
+      .eq('user_id', userId)
+      .eq('status', 'processing');
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, data: undefined };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao marcar job em erro.';
+    return { success: false, error: message };
+  }
+}
+
 export async function deleteUploadedPdfAction(input: {
   sessionId: string;
   jobId?: string;

@@ -85,6 +85,7 @@ export default function BatchDropzoneManager({
 
   const enqueueJob = useCallback(
     async (storagePath: string, supplierId: string) => {
+      console.log('[BatchDropzone] creating extraction job', { sessionId, storagePath, supplierId });
       const res = await createExtractionJobAction({
         sessionId,
         filePath: storagePath,
@@ -93,11 +94,21 @@ export default function BatchDropzoneManager({
       if (!res.success) {
         throw new Error(res.error);
       }
+      console.log('[BatchDropzone] job created:', res.data.jobId, '→ calling /api/process-pdfs');
       void fetch('/api/process-pdfs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ job_id: res.data.jobId }),
-      }).catch((e) => console.warn('[BatchDropzone] enqueue', e));
+      })
+        .then(async (r) => {
+          if (!r.ok) {
+            const body = await r.json().catch(() => ({})) as { error?: string };
+            console.warn('[BatchDropzone] /api/process-pdfs respondeu', r.status, body.error);
+          } else {
+            console.log('[BatchDropzone] /api/process-pdfs enfileirou', res.data.jobId);
+          }
+        })
+        .catch((e) => console.warn('[BatchDropzone] /api/process-pdfs falhou', e));
     },
     [sessionId]
   );
@@ -156,6 +167,7 @@ export default function BatchDropzoneManager({
 
       setError(null);
       setUploading(true);
+      console.log('[BatchDropzone] iniciando upload de', list.length, 'arquivo(s)');
 
       const {
         data: { user },
@@ -182,6 +194,7 @@ export default function BatchDropzoneManager({
             throw new Error(upErr?.message ?? 'Falha no upload');
           }
 
+          console.log('[BatchDropzone] arquivo enviado:', file.name, '→', up.path);
           uploaded.push({
             storagePath: up.path,
             fileLabel: file.name,
