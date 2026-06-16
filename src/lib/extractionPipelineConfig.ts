@@ -10,6 +10,19 @@ export const EXTRACT_UI_STUCK_MS = 3 * 60 * 1000;
 /** Auto-retomada na UI após este tempo. */
 export const EXTRACT_AUTO_RESUME_MS = 60 * 1000;
 
+/**
+ * Orçamento de tempo por invocação do /continue para a fase de match (L2).
+ * Após este tempo (com ao menos 1 lote processado), para e delega o restante à
+ * próxima chamada. Deixa ~30s de margem antes do timeout de 60s do Vercel Hobby.
+ */
+export const MATCH_INVOCATION_BUDGET_MS = 30_000;
+
+/** Cooldown mínimo entre tentativas de recovery do pipeline (post_extract / match). */
+export const PIPELINE_RECOVERY_COOLDOWN_MS = 5 * 60 * 1000;
+
+/** Número máximo de tentativas de recovery por job por sessão do browser. */
+export const PIPELINE_MAX_RECOVERY_ATTEMPTS = 5;
+
 export const EXTRACT_TIMEOUT_ERROR_MESSAGE =
   'Processamento expirou (extração não concluída). Use "Tentar processar novamente" ou exclua.';
 

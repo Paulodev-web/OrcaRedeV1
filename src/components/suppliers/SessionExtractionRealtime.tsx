@@ -24,6 +24,8 @@ import { MAX_PDFS_PER_QUOTATION } from '@/lib/suppliesLimits';
 import {
   EXTRACT_STUCK_ERROR_MS,
   EXTRACT_UI_STUCK_MS,
+  PIPELINE_MAX_RECOVERY_ATTEMPTS,
+  PIPELINE_RECOVERY_COOLDOWN_MS,
 } from '@/lib/extractionPipelineConfig';
 
 interface QuoteRow {
@@ -96,10 +98,13 @@ export default function SessionExtractionRealtime({
   const notifiedErrorJobIdsRef = useRef<Set<string>>(new Set());
   const transientErrorTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
-  // Recovery timers — fire ONCE per job per session, never re-invoke the edge function.
-  // *AttemptedRef: permanent set, never cleared. Prevents re-scheduling after the timer fires.
+  // Recovery timers para pipeline travado (post_extract / match).
+  // Usa cooldown em vez de bloqueio permanente: permite até MAX tentativas com intervalo entre elas.
+  // Isso garante recuperação de cadeia quebrada por timeout do Vercel sem criar loop infinito.
   const postExtractTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-  const postExtractAttemptedRef = useRef<Set<string>>(new Set());
+  const postExtractAttemptsRef = useRef<Map<string, number>>(new Map()); // tentativas por job
+  const postExtractLastFireRef = useRef<Map<string, number>>(new Map()); // timestamp da última tentativa
+  // Extract-stuck: bloqueio permanente (marcar como erro é idempotente, não cria loop)
   const extractStuckTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const extractStuckAttemptedRef = useRef<Set<string>>(new Set());
 
@@ -132,6 +137,8 @@ export default function SessionExtractionRealtime({
       transientErrorTimersRef.current.clear();
       postExtractTimersRef.current.forEach((timer) => clearTimeout(timer));
       postExtractTimersRef.current.clear();
+      postExtractAttemptsRef.current.clear();
+      postExtractLastFireRef.current.clear();
       extractStuckTimersRef.current.forEach((timer) => clearTimeout(timer));
       extractStuckTimersRef.current.clear();
     };
@@ -274,43 +281,68 @@ export default function SessionExtractionRealtime({
     }
   }, []);
 
-  // Post-extract recovery: job has quote_id but still processing for > 3min
-  // Safe: /continue never re-invokes Gemini (it picks up from pipeline_phase).
-  // postExtractAttemptedRef is NEVER cleared — prevents re-scheduling after the timer fires,
-  // which would cause an infinite loop of /continue calls on every realtime update.
+  // Recovery para pipeline travado (fases post_extract e match).
+  // Usa cooldown em vez de bloqueio permanente: permite até PIPELINE_MAX_RECOVERY_ATTEMPTS
+  // tentativas, com PIPELINE_RECOVERY_COOLDOWN_MS de intervalo entre elas.
+  //
+  // Por que cooldown e não bloqueio permanente?
+  // A cadeia de /continue pode quebrar por timeout do Vercel (60s) no meio da fase match
+  // (24 lotes × ~20s = ~8min). Sem recovery adicional, o job fica preso para sempre.
+  // Com cooldown: se a cadeia quebrar, a UI retoma automaticamente após o intervalo.
   useEffect(() => {
     if (disabled) return;
 
     for (const job of jobs) {
       if (
         job.status !== 'processing' ||
-        !job.quote_id ||
+        !job.quote_id ||          // só jobs que já têm cotação criada (post_extract ou match)
         !job.started_at ||
-        postExtractAttemptedRef.current.has(job.id) ||
-        postExtractTimersRef.current.has(job.id)
+        postExtractTimersRef.current.has(job.id) // timer já pendente
       ) continue;
 
-      const elapsed = Date.now() - new Date(job.started_at).getTime();
-      const remaining = Math.max(0, EXTRACT_UI_STUCK_MS - elapsed);
+      const attempts = postExtractAttemptsRef.current.get(job.id) ?? 0;
+      const lastFire = postExtractLastFireRef.current.get(job.id) ?? 0;
 
-      console.log('[SessionExtractionRealtime] post-extract recovery scheduled', job.id, {
+      if (attempts >= PIPELINE_MAX_RECOVERY_ATTEMPTS) continue; // esgotou as tentativas
+
+      // Cooldown: não reescalonar antes do intervalo mínimo ter passado
+      if (lastFire > 0 && Date.now() - lastFire < PIPELINE_RECOVERY_COOLDOWN_MS) continue;
+
+      // Cálculo do delay até a próxima tentativa:
+      // - Primeira tentativa: esperar até 3min desde started_at (tempo para a extração terminar)
+      // - Tentativas seguintes: cooldown a partir da última tentativa
+      let remaining: number;
+      if (attempts === 0) {
+        const elapsed = Date.now() - new Date(job.started_at).getTime();
+        remaining = Math.max(0, EXTRACT_UI_STUCK_MS - elapsed);
+      } else {
+        remaining = Math.max(0, PIPELINE_RECOVERY_COOLDOWN_MS - (Date.now() - lastFire));
+      }
+
+      console.log('[SessionExtractionRealtime] pipeline recovery scheduled', job.id, {
+        attempt: attempts + 1,
         remainingSec: Math.round(remaining / 1000),
         phase: job.pipeline_phase,
       });
 
+      const jobId = job.id;
       const timer = setTimeout(() => {
-        postExtractTimersRef.current.delete(job.id);
-        postExtractAttemptedRef.current.add(job.id); // Permanent — no re-scheduling ever
-        console.log('[SessionExtractionRealtime] post-extract recovery: calling /continue', job.id);
-        void continueJob(job.id).catch((err) => {
-          console.warn('[SessionExtractionRealtime] post-extract /continue failed', job.id, err);
+        postExtractTimersRef.current.delete(jobId);
+        const nextAttempt = (postExtractAttemptsRef.current.get(jobId) ?? 0) + 1;
+        postExtractAttemptsRef.current.set(jobId, nextAttempt);
+        postExtractLastFireRef.current.set(jobId, Date.now()); // definir ANTES da chamada async
+        console.log('[SessionExtractionRealtime] pipeline recovery: calling /continue', jobId, {
+          attempt: nextAttempt,
+        });
+        void continueJob(jobId).catch((err) => {
+          console.warn('[SessionExtractionRealtime] pipeline recovery /continue failed', jobId, err);
         });
       }, remaining);
 
       postExtractTimersRef.current.set(job.id, timer);
     }
 
-    // Cancel pending timers for jobs that completed or errored before the timer fired
+    // Cancelar timers de jobs que concluíram ou erraram antes do timer disparar
     for (const [id, timer] of postExtractTimersRef.current) {
       const job = jobs.find((j) => j.id === id);
       if (!job || job.status !== 'processing' || !job.quote_id) {
@@ -322,7 +354,7 @@ export default function SessionExtractionRealtime({
 
   // Extract-stuck: job has no quote_id and has been processing for > 10min → mark as error
   // The edge function (Supabase, 150s limit) must have crashed without updating the DB.
-  // extractStuckAttemptedRef is NEVER cleared — same reason as postExtractAttemptedRef.
+  // extractStuckAttemptedRef is NEVER cleared: marcar como erro é idempotente, sem risco de loop.
   useEffect(() => {
     if (disabled) return;
 

@@ -4,6 +4,7 @@ import { createSupabaseServiceRoleClient } from '@/lib/supabaseServer';
 import {
   EXTRACT_STUCK_ERROR_MS,
   EXTRACT_TIMEOUT_ERROR_MESSAGE,
+  MATCH_INVOCATION_BUDGET_MS,
 } from '@/lib/extractionPipelineConfig';
 import { invokeExtractOnEdge } from '@/services/suppliers/invokeExtractOnEdge';
 import { autoMatchQuoteItems } from '@/services/suppliers/autoMatchQuoteItems';
@@ -264,7 +265,6 @@ async function runMatchPhase(
 ): Promise<PipelineStepResult> {
   const userId = job.user_id as string;
   const quoteId = job.quote_id as string | null;
-  const batchIndex = (job.match_batch_index as number) ?? 0;
   const pipelineContext = parsePipelineContext(job.pipeline_context);
 
   if (!quoteId || !pipelineContext) {
@@ -272,58 +272,74 @@ async function runMatchPhase(
     return { hasMore: false };
   }
 
-  // Optimistic lock: claim this batch by atomically incrementing the index BEFORE processing.
-  // If two /continue calls arrive simultaneously and both read batchIndex=N,
-  // only ONE will succeed in updating from N to N+1 — the other gets 0 rows and bails out.
-  // This prevents duplicate concurrent batch processing and the resulting Supabase lock timeouts.
-  const { data: claimed } = await supabase
-    .from('extraction_jobs')
-    .update({ match_batch_index: batchIndex + 1 })
-    .eq('id', jobId)
-    .eq('status', 'processing')
-    .eq('match_batch_index', batchIndex)
-    .select('id')
-    .maybeSingle();
+  const totalBatches = pipelineContext.batchItemIds.length;
+  let batchIndex = (job.match_batch_index as number) ?? 0;
+  const startTs = Date.now();
+  let processedThisCall = 0;
 
-  if (!claimed) {
+  while (batchIndex < totalBatches) {
+    // Após o primeiro lote, verificar se ainda há orçamento de tempo antes de reivindicar o próximo.
+    // Isso impede o timeout de 60s do Vercel — o restante dos lotes fica para a próxima chamada.
+    if (processedThisCall > 0 && Date.now() - startTs >= MATCH_INVOCATION_BUDGET_MS) {
+      console.log(
+        `[runMatchPhase] Orçamento esgotado após ${processedThisCall} lotes; ` +
+          `próxima chamada retoma do lote ${batchIndex + 1}/${totalBatches}`,
+        jobId
+      );
+      return { hasMore: true };
+    }
+
+    // Optimistic lock: reivindica o lote atomicamente ANTES de processar.
+    // Garante que instâncias concorrentes não processem o mesmo lote.
+    const { data: claimed } = await supabase
+      .from('extraction_jobs')
+      .update({ match_batch_index: batchIndex + 1 })
+      .eq('id', jobId)
+      .eq('status', 'processing')
+      .eq('match_batch_index', batchIndex)
+      .select('id')
+      .maybeSingle();
+
+    if (!claimed) {
+      console.log(
+        `[runMatchPhase] lote ${batchIndex} já reivindicado por outra instância, ignorando`,
+        jobId
+      );
+      return { hasMore: false };
+    }
+
+    const batchResult = await runSingleSemanticMatchBatch(
+      supabase,
+      userId,
+      quoteId,
+      pipelineContext as SemanticMatchPipelineContext,
+      batchIndex,
+      { stepMode: true }
+    );
+
+    processedThisCall++;
+    batchIndex++;
+
+    if (batchResult.done || batchIndex >= totalBatches) {
+      await supabase
+        .from('extraction_jobs')
+        .update({ pipeline_phase: 'finalize' })
+        .eq('id', jobId);
+      console.log(
+        `[runMatchPhase] L2 concluído: ${processedThisCall} lotes esta chamada, total ${batchIndex}/${totalBatches}`,
+        jobId
+      );
+      return { hasMore: true };
+    }
+
     console.log(
-      `[runMatchPhase] lote ${batchIndex} já reivindicado por outra instância, ignorando`,
+      `[runMatchPhase] Lote ${batchIndex}/${totalBatches} concluído; ${processedThisCall} processados nesta chamada`,
       jobId
     );
-    return { hasMore: false };
   }
 
-  const semanticCtx: SemanticMatchPipelineContext = pipelineContext;
-
-  const batchResult = await runSingleSemanticMatchBatch(
-    supabase,
-    userId,
-    quoteId,
-    semanticCtx,
-    batchIndex,
-    { stepMode: true }
-  );
-
-  // match_batch_index already incremented by the claim above
-  const nextIndex = batchIndex + 1;
-  const totalBatches = batchResult.totalBatches;
-
-  if (batchResult.done || nextIndex >= totalBatches) {
-    await supabase
-      .from('extraction_jobs')
-      .update({ pipeline_phase: 'finalize' })
-      .eq('id', jobId);
-
-    console.log(
-      `[runExtractionPipelineStep] L2 concluído (${nextIndex}/${totalBatches} lotes processados)`
-    );
-    return { hasMore: true };
-  }
-
-  console.log(
-    `[runExtractionPipelineStep] Lote L2 ${nextIndex}/${totalBatches} concluído; próximo lote pendente`
-  );
-
+  // Todos os lotes processados (loop exauriu sem trigger do done)
+  await supabase.from('extraction_jobs').update({ pipeline_phase: 'finalize' }).eq('id', jobId);
   return { hasMore: true };
 }
 
