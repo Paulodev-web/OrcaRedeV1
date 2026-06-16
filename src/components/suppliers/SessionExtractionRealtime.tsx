@@ -96,9 +96,12 @@ export default function SessionExtractionRealtime({
   const notifiedErrorJobIdsRef = useRef<Set<string>>(new Set());
   const transientErrorTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
-  // Recovery timers — fire once per job, never re-invoke the edge function
+  // Recovery timers — fire ONCE per job per session, never re-invoke the edge function.
+  // *AttemptedRef: permanent set, never cleared. Prevents re-scheduling after the timer fires.
   const postExtractTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const postExtractAttemptedRef = useRef<Set<string>>(new Set());
   const extractStuckTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const extractStuckAttemptedRef = useRef<Set<string>>(new Set());
 
   const disabled = sessionStatus === 'completed';
 
@@ -272,7 +275,9 @@ export default function SessionExtractionRealtime({
   }, []);
 
   // Post-extract recovery: job has quote_id but still processing for > 3min
-  // Safe: /continue never re-invokes Gemini (it picks up from pipeline_phase)
+  // Safe: /continue never re-invokes Gemini (it picks up from pipeline_phase).
+  // postExtractAttemptedRef is NEVER cleared — prevents re-scheduling after the timer fires,
+  // which would cause an infinite loop of /continue calls on every realtime update.
   useEffect(() => {
     if (disabled) return;
 
@@ -281,6 +286,7 @@ export default function SessionExtractionRealtime({
         job.status !== 'processing' ||
         !job.quote_id ||
         !job.started_at ||
+        postExtractAttemptedRef.current.has(job.id) ||
         postExtractTimersRef.current.has(job.id)
       ) continue;
 
@@ -294,6 +300,7 @@ export default function SessionExtractionRealtime({
 
       const timer = setTimeout(() => {
         postExtractTimersRef.current.delete(job.id);
+        postExtractAttemptedRef.current.add(job.id); // Permanent — no re-scheduling ever
         console.log('[SessionExtractionRealtime] post-extract recovery: calling /continue', job.id);
         void continueJob(job.id).catch((err) => {
           console.warn('[SessionExtractionRealtime] post-extract /continue failed', job.id, err);
@@ -303,7 +310,7 @@ export default function SessionExtractionRealtime({
       postExtractTimersRef.current.set(job.id, timer);
     }
 
-    // Cancel timers for jobs that completed, errored, or got quote_id cleared
+    // Cancel pending timers for jobs that completed or errored before the timer fired
     for (const [id, timer] of postExtractTimersRef.current) {
       const job = jobs.find((j) => j.id === id);
       if (!job || job.status !== 'processing' || !job.quote_id) {
@@ -315,6 +322,7 @@ export default function SessionExtractionRealtime({
 
   // Extract-stuck: job has no quote_id and has been processing for > 10min → mark as error
   // The edge function (Supabase, 150s limit) must have crashed without updating the DB.
+  // extractStuckAttemptedRef is NEVER cleared — same reason as postExtractAttemptedRef.
   useEffect(() => {
     if (disabled) return;
 
@@ -323,6 +331,7 @@ export default function SessionExtractionRealtime({
         job.status !== 'processing' ||
         job.quote_id ||
         !job.started_at ||
+        extractStuckAttemptedRef.current.has(job.id) ||
         extractStuckTimersRef.current.has(job.id)
       ) continue;
 
@@ -335,6 +344,7 @@ export default function SessionExtractionRealtime({
 
       const timer = setTimeout(() => {
         extractStuckTimersRef.current.delete(job.id);
+        extractStuckAttemptedRef.current.add(job.id); // Permanent — no re-scheduling ever
         console.warn('[SessionExtractionRealtime] extract stuck: marking as error', job.id);
         void markExtractionJobsErrorAction(
           [job.id],
@@ -347,7 +357,7 @@ export default function SessionExtractionRealtime({
       extractStuckTimersRef.current.set(job.id, timer);
     }
 
-    // Cancel timers for jobs that finished (completed/error) or got quote_id set
+    // Cancel pending timers for jobs that finished or got quote_id set before the timer fired
     for (const [id, timer] of extractStuckTimersRef.current) {
       const job = jobs.find((j) => j.id === id);
       if (!job || job.status !== 'processing' || job.quote_id) {

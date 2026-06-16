@@ -272,6 +272,27 @@ async function runMatchPhase(
     return { hasMore: false };
   }
 
+  // Optimistic lock: claim this batch by atomically incrementing the index BEFORE processing.
+  // If two /continue calls arrive simultaneously and both read batchIndex=N,
+  // only ONE will succeed in updating from N to N+1 — the other gets 0 rows and bails out.
+  // This prevents duplicate concurrent batch processing and the resulting Supabase lock timeouts.
+  const { data: claimed } = await supabase
+    .from('extraction_jobs')
+    .update({ match_batch_index: batchIndex + 1 })
+    .eq('id', jobId)
+    .eq('status', 'processing')
+    .eq('match_batch_index', batchIndex)
+    .select('id')
+    .maybeSingle();
+
+  if (!claimed) {
+    console.log(
+      `[runMatchPhase] lote ${batchIndex} já reivindicado por outra instância, ignorando`,
+      jobId
+    );
+    return { hasMore: false };
+  }
+
   const semanticCtx: SemanticMatchPipelineContext = pipelineContext;
 
   const batchResult = await runSingleSemanticMatchBatch(
@@ -283,16 +304,14 @@ async function runMatchPhase(
     { stepMode: true }
   );
 
+  // match_batch_index already incremented by the claim above
   const nextIndex = batchIndex + 1;
   const totalBatches = batchResult.totalBatches;
 
   if (batchResult.done || nextIndex >= totalBatches) {
     await supabase
       .from('extraction_jobs')
-      .update({
-        pipeline_phase: 'finalize',
-        match_batch_index: nextIndex,
-      })
+      .update({ pipeline_phase: 'finalize' })
       .eq('id', jobId);
 
     console.log(
@@ -300,11 +319,6 @@ async function runMatchPhase(
     );
     return { hasMore: true };
   }
-
-  await supabase
-    .from('extraction_jobs')
-    .update({ match_batch_index: nextIndex })
-    .eq('id', jobId);
 
   console.log(
     `[runExtractionPipelineStep] Lote L2 ${nextIndex}/${totalBatches} concluído; próximo lote pendente`
