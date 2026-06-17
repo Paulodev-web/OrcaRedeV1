@@ -289,8 +289,13 @@ export default function SessionExtractionRealtime({
   // A cadeia de /continue pode quebrar por timeout do Vercel (60s) no meio da fase match
   // (24 lotes × ~20s = ~8min). Sem recovery adicional, o job fica preso para sempre.
   // Com cooldown: se a cadeia quebrar, a UI retoma automaticamente após o intervalo.
+  //
+  // O watchdog server-side (pg_cron) é o motor primário e roda com a aba fechada.
+  // Esta recuperação no navegador fica como rede de segurança; defina
+  // NEXT_PUBLIC_PIPELINE_BROWSER_RECOVERY=off para o cron ser o único driver.
   useEffect(() => {
     if (disabled) return;
+    if (process.env.NEXT_PUBLIC_PIPELINE_BROWSER_RECOVERY === 'off') return;
 
     for (const job of jobs) {
       if (
@@ -355,8 +360,13 @@ export default function SessionExtractionRealtime({
   // Extract-stuck: job has no quote_id and has been processing for > 10min → mark as error
   // The edge function (Supabase, 150s limit) must have crashed without updating the DB.
   // extractStuckAttemptedRef is NEVER cleared: marcar como erro é idempotente, sem risco de loop.
+  //
+  // Quando o watchdog server-side é o único driver (NEXT_PUBLIC_PIPELINE_BROWSER_RECOVERY=off),
+  // ele assume a marcação de erro de extração (janela de 15min, respeitando os re-invokes),
+  // então este timer de 10min no navegador é desativado para não errar cedo demais.
   useEffect(() => {
     if (disabled) return;
+    if (process.env.NEXT_PUBLIC_PIPELINE_BROWSER_RECOVERY === 'off') return;
 
     for (const job of jobs) {
       if (

@@ -6,7 +6,6 @@ import {
   EXTRACT_TIMEOUT_ERROR_MESSAGE,
   MATCH_INVOCATION_BUDGET_MS,
 } from '@/lib/extractionPipelineConfig';
-import { invokeExtractOnEdge } from '@/services/suppliers/invokeExtractOnEdge';
 import { autoMatchQuoteItems } from '@/services/suppliers/autoMatchQuoteItems';
 import {
   buildSemanticMatchPipelineContext,
@@ -253,8 +252,12 @@ async function runExtractPhase(
     return { hasMore: false };
   }
 
-  console.log('[runExtractionPipelineStep] reinvocando Edge para extração', jobId);
-  invokeExtractOnEdge(jobId);
+  // A (re)invocação da Edge de extração é feita exclusivamente pelo watchdog
+  // server-side (pg_cron → drive_stuck_extraction_jobs), que só re-invoca após o
+  // job ter > WATCHDOG_EXTRACT_REINVOKE_AFTER_MS (> teto de wall-clock da Edge),
+  // garantindo que nunca haja duas extrações concorrentes (cotação duplicada).
+  // Reinvocar aqui cegamente causava chamadas concorrentes do Gemini.
+  console.log('[runExtractionPipelineStep] extract sem cotação; aguardando Edge/watchdog', jobId);
   return { hasMore: false };
 }
 

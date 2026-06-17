@@ -23,6 +23,24 @@ export const PIPELINE_RECOVERY_COOLDOWN_MS = 5 * 60 * 1000;
 /** Número máximo de tentativas de recovery por job por sessão do browser. */
 export const PIPELINE_MAX_RECOVERY_ATTEMPTS = 5;
 
+/**
+ * Watchdog server-side (pg_cron + pg_net). Estes valores documentam os intervalos
+ * que a função SQL `public.drive_stuck_extraction_jobs()` usa (a SQL fixa os literais).
+ * O watchdog roda no Supabase a cada 1 min e move jobs travados independente do navegador.
+ */
+/** Janela de inatividade (sem escrita em updated_at) antes de considerar um job travado. */
+export const WATCHDOG_STALE_MS = 120_000;
+/** Intervalo mínimo entre disparos (re-invoke/continue) do mesmo job. > teto de ~150s da Edge. */
+export const WATCHDOG_DISPATCH_COOLDOWN_MS = 180_000;
+/**
+ * Só re-invoca a Edge de extração após este tempo desde started_at (job sem cotação).
+ * Maior que o teto de wall-clock da Edge (~150s), garantindo que nenhuma extração
+ * concorrente esteja em voo — impede extração/cotação duplicada SEM alterar a Edge.
+ */
+export const WATCHDOG_EXTRACT_REINVOKE_AFTER_MS = 240_000;
+/** Marca erro se a extração (job sem cotação na fase extract) passar deste tempo. */
+export const WATCHDOG_EXTRACT_HARD_TIMEOUT_MS = 15 * 60 * 1000;
+
 export const EXTRACT_TIMEOUT_ERROR_MESSAGE =
   'Processamento expirou (extração não concluída). Use "Tentar processar novamente" ou exclua.';
 
