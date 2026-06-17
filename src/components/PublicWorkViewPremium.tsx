@@ -279,7 +279,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
   const donutBg = { background: `conic-gradient(${ON.blue} ${realPct * 3.6}deg, rgba(255,255,255,0.18) 0deg)` };
 
   const postsForCanvas: BudgetPostDetail[] = workData.tracked_posts
-    .filter(p => p.x_coord != null && p.y_coord != null && p.x_coord !== 0 && p.y_coord !== 0)
+    .filter(p => p.x_coord != null && p.y_coord != null)
     .map(p => ({
       id: p.id, name: p.name || 'Poste', custom_name: p.custom_name,
       counter: 0, x_coord: p.x_coord, y_coord: p.y_coord,

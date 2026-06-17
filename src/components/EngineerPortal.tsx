@@ -347,10 +347,14 @@ export function EngineerPortal() {
       setIsLoadingDetails(true);
       console.time(`EngineerPortal: hydrate tracking ${activeTrackingId}`);
       try {
+        const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        const orFilter = UUID_RE.test(activeTrackingId)
+          ? `public_id.eq.${activeTrackingId},id.eq.${activeTrackingId}`
+          : `public_id.eq.${activeTrackingId}`;
         const { data: trackingRow, error: trackingError } = await supabase
           .from('work_trackings')
           .select('id, public_id')
-          .or(`public_id.eq.${activeTrackingId},id.eq.${activeTrackingId}`)
+          .or(orFilter)
           .limit(1)
           .single();
 
