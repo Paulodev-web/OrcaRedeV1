@@ -3,7 +3,7 @@ import { authorizeExtractRequest } from '../_shared/auth.ts';
 import { createAdminClient } from '../_shared/supabaseAdmin.ts';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
-const GEMINI_MODEL = 'gemini-1.5-flash';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 const MIN_CONFIDENCE = 85;
 
 // ---------------------------------------------------------------------------
@@ -337,7 +337,7 @@ async function callGeminiForMatching(
   };
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -348,6 +348,7 @@ async function callGeminiForMatching(
           response_mime_type: 'application/json',
           response_schema: responseSchema,
           temperature: 0.1,
+          thinkingConfig: { thinkingBudget: 0 },
         },
       }),
     },
@@ -395,4 +396,5 @@ async function markQuoteError(
     console.error('[match-supplier-quote] markQuoteError falhou:', quoteId, e);
   }
 }
+
 
