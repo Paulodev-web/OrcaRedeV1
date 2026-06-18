@@ -276,6 +276,8 @@ export interface RawExtractionItem {
   unidade: string;
   quantidade: number;
   preco_unit: number;
+  /** Presente quando o PDF tem coluna de desconto — é o preço efetivo usado no total_item. */
+  preco_unit_desconto?: number | null;
   total_item: number;
   ipi_percent: number;
   st_incluso: boolean;
@@ -347,6 +349,8 @@ export interface SupplierQuoteItem {
   unidade: string;
   quantidade: number;
   preco_unit: number;
+  /** Preço com desconto extraído do PDF — presente quando o PDF tem coluna separada de desconto. É o valor efetivo usado no total_item. */
+  preco_unit_desconto?: number | null;
   /** Preço acordado pelo usuário; quando preenchido, substitui preco_unit nos cenários. */
   preco_negociado?: number | null;
   total_item: number;

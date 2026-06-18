@@ -7,7 +7,7 @@ Extraia os itens associando corretamente a descrição da mesma linha (ou do blo
 
 Produza APENAS um objeto JSON válido (sem texto ou markdown fora do JSON), com exatamente duas chaves de nível superior:
 
-1) "items": array de objetos, um por linha de item da tabela de produtos/serviços. Campos por item: descricao (string), unidade (string), quantidade (number), preco_unit (number), total_item (number), ipi_percent (number), st_incluso (boolean), alerta (boolean — true se quantidade * preco_unit for diferente de total_item com tolerância razoável).
+1) "items": array de objetos, um por linha de item da tabela de produtos/serviços. Campos por item: descricao (string), unidade (string), quantidade (number), preco_unit (number — preço unitário de tabela/lista), preco_unit_desconto (number | null — preencher APENAS se o PDF tiver coluna separada de "preço com desconto" ou "preço líquido"; nesse caso esse é o valor efetivamente usado no cálculo do total_item; se não houver essa coluna use null), total_item (number), ipi_percent (number), st_incluso (boolean), alerta (boolean — true se o preço efetivo * quantidade for diferente de total_item com tolerância razoável; use preco_unit_desconto quando presente, senão preco_unit).
 
 2) "observacoesGerais": string com um resumo organizado das informações do orçamento que NÃO são linhas da tabela de itens. Inclua quando existirem: prazo de entrega, validade da proposta, frete/entrega, impostos ou totais globais descritos em rodapé, faturamento, condições de pagamento e demais regras gerais. Use quebras de linha (\\n) e, se útil, formatação Markdown (títulos com ##, listas com -) para manter legível. Se não houver nada além dos itens, use string vazia "".
 

@@ -4,6 +4,8 @@ export type SupplierExtractItem = {
   unidade: string;
   quantidade: number;
   preco_unit: number;
+  /** Preço unitário com desconto aplicado — presente quando o PDF tem coluna de desconto separada. É o valor efetivo usado no total_item. */
+  preco_unit_desconto?: number | null;
   total_item: number;
   ipi_percent: number;
   st_incluso: boolean;

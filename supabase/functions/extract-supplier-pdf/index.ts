@@ -146,6 +146,7 @@ Deno.serve(async (req: Request) => {
       unidade: item.unidade ?? '',
       quantidade: item.quantidade ?? 0,
       preco_unit: item.preco_unit ?? 0,
+      preco_unit_desconto: item.preco_unit_desconto ?? null,
       total_item: item.total_item ?? 0,
       ipi_percent: item.ipi_percent ?? 0,
       st_incluso: item.st_incluso ?? false,

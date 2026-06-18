@@ -39,6 +39,7 @@ interface EditingState {
   unidade: string;
   quantidade: string;
   preco_unit: string;
+  preco_unit_desconto: string;
   total_item: string;
 }
 
@@ -50,6 +51,7 @@ export default function ExtractionCurationModal({
   onValidated,
 }: Props) {
   const [items, setItems] = useState<SupplierQuoteItemWithMaterial[]>([]);
+  const hasDesconto = items.some((it) => it.preco_unit_desconto != null);
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editState, setEditState] = useState<EditingState | null>(null);
@@ -83,6 +85,7 @@ export default function ExtractionCurationModal({
       unidade: item.unidade,
       quantidade: String(item.quantidade),
       preco_unit: String(item.preco_unit),
+      preco_unit_desconto: item.preco_unit_desconto != null ? String(item.preco_unit_desconto) : '',
       total_item: String(item.total_item),
     });
   };
@@ -210,7 +213,12 @@ export default function ExtractionCurationModal({
                     <th className="px-3 py-2">Descrição</th>
                     <th className="px-3 py-2 w-20">Unid.</th>
                     <th className="px-3 py-2 w-24 text-right">Qtd</th>
-                    <th className="px-3 py-2 w-28 text-right">Preço Unit.</th>
+                    <th className="px-3 py-2 w-28 text-right">
+                      {hasDesconto ? 'Preço Lista' : 'Preço Unit.'}
+                    </th>
+                    {hasDesconto && (
+                      <th className="px-3 py-2 w-28 text-right text-blue-600">Preço c/ Desc.</th>
+                    )}
                     <th className="px-3 py-2 w-28 text-right">Total</th>
                     <th className="px-3 py-2 w-16" />
                   </tr>
@@ -273,9 +281,30 @@ export default function ExtractionCurationModal({
                               }
                             />
                           ) : (
-                            <span className="text-gray-700">{fmtCurrency(item.preco_unit)}</span>
+                            <span className={hasDesconto ? 'text-gray-400 line-through text-xs' : 'text-gray-700'}>
+                              {fmtCurrency(item.preco_unit)}
+                            </span>
                           )}
                         </td>
+                        {hasDesconto && (
+                          <td className="px-3 py-2 text-right">
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                step="0.01"
+                                className="w-full rounded border border-blue-300 px-2 py-1 text-right text-sm focus:border-[#64ABDE] focus:outline-none"
+                                value={editState!.preco_unit_desconto}
+                                onChange={(e) =>
+                                  setEditState((s) => (s ? { ...s, preco_unit_desconto: e.target.value } : s))
+                                }
+                              />
+                            ) : (
+                              <span className="text-blue-700 font-medium">
+                                {item.preco_unit_desconto != null ? fmtCurrency(item.preco_unit_desconto) : '—'}
+                              </span>
+                            )}
+                          </td>
+                        )}
                         <td className="px-3 py-2 text-right">
                           {isEditing ? (
                             <input
@@ -332,7 +361,7 @@ export default function ExtractionCurationModal({
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-gray-200 font-medium">
-                    <td colSpan={5} className="px-3 py-2 text-right text-gray-700">
+                    <td colSpan={hasDesconto ? 6 : 5} className="px-3 py-2 text-right text-gray-700">
                       Total geral
                     </td>
                     <td className="px-3 py-2 text-right text-[#1D3140]">{fmtCurrency(totalGeral)}</td>
