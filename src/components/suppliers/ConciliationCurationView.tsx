@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/dialog';
 import { onPortalPrimaryButtonSmClass } from '@/lib/branding';
 import { suppliesTableBorderedScrollClass } from '@/lib/suppliesLayout';
+import { supabase } from '@/lib/supabaseClient';
 
 const fmtCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -390,6 +391,33 @@ export default function ConciliationCurationView({
     }
   }, [initialPayload, initialError]);
 
+  // Auto-refresh quando alguma cotação sai de 'conciliando' → 'aguardando_revisao'
+  const hasConciliando = quotesSummary.some((q) => q.status === 'conciliando');
+  const routerRef = useRef(router);
+  routerRef.current = router;
+
+  useEffect(() => {
+    if (!hasConciliando) return;
+    const channel = supabase
+      .channel(`conciliation_status:${sessionId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'supplier_quotes', filter: `session_id=eq.${sessionId}` },
+        (payload) => {
+          const row = payload.new as { id: string; status: string };
+          if (row.status === 'aguardando_revisao' || row.status === 'conciliado') {
+            setQuotesSummary((prev) =>
+              prev.map((q) => (q.id === row.id ? { ...q, status: row.status } : q)),
+            );
+            // router.refresh() re-renderiza o server component e atualiza initialPayload
+            routerRef.current.refresh();
+          }
+        },
+      )
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [hasConciliando, sessionId]);
+
   const handleItemApproved = (itemId: string, newStatus: string) => {
     setMaterials((prev) =>
       prev.map((mat) => ({
@@ -561,9 +589,19 @@ export default function ConciliationCurationView({
   };
 
   const showEmpty = !loadError && filteredMaterials.length === 0 && unlinked.length === 0;
+  const conciliandoCount = quotesSummary.filter((q) => q.status === 'conciliando').length;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6">
+      {conciliandoCount > 0 && (
+        <div className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-blue-500" />
+          <span>
+            A IA está conciliando {conciliandoCount === 1 ? '1 cotação' : `${conciliandoCount} cotações`}.
+            A página atualiza automaticamente quando terminar.
+          </span>
+        </div>
+      )}
       <div className="shrink-0 rounded-2xl border border-[#64ABDE]/40 bg-white p-6 shadow-md">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
