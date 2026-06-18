@@ -256,9 +256,11 @@ export interface TrackedPostMaterial {
 
 export type SupplierQuoteStatus =
   | 'pendente'             // legado: pipeline multi-step (extraction_jobs)
-  | 'processando_ia'       // novo: PDF enviado para Edge, aguardando Gemini
-  | 'pendente_conciliacao' // novo: raw_extraction preenchido, aguardando match
-  | 'erro_extracao'        // novo: falha na extração
+  | 'processando_ia'       // PDF enviado para Edge, aguardando Gemini
+  | 'pendente_conciliacao' // raw_extraction preenchido, aguarda ação do usuário
+  | 'erro_extracao'        // falha na extração do PDF
+  | 'conciliando'          // Edge Function match-supplier-quote em execução
+  | 'aguardando_revisao'   // match concluído, aguarda validação humana
   | 'conciliado'
   | 'aprovado';
 

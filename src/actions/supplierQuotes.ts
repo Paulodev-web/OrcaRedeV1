@@ -2060,6 +2060,96 @@ export async function createQuoteAndDispatchExtractAction(
   }
 }
 
+// =============================================================================
+// Conciliação assíncrona: dispara a Edge Function match-supplier-quote
+// =============================================================================
+
+export async function processarConciliacaoAction(quoteId: string): Promise<ActionResult<void>> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const quoteIdTrimmed = quoteId?.trim();
+    if (!quoteIdTrimmed) {
+      return { success: false, error: 'quote_id é obrigatório.' };
+    }
+
+    // Valida propriedade e status atual
+    const { data: quote, error: quoteError } = await supabase
+      .from('supplier_quotes')
+      .select('id, status, session_id')
+      .eq('id', quoteIdTrimmed)
+      .eq('user_id', userId)
+      .single();
+
+    if (quoteError || !quote) {
+      return { success: false, error: 'Cotação não encontrada.' };
+    }
+
+    if (quote.status !== 'pendente_conciliacao') {
+      return { success: false, error: `Operação inválida: status atual é '${quote.status}'.` };
+    }
+
+    // Sinaliza que a Edge está processando (habilita feedback em tempo real)
+    const { error: updateError } = await supabase
+      .from('supplier_quotes')
+      .update({ status: 'conciliando' })
+      .eq('id', quoteIdTrimmed);
+
+    if (updateError) {
+      return { success: false, error: updateError.message };
+    }
+
+    // Fire-and-forget: mantém a função serverless viva após o retorno via after()
+    after(async () => {
+      await dispatchMatchToEdge(quoteIdTrimmed).catch((err) => {
+        console.error('[processarConciliacaoAction] Falha ao disparar match Edge:', quoteIdTrimmed, err);
+      });
+    });
+
+    revalidatePath('/fornecedores/sessao/[sessionId]', 'page');
+    return { success: true, data: undefined };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro inesperado ao iniciar conciliação.';
+    return { success: false, error: message };
+  }
+}
+
+async function dispatchMatchToEdge(quoteId: string): Promise<void> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '');
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const geminiKey = process.env.GEMINI_API_KEY?.trim();
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error('[dispatchMatchToEdge] Variáveis de ambiente Supabase não configuradas');
+    return;
+  }
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${serviceRoleKey}`,
+  };
+
+  if (geminiKey) {
+    headers['x-orcarede-gemini-pass'] = geminiKey;
+  }
+
+  const res = await fetch(`${supabaseUrl}/functions/v1/match-supplier-quote`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ quote_id: quoteId }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    console.warn('[dispatchMatchToEdge] Edge respondeu erro:', res.status, body.slice(0, 200));
+  } else {
+    console.log('[dispatchMatchToEdge] sucesso:', quoteId);
+  }
+}
+
+// =============================================================================
+
 async function dispatchExtractToEdge(quoteId: string, pdfPath: string): Promise<void> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '');
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();

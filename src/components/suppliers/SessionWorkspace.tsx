@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, ArrowRight, BarChart3, GitMerge, Loader2 } from 'lucide-react';
+import { AlertTriangle, ArrowRight, BarChart3, CheckCircle2, Clock, GitMerge, Loader2, Sparkles } from 'lucide-react';
 import SessionExtractionRealtime from '@/components/suppliers/SessionExtractionRealtime';
 import type { ExtractionJobRow } from '@/actions/quotationSessions';
+import { processarConciliacaoAction } from '@/actions/supplierQuotes';
 import { onPortalPrimaryButtonSmClass } from '@/lib/branding';
 
 type QuoteSummary = {
@@ -41,6 +42,9 @@ export default function SessionWorkspace({
   conciliationQuotes,
 }: Props) {
   const [jobs, setJobs] = useState<ExtractionJobRow[]>(initialJobs);
+  const [processingQuoteId, setProcessingQuoteId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
   const hasQuotes = conciliationQuotes.length > 0;
   const totalItems = conciliationQuotes.reduce((s, q) => s + q.item_count, 0);
   const totalMatched = conciliationQuotes.reduce((s, q) => s + q.matched_count, 0);
@@ -57,6 +61,14 @@ export default function SessionWorkspace({
   const processingPct = totalJobs > 0 ? Math.round((finalizedJobs / totalJobs) * 100) : 0;
   const hasActiveJobs = jobsSummary.pending + jobsSummary.processing > 0;
   const hasErroredJobs = jobsSummary.error > 0;
+  function handleProcessarConciliacao(quoteId: string) {
+    setProcessingQuoteId(quoteId);
+    startTransition(async () => {
+      await processarConciliacaoAction(quoteId);
+      // O status real virá via Realtime; não resetamos o ID aqui para manter o spinner
+    });
+  }
+
   const canOpenConciliation = hasQuotes && !hasActiveJobs && !hasErroredJobs;
   const conciliationBlockReason = hasActiveJobs
     ? 'Aguarde o processamento da IA terminar para abrir a conciliação.'
@@ -128,6 +140,72 @@ export default function SessionWorkspace({
               )}
             </div>
           </div>
+          {/* Status individual por cotação + botão "Processar Conciliação" */}
+          <div className="mt-4 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
+            {conciliationQuotes.map((q) => {
+              const isThisProcessing =
+                (processingQuoteId === q.id && isPending) || q.status === 'conciliando';
+
+              return (
+                <div key={q.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-[#1D3140]">{q.supplier_name}</p>
+                    <p className="text-xs text-slate-500">
+                      {q.matched_count} de {q.item_count} itens vinculados
+                    </p>
+                  </div>
+
+                  <div className="shrink-0">
+                    {/* Aguardando revisão ou conciliado → link para conciliação */}
+                    {(q.status === 'aguardando_revisao' || q.status === 'conciliado') && (
+                      <Link
+                        href={`/fornecedores/sessao/${sessionId}/conciliacao`}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition-colors"
+                      >
+                        {q.status === 'conciliado' ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                        ) : (
+                          <Sparkles className="h-3.5 w-3.5" />
+                        )}
+                        {q.status === 'conciliado' ? 'Conciliado' : 'Revisar matches'}
+                      </Link>
+                    )}
+
+                    {/* Conciliando → spinner */}
+                    {isThisProcessing && (
+                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Conciliando…
+                      </span>
+                    )}
+
+                    {/* Pendente conciliação → botão de ação */}
+                    {q.status === 'pendente_conciliacao' && !isThisProcessing && (
+                      <button
+                        type="button"
+                        onClick={() => handleProcessarConciliacao(q.id)}
+                        disabled={isPending}
+                        className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${onPortalPrimaryButtonSmClass}`}
+                      >
+                        <GitMerge className="h-3.5 w-3.5" />
+                        Processar Conciliação
+                      </button>
+                    )}
+
+                    {/* Demais status (pendente, processando_ia, erro_extracao) */}
+                    {!['aguardando_revisao', 'conciliado', 'conciliando', 'pendente_conciliacao'].includes(q.status) &&
+                      !isThisProcessing && (
+                        <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-500">
+                          <Clock className="h-3.5 w-3.5" />
+                          Aguardando extração
+                        </span>
+                      )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
           <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm font-medium text-[#1D3140]">Status do processamento por IA</p>
