@@ -21,6 +21,7 @@ import {
   acceptAiSuggestionAction,
   rejectAiSuggestionAction,
   saveManualMatchAction,
+  markQuoteConciliatedAction,
   type SessionConciliationMaterialRow,
   type SessionConciliationQuoteSummary,
   type BudgetMaterialOption,
@@ -232,12 +233,12 @@ function SupplierCell({
   const handleApprove = (item: LinkedItem) => {
     setApprovingId(item.id);
     startTransition(async () => {
-      if (item.match_status === 'ia_suggested' && item.suggestion_id && item.matched_material_id) {
+      if (item.match_status === 'ia_suggested' && item.matched_material_id) {
         const res = await acceptAiSuggestionAction({
           itemId: item.id,
           suggestionId: item.suggestion_id,
           materialId: item.matched_material_id,
-          conversionFactor: item.conversion_factor,
+          conversionFactor: item.conversion_factor ?? 1,
           supplierName: item.supplier_name,
           supplierMaterialName: item.descricao,
         });
@@ -252,14 +253,12 @@ function SupplierCell({
   const handleReject = (item: LinkedItem) => {
     setRejectingId(item.id);
     startTransition(async () => {
-      if (item.suggestion_id) {
-        const res = await rejectAiSuggestionAction({
-          itemId: item.id,
-          suggestionId: item.suggestion_id,
-        });
-        if (res.success) {
-          onRejected(item.id);
-        }
+      const res = await rejectAiSuggestionAction({
+        itemId: item.id,
+        suggestionId: item.suggestion_id,
+      });
+      if (res.success) {
+        onRejected(item.id);
       }
       setRejectingId(null);
     });
@@ -350,11 +349,15 @@ export default function ConciliationCurationView({
   const [unlinked, setUnlinked] = useState<(SupplierQuoteItemWithMaterial & { supplier_name: string })[]>(
     () => initialPayload?.unlinked_items ?? [],
   );
+  const [quotesSummary, setQuotesSummary] = useState<SessionConciliationQuoteSummary[]>(
+    () => initialPayload?.quotes_summary ?? [],
+  );
   const [supplierColumnOrder, setSupplierColumnOrder] = useState<string[]>(
     () => initialPayload?.supplier_column_order ?? [],
   );
   const [loadError, setLoadError] = useState<string | null>(() => initialError);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isFinalizando, startFinalizando] = useTransition();
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
   const [searchFilter, setSearchFilter] = useState('');
   const [activeSupplier, setActiveSupplier] = useState<string>(
@@ -371,6 +374,7 @@ export default function ConciliationCurationView({
     if (initialPayload) {
       setMaterials(initialPayload.materials);
       setUnlinked(initialPayload.unlinked_items);
+      setQuotesSummary(initialPayload.quotes_summary);
       setSupplierColumnOrder(initialPayload.supplier_column_order);
       setBudgetConsolidatedCount(
         initialPayload.budget_consolidated_count ?? initialPayload.materials.length,
@@ -449,6 +453,7 @@ export default function ConciliationCurationView({
         if (res.success) {
           setMaterials(res.data.materials);
           setUnlinked(res.data.unlinked_items);
+          setQuotesSummary(res.data.quotes_summary);
           setSupplierColumnOrder(res.data.supplier_column_order);
           setBudgetConsolidatedCount(
             res.data.budget_consolidated_count ?? res.data.materials.length,
@@ -535,6 +540,25 @@ export default function ConciliationCurationView({
     (sum, m) => sum + m.linked_items.filter((it) => it.match_status === 'ia_suggested').length,
     0,
   );
+  const totalSemMatch = materials.reduce(
+    (sum, m) => sum + m.linked_items.filter((it) => it.match_status === 'sem_match').length,
+    0,
+  ) + unlinked.length;
+
+  const handleFinalizar = () => {
+    const pendingQuotes = quotesSummary.filter((q) => q.status === 'aguardando_revisao');
+    if (pendingQuotes.length === 0) return;
+    if (totalSemMatch > 0) {
+      const ok = confirm(
+        `Ainda há ${totalSemMatch} item(ns) sem vínculo. Deseja finalizar mesmo assim? Eles serão desconsiderados nos cenários.`,
+      );
+      if (!ok) return;
+    }
+    startFinalizando(async () => {
+      await Promise.all(pendingQuotes.map((q) => markQuoteConciliatedAction(q.id)));
+      router.push(`/fornecedores/sessao/${sessionId}/cenarios`);
+    });
+  };
 
   const showEmpty = !loadError && filteredMaterials.length === 0 && unlinked.length === 0;
 
@@ -614,6 +638,17 @@ export default function ConciliationCurationView({
               {isRefreshing && <Loader2 className="h-4 w-4 animate-spin" />}
               {isRefreshing ? 'Atualizando...' : 'Atualizar'}
             </button>
+            {totalIaSuggested === 0 && quotesSummary.some((q) => q.status === 'aguardando_revisao') && (
+              <button
+                type="button"
+                onClick={handleFinalizar}
+                disabled={isFinalizando}
+                className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-60"
+              >
+                {isFinalizando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                Finalizar cotação
+              </button>
+            )}
             {budgetId && (
               <Link
                 href={`/fornecedores/sessao/${sessionId}/cenarios`}

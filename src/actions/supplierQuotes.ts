@@ -626,7 +626,7 @@ export async function saveManualMatchAction(
 // ---------------------------------------------------------------------------
 export interface AcceptAiSuggestionInput {
   itemId: string;
-  suggestionId: string;
+  suggestionId?: string | null;
   materialId: string;
   conversionFactor: number;
   supplierName: string;
@@ -684,10 +684,12 @@ export async function acceptAiSuggestionAction(
       return { success: false, error: `Erro ao aceitar sugestão: ${itemError.message}` };
     }
 
-    await supabase
-      .from('semantic_match_suggestions')
-      .update({ status: 'accepted', reviewed_at: new Date().toISOString() })
-      .eq('id', input.suggestionId);
+    if (input.suggestionId) {
+      await supabase
+        .from('semantic_match_suggestions')
+        .update({ status: 'accepted', reviewed_at: new Date().toISOString() })
+        .eq('id', input.suggestionId);
+    }
 
     const { error: mappingError } = await supabase
       .from('supplier_material_mappings')
@@ -743,7 +745,7 @@ export async function acceptAiSuggestionAction(
 // ---------------------------------------------------------------------------
 export interface RejectAiSuggestionInput {
   itemId: string;
-  suggestionId: string;
+  suggestionId?: string | null;
 }
 
 export async function rejectAiSuggestionAction(
@@ -769,10 +771,12 @@ export async function rejectAiSuggestionAction(
       return { success: false, error: `Erro ao recusar sugestão: ${itemError.message}` };
     }
 
-    await supabase
-      .from('semantic_match_suggestions')
-      .update({ status: 'rejected', reviewed_at: new Date().toISOString() })
-      .eq('id', input.suggestionId);
+    if (input.suggestionId) {
+      await supabase
+        .from('semantic_match_suggestions')
+        .update({ status: 'rejected', reviewed_at: new Date().toISOString() })
+        .eq('id', input.suggestionId);
+    }
 
     const { data: itemRow } = await supabase
       .from('supplier_quote_items')
@@ -1329,7 +1333,7 @@ export async function validateExtractionAction(
     // Verifica ownership antes de atualizar
     const { data: existing, error: existingError } = await supabase
       .from('supplier_quotes')
-      .select('id, user_id, session_id')
+      .select('id, user_id, session_id, status')
       .eq('id', quoteId)
       .single();
 
@@ -1368,6 +1372,21 @@ export async function validateExtractionAction(
     if (error || !updated) {
       console.error('[validateExtractionAction] Falha ao atualizar:', error?.message);
       return { success: false, error: error?.message ?? 'Falha ao validar extração.' };
+    }
+
+    // Auto-dispara conciliação: elimina o passo manual "Processar Conciliação"
+    if (existing.status === 'pendente_conciliacao') {
+      await supabase
+        .from('supplier_quotes')
+        .update({ status: 'conciliando' })
+        .eq('id', quoteId)
+        .eq('user_id', userId);
+
+      after(async () => {
+        await dispatchMatchToEdge(quoteId).catch((err) => {
+          console.error('[validateExtractionAction] Falha ao disparar match Edge:', quoteId, err);
+        });
+      });
     }
 
     if (existing.session_id) {

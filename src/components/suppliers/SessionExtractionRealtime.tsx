@@ -419,7 +419,7 @@ export default function SessionExtractionRealtime({
     setQuotes((prev) =>
       prev.map((q) =>
         q.id === curationQuoteId
-          ? { ...q, extraction_validated_at: new Date().toISOString() }
+          ? { ...q, extraction_validated_at: new Date().toISOString(), status: 'conciliando' }
           : q,
       ),
     );

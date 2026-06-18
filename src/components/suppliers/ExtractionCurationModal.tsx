@@ -134,7 +134,7 @@ export default function ExtractionCurationModal({
           displayName: budgetName.trim() || null,
         });
         if (res.success) {
-          toast.success('Extração validada com sucesso.');
+          toast.success('Extração validada. Conciliação iniciando em segundo plano…');
           onValidated?.();
           onOpenChange(false);
           return;
@@ -392,7 +392,7 @@ export default function ExtractionCurationModal({
             ) : (
               <CheckCircle2 className="h-4 w-4" />
             )}
-            Validar Extração
+            {isValidating ? 'Validando…' : 'Validar e Conciliar'}
           </button>
         </DialogFooter>
       </DialogContent>
