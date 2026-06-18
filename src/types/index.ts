@@ -254,7 +254,33 @@ export interface TrackedPostMaterial {
 // Módulo: Comparação de Fornecedores e Cenários de Compra
 // =============================================================================
 
-export type SupplierQuoteStatus = 'pendente' | 'conciliado' | 'aprovado';
+export type SupplierQuoteStatus =
+  | 'pendente'             // legado: pipeline multi-step (extraction_jobs)
+  | 'processando_ia'       // novo: PDF enviado para Edge, aguardando Gemini
+  | 'pendente_conciliacao' // novo: raw_extraction preenchido, aguardando match
+  | 'erro_extracao'        // novo: falha na extração
+  | 'conciliado'
+  | 'aprovado';
+
+/** Estrutura do JSON bruto extraído pelo Gemini e salvo em supplier_quotes.raw_extraction */
+export interface RawExtractionData {
+  items: RawExtractionItem[];
+  observacoesGerais?: string;
+  quoteDate?: string | null;
+  extractedAt?: string;
+  geminiModel?: string;
+}
+
+export interface RawExtractionItem {
+  descricao: string;
+  unidade: string;
+  quantidade: number;
+  preco_unit: number;
+  total_item: number;
+  ipi_percent: number;
+  st_incluso: boolean;
+  alerta: boolean;
+}
 export type SupplierMatchStatus = 'sem_match' | 'automatico' | 'manual' | 'ia_suggested';
 export type SupplierMatchMethod = 'exact_memory' | 'semantic_ai' | 'manual';
 export type SupplierMappingSource = 'manual' | 'ai';
@@ -304,6 +330,11 @@ export interface SupplierQuote {
   /** Data da cotação no PDF (YYYY-MM-DD). */
   quote_date?: string | null;
   extraction_validated_at?: string | null;
+  /** JSON bruto retornado pelo Gemini (fluxo assíncrono). Preenchido quando status='pendente_conciliacao'. */
+  raw_extraction?: RawExtractionData | null;
+  /** Mensagem de erro da extração. Preenchido quando status='erro_extracao'. */
+  extraction_error_message?: string | null;
+  extraction_error_at?: string | null;
   user_id: string;
   created_at: string;
   updated_at: string;

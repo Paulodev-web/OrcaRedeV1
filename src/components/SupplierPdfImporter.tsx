@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { extractSupplierDataAction, type SupplierItem } from '@/actions/supplierIngestion';
-import { getSupplierAction } from '@/actions/suppliers';
 import { createSupplierQuoteAction, runAutoMatchAction } from '@/actions/supplierQuotes';
 import { supabase } from '@/lib/supabaseClient';
 import SupplierPickerModal from '@/components/suppliers/SupplierPickerModal';
@@ -542,16 +541,11 @@ export default function SupplierPdfImporter({ budgets, embedded = false }: Props
         open={pickerOpen}
         onOpenChange={setPickerOpen}
         fileLabel={selectedFile?.name}
-        onConfirm={(id, _applyAll) => {
-          void (async () => {
-            const res = await getSupplierAction(id);
-            if (res.success) {
-              setSupplierDisplayName(res.data.name);
-            }
-            setSupplierId(id);
-            setPickerOpen(false);
-            void persistQuote(id);
-          })();
+        onConfirm={(id, name, _applyAll) => {
+          setSupplierDisplayName(name);
+          setSupplierId(id);
+          setPickerOpen(false);
+          void persistQuote(id);
         }}
       />
     </div>

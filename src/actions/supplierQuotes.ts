@@ -1958,6 +1958,136 @@ export async function bulkSaveIdealSelectionsAction(
   }
 }
 
+// ---------------------------------------------------------------------------
+// createQuoteAndDispatchExtractAction
+// Novo fluxo assíncrono: cria supplier_quote (status='processando_ia') e
+// dispara a Edge Function extract-supplier-pdf em fire-and-forget.
+// ---------------------------------------------------------------------------
+export interface CreateQuoteAndDispatchInput {
+  session_id: string;
+  supplier_id: string;
+  pdf_path: string;
+  supplier_name: string;
+}
+
+export async function createQuoteAndDispatchExtractAction(
+  input: CreateQuoteAndDispatchInput
+): Promise<ActionResult<{ quoteId: string }>> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const sessionId = input.session_id?.trim();
+    const supplierId = input.supplier_id?.trim();
+    const pdfPath = input.pdf_path?.trim();
+
+    if (!sessionId || !supplierId || !pdfPath) {
+      return { success: false, error: 'Sessão, fornecedor e caminho do PDF são obrigatórios.' };
+    }
+
+    const expectedPrefix = `${userId}/${sessionId}/`;
+    if (!pdfPath.startsWith(expectedPrefix)) {
+      return { success: false, error: 'Caminho do PDF inválido para esta sessão.' };
+    }
+
+    // Busca sessão para obter budget_id e validar status
+    const { data: session, error: sessionError } = await supabase
+      .from('quotation_sessions')
+      .select('id, status, budget_id')
+      .eq('id', sessionId)
+      .eq('user_id', userId)
+      .single();
+
+    if (sessionError || !session) {
+      return { success: false, error: 'Sessão não encontrada.' };
+    }
+
+    if (session.status === 'completed') {
+      return { success: false, error: 'Esta sessão está encerrada; não é possível importar novos PDFs.' };
+    }
+
+    // Valida limite de cotações por sessão
+    const { count: quoteCount } = await supabase
+      .from('supplier_quotes')
+      .select('id', { count: 'exact', head: true })
+      .eq('session_id', sessionId)
+      .eq('user_id', userId);
+
+    if ((quoteCount ?? 0) >= MAX_PDFS_PER_QUOTATION) {
+      return { success: false, error: `Esta cotação já atingiu o limite de ${MAX_PDFS_PER_QUOTATION} PDFs.` };
+    }
+
+    const resolved = await resolveSupplierForQuote(supabase, userId, supplierId);
+    if ('error' in resolved) {
+      return { success: false, error: resolved.error };
+    }
+
+    // INSERT supplier_quotes com status='processando_ia'
+    const { data: quote, error: quoteError } = await supabase
+      .from('supplier_quotes')
+      .insert({
+        session_id: sessionId,
+        budget_id: session.budget_id ?? null,
+        supplier_id: resolved.id,
+        supplier_name: input.supplier_name || resolved.name,
+        pdf_path: pdfPath,
+        status: 'processando_ia',
+        user_id: userId,
+      })
+      .select('id')
+      .single();
+
+    if (quoteError || !quote) {
+      return { success: false, error: quoteError?.message ?? 'Erro ao criar cotação.' };
+    }
+
+    console.log('[supplierQuotes] Quote criada (async):', quote.id, '→ disparando Edge');
+
+    // Fire-and-forget: dispara Edge Function sem bloquear a resposta
+    dispatchExtractToEdge(quote.id, pdfPath).catch((err) => {
+      console.error('[supplierQuotes] Falha ao disparar Edge para quote:', quote.id, err);
+    });
+
+    return { success: true, data: { quoteId: quote.id } };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro inesperado ao criar cotação.';
+    return { success: false, error: message };
+  }
+}
+
+async function dispatchExtractToEdge(quoteId: string, pdfPath: string): Promise<void> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '');
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const geminiKey = process.env.GEMINI_API_KEY?.trim();
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error('[dispatchExtractToEdge] Variáveis de ambiente Supabase não configuradas');
+    return;
+  }
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${serviceRoleKey}`,
+  };
+
+  if (geminiKey) {
+    headers['x-orcarede-gemini-pass'] = geminiKey;
+  }
+
+  const res = await fetch(`${supabaseUrl}/functions/v1/extract-supplier-pdf`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ quote_id: quoteId, pdf_path: pdfPath }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    console.warn('[dispatchExtractToEdge] Edge respondeu erro:', res.status, body.slice(0, 200));
+  } else {
+    console.log('[dispatchExtractToEdge] sucesso:', quoteId);
+  }
+}
+
 export async function removeIdealSelectionAction(
   sessionId: string,
   materialId: string

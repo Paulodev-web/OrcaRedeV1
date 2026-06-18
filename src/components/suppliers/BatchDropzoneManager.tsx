@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Loader2, Upload } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '@/lib/supabaseClient';
-import { createExtractionJobAction } from '@/actions/supplierQuotes';
+import { createQuoteAndDispatchExtractAction } from '@/actions/supplierQuotes';
 import { MAX_PDFS_PER_QUOTATION } from '@/lib/suppliesLimits';
 import SupplierPickerModal from './SupplierPickerModal';
 
@@ -83,38 +84,26 @@ export default function BatchDropzoneManager({
     setPickerOpen(true);
   }, [pendingQueue, pickerOpen, currentPending, onJobsCreated]);
 
-  const enqueueJob = useCallback(
-    async (storagePath: string, supplierId: string) => {
-      console.log('[BatchDropzone] creating extraction job', { sessionId, storagePath, supplierId });
-      const res = await createExtractionJobAction({
-        sessionId,
-        filePath: storagePath,
-        supplierId,
+  const createQuote = useCallback(
+    async (storagePath: string, supplierId: string, supplierName: string) => {
+      console.log('[BatchDropzone] creating quote (async)', { sessionId, storagePath, supplierId });
+      const res = await createQuoteAndDispatchExtractAction({
+        session_id: sessionId,
+        supplier_id: supplierId,
+        pdf_path: storagePath,
+        supplier_name: supplierName,
       });
       if (!res.success) {
         throw new Error(res.error);
       }
-      console.log('[BatchDropzone] job created:', res.data.jobId, '→ calling /api/process-pdfs');
-      void fetch('/api/process-pdfs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ job_id: res.data.jobId }),
-      })
-        .then(async (r) => {
-          if (!r.ok) {
-            const body = await r.json().catch(() => ({})) as { error?: string };
-            console.warn('[BatchDropzone] /api/process-pdfs respondeu', r.status, body.error);
-          } else {
-            console.log('[BatchDropzone] /api/process-pdfs enfileirou', res.data.jobId);
-          }
-        })
-        .catch((e) => console.warn('[BatchDropzone] /api/process-pdfs falhou', e));
+      console.log('[BatchDropzone] quote criada:', res.data.quoteId, '→ Edge disparada');
+      toast.success(`Cotação de ${supplierName} enviada para processamento`);
     },
     [sessionId]
   );
 
   const handleSupplierConfirmed = useCallback(
-    async (supplierId: string, applyToRemaining: boolean) => {
+    async (supplierId: string, supplierName: string, applyToRemaining: boolean) => {
       if (!currentPending) return;
       setPickerOpen(false);
 
@@ -129,13 +118,13 @@ export default function BatchDropzoneManager({
 
       try {
         for (const item of batch) {
-          await enqueueJob(item.storagePath, supplierId);
+          await createQuote(item.storagePath, supplierId, supplierName);
         }
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'Erro ao iniciar processamento.');
       }
     },
-    [currentPending, pendingQueue, enqueueJob]
+    [currentPending, pendingQueue, createQuote]
   );
 
   const processFiles = useCallback(
@@ -292,7 +281,7 @@ export default function BatchDropzoneManager({
         }}
         fileLabel={currentPending?.fileLabel}
         remainingInBatch={pendingQueue.length}
-        onConfirm={(id, applyAll) => void handleSupplierConfirmed(id, applyAll)}
+        onConfirm={(id, name, applyAll) => void handleSupplierConfirmed(id, name, applyAll)}
       />
     </>
   );

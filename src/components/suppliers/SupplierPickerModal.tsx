@@ -19,7 +19,7 @@ interface Props {
   fileLabel?: string;
   /** PDFs ainda na fila após o atual (exibe opção de aplicar o mesmo fornecedor). */
   remainingInBatch?: number;
-  onConfirm: (supplierId: string, applyToRemaining: boolean) => void;
+  onConfirm: (supplierId: string, supplierName: string, applyToRemaining: boolean) => void;
 }
 
 export default function SupplierPickerModal({
@@ -73,7 +73,8 @@ export default function SupplierPickerModal({
       setError('Selecione um fornecedor para continuar.');
       return;
     }
-    onConfirm(selectedId, applyToRemaining && remainingInBatch > 0);
+    const selected = suppliers.find((s) => s.id === selectedId);
+    onConfirm(selectedId, selected?.name ?? '', applyToRemaining && remainingInBatch > 0);
     onOpenChange(false);
   };
 
