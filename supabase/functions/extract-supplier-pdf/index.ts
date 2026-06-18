@@ -139,12 +139,45 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // 8. INSERT supplier_quote_items a partir dos itens extraídos
+    const itemsToInsert = gemini.data.items.map((item) => ({
+      quote_id: quoteId,
+      descricao: item.descricao ?? '',
+      unidade: item.unidade ?? '',
+      quantidade: item.quantidade ?? 0,
+      preco_unit: item.preco_unit ?? 0,
+      total_item: item.total_item ?? 0,
+      ipi_percent: item.ipi_percent ?? 0,
+      st_incluso: item.st_incluso ?? false,
+      alerta: item.alerta ?? false,
+      match_status: 'sem_match',
+      conversion_factor: 1,
+      match_level: null,
+      match_confidence: null,
+      match_method: null,
+    }));
+
+    if (itemsToInsert.length > 0) {
+      const { error: itemsError } = await supabase
+        .from('supplier_quote_items')
+        .insert(itemsToInsert);
+
+      if (itemsError) {
+        console.error('[extract-supplier-pdf] erro ao inserir itens:', itemsError);
+        await markQuoteError(supabase, quoteId, `Erro ao salvar itens: ${itemsError.message}`);
+        return new Response(
+          JSON.stringify({ error: `Erro ao salvar itens: ${itemsError.message}` }),
+          { status: 500, headers: JSON_HEADERS }
+        );
+      }
+    }
+
     console.log(
       '[extract-supplier-pdf] sucesso: quote',
       quoteId,
       '→ pendente_conciliacao,',
       gemini.data.items.length,
-      'itens extraídos'
+      'itens extraídos e inseridos'
     );
 
     return new Response(
