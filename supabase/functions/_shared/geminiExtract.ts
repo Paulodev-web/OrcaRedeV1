@@ -57,6 +57,8 @@ export async function extractSupplierQuoteWithGemini(
     model: 'gemini-2.5-flash',
     generationConfig: {
       responseMimeType: 'application/json',
+      // @ts-ignore — thinkingBudget desabilita o thinking do 2.5-flash, reduz latência de ~140s para ~10s
+      thinkingConfig: { thinkingBudget: 0 },
     },
   });
 
