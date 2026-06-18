@@ -330,6 +330,7 @@ export async function getQuoteWithItemsAction(
         unidade,
         quantidade,
         preco_unit,
+        preco_unit_desconto,
         total_item,
         ipi_percent,
         st_incluso,
