@@ -1,5 +1,6 @@
 ﻿'use server';
 
+import { after } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
 import { getSupplierDisplayName } from '@/lib/supplierDisplay';
@@ -2043,9 +2044,11 @@ export async function createQuoteAndDispatchExtractAction(
 
     console.log('[supplierQuotes] Quote criada (async):', quote.id, '→ disparando Edge');
 
-    // Fire-and-forget: dispara Edge Function sem bloquear a resposta
-    dispatchExtractToEdge(quote.id, pdfPath).catch((err) => {
-      console.error('[supplierQuotes] Falha ao disparar Edge para quote:', quote.id, err);
+    // after() mantém a função serverless viva após o retorno, garantindo que o fetch complete
+    after(async () => {
+      await dispatchExtractToEdge(quote.id, pdfPath).catch((err) => {
+        console.error('[supplierQuotes] Falha ao disparar Edge para quote:', quote.id, err);
+      });
     });
 
     return { success: true, data: { quoteId: quote.id } };
