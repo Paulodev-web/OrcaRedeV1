@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useSupplierQuoteRealtime } from '@/hooks/useSupplierQuoteRealtime';
@@ -10,8 +11,11 @@ import { useSupplierQuoteRealtime } from '@/hooks/useSupplierQuoteRealtime';
  * Deve ser montado uma única vez no layout autenticado da área de fornecedores.
  */
 export function SupplierQuoteNotifications() {
+  const router = useRouter();
+
   useSupplierQuoteRealtime({
     onReady: (quote) => {
+      router.refresh();
       toast.success(
         <div className="flex items-start gap-2">
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
