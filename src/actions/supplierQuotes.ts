@@ -381,6 +381,7 @@ export async function getQuoteWithItemsAction(
         unidade: row.unidade,
         quantidade: row.quantidade,
         preco_unit: row.preco_unit,
+        preco_unit_desconto: row.preco_unit_desconto ?? null,
         total_item: row.total_item,
         ipi_percent: row.ipi_percent,
         st_incluso: row.st_incluso,
