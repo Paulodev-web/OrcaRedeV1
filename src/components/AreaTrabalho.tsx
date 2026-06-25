@@ -15,6 +15,31 @@ import { getPostDisplayName } from '@/lib/utils';
 import { exportByPostAndGroupToExcel, PostWithMaterials } from '@/services/exportService';
 
 export function AreaTrabalho() {
+  const [splitPercent, setSplitPercent] = useState(50);
+  const isDragging = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!isDragging.current || !containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const newPercent = ((ev.clientX - rect.left) / rect.width) * 100;
+      setSplitPercent(Math.min(Math.max(newPercent, 20), 80));
+    };
+
+    const onMouseUp = () => {
+      isDragging.current = false;
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, []);
+
   // --- INÍCIO DO BLOCO DE CÓDIGO PARA SUBSTITUIR ---
   const {
     currentOrcamento,
@@ -735,10 +760,17 @@ export function AreaTrabalho() {
         </div>
       </div>
 
-      {/* Grid de 2 Colunas: Lista (esquerda) e Mapa (direita) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start px-4">
-        {/* Coluna Esquerda - Lista de Postes (cresce dinamicamente) */}
-        <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+      {/* Split redimensionável: Lista (esquerda) | Divisor | Mapa (direita) */}
+      <div
+        ref={containerRef}
+        className="flex items-start px-4 gap-0"
+        style={{ height: 'calc(100vh - 8rem)' }}
+      >
+        {/* Coluna Esquerda - Lista de Postes */}
+        <div
+          className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-auto h-full"
+          style={{ width: `${splitPercent}%`, minWidth: 0 }}
+        >
           <PostListAccordion
             budgetDetails={budgetDetails}
             selectedPostDetail={selectedPostDetail}
@@ -761,8 +793,20 @@ export function AreaTrabalho() {
           />
         </div>
 
-        {/* Coluna Direita - Canvas/Mapa com Sticky */}
-        <div className="sticky top-0 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden h-[calc(100vh-8rem)] max-h-[800px]">
+        {/* Divisor arrastável */}
+        <div
+          onMouseDown={handleDividerMouseDown}
+          className="flex-shrink-0 flex items-center justify-center w-3 mx-1 h-full cursor-col-resize group select-none"
+          title="Arraste para redimensionar"
+        >
+          <div className="w-1 h-16 rounded-full bg-gray-300 group-hover:bg-blue-400 group-active:bg-blue-500 transition-colors" />
+        </div>
+
+        {/* Coluna Direita - Canvas/Mapa */}
+        <div
+          className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden h-full"
+          style={{ width: `${100 - splitPercent}%`, minWidth: 0 }}
+        >
           <CanvasVisual
             orcamento={currentOrcamento}
             budgetDetails={budgetDetails}
