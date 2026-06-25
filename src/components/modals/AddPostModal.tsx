@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback, useMemo, ErrorInfo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, ErrorInfo } from 'react';
 import { X, Loader2, Search, Plus, Minus, Package, Folder, ArrowUpDown, ArrowUp, ArrowDown, Copy } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
@@ -440,15 +440,106 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
     return result;
   }, [filteredMaterials, selectedMaterials]);
 
+  // Layout persistente: posição e tamanho do modal
+  const [layout, setLayout] = useState(() => {
+    if (typeof window === 'undefined') return { x: 0, y: 0, width: 900, height: 600 };
+    try {
+      const saved = localStorage.getItem('orca-rede:addPostModal-layout');
+      if (saved) {
+        const p = JSON.parse(saved);
+        return {
+          x: Math.min(Math.max(0, p.x), window.innerWidth - 100),
+          y: Math.min(Math.max(0, p.y), window.innerHeight - 100),
+          width: Math.max(480, Math.min(p.width, window.innerWidth)),
+          height: Math.max(400, Math.min(p.height, window.innerHeight)),
+        };
+      }
+    } catch {}
+    return {
+      x: Math.max(0, (window.innerWidth - 900) / 2),
+      y: Math.max(0, (window.innerHeight - 600) / 2),
+      width: 900,
+      height: 600,
+    };
+  });
+  const layoutRef = useRef(layout);
+  useEffect(() => { layoutRef.current = layout; }, [layout]);
+
+  const saveLayout = useCallback(() => {
+    try { localStorage.setItem('orca-rede:addPostModal-layout', JSON.stringify(layoutRef.current)); } catch {}
+  }, []);
+
+  const handleHeaderMouseDown = useCallback((e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button')) return;
+    e.preventDefault();
+    const startX = e.clientX, startY = e.clientY;
+    const startLX = layoutRef.current.x, startLY = layoutRef.current.y;
+    const onMouseMove = (ev: MouseEvent) => {
+      setLayout(prev => ({ ...prev, x: startLX + ev.clientX - startX, y: startLY + ev.clientY - startY }));
+    };
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      saveLayout();
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, [saveLayout]);
+
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent, dir: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX, startY = e.clientY;
+    const start = { ...layoutRef.current };
+    const MIN_W = 480, MIN_H = 400;
+    const onMouseMove = (ev: MouseEvent) => {
+      const dx = ev.clientX - startX, dy = ev.clientY - startY;
+      let { x, y, width, height } = start;
+      if (dir.includes('e')) width = Math.max(MIN_W, start.width + dx);
+      if (dir.includes('s')) height = Math.max(MIN_H, start.height + dy);
+      if (dir.includes('w')) { const nw = Math.max(MIN_W, start.width - dx); x = start.x + (start.width - nw); width = nw; }
+      if (dir.includes('n')) { const nh = Math.max(MIN_H, start.height - dy); y = start.y + (start.height - nh); height = nh; }
+      setLayout({ x, y, width, height });
+    };
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      saveLayout();
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, [saveLayout]);
+
   if (!isOpen) return null;
 
   const hasAdditionalItems = selectedGroups.length > 0 || selectedMaterials.length > 0;
 
+  const CURSORS: Record<string, string> = { n:'n-resize', ne:'ne-resize', e:'e-resize', se:'se-resize', s:'s-resize', sw:'sw-resize', w:'w-resize', nw:'nw-resize' };
+
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b">
+    <div className="fixed inset-0 z-50 pointer-events-none">
+      <div className="absolute inset-0 bg-black/40 pointer-events-auto" />
+      <div
+        className="absolute bg-white rounded-lg shadow-2xl flex flex-col overflow-hidden pointer-events-auto"
+        style={{ left: layout.x, top: layout.y, width: layout.width, height: layout.height }}
+      >
+        {/* Handles de resize nas 8 direções */}
+        {(['n','ne','e','se','s','sw','w','nw'] as const).map(dir => {
+          const corner = dir.length === 2;
+          const s: React.CSSProperties = { position: 'absolute', zIndex: 10 };
+          if (dir.includes('n')) { s.top = 0; s.height = corner ? 12 : 4; }
+          if (dir.includes('s')) { s.bottom = 0; s.height = corner ? 12 : 4; }
+          if (dir.includes('e')) { s.right = 0; s.width = corner ? 12 : 4; }
+          if (dir.includes('w')) { s.left = 0; s.width = corner ? 12 : 4; }
+          if (!dir.includes('n') && !dir.includes('s')) { s.top = 4; s.bottom = 4; }
+          if (!dir.includes('e') && !dir.includes('w')) { s.left = 4; s.right = 4; }
+          return <div key={dir} style={{ ...s, cursor: CURSORS[dir] }} onMouseDown={e => handleResizeMouseDown(e, dir)} />;
+        })}
+        {/* Header — arraste para mover */}
+        <div
+          className="flex justify-between items-center px-6 py-4 border-b cursor-move select-none shrink-0"
+          onMouseDown={handleHeaderMouseDown}
+        >
           <h3 className="text-lg font-semibold text-gray-900">Adicionar Novo Poste</h3>
           <button
             onClick={onClose}
@@ -1059,9 +1150,8 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
             </div>
           </form>
         </div>
+        <AlertDialog {...alertDialog.dialogProps} />
       </div>
-      
-      <AlertDialog {...alertDialog.dialogProps} />
     </div>
   );
 }
