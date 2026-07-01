@@ -29,10 +29,12 @@ import {
   saveIdealSelectionAction,
   bulkSaveIdealSelectionsAction,
   closeIdealScenarioAndUpdateMaterialsAction,
+  savePurchaseOrderAction,
   type ScenariosResult,
   type ScenarioItem,
   type SessionStockInput,
   type IdealSelectionRow,
+  type PurchaseOrderRow,
 } from '@/actions/supplierQuotes';
 import { excludeMaterialFromSessionAction } from '@/actions/materials';
 import { negotiatedFromNormalized } from '@/lib/supplierPrice';
@@ -85,6 +87,7 @@ interface Props {
   budgetId: string;
   initialStock: SessionStockInput[];
   initialIdealSelections: IdealSelectionRow[];
+  initialPurchaseOrders: PurchaseOrderRow[];
 }
 
 function parseContentDispositionFilename(header: string | null): string | null {
@@ -589,6 +592,9 @@ function ScenarioIdealView({
   isClosingIdeal,
   staleCount,
   onManualQuoteRequest,
+  purchaseOrders,
+  onOcSave,
+  savingOcMaterialId,
 }: {
   scenarios: ScenariosResult;
   idealSelections: Map<string, string>;
@@ -602,6 +608,9 @@ function ScenarioIdealView({
   isClosingIdeal: boolean;
   staleCount: number;
   onManualQuoteRequest?: (item: ScenarioItem) => void;
+  purchaseOrders: Map<string, string>;
+  onOcSave: (materialId: string, ocNumber: string | null) => Promise<void>;
+  savingOcMaterialId: string | null;
 }) {
   const alertDialog = useAlertDialog();
   const [isExporting, setIsExporting] = useState(false);
@@ -961,6 +970,9 @@ function ScenarioIdealView({
         }}
         onOfferSelect={onIdealSelect}
         onManualQuoteRequest={onManualQuoteRequest}
+        ocByMaterialId={purchaseOrders}
+        onOcSave={onOcSave}
+        savingOcMaterialId={savingOcMaterialId}
       />
 
       <AlertDialog {...alertDialog.dialogProps} />
@@ -981,6 +993,9 @@ function RankingView({
   isClosingIdeal,
   staleCount,
   onManualQuoteRequest,
+  purchaseOrders,
+  onOcSave,
+  savingOcMaterialId,
 }: {
   scenarios: ScenariosResult;
   idealSelections: Map<string, string>;
@@ -994,6 +1009,9 @@ function RankingView({
   isClosingIdeal: boolean;
   staleCount: number;
   onManualQuoteRequest?: (item: ScenarioItem) => void;
+  purchaseOrders: Map<string, string>;
+  onOcSave: (materialId: string, ocNumber: string | null) => Promise<void>;
+  savingOcMaterialId: string | null;
 }) {
   const [rankingTab, setRankingTab] = useState<'A' | 'B' | 'Ideal'>('A');
   const idealUnvalidated = useMemo(() => {
@@ -1058,6 +1076,9 @@ function RankingView({
             isClosingIdeal={isClosingIdeal}
             staleCount={staleCount}
             onManualQuoteRequest={onManualQuoteRequest}
+            purchaseOrders={purchaseOrders}
+            onOcSave={onOcSave}
+            savingOcMaterialId={savingOcMaterialId}
           />
         )}
       </div>
@@ -1172,6 +1193,7 @@ export default function SessionScenariosView({
   budgetId,
   initialStock,
   initialIdealSelections,
+  initialPurchaseOrders,
 }: Props) {
   const [scenarios, setScenarios] = useState(initialScenarios);
   const [activeTab, setActiveTab] = useState<'tabelona' | 'ranking'>('tabelona');
@@ -1182,6 +1204,15 @@ export default function SessionScenariosView({
   const [isSavingPrice, setIsSavingPrice] = useState(false);
   const [isRemovingMaterial, setIsRemovingMaterial] = useState(false);
   const [isClosingIdeal, setIsClosingIdeal] = useState(false);
+  const [savingOcMaterialId, setSavingOcMaterialId] = useState<string | null>(null);
+
+  const [purchaseOrders, setPurchaseOrders] = useState<Map<string, string>>(() => {
+    const m = new Map<string, string>();
+    for (const row of initialPurchaseOrders) {
+      m.set(row.material_id, row.oc_number);
+    }
+    return m;
+  });
 
   const [idealSelections, setIdealSelections] = useState<Map<string, string>>(() => {
     const m = new Map<string, string>();
@@ -1405,6 +1436,32 @@ export default function SessionScenariosView({
       }
     },
     [scenarios, sessionId, refreshScenarios]
+  );
+
+  const handleOcSave = useCallback(
+    async (materialId: string, ocNumber: string | null) => {
+      const previous = purchaseOrders.get(materialId) ?? null;
+      setSavingOcMaterialId(materialId);
+      setPurchaseOrders((prev) => {
+        const next = new Map(prev);
+        if (ocNumber) next.set(materialId, ocNumber);
+        else next.delete(materialId);
+        return next;
+      });
+
+      const res = await savePurchaseOrderAction(sessionId, materialId, ocNumber);
+      setSavingOcMaterialId(null);
+      if (!res.success) {
+        setPurchaseOrders((prev) => {
+          const next = new Map(prev);
+          if (previous) next.set(materialId, previous);
+          else next.delete(materialId);
+          return next;
+        });
+        alertDialog.showError('OC não salva', res.error ?? 'Não foi possível salvar a OC.');
+      }
+    },
+    [purchaseOrders, sessionId, alertDialog]
   );
 
   const handleIdealSelect = useCallback(
@@ -1634,6 +1691,9 @@ export default function SessionScenariosView({
               isClosingIdeal={isClosingIdeal}
               staleCount={staleCount}
               onManualQuoteRequest={handleManualQuoteRequest}
+              purchaseOrders={purchaseOrders}
+              onOcSave={handleOcSave}
+              savingOcMaterialId={savingOcMaterialId}
             />
           )}
         </div>

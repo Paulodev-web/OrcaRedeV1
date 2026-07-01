@@ -6,6 +6,7 @@ import {
   listQuotesByBudgetAction,
   getSessionStockInputsAction,
   getIdealSelectionsAction,
+  getPurchaseOrdersAction,
 } from '@/actions/supplierQuotes';
 import SessionScenariosView from '@/components/suppliers/SessionScenariosView';
 import SuppliesHeader from '@/components/suppliers/SuppliesHeader';
@@ -27,17 +28,20 @@ export default async function SessionCenariosPage({ params }: Props) {
     redirect(`/fornecedores/sessao/${sessionId}`);
   }
 
-  const [scenariosResult, quotesResult, stockResult, idealResult] = await Promise.all([
-    calculateScenariosAction(session.budget_id, sessionId),
-    listQuotesByBudgetAction(session.budget_id, sessionId),
-    getSessionStockInputsAction(sessionId),
-    getIdealSelectionsAction(sessionId),
-  ]);
+  const [scenariosResult, quotesResult, stockResult, idealResult, purchaseOrdersResult] =
+    await Promise.all([
+      calculateScenariosAction(session.budget_id, sessionId),
+      listQuotesByBudgetAction(session.budget_id, sessionId),
+      getSessionStockInputsAction(sessionId),
+      getIdealSelectionsAction(sessionId),
+      getPurchaseOrdersAction(sessionId),
+    ]);
 
   const scenarios = scenariosResult.success ? scenariosResult.data : null;
   const quotes = quotesResult.success ? quotesResult.data.quotes : [];
   const initialStock = stockResult.success ? stockResult.data : [];
   const initialIdealSelections = idealResult.success ? idealResult.data : [];
+  const initialPurchaseOrders = purchaseOrdersResult.success ? purchaseOrdersResult.data : [];
 
   return (
     <div className={suppliesPageColumnClass}>
@@ -74,6 +78,7 @@ export default async function SessionCenariosPage({ params }: Props) {
           budgetId={session.budget_id}
           initialStock={initialStock}
           initialIdealSelections={initialIdealSelections}
+          initialPurchaseOrders={initialPurchaseOrders}
         />
       )}
     </div>

@@ -1981,6 +1981,93 @@ export async function bulkSaveIdealSelectionsAction(
 }
 
 // ---------------------------------------------------------------------------
+// Cenário Ideal — OC (Ordem de Compra) por material
+// ---------------------------------------------------------------------------
+export interface PurchaseOrderRow {
+  material_id: string;
+  oc_number: string;
+}
+
+export async function getPurchaseOrdersAction(
+  sessionId: string
+): Promise<ActionResult<PurchaseOrderRow[]>> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const { data, error } = await supabase
+      .from('scenario_purchase_orders')
+      .select('material_id, oc_number')
+      .eq('session_id', sessionId)
+      .eq('user_id', userId);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return {
+      success: true,
+      data: (data ?? []).map((r) => ({
+        material_id: r.material_id,
+        oc_number: r.oc_number,
+      })),
+    };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao buscar OCs do cenário ideal.';
+    return { success: false, error: message };
+  }
+}
+
+export async function savePurchaseOrderAction(
+  sessionId: string,
+  materialId: string,
+  ocNumber: string | null
+): Promise<ActionResult<void>> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const trimmed = ocNumber?.trim() ?? '';
+
+    if (trimmed === '') {
+      const { error } = await supabase
+        .from('scenario_purchase_orders')
+        .delete()
+        .eq('session_id', sessionId)
+        .eq('material_id', materialId)
+        .eq('user_id', userId);
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      revalidatePath(`/fornecedores/sessao/${sessionId}/cenarios`);
+      return { success: true, data: undefined };
+    }
+
+    const { error } = await supabase.from('scenario_purchase_orders').upsert(
+      {
+        session_id: sessionId,
+        material_id: materialId,
+        oc_number: trimmed,
+        user_id: userId,
+      },
+      { onConflict: 'session_id,material_id,user_id' }
+    );
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath(`/fornecedores/sessao/${sessionId}/cenarios`);
+    return { success: true, data: undefined };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao salvar OC do cenário ideal.';
+    return { success: false, error: message };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // createQuoteAndDispatchExtractAction
 // Novo fluxo assíncrono: cria supplier_quote (status='processando_ia') e
 // dispara a Edge Function extract-supplier-pdf em fire-and-forget.

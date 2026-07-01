@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Award, ChevronDown } from 'lucide-react';
+import React, { useCallback, useState } from 'react';
+import { Award, ChevronDown, Loader2 } from 'lucide-react';
 import type { ScenarioItem } from '@/actions/supplierQuotes';
 import { suppliesTableBorderedScrollClass } from '@/lib/suppliesLayout';
 import { originalNormalizedPrice } from '@/lib/supplierPrice';
@@ -35,6 +35,75 @@ interface Props {
   emptyMessage?: React.ReactNode;
   /** Cenário Ideal usa supplierQuotes — sem colunas técnicas de PDF/normalizado. */
   priceDisplay?: ScenarioPriceDisplay;
+  /** Número da OC por material — presente = linha marcada como comprada. */
+  ocByMaterialId?: Map<string, string>;
+  onOcSave?: (materialId: string, ocNumber: string | null) => Promise<void>;
+  savingOcMaterialId?: string | null;
+}
+
+function OcCell({
+  materialId,
+  ocNumber,
+  onOcSave,
+  isSaving,
+}: {
+  materialId: string;
+  ocNumber: string;
+  onOcSave: (materialId: string, ocNumber: string | null) => Promise<void>;
+  isSaving: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(ocNumber);
+
+  const startEdit = useCallback(() => {
+    setDraft(ocNumber);
+    setEditing(true);
+  }, [ocNumber]);
+
+  const commit = useCallback(async () => {
+    setEditing(false);
+    const trimmed = draft.trim();
+    if (trimmed === ocNumber) return;
+    await onOcSave(materialId, trimmed === '' ? null : trimmed);
+  }, [draft, materialId, ocNumber, onOcSave]);
+
+  if (editing) {
+    return (
+      <input
+        type="text"
+        autoFocus
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => void commit()}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') void commit();
+          if (e.key === 'Escape') setEditing(false);
+        }}
+        placeholder="Nº da OC"
+        className="w-full min-w-[90px] rounded border border-blue-300 px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
+        disabled={isSaving}
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={startEdit}
+      disabled={isSaving}
+      className={`w-full min-w-[90px] rounded border px-1.5 py-0.5 text-left text-xs transition-colors ${
+        ocNumber
+          ? 'border-green-300 bg-green-100 font-semibold text-green-800 hover:bg-green-200'
+          : 'border-dashed border-gray-300 text-gray-400 hover:border-gray-400 hover:text-gray-600'
+      }`}
+    >
+      {isSaving ? (
+        <Loader2 className="h-3 w-3 animate-spin" />
+      ) : (
+        ocNumber || 'Inserir OC'
+      )}
+    </button>
+  );
 }
 
 export default function ScenarioItemExpandableTable({
@@ -50,9 +119,13 @@ export default function ScenarioItemExpandableTable({
   onManualQuoteRequest,
   emptyMessage,
   priceDisplay = 'comparison',
+  ocByMaterialId,
+  onOcSave,
+  savingOcMaterialId,
 }: Props) {
   const supplierQuotesMode = priceDisplay === 'supplierQuotes';
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const showOcColumn = !!onOcSave;
 
   if (items.length === 0) {
     return (
@@ -86,6 +159,11 @@ export default function ScenarioItemExpandableTable({
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32 bg-gray-50">
                 Total
               </th>
+              {showOcColumn && (
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32 bg-gray-50">
+                  OC
+                </th>
+              )}
               <th className="px-4 py-3 w-8 bg-gray-50" />
             </tr>
           </thead>
@@ -99,16 +177,20 @@ export default function ScenarioItemExpandableTable({
                 item.is_session_excluded || item.net_qty <= 0;
               const summary = getRowSummary(item);
               const highlightedQuoteId = highlightQuoteId?.(item.material_id) ?? null;
+              const ocNumber = ocByMaterialId?.get(item.material_id) ?? '';
+              const isPurchased = showOcColumn && !!ocNumber;
 
               return (
                 <React.Fragment key={item.material_id}>
                   <tr
                     className={`transition-colors ${
-                      isExpanded
-                        ? 'bg-[#64ABDE]/10'
-                        : isEvenRow
-                          ? 'bg-white hover:bg-gray-50'
-                          : 'bg-gray-50/50 hover:bg-gray-100'
+                      isPurchased
+                        ? 'bg-green-50 hover:bg-green-100'
+                        : isExpanded
+                          ? 'bg-[#64ABDE]/10'
+                          : isEvenRow
+                            ? 'bg-white hover:bg-gray-50'
+                            : 'bg-gray-50/50 hover:bg-gray-100'
                     } ${isNoPurchase ? 'opacity-55' : ''}`}
                   >
                     <td className="px-4 py-3">
@@ -160,6 +242,16 @@ export default function ScenarioItemExpandableTable({
                         {summary.lineTotal > 0 ? formatCurrency(summary.lineTotal) : '—'}
                       </p>
                     </td>
+                    {showOcColumn && (
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <OcCell
+                          materialId={item.material_id}
+                          ocNumber={ocNumber}
+                          onOcSave={onOcSave!}
+                          isSaving={savingOcMaterialId === item.material_id}
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-center">
                       {(hasMultiple || (hasNoOffers && onManualQuoteRequest && item.net_qty > 0 && !item.is_session_excluded)) && (
                         <button
@@ -180,7 +272,7 @@ export default function ScenarioItemExpandableTable({
                   </tr>
                   {isExpanded && (
                     <tr className="bg-[#64ABDE]/5">
-                      <td colSpan={6} className="px-4 py-3">
+                      <td colSpan={showOcColumn ? 7 : 6} className="px-4 py-3">
                         {hasNoOffers && onManualQuoteRequest ? (
                           <button
                             type="button"
