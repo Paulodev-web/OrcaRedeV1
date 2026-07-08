@@ -2,12 +2,15 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   calculateServicePricing,
-  calcularValorServicoPorLucro,
+  calcularValorServicoPorPercentual,
 } from '@/lib/pricingMath';
 import { consolidateMaterialsFromBudgetDetails } from '@/services/budgetMaterialAggregation';
 import { getBudgetForImport } from '@/services/works/getBudgetForImport';
+import { resolveCostItemValue } from '@/components/precificacao/types';
 import type {
   CostItem,
+  CostItemTipo,
+  PercentualBase,
   PricingInputMode,
   PricingMaterialSnapshot,
   PricingSaveMode,
@@ -27,6 +30,7 @@ export interface SavedPricingBudgetRow {
   pricing_input_mode: string;
   valor_servico_input: number | string | null;
   lucro_percent_input: number | string | null;
+  percent_materiais_input: number | string | null;
   imposto_percent: number | string | null;
   cost_items: unknown;
   materials_snapshot: unknown;
@@ -55,8 +59,9 @@ function toNumber(value: unknown): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+// Modo legado 'lucro' vira 'valor' (o VS já calculado fica como entrada direta).
 function toPricingInputMode(value: string): PricingInputMode {
-  return value === 'lucro' ? 'lucro' : 'valor';
+  return value === 'percentual' ? 'percentual' : 'valor';
 }
 
 function toPricingSaveMode(value: string): PricingSaveMode {
@@ -67,6 +72,18 @@ function asObjectArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
+function toCostItemTipo(value: unknown): CostItemTipo {
+  if (value === 'maoDeObra' || value === 'percentual') {
+    return value;
+  }
+
+  return 'unitario';
+}
+
+function toPercentualBase(value: unknown): PercentualBase {
+  return value === 'servico' ? 'servico' : 'total';
+}
+
 function sanitizeCostItems(value: unknown): CostItem[] {
   return asObjectArray(value).map((item, index) => {
     const row = item && typeof item === 'object' ? item as Record<string, unknown> : {};
@@ -75,25 +92,45 @@ function sanitizeCostItems(value: unknown): CostItem[] {
     const hasUnitFields = row.unidade !== undefined || row.valorUnitario !== undefined || row.valor_unitario !== undefined;
     const unidade = Math.max(toNumber(row.unidade), 0);
     const valorUnitario = Math.max(toNumber(row.valorUnitario ?? row.valor_unitario), 0);
-    const valorLegado = Math.max(toNumber(row.valor), 0);
+    const valorSalvo = Math.max(toNumber(row.valor), 0);
+    const tipo = toCostItemTipo(row.tipo);
 
-    if (hasUnitFields) {
+    // Linha legada (antes dos campos unidade/valorUnitario): só tinha `valor`.
+    if (row.tipo === undefined && !hasUnitFields) {
       return {
         id,
         descricao,
-        unidade,
-        valorUnitario,
-        valor: unidade * valorUnitario,
+        tipo: 'unitario' as const,
+        unidade: valorSalvo > 0 ? 1 : 0,
+        valorUnitario: valorSalvo,
+        pessoas: 0,
+        dias: 0,
+        percentual: 0,
+        percentualBase: 'total' as const,
+        valor: valorSalvo,
       };
     }
 
-    return {
+    const sanitized: CostItem = {
       id,
       descricao,
-      unidade: valorLegado > 0 ? 1 : 0,
-      valorUnitario: valorLegado,
-      valor: valorLegado,
+      tipo,
+      unidade,
+      valorUnitario,
+      pessoas: Math.max(toNumber(row.pessoas), 0),
+      dias: Math.max(toNumber(row.dias), 0),
+      percentual: Math.max(toNumber(row.percentual), 0),
+      percentualBase: toPercentualBase(row.percentualBase),
+      valor: valorSalvo,
     };
+
+    // Tipos determinísticos são recalculados; 'percentual' mantém o valor salvo
+    // (snapshot) e é re-resolvido no cálculo live quando há totais atualizados.
+    if (tipo !== 'percentual') {
+      sanitized.valor = resolveCostItemValue(sanitized, { valorServico: 0, valorMateriais: 0 });
+    }
+
+    return sanitized;
   });
 }
 
@@ -143,11 +180,11 @@ function resultFromRow(row: SavedPricingBudgetRow, costItems: CostItem[]): Servi
 
 function calculateLiveResult(row: SavedPricingBudgetRow, costItems: CostItem[], valorMateriais: number) {
   const inputMode = toPricingInputMode(row.pricing_input_mode);
-  const totalCustos = costItems.reduce((acc, item) => acc + item.valor, 0);
   const valorServico =
-    inputMode === 'valor'
-      ? Math.max(toNumber(row.valor_servico_input), 0)
-      : calcularValorServicoPorLucro(totalCustos, Math.max(toNumber(row.lucro_percent_input), 0)) ?? 0;
+    inputMode === 'percentual'
+      ? calcularValorServicoPorPercentual(valorMateriais, Math.max(toNumber(row.percent_materiais_input), 0))
+      // Linhas legadas do modo 'lucro' têm valor_servico_input = 0; usa o VS calculado salvo.
+      : Math.max(toNumber(row.valor_servico_input), 0) || Math.max(toNumber(row.valor_servico), 0);
 
   return calculateServicePricing(valorServico, costItems, toNumber(row.imposto_percent), valorMateriais);
 }
@@ -196,7 +233,7 @@ export function buildSavedPricingUpsertRow(input: SavePricingBudgetInput, userId
     city: input.city || null,
     pricing_input_mode: input.pricingInputMode,
     valor_servico_input: Math.max(toNumber(input.valorServicoInput), 0),
-    lucro_percent_input: Math.max(toNumber(input.lucroPercentInput), 0),
+    percent_materiais_input: Math.max(toNumber(input.percentMateriaisInput), 0),
     imposto_percent: Math.max(toNumber(input.impostoPercent), 0),
     cost_items: costItems,
     materials_snapshot: materialsSnapshot,
@@ -233,8 +270,8 @@ export async function resolveSavedPricingBudget(
         city: liveSnapshot.city,
         saveMode,
         pricingInputMode: toPricingInputMode(row.pricing_input_mode),
-        valorServicoInput: toNumber(row.valor_servico_input),
-        lucroPercentInput: toNumber(row.lucro_percent_input),
+        valorServicoInput: toNumber(row.valor_servico_input) || toNumber(row.valor_servico),
+        percentMateriaisInput: toNumber(row.percent_materiais_input),
         impostoPercent: toNumber(row.imposto_percent),
         costItems,
         materialsSnapshot: liveSnapshot.materials,
@@ -254,8 +291,8 @@ export async function resolveSavedPricingBudget(
     city: row.city,
     saveMode,
     pricingInputMode: toPricingInputMode(row.pricing_input_mode),
-    valorServicoInput: toNumber(row.valor_servico_input),
-    lucroPercentInput: toNumber(row.lucro_percent_input),
+    valorServicoInput: toNumber(row.valor_servico_input) || toNumber(row.valor_servico),
+    percentMateriaisInput: toNumber(row.percent_materiais_input),
     impostoPercent: toNumber(row.imposto_percent),
     costItems,
     materialsSnapshot: fallbackMaterials,

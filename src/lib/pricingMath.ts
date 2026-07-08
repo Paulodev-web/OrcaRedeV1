@@ -1,7 +1,8 @@
-import type {
-  CostItem,
-  CostItemWithPercent,
-  ServicePricingResult,
+import {
+  resolveCostItemValue,
+  type CostItem,
+  type CostItemWithPercent,
+  type ServicePricingResult,
 } from '@/components/precificacao/types';
 
 function toSafeNumber(value: number): number {
@@ -32,12 +33,15 @@ function clampPercent(value: number, { min, max }: { min: number; max: number })
  * Calcula a precificação do serviço.
  *
  * Modelo:
- * - Valor do Serviço (VS) é o preço cobrado pelo serviço (digitado ou calculado via lucro%).
- * - Custos do Serviço: N linhas livres (mão de obra, diária, etc.), cada uma com % sobre VS.
+ * - Materiais vêm do orçamento importado e passam por fora (repassados ao cliente sem margem).
+ * - Valor do Serviço (VS) = percentual aplicado sobre os materiais (ex.: 100k × 40% = 40k),
+ *   ou digitado diretamente. É a verba disponível para executar a obra.
+ * - Custos do Serviço: N linhas livres, cada uma resolvida pelo seu tipo:
+ *   unitário (qtd × valor), mão de obra (pessoas × dias × diária) ou
+ *   percentual (% do total ao cliente ou do VS — ex.: comissão de vendedor).
  * - Lucro Bruto = VS - Σ custos.
  * - Imposto incide SOBRE O VS (não sobre materiais nem sobre lucro).
  * - Lucro Líquido = Lucro Bruto - Imposto.
- * - Materiais passam por fora (informativos) e somam no Total ao Cliente.
  * - Preço Total ao Cliente = Materiais + VS.
  */
 export function calculateServicePricing(
@@ -51,16 +55,11 @@ export function calculateServicePricing(
   const materiais = Math.max(toSafeNumber(valorMateriais), 0);
 
   const custosDetalhados: CostItemWithPercent[] = custos.map((custo) => {
-    const unidade = Math.max(toSafeNumber(custo.unidade), 0);
-    const valorUnitario = Math.max(toSafeNumber(custo.valorUnitario), 0);
-    const valor = unidade > 0 || valorUnitario > 0 ? unidade * valorUnitario : toSafeNumber(custo.valor);
+    const valor = resolveCostItemValue(custo, { valorServico: vs, valorMateriais: materiais });
     const percentualDoVS = vs > 0 ? (valor / vs) * 100 : 0;
 
     return {
-      id: custo.id,
-      descricao: custo.descricao,
-      unidade,
-      valorUnitario,
+      ...custo,
       valor,
       percentualDoVS,
     };
@@ -96,53 +95,37 @@ export function calculateServicePricing(
 }
 
 /**
- * Calcula o Valor do Serviço a partir do total de custos e do percentual de lucro desejado.
+ * Calcula o Valor do Serviço a partir do total de materiais e do percentual definido.
  *
- * Fórmula: VS = totalCustos / (1 - lucroPercent/100)
- *
- * Retorna `null` se lucroPercent >= 100 (inválido, pois resultaria em divisão por zero ou negativo).
- * Retorna 0 se totalCustos <= 0.
+ * Fórmula: VS = materiais × (percent / 100)
+ * Ex.: materiais = 100k, percent = 40 → VS = 40k (total ao cliente = 140k).
  */
-export function calcularValorServicoPorLucro(
-  totalCustos: number,
-  lucroPercentDesejado: number
-): number | null {
-  const custos = toSafeNumber(totalCustos);
-  const lucroPercent = toSafeNumber(lucroPercentDesejado);
+export function calcularValorServicoPorPercentual(
+  valorMateriais: number,
+  percentMateriais: number
+): number {
+  const materiais = Math.max(toSafeNumber(valorMateriais), 0);
+  const percent = Math.max(toSafeNumber(percentMateriais), 0);
 
-  if (lucroPercent >= 100) {
-    return null;
-  }
-
-  if (custos <= 0) {
-    return 0;
-  }
-
-  const divisor = 1 - lucroPercent / 100;
-  if (divisor <= 0) {
-    return null;
-  }
-
-  return custos / divisor;
+  return materiais * (percent / 100);
 }
 
 /**
- * Calcula o percentual de lucro bruto a partir do Valor do Serviço e total de custos.
+ * Calcula o percentual sobre materiais a partir do Valor do Serviço digitado.
  *
- * Fórmula: lucroPercent = ((VS - totalCustos) / VS) * 100
- *
- * Retorna 0 se VS <= 0.
+ * Fórmula: percent = (VS / materiais) × 100
+ * Retorna 0 se materiais <= 0.
  */
-export function calcularLucroPorValorServico(
+export function calcularPercentualPorValorServico(
   valorServico: number,
-  totalCustos: number
+  valorMateriais: number
 ): number {
-  const vs = toSafeNumber(valorServico);
-  const custos = toSafeNumber(totalCustos);
+  const vs = Math.max(toSafeNumber(valorServico), 0);
+  const materiais = Math.max(toSafeNumber(valorMateriais), 0);
 
-  if (vs <= 0) {
+  if (materiais <= 0) {
     return 0;
   }
 
-  return ((vs - custos) / vs) * 100;
+  return (vs / materiais) * 100;
 }

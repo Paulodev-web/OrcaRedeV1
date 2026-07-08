@@ -1,16 +1,17 @@
 "use client";
 
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Package } from 'lucide-react';
 import { DecimalInput } from './DecimalInput';
 import type { PricingInputMode } from './types';
 
 interface ServiceValueInputProps {
+  valorMateriais: number;
   totalCustos: number;
   valorServico: number;
-  lucroPercent: number;
+  percentMateriais: number;
   inputMode: PricingInputMode;
   onValorServicoChange: (value: number) => void;
-  onLucroPercentChange: (value: number) => void;
+  onPercentMateriaisChange: (value: number) => void;
 }
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
@@ -24,27 +25,59 @@ const percentFormatter = new Intl.NumberFormat('pt-BR', {
 });
 
 export function ServiceValueInput({
+  valorMateriais,
   totalCustos,
   valorServico,
-  lucroPercent,
+  percentMateriais,
   inputMode,
   onValorServicoChange,
-  onLucroPercentChange,
+  onPercentMateriaisChange,
 }: ServiceValueInputProps) {
-  const lucroBruto = valorServico - totalCustos;
-  const lucroBrutoPercent = valorServico > 0 ? (lucroBruto / valorServico) * 100 : 0;
-  const isLucroInvalido = lucroPercent >= 100;
-  const isLucroNegativo = lucroBruto < 0;
-  const custosExcedemServico = totalCustos > valorServico && valorServico > 0;
+  const hasMateriais = valorMateriais > 0;
+  const totalCliente = valorMateriais + valorServico;
+  const sobraAposCustos = valorServico - totalCustos;
+  const sobraNegativa = sobraAposCustos < 0;
+  const semBaseParaPercent = !hasMateriais && inputMode === 'percentual';
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
       <h2 className="text-sm font-semibold text-[#1D3140]">Valor do Serviço</h2>
       <p className="mt-1 text-xs text-gray-500">
-        Digite o valor do serviço diretamente ou informe o percentual de lucro desejado para calcular automaticamente.
+        Defina o percentual sobre o total dos materiais para calcular o valor do serviço, ou digite o valor
+        diretamente para descobrir o percentual.
       </p>
 
+      <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+        <span className="inline-flex items-center gap-2 text-xs text-gray-600">
+          <Package className="h-4 w-4 text-gray-400" />
+          Total dos materiais importados
+        </span>
+        <span className="text-sm font-semibold text-[#1D3140]">
+          {hasMateriais ? currencyFormatter.format(valorMateriais) : 'Nenhum orçamento importado'}
+        </span>
+      </div>
+
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1">
+          <label htmlFor="percent-materiais" className="text-xs font-medium text-gray-700">
+            % sobre os materiais
+          </label>
+          <DecimalInput
+            id="percent-materiais"
+            value={percentMateriais}
+            onValueChange={onPercentMateriaisChange}
+            placeholder="Ex: 40"
+            className={`h-10 w-full rounded-lg border px-3 text-sm outline-none transition focus:ring-2 ${
+              inputMode === 'percentual'
+                ? 'border-[#64ABDE] bg-white text-[#1D3140] focus:border-[#64ABDE]/80 focus:ring-[#64ABDE]/20'
+                : 'border-gray-200 bg-gray-50 text-gray-700 focus:border-gray-300 focus:ring-gray-200'
+            }`}
+          />
+          <p className="text-[10px] text-gray-400">
+            {inputMode === 'percentual' ? 'Entrada ativa' : 'Calculado pelo valor'}
+          </p>
+        </div>
+
         <div className="space-y-1">
           <label htmlFor="valor-servico" className="text-xs font-medium text-gray-700">
             Valor do Serviço (R$)
@@ -60,64 +93,52 @@ export function ServiceValueInput({
             }`}
           />
           <p className="text-[10px] text-gray-400">
-            {inputMode === 'valor' ? 'Entrada ativa' : 'Calculado pelo lucro'}
-          </p>
-        </div>
-
-        <div className="space-y-1">
-          <label htmlFor="lucro-percent" className="text-xs font-medium text-gray-700">
-            Lucro desejado (%)
-          </label>
-          <DecimalInput
-            id="lucro-percent"
-            value={lucroPercent}
-            onValueChange={onLucroPercentChange}
-            className={`h-10 w-full rounded-lg border px-3 text-sm outline-none transition focus:ring-2 ${
-              inputMode === 'lucro'
-                ? 'border-[#64ABDE] bg-white text-[#1D3140] focus:border-[#64ABDE]/80 focus:ring-[#64ABDE]/20'
-                : 'border-gray-200 bg-gray-50 text-gray-700 focus:border-gray-300 focus:ring-gray-200'
-            } ${isLucroInvalido ? 'border-red-300 bg-red-50' : ''}`}
-          />
-          <p className="text-[10px] text-gray-400">
-            {inputMode === 'lucro' ? 'Entrada ativa' : 'Calculado pelo valor'}
+            {inputMode === 'valor' ? 'Entrada ativa' : 'Calculado pelo percentual'}
           </p>
         </div>
       </div>
 
-      {isLucroInvalido && (
-        <div className="mt-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-          <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-          <span>
-            Percentual de lucro inválido. O lucro deve ser menor que 100% para calcular o valor do serviço.
-          </span>
-        </div>
-      )}
-
-      {custosExcedemServico && !isLucroInvalido && (
+      {semBaseParaPercent && (
         <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
           <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
           <span>
-            Atenção: os custos do serviço ({currencyFormatter.format(totalCustos)}) excedem o valor do serviço.
-            O lucro será negativo.
+            Importe um orçamento para calcular o serviço pelo percentual, ou digite o valor do serviço
+            diretamente.
           </span>
         </div>
       )}
 
       <div className="mt-4 rounded-lg bg-[#1D3140]/5 px-3 py-2">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
-          <span className="text-gray-600">Custos do serviço:</span>
-          <span className="font-medium text-[#1D3140]">{currencyFormatter.format(totalCustos)}</span>
+          <span className="text-gray-600">Total ao cliente (materiais + serviço):</span>
+          <span className="font-semibold text-[#1D3140]">{currencyFormatter.format(totalCliente)}</span>
         </div>
         <div className="mt-1 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
-          <span className="text-gray-600">Lucro bruto:</span>
-          <span className={`font-semibold ${isLucroNegativo ? 'text-red-600' : 'text-emerald-600'}`}>
-            {currencyFormatter.format(lucroBruto)}{' '}
-            <span className="text-xs font-normal">
-              ({valorServico > 0 ? `${percentFormatter.format(lucroBrutoPercent)}%` : '--'})
+          <span className="text-gray-600">Verba para executar a obra (serviço):</span>
+          <span className="font-medium text-[#1D3140]">
+            {currencyFormatter.format(valorServico)}{' '}
+            <span className="text-xs font-normal text-gray-500">
+              ({hasMateriais ? `${percentFormatter.format(percentMateriais)}% dos materiais` : '--'})
             </span>
           </span>
         </div>
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
+          <span className="text-gray-600">Sobra após custos do serviço:</span>
+          <span className={`font-semibold ${sobraNegativa ? 'text-red-600' : 'text-emerald-600'}`}>
+            {currencyFormatter.format(sobraAposCustos)}
+          </span>
+        </div>
       </div>
+
+      {sobraNegativa && valorServico > 0 && (
+        <div className="mt-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+          <span>
+            Os custos do serviço ({currencyFormatter.format(totalCustos)}) excedem a verba da obra. Aumente o
+            percentual ou revise os custos.
+          </span>
+        </div>
+      )}
     </div>
   );
 }

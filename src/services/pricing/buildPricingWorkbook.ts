@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import { costItemTipoLabel, describeCostItemFormula } from '@/components/precificacao/types';
 import type {
   CostItem,
   PricingMaterialSnapshot,
@@ -99,6 +100,10 @@ export async function buildPricingWorkbook(data: PricingWorkbookData): Promise<E
   });
 
   const percentRows: Array<[string, number]> = [
+    [
+      'Margem sobre materiais',
+      data.result.valorMateriais > 0 ? data.result.valorServico / data.result.valorMateriais : 0,
+    ],
     ['Custos sobre VS', data.result.totalCustosPercent / 100],
     ['Lucro bruto sobre VS', data.result.lucroBrutoPercent / 100],
     ['Imposto informado', data.result.impostoPercent / 100],
@@ -117,7 +122,7 @@ export async function buildPricingWorkbook(data: PricingWorkbookData): Promise<E
 
   const costs = workbook.addWorksheet('Custos');
   const costsHeader = costs.getRow(1);
-  ['Descrição', 'Unidade', 'Valor/unid.', 'Total', '% do VS'].forEach((label, index) => {
+  ['Descrição', 'Tipo', 'Cálculo', 'Total', '% do VS'].forEach((label, index) => {
     costsHeader.getCell(index + 1).value = label;
   });
   styleHeader(costsHeader);
@@ -129,10 +134,9 @@ export async function buildPricingWorkbook(data: PricingWorkbookData): Promise<E
       const detalhe = data.result.custosDetalhados.find((custo) => custo.id === item.id);
       const row = costs.getRow(index + 2);
       row.getCell(1).value = item.descricao || 'Custo sem descrição';
-      row.getCell(2).value = item.unidade;
-      row.getCell(3).value = item.valorUnitario;
-      row.getCell(3).numFmt = MONEY_FMT;
-      row.getCell(4).value = item.valor;
+      row.getCell(2).value = costItemTipoLabel(item.tipo);
+      row.getCell(3).value = describeCostItemFormula(item);
+      row.getCell(4).value = detalhe?.valor ?? item.valor;
       row.getCell(4).numFmt = MONEY_FMT;
       row.getCell(5).value = (detalhe?.percentualDoVS ?? 0) / 100;
       row.getCell(5).numFmt = PERCENT_FMT;

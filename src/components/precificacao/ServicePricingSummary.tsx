@@ -2,6 +2,7 @@
 
 import { FileSpreadsheet, Loader2, Package, Save } from 'lucide-react';
 import { useState } from 'react';
+import { describeCostItemFormula } from './types';
 import type { PricingSaveMode, ServicePricingResult } from './types';
 
 interface ServicePricingSummaryProps {
@@ -59,7 +60,7 @@ export function ServicePricingSummary({
           <h2 className="text-sm font-semibold text-[#1D3140]">Materiais</h2>
         </div>
         <p className="mt-1 text-xs text-gray-500">
-          Faturados diretamente ao cliente, sem margem e sem imposto.
+          Repassados ao cliente sem imposto. Base para o percentual do serviço.
         </p>
 
         <div className="mt-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
@@ -86,7 +87,11 @@ export function ServicePricingSummary({
               {currencyFormatter.format(result.valorServico)}
             </p>
             <p className="mt-0.5 text-[11px] text-gray-500">
-              {hasVS ? '100,00% (base de cálculo do serviço)' : 'Informe o valor ou lucro desejado.'}
+              {hasVS
+                ? result.valorMateriais > 0
+                  ? `${percentFormatter.format((result.valorServico / result.valorMateriais) * 100)}% sobre os materiais — verba para executar a obra`
+                  : 'Verba para executar a obra'
+                : 'Informe o percentual sobre os materiais ou o valor do serviço.'}
             </p>
           </div>
 
@@ -183,11 +188,9 @@ export function ServicePricingSummary({
               <div key={custo.id} className="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-2 py-1.5">
                 <span className="truncate text-gray-600" title={custo.descricao || 'Custo sem descrição'}>
                   {custo.descricao || 'Custo sem descrição'}
-                  {custo.unidade > 0 && custo.valorUnitario > 0 ? (
-                    <span className="ml-1 text-[11px] text-gray-400">
-                      ({custo.unidade} × {currencyFormatter.format(custo.valorUnitario)})
-                    </span>
-                  ) : null}
+                  <span className="ml-1 text-[11px] text-gray-400">
+                    ({describeCostItemFormula(custo)})
+                  </span>
                 </span>
                 <span className="flex items-baseline gap-2 whitespace-nowrap">
                   <span className="font-medium text-[#1D3140]">{currencyFormatter.format(custo.valor)}</span>

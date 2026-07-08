@@ -9,8 +9,8 @@ import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   calculateServicePricing,
-  calcularValorServicoPorLucro,
-  calcularLucroPorValorServico,
+  calcularValorServicoPorPercentual,
+  calcularPercentualPorValorServico,
 } from '@/lib/pricingMath';
 import { consolidateMaterialsFromBudgetDetails } from '@/services/budgetMaterialAggregation';
 import { BudgetImportSelect } from './BudgetImportSelect';
@@ -19,7 +19,6 @@ import { ServicePricingSummary } from './ServicePricingSummary';
 import { ServiceValueInput } from './ServiceValueInput';
 import { TaxInput } from './TaxInput';
 import type { CostItem, PricingInputMode, PricingSaveMode, SavedPricingBudget } from './types';
-import { computeCostItemTotal } from './types';
 
 interface PrecificacaoCalculatorProps {
   initialSaved?: SavedPricingBudget;
@@ -34,22 +33,17 @@ function parseNonNegativeNumber(value: string): number {
   return parsed;
 }
 
-function parsePercent(value: string): number {
-  const parsed = Number.parseFloat(value);
-  if (!Number.isFinite(parsed)) {
-    return 0;
-  }
-
-  if (parsed < 0) return 0;
-  return parsed;
-}
-
 function createCostItem(): CostItem {
   return {
     id: `${Date.now()}-${Math.round(Math.random() * 100000)}`,
     descricao: '',
+    tipo: 'unitario',
     unidade: 0,
     valorUnitario: 0,
+    pessoas: 0,
+    dias: 0,
+    percentual: 0,
+    percentualBase: 'total',
     valor: 0,
   };
 }
@@ -71,9 +65,11 @@ export function PrecificacaoCalculator({ initialSaved }: PrecificacaoCalculatorP
 
   const [selectedBudgetId, setSelectedBudgetId] = useState(() => initialSaved?.budgetId ?? '');
   const [valorServicoInput, setValorServicoInput] = useState(() => initialSaved?.valorServicoInput ?? 0);
-  const [lucroPercentInput, setLucroPercentInput] = useState(() => initialSaved?.lucroPercentInput ?? 0);
+  const [percentMateriaisInput, setPercentMateriaisInput] = useState(
+    () => initialSaved?.percentMateriaisInput ?? 0
+  );
   const [pricingInputMode, setPricingInputMode] = useState<PricingInputMode>(
-    () => initialSaved?.pricingInputMode ?? 'valor'
+    () => initialSaved?.pricingInputMode ?? 'percentual'
   );
   const [costItems, setCostItems] = useState<CostItem[]>(() => initialSaved?.costItems ?? []);
   const [impostoPercent, setImpostoPercent] = useState(() => initialSaved?.impostoPercent ?? 0);
@@ -110,23 +106,19 @@ export function PrecificacaoCalculator({ initialSaved }: PrecificacaoCalculatorP
     [consolidatedMaterials]
   );
 
-  const totalCustos = useMemo(
-    () => costItems.reduce((acc, item) => acc + item.valor, 0),
-    [costItems]
-  );
-
-  const { valorServico, lucroPercent } = useMemo(() => {
-    if (pricingInputMode === 'valor') {
-      const derivedLucro = calcularLucroPorValorServico(valorServicoInput, totalCustos);
-      return { valorServico: valorServicoInput, lucroPercent: derivedLucro };
+  const { valorServico, percentMateriais } = useMemo(() => {
+    if (pricingInputMode === 'percentual') {
+      return {
+        valorServico: calcularValorServicoPorPercentual(valorMateriais, percentMateriaisInput),
+        percentMateriais: percentMateriaisInput,
+      };
     }
 
-    const derivedVS = calcularValorServicoPorLucro(totalCustos, lucroPercentInput);
     return {
-      valorServico: derivedVS ?? 0,
-      lucroPercent: lucroPercentInput,
+      valorServico: valorServicoInput,
+      percentMateriais: calcularPercentualPorValorServico(valorServicoInput, valorMateriais),
     };
-  }, [pricingInputMode, valorServicoInput, lucroPercentInput, totalCustos]);
+  }, [pricingInputMode, valorServicoInput, percentMateriaisInput, valorMateriais]);
 
   const pricingResult = useMemo(
     () => calculateServicePricing(valorServico, costItems, impostoPercent, valorMateriais),
@@ -146,41 +138,18 @@ export function PrecificacaoCalculator({ initialSaved }: PrecificacaoCalculatorP
     setPricingInputMode('valor');
   };
 
-  const handleLucroPercentChange = (value: number) => {
-    setLucroPercentInput(parsePercent(String(value)));
-    setPricingInputMode('lucro');
+  const handlePercentMateriaisChange = (value: number) => {
+    setPercentMateriaisInput(parseNonNegativeNumber(String(value)));
+    setPricingInputMode('percentual');
   };
 
   const handleAddCostItem = () => {
     setCostItems((prev) => [...prev, createCostItem()]);
   };
 
-  const handleUpdateCostItem = (
-    id: string,
-    field: 'descricao' | 'unidade' | 'valorUnitario',
-    value: string | number
-  ) => {
+  const handleUpdateCostItem = (id: string, patch: Partial<CostItem>) => {
     setCostItems((prev) =>
-      prev.map((item) => {
-        if (item.id !== id) {
-          return item;
-        }
-
-        if (field === 'descricao') {
-          return { ...item, descricao: String(value) };
-        }
-
-        const unidade = field === 'unidade' ? parseNonNegativeNumber(String(value)) : item.unidade;
-        const valorUnitario =
-          field === 'valorUnitario' ? parseNonNegativeNumber(String(value)) : item.valorUnitario;
-
-        return {
-          ...item,
-          unidade,
-          valorUnitario,
-          valor: computeCostItemTotal(unidade, valorUnitario),
-        };
-      })
+      prev.map((item) => (item.id === id ? { ...item, ...patch, id: item.id } : item))
     );
   };
 
@@ -189,7 +158,7 @@ export function PrecificacaoCalculator({ initialSaved }: PrecificacaoCalculatorP
   };
 
   const handleImpostoChange = (value: number) => {
-    setImpostoPercent(parsePercent(String(value)));
+    setImpostoPercent(parseNonNegativeNumber(String(value)));
   };
 
   const buildPricingPayload = (saveMode: PricingSaveMode) => ({
@@ -200,9 +169,10 @@ export function PrecificacaoCalculator({ initialSaved }: PrecificacaoCalculatorP
     saveMode,
     pricingInputMode,
     valorServicoInput,
-    lucroPercentInput,
+    percentMateriaisInput,
     impostoPercent,
-    costItems,
+    // Persiste os custos com o valor resolvido (inclusive percentuais) no momento do save.
+    costItems: pricingResult.custosDetalhados.map(({ percentualDoVS: _percentualDoVS, ...item }) => item),
     materialsSnapshot: consolidatedMaterials,
     result: pricingResult,
   });
@@ -300,8 +270,8 @@ export function PrecificacaoCalculator({ initialSaved }: PrecificacaoCalculatorP
         </h1>
         <p className="mt-1 text-sm text-gray-500">
           {isEditMode
-            ? 'Altere valores, custos ou impostos e salve para atualizar o card no dashboard.'
-            : 'Vincule um orçamento, defina o valor ou lucro desejado, adicione custos e salve no dashboard.'}
+            ? 'Altere o percentual, custos ou impostos e salve para atualizar o card no dashboard.'
+            : 'Vincule um orçamento, defina o percentual sobre os materiais, adicione custos e salve no dashboard.'}
           {selectedBudgetName ? ` Orçamento selecionado: ${selectedBudgetName}.` : ''}
         </p>
         </div>
@@ -324,17 +294,18 @@ export function PrecificacaoCalculator({ initialSaved }: PrecificacaoCalculatorP
           />
 
           <ServiceValueInput
-            totalCustos={totalCustos}
+            valorMateriais={valorMateriais}
+            totalCustos={pricingResult.totalCustos}
             valorServico={valorServico}
-            lucroPercent={lucroPercent}
+            percentMateriais={percentMateriais}
             inputMode={pricingInputMode}
             onValorServicoChange={handleValorServicoChange}
-            onLucroPercentChange={handleLucroPercentChange}
+            onPercentMateriaisChange={handlePercentMateriaisChange}
           />
 
           <CostItemsTable
             valorServico={valorServico}
-            costItems={costItems}
+            costItems={pricingResult.custosDetalhados}
             onAddCostItem={handleAddCostItem}
             onUpdateCostItem={handleUpdateCostItem}
             onRemoveCostItem={handleRemoveCostItem}
