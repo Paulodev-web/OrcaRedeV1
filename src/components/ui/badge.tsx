@@ -4,7 +4,7 @@ import * as React from "react";
 
 import { cn } from "../../lib/utils";
 
-type BadgeTone = "green" | "amber" | "red" | "blue" | "purple" | "gray";
+type BadgeTone = "green" | "amber" | "red" | "blue" | "purple" | "gray" | "teal";
 
 const toneClasses: Record<BadgeTone, string> = {
   green: "bg-green-50 text-green-700 border-green-200",
@@ -13,6 +13,7 @@ const toneClasses: Record<BadgeTone, string> = {
   blue: "bg-blue-50 text-blue-700 border-blue-200",
   purple: "bg-purple-50 text-purple-700 border-purple-200",
   gray: "bg-gray-50 text-gray-700 border-gray-200",
+  teal: "bg-teal-50 text-teal-700 border-teal-200",
 };
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {

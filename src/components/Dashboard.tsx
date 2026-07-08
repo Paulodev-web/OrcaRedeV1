@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, useTransition } from 'react';
-import { Plus, Calendar, Building2, Loader2, Edit, Trash2, Copy, CheckCircle, Clock, BarChart3, TrendingUp, Search, Filter, X, Folder, FolderOpen, MoreVertical, FolderEdit, FileText, ArrowLeft, Home, ChevronRight, Move, Star } from 'lucide-react';
+import { Plus, Calendar, Building2, Edit, Trash2, Copy, CheckCircle, Clock, BarChart3, TrendingUp, Search, Filter, X, Folder, FolderOpen, MoreVertical, FolderEdit, FileText, ArrowLeft, Home, ChevronRight, Move, Star } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { CriarOrcamentoModal } from '@/components/modals/CriarOrcamentoModal';
 import { FolderModal } from '@/components/modals/FolderModal';
@@ -543,7 +543,7 @@ export function Dashboard() {
     return (
       <Card
         state={isDragging ? 'dragging' : 'default'}
-        className="group cursor-grab hover:cursor-grab active:cursor-grabbing"
+        className={`group cursor-grab hover:cursor-grab active:cursor-grabbing rounded-xl hover:-translate-y-0.5 hover:shadow-lg ${openBudgetMenu === budget.id ? 'z-40' : ''}`}
         draggable={true}
         onMouseDown={(e) => {
           // Prevenir seleção de texto
@@ -566,12 +566,18 @@ export function Dashboard() {
         }}
         style={{ userSelect: 'none' }}
       >
-      <div className="p-4">
+      {/* Indicador de status */}
+      <div
+        className={`absolute left-0 top-4 bottom-4 w-1 rounded-full ${
+          budget.status === 'Finalizado' ? 'bg-green-400' : 'bg-teal-400'
+        }`}
+      />
+      <div className="p-4 pl-5">
         {/* Cabeçalho com Status */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0 pr-3">
             <div className="flex items-center gap-1.5 mb-1">
-              <h3 className="text-base font-semibold text-gray-900 truncate">
+              <h3 className="text-base font-semibold text-gray-900 truncate group-hover:text-[#1D3140] transition-colors">
                 {budget.nome}
               </h3>
               {budget.isTemplate && (
@@ -584,14 +590,14 @@ export function Dashboard() {
               </p>
             )}
           </div>
-          <div className="flex flex-col items-end gap-1.5">
+          <div className="flex flex-col items-end gap-1.5 shrink-0">
             {budget.status === 'Finalizado' ? (
               <Badge tone="green">
                 <CheckCircle className="h-3 w-3 mr-1" />
                 Finalizado
               </Badge>
             ) : (
-              <Badge tone="amber">
+              <Badge tone="teal">
                 <Clock className="h-3 w-3 mr-1" />
                 Em Andamento
               </Badge>
@@ -602,18 +608,18 @@ export function Dashboard() {
 
         {/* Informações */}
         <div className="flex items-center justify-between text-sm text-gray-600 mb-3 pb-3 border-b border-gray-100">
-          <div className="flex items-center">
-            <Building2 className="h-3.5 w-3.5 mr-1.5" />
-            <span>{getConcessionariaNome(budget.concessionariaId)}</span>
+          <div className="flex items-center min-w-0">
+            <Building2 className="h-3.5 w-3.5 mr-1.5 shrink-0 text-gray-400" />
+            <span className="truncate">{getConcessionariaNome(budget.concessionariaId)}</span>
           </div>
-          <div className="flex items-center">
-            <Calendar className="h-3.5 w-3.5 mr-1.5" />
+          <div className="flex items-center shrink-0 pl-2">
+            <Calendar className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
             <span>{formatDate(budget.dataModificacao)}</span>
           </div>
         </div>
 
         {/* Ações */}
-        <div className="flex items-center justify-end space-x-1 relative">
+        <div className="flex items-center justify-end space-x-0.5 relative opacity-80 group-hover:opacity-100 transition-opacity">
           {budget.status !== 'Finalizado' && (
             <Button
               variant="ghost"
@@ -666,7 +672,7 @@ export function Dashboard() {
                 }}
               ></div>
 
-              <div className="absolute right-0 top-10 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-30 overflow-hidden">
+              <div className="absolute right-0 top-10 w-60 bg-white rounded-xl shadow-xl ring-1 ring-black/5 border border-gray-100 z-30 overflow-hidden py-1.5 animate-in fade-in-0 zoom-in-95 duration-100">
                 {budget.status !== 'Finalizado' && (
                   <button
                     onClick={(e) => {
@@ -675,38 +681,37 @@ export function Dashboard() {
                       setOpenBudgetMenu(null);
                     }}
                     disabled={isFinalizing === budget.id}
-                    className="w-full flex items-center space-x-2 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    className="w-[calc(100%-8px)] mx-1 flex items-center space-x-2.5 px-3 py-2 text-left text-sm text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
                   >
-                    <CheckCircle className="h-4 w-4" />
+                    <CheckCircle className="h-4 w-4 text-gray-400" />
                     <span>{isFinalizing === budget.id ? 'Finalizando...' : 'Finalizar Orçamento'}</span>
                   </button>
                 )}
 
-                <div className="border-t border-gray-100"></div>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     handleToggleTemplate(budget);
                   }}
-                  className="w-full flex items-center space-x-2 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                  className="w-[calc(100%-8px)] mx-1 flex items-center space-x-2.5 px-3 py-2 text-left text-sm text-gray-700 rounded-lg hover:bg-gray-50"
                 >
-                  <Star className="h-4 w-4" />
+                  <Star className="h-4 w-4 text-gray-400" />
                   <span>{budget.isTemplate ? 'Desmarcar Modelo' : 'Marcar como Modelo'}</span>
                 </button>
 
-                <div className="border-t border-gray-100"></div>
+                <div className="my-1 border-t border-gray-100"></div>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     setMoveMenuFor(isMoveMenuOpen ? null : { type: 'budget', id: budget.id });
                   }}
-                  className="w-full flex items-center space-x-2 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                  className="w-[calc(100%-8px)] mx-1 flex items-center space-x-2.5 px-3 py-2 text-left text-sm text-gray-700 rounded-lg hover:bg-gray-50"
                 >
-                  <Move className="h-4 w-4" />
+                  <Move className="h-4 w-4 text-gray-400" />
                   <span>Mover para pasta...</span>
                 </button>
                 {isMoveMenuOpen && (
-                  <div className="max-h-40 overflow-y-auto border-t border-gray-100 bg-gray-50">
+                  <div className="max-h-40 overflow-y-auto mx-1 mb-1 rounded-lg bg-gray-50">
                     {moveTargets.map((target) => (
                       <button
                         key={String(target.id)}
@@ -714,7 +719,7 @@ export function Dashboard() {
                           e.stopPropagation();
                           handleMoveViaMenu('budget', budget.id, budget.nome, target.id);
                         }}
-                        className="w-full flex items-center space-x-2 px-4 py-2 text-left text-sm text-gray-600 hover:bg-gray-100"
+                        className="w-full flex items-center space-x-2 px-3 py-1.5 text-left text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
                       >
                         {target.id === null ? (
                           <Home className="h-3.5 w-3.5" />
@@ -729,13 +734,13 @@ export function Dashboard() {
 
                 {budget.folderId && (
                   <>
-                    <div className="border-t border-gray-100"></div>
+                    <div className="my-1 border-t border-gray-100"></div>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleRemoveFromFolder(budget.id, 'budget', budget.nome);
                       }}
-                      className="w-full flex items-center space-x-2 px-4 py-2.5 text-left text-sm text-blue-600 hover:bg-blue-50"
+                      className="w-[calc(100%-8px)] mx-1 flex items-center space-x-2.5 px-3 py-2 text-left text-sm text-[#1D3140] rounded-lg hover:bg-[#64ABDE]/10"
                     >
                       <FolderOpen className="h-4 w-4" />
                       <span>Mover para Raiz</span>
@@ -743,14 +748,14 @@ export function Dashboard() {
                   </>
                 )}
 
-                <div className="border-t border-gray-100"></div>
+                <div className="my-1 border-t border-gray-100"></div>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDeleteBudget(budget);
                     setOpenBudgetMenu(null);
                   }}
-                  className="w-full flex items-center space-x-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
+                  className="w-[calc(100%-8px)] mx-1 flex items-center space-x-2.5 px-3 py-2 text-left text-sm text-red-600 rounded-lg hover:bg-red-50"
                 >
                   <Trash2 className="h-4 w-4" />
                   <span>Excluir</span>
@@ -763,8 +768,8 @@ export function Dashboard() {
 
       {/* Indicador visual de drag */}
       {isDragging && (
-        <div className="absolute inset-0 bg-gray-900 bg-opacity-10 rounded-lg pointer-events-none flex items-center justify-center">
-          <div className="bg-gray-900 text-white px-3 py-1.5 rounded-md text-xs font-medium">
+        <div className="absolute inset-0 bg-gray-900/10 rounded-xl pointer-events-none flex items-center justify-center">
+          <div className="bg-gray-900 text-white px-3 py-1.5 rounded-md text-xs font-medium shadow-lg">
             Arrastando...
           </div>
         </div>
@@ -797,7 +802,7 @@ export function Dashboard() {
     return (
       <Card
         state={cardState}
-        className={cardState === 'drop-invalid' ? 'cursor-not-allowed' : 'cursor-grab hover:cursor-grab'}
+        className={`rounded-xl ${cardState === 'drop-invalid' ? 'cursor-not-allowed' : 'cursor-grab hover:cursor-grab hover:-translate-y-0.5 hover:shadow-lg'} ${openFolderMenu === folderId ? 'z-40' : ''}`}
         draggable={true}
         onMouseDown={(e) => {
           // Prevenir seleção de texto
@@ -824,12 +829,17 @@ export function Dashboard() {
       >
         {/* Cabeçalho da Pasta */}
         <div className="flex items-center justify-between p-4">
-          <div className="flex items-center space-x-3 flex-1 pointer-events-none">
-            <Folder 
-              className="h-6 w-6 flex-shrink-0" 
-              style={{ color: folderColor || '#6B7280' }} 
-            />
-            
+          <div className="flex items-center space-x-3 flex-1 min-w-0 pointer-events-none">
+            <div
+              className="p-2.5 rounded-lg shrink-0"
+              style={{ backgroundColor: `${folderColor || '#6B7280'}1A` }}
+            >
+              <Folder
+                className="h-5 w-5"
+                style={{ color: folderColor || '#6B7280' }}
+              />
+            </div>
+
             <div className="flex-1 min-w-0">
               <h3 className="text-base font-semibold text-gray-900 truncate">
                 {folderName}
@@ -842,14 +852,14 @@ export function Dashboard() {
           </div>
 
           {/* Menu de Ações - Atualizado com opção de mover */}
-          <div className="flex items-center space-x-2 relative pointer-events-auto">
+          <div className="flex items-center space-x-2 relative pointer-events-auto shrink-0">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setMoveMenuFor(null);
                 setOpenFolderMenu(openFolderMenu === folderId ? null : folderId);
               }}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#64ABDE]"
             >
               <MoreVertical className="h-4 w-4" />
             </button>
@@ -866,43 +876,43 @@ export function Dashboard() {
                   }}
                 ></div>
 
-                <div className="absolute right-0 top-10 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-30 overflow-hidden">
+                <div className="absolute right-0 top-10 w-60 bg-white rounded-xl shadow-xl ring-1 ring-black/5 border border-gray-100 z-30 overflow-hidden py-1.5 animate-in fade-in-0 zoom-in-95 duration-100">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleOpenFolder(folderId);
                       setOpenFolderMenu(null);
                     }}
-                    className="w-full flex items-center space-x-2 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                    className="w-[calc(100%-8px)] mx-1 flex items-center space-x-2.5 px-3 py-2 text-left text-sm text-gray-700 rounded-lg hover:bg-gray-50"
                   >
-                    <FolderOpen className="h-4 w-4" />
+                    <FolderOpen className="h-4 w-4 text-gray-400" />
                     <span>Abrir Pasta</span>
                   </button>
-                  <div className="border-t border-gray-100"></div>
+                  <div className="my-1 border-t border-gray-100"></div>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleEditFolder(folderId, folderName, folderColor);
                     }}
-                    className="w-full flex items-center space-x-2 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                    className="w-[calc(100%-8px)] mx-1 flex items-center space-x-2.5 px-3 py-2 text-left text-sm text-gray-700 rounded-lg hover:bg-gray-50"
                   >
-                    <FolderEdit className="h-4 w-4" />
+                    <FolderEdit className="h-4 w-4 text-gray-400" />
                     <span>Renomear</span>
                   </button>
 
-                  <div className="border-t border-gray-100"></div>
+                  <div className="my-1 border-t border-gray-100"></div>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setMoveMenuFor(isMoveMenuOpen ? null : { type: 'folder', id: folderId });
                     }}
-                    className="w-full flex items-center space-x-2 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                    className="w-[calc(100%-8px)] mx-1 flex items-center space-x-2.5 px-3 py-2 text-left text-sm text-gray-700 rounded-lg hover:bg-gray-50"
                   >
-                    <Move className="h-4 w-4" />
+                    <Move className="h-4 w-4 text-gray-400" />
                     <span>Mover para pasta...</span>
                   </button>
                   {isMoveMenuOpen && (
-                    <div className="max-h-40 overflow-y-auto border-t border-gray-100 bg-gray-50">
+                    <div className="max-h-40 overflow-y-auto mx-1 mb-1 rounded-lg bg-gray-50">
                       {moveTargets.map((target) => (
                         <button
                           key={String(target.id)}
@@ -910,7 +920,7 @@ export function Dashboard() {
                             e.stopPropagation();
                             handleMoveViaMenu('folder', folderId, folderName, target.id);
                           }}
-                          className="w-full flex items-center space-x-2 px-4 py-2 text-left text-sm text-gray-600 hover:bg-gray-100"
+                          className="w-full flex items-center space-x-2 px-3 py-1.5 text-left text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
                         >
                           {target.id === null ? (
                             <Home className="h-3.5 w-3.5" />
@@ -925,13 +935,13 @@ export function Dashboard() {
 
                   {folder?.parentId && (
                     <>
-                      <div className="border-t border-gray-100"></div>
+                      <div className="my-1 border-t border-gray-100"></div>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleRemoveFromFolder(folderId, 'folder', folderName);
                         }}
-                        className="w-full flex items-center space-x-2 px-4 py-2.5 text-left text-sm text-blue-600 hover:bg-blue-50"
+                        className="w-[calc(100%-8px)] mx-1 flex items-center space-x-2.5 px-3 py-2 text-left text-sm text-[#1D3140] rounded-lg hover:bg-[#64ABDE]/10"
                       >
                         <Home className="h-4 w-4" />
                         <span>Mover para Raiz</span>
@@ -939,13 +949,13 @@ export function Dashboard() {
                     </>
                   )}
 
-                  <div className="border-t border-gray-100"></div>
+                  <div className="my-1 border-t border-gray-100"></div>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDeleteFolder(folderId, folderName);
                     }}
-                    className="w-full flex items-center space-x-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
+                    className="w-[calc(100%-8px)] mx-1 flex items-center space-x-2.5 px-3 py-2 text-left text-sm text-red-600 rounded-lg hover:bg-red-50"
                   >
                     <Trash2 className="h-4 w-4" />
                     <span>Excluir</span>
@@ -958,8 +968,8 @@ export function Dashboard() {
 
         {/* Indicador de Arrasto */}
         {isDragging && (
-          <div className="absolute inset-0 bg-gray-900 bg-opacity-10 rounded-lg pointer-events-none flex items-center justify-center">
-            <div className="bg-gray-900 text-white px-3 py-1.5 rounded-md text-xs font-medium">
+          <div className="absolute inset-0 bg-gray-900/10 rounded-xl pointer-events-none flex items-center justify-center">
+            <div className="bg-gray-900 text-white px-3 py-1.5 rounded-md text-xs font-medium shadow-lg">
               Arrastando pasta...
             </div>
           </div>
@@ -967,7 +977,7 @@ export function Dashboard() {
 
         {/* Indicador de Drop Válido */}
         {isDropTarget && isValidTarget && !isDragging && (
-          <div className="absolute inset-0 bg-blue-500 bg-opacity-10 pointer-events-none flex items-center justify-center rounded-lg animate-pulse">
+          <div className="absolute inset-0 bg-blue-500/10 pointer-events-none flex items-center justify-center rounded-xl animate-pulse">
             <div className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg flex items-center space-x-2">
               {draggedFolder ? (
                 <>
@@ -983,10 +993,10 @@ export function Dashboard() {
             </div>
           </div>
         )}
-        
+
         {/* Indicador de Drop Inválido */}
         {isDropTarget && !isValidTarget && !isDragging && (
-          <div className="absolute inset-0 bg-red-500 bg-opacity-10 pointer-events-none flex items-center justify-center rounded-lg">
+          <div className="absolute inset-0 bg-red-500/10 pointer-events-none flex items-center justify-center rounded-xl">
             <div className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg flex items-center space-x-2">
               <X className="h-4 w-4" />
               <span>Operação inválida</span>
@@ -998,14 +1008,14 @@ export function Dashboard() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Cabeçalho */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Meus Orçamentos</h2>
-          <p className="text-sm text-gray-500 mt-1">Gerencie seus projetos</p>
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Meus Orçamentos</h2>
+          <p className="text-sm text-gray-500 mt-1">Gerencie seus projetos e organize por pastas</p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-3">
           <Button variant="secondary" onClick={handleCreateFolder}>
             <Folder className="h-4 w-4" />
             <span>Nova Pasta</span>
@@ -1017,37 +1027,37 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Estatísticas - Design Neutro */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-4">
+      {/* Estatísticas */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-500 mb-1">Total</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-xs font-medium text-gray-500 mb-1">Total de Projetos</p>
+              <p className="text-2xl font-bold text-gray-900 tabular-nums">{stats.total}</p>
             </div>
-            <div className="p-2.5 bg-gray-50 rounded-lg">
-              <BarChart3 className="h-5 w-5 text-gray-600" />
+            <div className="p-2.5 rounded-lg" style={{ backgroundColor: '#64ABDE1A' }}>
+              <BarChart3 className="h-5 w-5" style={{ color: '#1D3140' }} />
             </div>
           </div>
         </Card>
 
-        <Card className="p-4">
+        <Card className="p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-500 mb-1">Em Andamento</p>
-              <p className="text-2xl font-bold text-amber-600">{stats.emAndamento}</p>
+              <p className="text-xs font-medium text-gray-500 mb-1">Em Andamento</p>
+              <p className="text-2xl font-bold text-teal-600 tabular-nums">{stats.emAndamento}</p>
             </div>
-            <div className="p-2.5 bg-amber-50 rounded-lg">
-              <Clock className="h-5 w-5 text-amber-600" />
+            <div className="p-2.5 bg-teal-50 rounded-lg">
+              <Clock className="h-5 w-5 text-teal-600" />
             </div>
           </div>
         </Card>
 
-        <Card className="p-4">
+        <Card className="p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-500 mb-1">Finalizados</p>
-              <p className="text-2xl font-bold text-green-600">{stats.finalizados}</p>
+              <p className="text-xs font-medium text-gray-500 mb-1">Finalizados</p>
+              <p className="text-2xl font-bold text-green-600 tabular-nums">{stats.finalizados}</p>
             </div>
             <div className="p-2.5 bg-green-50 rounded-lg">
               <CheckCircle className="h-5 w-5 text-green-600" />
@@ -1055,25 +1065,31 @@ export function Dashboard() {
           </div>
         </Card>
 
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
+        <Card className="p-4 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-2.5">
             <div>
-              <p className="text-xs text-gray-500 mb-1">Taxa de Conclusão</p>
-              <p className="text-2xl font-bold text-gray-700">{stats.percentualFinalizacao}%</p>
+              <p className="text-xs font-medium text-gray-500 mb-1">Taxa de Conclusão</p>
+              <p className="text-2xl font-bold text-gray-900 tabular-nums">{stats.percentualFinalizacao}%</p>
             </div>
             <div className="p-2.5 bg-gray-50 rounded-lg">
               <TrendingUp className="h-5 w-5 text-gray-600" />
             </div>
           </div>
+          <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-green-500 rounded-full transition-all duration-500"
+              style={{ width: `${stats.percentualFinalizacao}%` }}
+            />
+          </div>
         </Card>
       </div>
 
       {/* Barra de Busca e Filtros */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4">
+      <div className="bg-white border border-gray-200 rounded-xl p-4">
         <div className="flex flex-col md:flex-row gap-3">
           {/* Barra de Busca */}
           <div className="flex-1 relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
               <Search className="h-4 w-4 text-gray-400" />
             </div>
             <input
@@ -1081,7 +1097,7 @@ export function Dashboard() {
               placeholder="Buscar por nome do projeto, cliente ou cidade..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-sm"
+              className="block w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#64ABDE]/40 focus:border-[#64ABDE] text-sm transition-shadow"
             />
             {searchTerm && (
               <button
@@ -1096,16 +1112,16 @@ export function Dashboard() {
           {/* Botão de Filtros */}
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              hasActiveFilters 
-                ? 'bg-gray-900 text-white hover:bg-gray-800' 
+            className={`flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#64ABDE] ${
+              hasActiveFilters
+                ? 'bg-gray-900 text-white hover:bg-gray-800'
                 : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
             }`}
           >
             <Filter className="h-4 w-4" />
             <span>Filtros</span>
             {hasActiveFilters && (
-              <span className="bg-white text-gray-900 text-xs font-bold px-2 py-0.5 rounded-full">
+              <span className="bg-white text-gray-900 text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
                 {(statusFilter !== 'all' ? 1 : 0) + (concessionariaFilter !== 'all' ? 1 : 0) + (templatesOnly ? 1 : 0)}
               </span>
             )}
@@ -1114,7 +1130,7 @@ export function Dashboard() {
 
         {/* Painel de Filtros Expandido */}
         {showFilters && (
-          <div className="pt-4 mt-4 border-t border-gray-200">
+          <div className="pt-4 mt-4 border-t border-gray-100 animate-in fade-in-0 slide-in-from-top-1 duration-150">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               {/* Status */}
               <div>
@@ -1190,92 +1206,124 @@ export function Dashboard() {
           </div>
         )}
 
-        {/* Contador de Resultados */}
+        {/* Chips de Filtros Ativos + Contador de Resultados */}
         {hasActiveFilters && (
-          <div className="pt-3 mt-3 border-t border-gray-200">
-            <p className="text-sm text-gray-600">
-              Mostrando <span className="font-semibold text-gray-900">{filteredBudgets.length}</span> de{' '}
+          <div className="pt-3 mt-3 border-t border-gray-100 flex flex-wrap items-center gap-2">
+            <p className="text-sm text-gray-600 mr-1">
+              <span className="font-semibold text-gray-900">{filteredBudgets.length}</span> de{' '}
               <span className="font-semibold text-gray-900">{budgets.length}</span> orçamentos
             </p>
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full text-xs font-medium bg-[#64ABDE]/10 text-[#1D3140] hover:bg-[#64ABDE]/20 transition-colors"
+              >
+                “{searchTerm}” <X className="h-3 w-3" />
+              </button>
+            )}
+            {statusFilter !== 'all' && (
+              <button
+                onClick={() => setStatusFilter('all')}
+                className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full text-xs font-medium bg-[#64ABDE]/10 text-[#1D3140] hover:bg-[#64ABDE]/20 transition-colors"
+              >
+                {statusFilter} <X className="h-3 w-3" />
+              </button>
+            )}
+            {concessionariaFilter !== 'all' && (
+              <button
+                onClick={() => setConcessionariaFilter('all')}
+                className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full text-xs font-medium bg-[#64ABDE]/10 text-[#1D3140] hover:bg-[#64ABDE]/20 transition-colors"
+              >
+                {getConcessionariaNome(concessionariaFilter)} <X className="h-3 w-3" />
+              </button>
+            )}
+            {templatesOnly && (
+              <button
+                onClick={() => setTemplatesOnly(false)}
+                className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full text-xs font-medium bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors"
+              >
+                Modelos <X className="h-3 w-3" />
+              </button>
+            )}
           </div>
         )}
       </div>
 
       {/* Breadcrumbs e Navegação - COM DROP ZONES */}
       {(currentFolderId || folderPath.length > 0) && (
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="bg-white border border-gray-200 rounded-xl p-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 flex-1">
+            <div className="flex items-center space-x-1 flex-1 min-w-0">
               {/* Botão Voltar */}
               <button
                 onClick={handleGoBack}
-                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#64ABDE] shrink-0"
                 title="Voltar"
               >
                 <ArrowLeft className="h-5 w-5" />
               </button>
 
               {/* Breadcrumbs com Drop Zones */}
-              <div className="flex items-center space-x-2 text-sm flex-1">
+              <div className="flex items-center space-x-1 text-sm flex-1 min-w-0 overflow-x-auto">
                 {/* Início - Drop Zone para Raiz */}
                 <div
                   onDragOver={(e) => handleDragOver(e, null)}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, null)}
-                  className={`rounded-lg transition-all duration-200 ${
+                  className={`rounded-lg transition-all duration-200 shrink-0 ${
                     dropTargetFolder === null && isDraggingOver && isValidDropTarget(null)
-                      ? 'bg-blue-100 ring-2 ring-blue-500 scale-110'
+                      ? 'bg-blue-100 ring-2 ring-blue-500 scale-105'
                       : ''
                   }`}
                 >
                   <button
                     onClick={() => navigateToFolder(null)}
-                    className={`flex items-center space-x-1 px-3 py-2 rounded-lg transition-colors ${
+                    className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-colors ${
                       dropTargetFolder === null && isDraggingOver && isValidDropTarget(null)
                         ? 'text-blue-700 font-bold'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                        : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
                     }`}
                   >
                     <Home className="h-4 w-4" />
                     <span>Início</span>
                   </button>
                 </div>
-                
+
                 {/* Pastas no Caminho - Cada uma é um Drop Zone */}
                 {folderPath.map((folder: BudgetFolder, index: number) => (
-                  <div key={folder.id} className="flex items-center space-x-2">
-                    <ChevronRight className="h-4 w-4 text-gray-400" />
+                  <div key={folder.id} className="flex items-center space-x-1 shrink-0">
+                    <ChevronRight className="h-3.5 w-3.5 text-gray-300 shrink-0" />
                     <div
                       onDragOver={(e) => handleDragOver(e, folder.id)}
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e, folder.id)}
                       className={`rounded-lg transition-all duration-200 ${
                         dropTargetFolder === folder.id && isDraggingOver && isValidDropTarget(folder.id)
-                          ? 'bg-blue-100 ring-2 ring-blue-500 scale-110'
+                          ? 'bg-blue-100 ring-2 ring-blue-500 scale-105'
                           : ''
                       }`}
                     >
                       <button
                         onClick={() => navigateToFolder(folder.id)}
-                        className={`flex items-center space-x-1 px-3 py-2 rounded-lg transition-colors ${
+                        className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-colors ${
                           dropTargetFolder === folder.id && isDraggingOver && isValidDropTarget(folder.id)
                             ? 'text-blue-700 font-bold'
                             : index === folderPath.length - 1
-                            ? 'text-gray-900 font-medium'
-                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                            ? 'text-gray-900 font-semibold bg-gray-100'
+                            : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
                         }`}
                       >
-                        <Folder className="h-4 w-4" style={{ color: folder.color || '#6B7280' }} />
-                        <span>{folder.name}</span>
+                        <Folder className="h-3.5 w-3.5" style={{ color: folder.color || '#6B7280' }} />
+                        <span className="truncate max-w-[10rem]">{folder.name}</span>
                       </button>
                     </div>
                   </div>
                 ))}
               </div>
-              
+
               {/* Indicador de Drag Ativo */}
               {(draggedBudget || draggedFolder) && (
-                <div className="flex items-center space-x-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700 font-medium">
+                <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 bg-[#64ABDE]/10 border border-[#64ABDE]/30 rounded-lg text-xs text-[#1D3140] font-medium shrink-0 ml-2">
                   <span>💡 Arraste para os breadcrumbs para mover</span>
                 </div>
               )}
@@ -1300,7 +1348,7 @@ export function Dashboard() {
               : null;
             handleDrop(e, parentId);
           }}
-          className={`relative bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-dashed rounded-lg p-6 transition-all duration-200 ${
+          className={`relative bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-dashed rounded-xl p-6 transition-all duration-200 ${
             dropTargetFolder === (folderPath.length > 1 ? folderPath[folderPath.length - 2].id : null) && isDraggingOver
               ? 'border-blue-500 bg-blue-100 scale-105 shadow-lg'
               : 'border-blue-300 hover:border-blue-400 hover:bg-blue-100'
@@ -1359,25 +1407,45 @@ export function Dashboard() {
 
       {/* Conteúdo Principal */}
       {loadingBudgets || loadingFolders ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-3" />
-            <p className="text-sm text-gray-500">Carregando...</p>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 animate-pulse">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-3/4" />
+                  <div className="h-3 bg-gray-100 rounded w-1/2" />
+                </div>
+                <div className="h-5 w-16 bg-gray-100 rounded-full" />
+              </div>
+              <div className="h-px bg-gray-100 my-3" />
+              <div className="flex justify-between">
+                <div className="h-3 bg-gray-100 rounded w-1/3" />
+                <div className="h-3 bg-gray-100 rounded w-1/4" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
         <div className="space-y-4">
           {/* Pastas do Nível Atual */}
           {currentLevelFolders.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {currentLevelFolders.map(folder => (
-                <FolderCard
-                  key={folder.id}
-                  folderId={folder.id}
-                  folderName={folder.name}
-                  folderColor={folder.color}
-                />
-              ))}
+            <div>
+              <div className="flex items-center space-x-2 mb-4">
+                <Folder className="h-4 w-4 text-gray-400" />
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                  Pastas <span className="text-gray-400 normal-case font-normal">({currentLevelFolders.length})</span>
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {currentLevelFolders.map(folder => (
+                  <FolderCard
+                    key={folder.id}
+                    folderId={folder.id}
+                    folderName={folder.name}
+                    folderColor={folder.color}
+                  />
+                ))}
+              </div>
             </div>
           )}
 
@@ -1396,11 +1464,13 @@ export function Dashboard() {
               <div className={currentLevelFolders.length > 0 ? "mt-6" : ""}>
                 {currentLevelFolders.length > 0 && (
                   <div className="flex items-center space-x-2 mb-4">
-                    <FileText className="h-5 w-5 text-gray-600" />
-                    <h3 className="text-base font-semibold text-gray-900">Orçamentos</h3>
+                    <FileText className="h-4 w-4 text-gray-400" />
+                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                      Orçamentos <span className="text-gray-400 normal-case font-normal">({currentLevelBudgets.length})</span>
+                    </h3>
                   </div>
                 )}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {currentLevelBudgets.map(budget => (
                     <BudgetCard key={budget.id} budget={budget} />
                   ))}
@@ -1429,13 +1499,13 @@ export function Dashboard() {
 
           {/* Mensagem quando não há conteúdo no nível atual */}
           {currentLevelFolders.length === 0 && currentLevelBudgets.length === 0 && (
-            <div 
+            <div
               onDragOver={(e) => handleDragOver(e, currentFolderId)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, currentFolderId)}
-              className={`relative text-center py-12 bg-white rounded-lg transition-all duration-200 ${
+              className={`relative text-center py-14 bg-white rounded-xl transition-all duration-200 ${
                 dropTargetFolder === currentFolderId && isDraggingOver && isValidDropTarget(currentFolderId)
-                  ? 'border-2 border-blue-500 bg-blue-50 shadow-lg transform scale-105'
+                  ? 'border-2 border-blue-500 bg-blue-50 shadow-lg transform scale-[1.02]'
                   : 'border-2 border-dashed border-gray-200'
               }`}
             >
@@ -1457,14 +1527,19 @@ export function Dashboard() {
                 </>
               ) : (
                 <>
-                  <Folder className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    {currentFolderId ? 'Pasta vazia' : 'Nenhum conteúdo'}
+                  <div
+                    className="h-16 w-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+                    style={{ backgroundColor: '#64ABDE1A' }}
+                  >
+                    <Folder className="h-8 w-8" style={{ color: '#64ABDE' }} />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1.5">
+                    {currentFolderId ? 'Pasta vazia' : 'Nenhum orçamento por aqui ainda'}
                   </h3>
-                  <p className="text-sm text-gray-500 mb-4">
-                    {currentFolderId 
-                      ? 'Crie subpastas, adicione orçamentos ou arraste itens para cá' 
-                      : 'Comece criando uma pasta ou orçamento'}
+                  <p className="text-sm text-gray-500 mb-5 max-w-sm mx-auto">
+                    {currentFolderId
+                      ? 'Crie subpastas, adicione orçamentos ou arraste itens para cá'
+                      : 'Comece criando uma pasta para organizar ou um novo orçamento'}
                   </p>
                   <div className="flex items-center justify-center space-x-3">
                     <Button variant="secondary" onClick={handleCreateFolder}>
@@ -1483,10 +1558,12 @@ export function Dashboard() {
 
           {/* Mensagem quando não há resultados com filtros */}
           {budgets.length > 0 && filteredBudgets.length === 0 && (
-            <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-200">
-              <Search className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum resultado encontrado</h3>
-              <p className="text-sm text-gray-500 mb-4">Tente ajustar seus filtros</p>
+            <div className="text-center py-14 bg-white rounded-xl border-2 border-dashed border-gray-200">
+              <div className="h-16 w-16 rounded-2xl mx-auto mb-4 flex items-center justify-center bg-gray-100">
+                <Search className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1.5">Nenhum resultado encontrado</h3>
+              <p className="text-sm text-gray-500 mb-5">Tente ajustar sua busca ou os filtros aplicados</p>
               <Button variant="primary" onClick={handleClearFilters}>
                 <X className="h-4 w-4" />
                 <span>Limpar Filtros</span>
