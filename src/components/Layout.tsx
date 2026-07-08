@@ -22,6 +22,8 @@ export function Layout({ children }: LayoutProps) {
       case 'concessionarias': return 'Gerenciar Concessionárias';
       case 'tipos-postes': return 'Gerenciar Tipos de Poste';
       case 'editor-grupo': return 'Editor de Grupo de Itens';
+      case 'padroes-poste': return 'Padrões de Poste';
+      case 'editor-padrao-poste': return 'Editor de Padrão de Poste';
       default: return 'ON Engenharia Elétrica';
     }
   };
@@ -36,6 +38,8 @@ export function Layout({ children }: LayoutProps) {
       case 'concessionarias': return 'Cadastre e gerencie concessionárias de energia';
       case 'tipos-postes': return 'Configure os tipos de postes disponíveis';
       case 'editor-grupo': return 'Edite os detalhes do grupo selecionado';
+      case 'padroes-poste': return 'Combine grupos de itens em um padrão completo reutilizável para postes';
+      case 'editor-padrao-poste': return 'Edite a composição do padrão de poste selecionado';
       default: return '';
     }
   };

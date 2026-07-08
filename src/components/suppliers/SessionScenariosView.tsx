@@ -7,15 +7,11 @@ import {
   Check,
   ChevronDown,
   Download,
-  Lightbulb,
   Loader2,
-  Package,
   Save,
-  Shuffle,
   Trash2,
   Table2,
   TrendingDown,
-  Trophy,
   Warehouse,
   Target,
 } from 'lucide-react';
@@ -104,75 +100,6 @@ const tabBtnClass = (active: boolean) =>
       ? 'border-[#64ABDE] text-[#64ABDE]'
       : 'border-transparent text-slate-500 hover:text-[#1D3140]'
   }`;
-
-// ---------------------------------------------------------------------------
-// Suggestion cards (deterministic)
-// ---------------------------------------------------------------------------
-function SuggestionCards({ scenarios }: { scenarios: ScenariosResult }) {
-  const { scenarioA, scenarioB } = scenarios;
-  const bestA = scenarioA[0];
-  const hasItems = scenarioB.items.filter((i) => i.net_qty > 0).length > 0;
-
-  if (!hasItems || !bestA) return null;
-
-  const pctDiff = bestA.total_normalizado > 0
-    ? ((bestA.total_normalizado - scenarioB.total_normalizado) / bestA.total_normalizado) * 100
-    : 0;
-
-  const suggestions: { title: string; description: string; highlight?: boolean }[] = [];
-
-  if (scenarioB.total_normalizado < bestA.total_normalizado) {
-    suggestions.push({
-      title: 'Menor custo total',
-      description: `Fracionar a compra entre fornecedores (Cenário B) economiza ${formatCurrency(scenarioB.saving_vs_cheapest_a)} (${formatNumber(pctDiff)}%) vs. pacote fechado.`,
-      highlight: true,
-    });
-  }
-
-  if (bestA.items_covered === bestA.total_items) {
-    suggestions.push({
-      title: 'Menor complexidade',
-      description: `Comprar tudo de ${bestA.supplier_name} por ${formatCurrency(bestA.total_normalizado)} cobre 100% dos itens com um único pedido.`,
-    });
-  } else if (bestA.items_covered > 0) {
-    suggestions.push({
-      title: 'Melhor pacote unitário',
-      description: `${bestA.supplier_name} cobre ${bestA.items_covered}/${bestA.total_items} itens por ${formatCurrency(bestA.total_normalizado)}.`,
-    });
-  }
-
-  if (pctDiff > 0 && pctDiff < 5 && bestA.items_covered === bestA.total_items) {
-    suggestions.push({
-      title: 'Equilíbrio',
-      description: `A diferença entre pacote fechado e fracionado é apenas ${formatNumber(pctDiff)}%. Comprar de um fornecedor pode ser mais prático.`,
-    });
-  }
-
-  if (suggestions.length === 0) return null;
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-      {suggestions.map((s) => (
-        <div
-          key={s.title}
-          className={`rounded-xl border p-4 ${
-            s.highlight
-              ? 'border-green-200 bg-green-50'
-              : 'border-gray-200 bg-white'
-          }`}
-        >
-          <div className="flex items-center gap-2 mb-1.5">
-            <Lightbulb className={`h-4 w-4 ${s.highlight ? 'text-green-600' : 'text-[#64ABDE]'}`} />
-            <p className={`text-xs font-semibold uppercase tracking-wide ${s.highlight ? 'text-green-700' : 'text-[#1D3140]'}`}>
-              {s.title}
-            </p>
-          </div>
-          <p className="text-sm text-gray-600">{s.description}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Stock editor
@@ -270,136 +197,6 @@ function StockEditor({
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Summary cards
-// ---------------------------------------------------------------------------
-function ScenarioSummaryCards({ scenarios, isFiltered }: { scenarios: ScenariosResult; isFiltered?: boolean }) {
-  const { scenarioA, scenarioB, budget_total_reference, budget_consolidated_count } = scenarios;
-  const bestSupplier = scenarioA[0];
-  const hasSaving = scenarioB.saving_vs_cheapest_a > 0;
-  const consolidatedTotal = budget_consolidated_count || scenarioB.items.length;
-  const itemsWithDemand = scenarioB.items.filter((i) => i.net_qty > 0 && !i.is_session_excluded).length;
-  const totalStock = scenarioB.items.reduce((s, i) => s + i.stock_qty, 0);
-
-  return (
-    <div className="space-y-3">
-      {isFiltered && (
-        <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-          <AlertTriangle className="h-4 w-4" />
-          <span>Totais abaixo refletem os filtros ativos (visualização apenas).</span>
-        </div>
-      )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Cenário A */}
-        <div className="rounded-xl border-2 border-[#64ABDE]/40 bg-gradient-to-br from-[#64ABDE]/5 to-[#64ABDE]/15 p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-[#64ABDE]/20">
-                <Package className="h-4 w-4 text-[#64ABDE]" />
-              </div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#64ABDE]">
-                Cenário A
-              </p>
-            </div>
-          </div>
-          <p className="text-xs text-gray-500 mb-1">Pacote Fechado</p>
-          {bestSupplier ? (
-            <>
-              <p className="text-3xl font-bold text-[#1D3140] tracking-tight">{formatCurrency(bestSupplier.total_normalizado)}</p>
-              <div className="mt-3 pt-3 border-t border-[#64ABDE]/20">
-                <p className="text-sm text-[#1D3140]">
-                  <span className="font-semibold">{bestSupplier.supplier_name}</span>
-                </p>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {bestSupplier.items_covered}/{consolidatedTotal} itens cobertos (de {itemsWithDemand} com
-                  compra)
-                </p>
-              </div>
-            </>
-          ) : (
-            <p className="text-sm text-gray-400 mt-2">Sem dados</p>
-          )}
-        </div>
-
-        {/* Cenário B */}
-        <div className="rounded-xl border-2 border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-slate-200">
-                <Shuffle className="h-4 w-4 text-slate-600" />
-              </div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                Cenário B
-              </p>
-            </div>
-          </div>
-          <p className="text-xs text-gray-500 mb-1">Melhor por Item</p>
-          <p className="text-3xl font-bold text-[#1D3140] tracking-tight">{formatCurrency(scenarioB.total_normalizado)}</p>
-          <div className="mt-3 pt-3 border-t border-slate-200">
-            <p className="text-sm text-slate-600">{consolidatedTotal} materiais no orçamento</p>
-            <p className="text-xs text-gray-500 mt-0.5">
-              {itemsWithDemand} com necessidade de compra
-            </p>
-          </div>
-        </div>
-
-        {/* Diferença / Economia */}
-        <div
-          className={`rounded-xl border-2 p-5 shadow-sm ${
-            hasSaving
-              ? 'border-green-200 bg-gradient-to-br from-green-50 to-green-100'
-              : 'border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className={`p-2 rounded-lg ${hasSaving ? 'bg-green-200' : 'bg-gray-200'}`}>
-                <TrendingDown className={`h-4 w-4 ${hasSaving ? 'text-green-600' : 'text-gray-500'}`} />
-              </div>
-              <p className={`text-xs font-semibold uppercase tracking-wide ${hasSaving ? 'text-green-600' : 'text-gray-500'}`}>
-                {hasSaving ? 'Economia' : 'Diferença'}
-              </p>
-            </div>
-          </div>
-          <p className="text-xs text-gray-500 mb-1">{hasSaving ? 'Potencial com Cenário B' : 'B vs. A'}</p>
-          <p className={`text-3xl font-bold tracking-tight ${hasSaving ? 'text-green-700' : 'text-gray-600'}`}>
-            {hasSaving ? '−' : '+'}{formatCurrency(Math.abs(scenarioB.saving_vs_cheapest_a))}
-          </p>
-          {budget_total_reference > 0 && (
-            <div className="mt-3 pt-3 border-t border-gray-200/50">
-              <p className="text-xs text-gray-500">
-                vs. {formatCurrency(budget_total_reference)} do melhor pacote
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Estoque */}
-        <div className="rounded-xl border-2 border-gray-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-gray-100">
-                <Warehouse className="h-4 w-4 text-gray-500" />
-              </div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Estoque
-              </p>
-            </div>
-          </div>
-          <p className="text-xs text-gray-500 mb-1">Informado pelo usuário</p>
-          <p className="text-3xl font-bold text-[#1D3140] tracking-tight">{formatNumber(totalStock)}</p>
-          <div className="mt-3 pt-3 border-t border-gray-100">
-            <p className="text-sm text-gray-600">
-              {scenarioB.items.filter((i) => i.stock_qty > 0).length} materiais
-            </p>
-            <p className="text-xs text-gray-500 mt-0.5">com estoque cadastrado</p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
@@ -577,7 +374,7 @@ function TabelonaView({
 }
 
 // ---------------------------------------------------------------------------
-// Ranking views (A & B)
+// Cenário Ideal view
 // ---------------------------------------------------------------------------
 function ScenarioIdealView({
   scenarios,
@@ -813,20 +610,6 @@ function ScenarioIdealView({
         />
       </div>
 
-      {staleCount > 0 && (
-        <div className="flex items-start gap-3 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-          <AlertTriangle className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-orange-900">
-            <p className="font-medium">
-              {staleCount} validação(ões) com oferta mais barata disponível
-            </p>
-            <p className="text-orange-700 mt-0.5">
-              A escolha manual foi mantida. Use &quot;Revalidar menores&quot; para atualizar ao menor preço atual.
-            </p>
-          </div>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
           <p className="text-xs font-semibold uppercase text-blue-700">Total Cenário Ideal</p>
@@ -980,209 +763,6 @@ function ScenarioIdealView({
   );
 }
 
-function RankingView({
-  scenarios,
-  idealSelections,
-  sessionId,
-  onIdealSelect,
-  onValidateAll,
-  onRevalidateStale,
-  onCloseIdeal,
-  isValidatingAll,
-  isRevalidatingStale,
-  isClosingIdeal,
-  staleCount,
-  onManualQuoteRequest,
-  purchaseOrders,
-  onOcSave,
-  savingOcMaterialId,
-}: {
-  scenarios: ScenariosResult;
-  idealSelections: Map<string, string>;
-  sessionId: string;
-  onIdealSelect: (materialId: string, quoteId: string) => void;
-  onValidateAll: () => void;
-  onRevalidateStale: () => void;
-  onCloseIdeal: () => void | Promise<void>;
-  isValidatingAll: boolean;
-  isRevalidatingStale: boolean;
-  isClosingIdeal: boolean;
-  staleCount: number;
-  onManualQuoteRequest?: (item: ScenarioItem) => void;
-  purchaseOrders: Map<string, string>;
-  onOcSave: (materialId: string, ocNumber: string | null) => Promise<void>;
-  savingOcMaterialId: string | null;
-}) {
-  const [rankingTab, setRankingTab] = useState<'A' | 'B' | 'Ideal'>('A');
-  const idealUnvalidated = useMemo(() => {
-    const result = computeIdealScenario(
-      scenarios.scenarioB.items,
-      idealSelections,
-      scenarios.scenarioA[0]?.total_normalizado ?? 0,
-      scenarios.scenarioB.total_normalizado
-    );
-    return result.unvalidatedCount;
-  }, [scenarios, idealSelections]);
-
-  return (
-    <div className="space-y-4">
-      <div className="flex border-b border-gray-200">
-        <button type="button" onClick={() => setRankingTab('A')} className={tabBtnClass(rankingTab === 'A')}>
-          <Package className="h-4 w-4" />
-          Cenário A — Pacote Fechado
-        </button>
-        <button type="button" onClick={() => setRankingTab('B')} className={tabBtnClass(rankingTab === 'B')}>
-          <Shuffle className="h-4 w-4" />
-          Cenário B — Melhor Preço por Item
-          {scenarios.scenarioB.saving_vs_cheapest_a > 0 && (
-            <span className="ml-1 inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded-full border border-green-200">
-              <TrendingDown className="h-3 w-3" />
-              Economia
-            </span>
-          )}
-        </button>
-        <button type="button" onClick={() => setRankingTab('Ideal')} className={tabBtnClass(rankingTab === 'Ideal')}>
-          <Target className="h-4 w-4" />
-          Cenário Ideal
-          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-            {scenarios.budget_consolidated_count || scenarios.scenarioB.items.length}
-          </span>
-          {idealUnvalidated > 0 && (
-            <span className="ml-1 inline-flex items-center px-1.5 py-0.5 bg-amber-100 text-amber-800 text-xs rounded-full border border-amber-200">
-              {idealUnvalidated} sug.
-            </span>
-          )}
-          {staleCount > 0 && (
-            <span className="ml-1 inline-flex items-center px-1.5 py-0.5 bg-orange-100 text-orange-800 text-xs rounded-full border border-orange-200">
-              {staleCount} revisar
-            </span>
-          )}
-        </button>
-      </div>
-      <div className="pt-2">
-        {rankingTab === 'A' && <ScenarioAView scenarios={scenarios} />}
-        {rankingTab === 'B' && <ScenarioBView scenarios={scenarios} />}
-        {rankingTab === 'Ideal' && (
-          <ScenarioIdealView
-            scenarios={scenarios}
-            idealSelections={idealSelections}
-            sessionId={sessionId}
-            onIdealSelect={onIdealSelect}
-            onValidateAll={onValidateAll}
-            onRevalidateStale={onRevalidateStale}
-            onCloseIdeal={onCloseIdeal}
-            isValidatingAll={isValidatingAll}
-            isRevalidatingStale={isRevalidatingStale}
-            isClosingIdeal={isClosingIdeal}
-            staleCount={staleCount}
-            onManualQuoteRequest={onManualQuoteRequest}
-            purchaseOrders={purchaseOrders}
-            onOcSave={onOcSave}
-            savingOcMaterialId={savingOcMaterialId}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
-function ScenarioAView({ scenarios }: { scenarios: ScenariosResult }) {
-  const { scenarioA } = scenarios;
-  if (scenarioA.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-32 text-sm text-gray-400">
-        <p>Nenhum dado disponível.</p>
-        <p className="text-xs mt-1">Ajuste os filtros ou concilie as cotações primeiro.</p>
-      </div>
-    );
-  }
-  const cheapest = scenarioA[0];
-
-  return (
-    <div className="space-y-4">
-      <p className="text-xs text-gray-500">
-        Comprar tudo de um único fornecedor. Totais sobre necessidade líquida.
-      </p>
-      <div className={suppliesTableBorderedScrollClass}>
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50 sticky top-0 z-10">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">Fornecedor</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32 bg-gray-50">Itens cobertos</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-40 bg-gray-50">Total</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-100">
-            {scenarioA.map((supplier, idx) => {
-              const isBest = idx === 0;
-              const diff = supplier.total_normalizado - cheapest.total_normalizado;
-              const pctDiff = cheapest.total_normalizado > 0 ? (diff / cheapest.total_normalizado) * 100 : 0;
-              const isEvenRow = idx % 2 === 0;
-              return (
-                <tr
-                  key={supplier.quote_id}
-                  className={`transition-colors ${isBest ? 'bg-green-50' : isEvenRow ? 'bg-white hover:bg-gray-50' : 'bg-gray-50/50 hover:bg-gray-100'}`}
-                >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      {isBest && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full border border-green-200">
-                          <Award className="h-3 w-3" /> Mais barato
-                        </span>
-                      )}
-                      <span className="text-sm font-medium text-[#1D3140]">{supplier.supplier_name}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-right text-sm text-gray-700">
-                    {supplier.items_covered} / {supplier.total_items}
-                    <div className="w-full bg-gray-100 rounded-full h-1 mt-1">
-                      <div
-                        className="h-1 rounded-full bg-[#64ABDE]"
-                        style={{ width: `${Math.round((supplier.items_covered / Math.max(supplier.total_items, 1)) * 100)}%` }}
-                      />
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <p className={`text-sm font-bold ${isBest ? 'text-green-700' : 'text-[#1D3140]'}`}>
-                      {formatCurrency(supplier.total_normalizado)}
-                    </p>
-                    {!isBest && diff > 0 && (
-                      <p className="text-xs text-red-500 mt-0.5">+{formatCurrency(diff)} (+{formatNumber(pctDiff)}%)</p>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function ScenarioBView({ scenarios }: { scenarios: ScenariosResult & { filteredItems?: ScenarioItem[] } }) {
-  const items = scenarios.filteredItems ?? scenarios.scenarioB.items;
-
-  return (
-    <ScenarioItemExpandableTable
-      items={items}
-      description="Fracionar a compra: cada item do fornecedor com menor preço na cotação. Apenas itens com necessidade líquida > 0."
-      supplierColumnLabel="Melhor fornecedor"
-      totalLabel="Total Cenário B:"
-      totalValue={scenarios.scenarioB.total_normalizado}
-      getRowSummary={(item) => ({
-        supplierLabel: item.best_supplier,
-        unitPrice: item.best_price_normalized,
-        lineTotal: item.best_total,
-      })}
-      highlightQuoteId={(materialId) => {
-        const item = items.find((i) => i.material_id === materialId);
-        return item ? getBestOfferQuoteId(item) : null;
-      }}
-    />
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
@@ -1196,7 +776,7 @@ export default function SessionScenariosView({
   initialPurchaseOrders,
 }: Props) {
   const [scenarios, setScenarios] = useState(initialScenarios);
-  const [activeTab, setActiveTab] = useState<'tabelona' | 'ranking'>('tabelona');
+  const [activeTab, setActiveTab] = useState<'tabelona' | 'ideal'>('ideal');
   const alertDialog = useAlertDialog();
   const [isPending, startTransition] = useTransition();
   const [isValidatingAll, startValidateAll] = useTransition();
@@ -1257,6 +837,16 @@ export default function SessionScenariosView({
     [scenarios.scenarioB.items, idealSelections]
   );
 
+  const idealUnvalidatedCount = useMemo(() => {
+    const result = computeIdealScenario(
+      scenarios.scenarioB.items,
+      idealSelections,
+      scenarios.scenarioA[0]?.total_normalizado ?? 0,
+      scenarios.scenarioB.total_normalizado
+    );
+    return result.unvalidatedCount;
+  }, [scenarios, idealSelections]);
+
   // Filter state
   const [filterState, setFilterState] = useState<ScenarioFilterState>(defaultFilterState);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
@@ -1311,8 +901,8 @@ export default function SessionScenariosView({
   // Fluxos de dados — separação explícita para evitar regressão:
   //
   // rawData (`scenarios`):  vem direto de calculateScenariosAction.
-  //   ▶ Alimenta APENAS o Ranking (Cenários A e B). Não passa pelo engine de
-  //     filtros para que a aba Ranking nunca seja afetada por toggles do
+  //   ▶ Alimenta APENAS o Cenário Ideal. Não passa pelo engine de
+  //     filtros para que essa aba nunca seja afetada por toggles do
   //     ScenarioFiltersPanel.
   //
   // filteredData (`filteredScenarios`): rawData transformado por
@@ -1619,27 +1209,25 @@ export default function SessionScenariosView({
   }, [isClosingIdeal, sessionId, alertDialog, refreshScenarios]);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6">
-      <ScenarioSummaryCards scenarios={filteredScenarios} isFiltered={filteredScenarios.isFiltered} />
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <StockEditor
+          items={scenarios.scenarioB.items}
+          stockMap={stockMap}
+          onStockChange={handleStockChange}
+          onSave={handleSaveStock}
+          isSaving={isPending}
+          hasChanges={hasStockChanges}
+        />
 
-      <SuggestionCards scenarios={scenarios} />
-
-      <StockEditor
-        items={scenarios.scenarioB.items}
-        stockMap={stockMap}
-        onStockChange={handleStockChange}
-        onSave={handleSaveStock}
-        isSaving={isPending}
-        hasChanges={hasStockChanges}
-      />
-
-      <ScenarioFiltersPanel
-        quotes={quotesWithOffers}
-        filterState={effectiveFilterState}
-        onFilterChange={setFilterState}
-        isExpanded={filtersExpanded}
-        onExpandedChange={setFiltersExpanded}
-      />
+        <ScenarioFiltersPanel
+          quotes={quotesWithOffers}
+          filterState={effectiveFilterState}
+          onFilterChange={setFilterState}
+          isExpanded={filtersExpanded}
+          onExpandedChange={setFiltersExpanded}
+        />
+      </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#64ABDE]/40 bg-white shadow-md">
         <div className="flex shrink-0 border-b border-gray-200 bg-white/80">
@@ -1649,8 +1237,21 @@ export default function SessionScenariosView({
               {scenarios.budget_consolidated_count || scenarios.scenarioB.items.length}
             </span>
           </button>
-          <button type="button" onClick={() => setActiveTab('ranking')} className={tabBtnClass(activeTab === 'ranking')}>
-            <Trophy className="h-4 w-4" /> Ranking (Cenários A e B)
+          <button type="button" onClick={() => setActiveTab('ideal')} className={tabBtnClass(activeTab === 'ideal')}>
+            <Target className="h-4 w-4" /> Cenário Ideal
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+              {scenarios.budget_consolidated_count || scenarios.scenarioB.items.length}
+            </span>
+            {idealUnvalidatedCount > 0 && (
+              <span className="ml-1 inline-flex items-center px-1.5 py-0.5 bg-amber-100 text-amber-800 text-xs rounded-full border border-amber-200">
+                {idealUnvalidatedCount} sug.
+              </span>
+            )}
+            {staleCount > 0 && (
+              <span className="ml-1 inline-flex items-center px-1.5 py-0.5 bg-orange-100 text-orange-800 text-xs rounded-full border border-orange-200">
+                {staleCount} revisar
+              </span>
+            )}
           </button>
         </div>
         <div className="flex min-h-0 flex-1 flex-col p-5">
@@ -1674,11 +1275,11 @@ export default function SessionScenariosView({
               onManualQuoteRequest={handleManualQuoteRequest}
             />
           )}
-          {/* Ranking consome rawData (`scenarios` direto da action) — nunca passa
-              pelo engine de filtros para evitar que toggles do painel afetem a
-              aba de Ranking. */}
-          {activeTab === 'ranking' && (
-            <RankingView
+          {/* Cenário Ideal consome rawData (`scenarios` direto da action) — nunca
+              passa pelo engine de filtros para evitar que toggles do painel
+              afetem essa aba. */}
+          {activeTab === 'ideal' && (
+            <ScenarioIdealView
               scenarios={scenarios}
               idealSelections={idealSelections}
               sessionId={sessionId}

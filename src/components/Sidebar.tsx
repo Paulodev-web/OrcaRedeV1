@@ -1,14 +1,15 @@
 "use client";
 import React, { useState } from 'react';
-import { 
-  Home, 
-  Calculator,  
-  Package, 
-  Users, 
-  Building, 
-  Pilcrow, 
-  Menu, 
-  X, 
+import {
+  Home,
+  Calculator,
+  Package,
+  Users,
+  Building,
+  Pilcrow,
+  Layers,
+  Menu,
+  X,
   LogOut,
   ChevronLeft,
   ChevronRight
@@ -67,6 +68,13 @@ const configurationItems: NavItem[] = [
     icon: Users,
     view: 'grupos',
     description: 'Gerenciar grupos'
+  },
+  {
+    id: 'padroes-poste',
+    label: 'Padrões de Poste',
+    icon: Layers,
+    view: 'padroes-poste',
+    description: 'Grupos de grupos de itens'
   },
   {
     id: 'tipos-postes',

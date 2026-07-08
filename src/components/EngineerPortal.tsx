@@ -57,6 +57,11 @@ function getTrackingDisplayName(tracking: WorkTracking): string {
   return tracking.budget_data?.project_name?.trim() || tracking.name;
 }
 
+/** Conta os postes marcados como "Concluído" no mapa — fonte da verdade para o contador de instalados. */
+function countCompletedPoles(posts: TrackedPost[] | undefined): number {
+  return (posts || []).filter((p) => p.status === 'Concluído').length;
+}
+
 type ViewMode = 'dashboard' | 'select-budget' | 'tracking-detail';
 
 const DEMO_TRACKING_ID = 'tracking-demo-1';
@@ -492,7 +497,7 @@ export function EngineerPortal() {
       return {
         ...t,
         tracked_posts: newPosts,
-        poles_installed: Math.max(t.poles_installed ?? 0, newPosts.length),
+        poles_installed: countCompletedPoles(newPosts),
         updated_at: new Date().toISOString(),
       };
     });
@@ -529,6 +534,7 @@ export function EngineerPortal() {
         ...t,
         tracked_posts: newPosts,
         post_connections: newConnections,
+        poles_installed: countCompletedPoles(newPosts),
         updated_at: new Date().toISOString(),
       };
     });
@@ -980,10 +986,12 @@ export function EngineerPortal() {
       const trackedPosts = tracking.tracked_posts.map((post) =>
         post.id === updatedPost.id ? updatedPost : post
       );
+      const polesInstalled = countCompletedPoles(trackedPosts);
 
       const progress = calculateWeightedProgress({
         ...tracking,
         tracked_posts: trackedPosts,
+        poles_installed: polesInstalled,
       });
 
       let newStatus = tracking.status;
@@ -997,6 +1005,7 @@ export function EngineerPortal() {
         tracked_posts: trackedPosts,
         progress_percentage: progress,
         status: newStatus,
+        poles_installed: polesInstalled,
         updated_at: new Date().toISOString(),
       };
     });
@@ -1598,7 +1607,7 @@ export function EngineerPortal() {
     if (!activeTracking) return null;
     const mtInstalled = Math.round((activeTracking.mt_extension_km ?? 0) * 1000);
     const btInstalled = Math.round((activeTracking.bt_extension_km ?? 0) * 1000);
-    const polesInstalled = activeTracking.poles_installed ?? 0;
+    const polesInstalled = countCompletedPoles(activeTracking.tracked_posts);
     const equipmentInstalled = activeTracking.equipment_installed ?? 0;
     const lightingInstalled = activeTracking.public_lighting_installed ?? 0;
 
@@ -1817,25 +1826,15 @@ export function EngineerPortal() {
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Postes</p>
                     <span className="text-xs font-semibold text-[#1D3140]">{polesProgress}%</span>
                   </div>
-                  <p className="text-xs text-slate-500 mb-2">Instalado vs meta total</p>
+                  <p className="text-xs text-slate-500 mb-2">Instalado (sincronizado com o mapa) vs meta total</p>
                   <div className="grid grid-cols-2 gap-2">
                     <input
                       type="number"
-                      min={0}
-                      step={1}
+                      readOnly
+                      disabled
                       value={polesInstalled}
-                      onChange={(e) => {
-                        if (e.target.value === '') return;
-                        const v = Math.max(0, Math.floor(Number(e.target.value)));
-                        const planned = activeTracking.planned_poles ?? 0;
-                        if (planned > 0 && v > planned) {
-                          alertDialog.showError('Valor inválido', `Instalado não pode ser maior que a meta (${planned}).`);
-                          return;
-                        }
-                        updateTracking(activeTracking.id, (t) => ({ ...t, poles_installed: v, updated_at: new Date().toISOString() }));
-                      }}
-                      title="Instalado"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#64ABDE]/40"
+                      title="Instalado — número de postes marcados como Concluído no mapa"
+                      className="w-full rounded-md border border-slate-200 bg-slate-100 px-2.5 py-1.5 text-sm text-slate-600 cursor-not-allowed"
                     />
                     <input
                       type="number"
@@ -1844,9 +1843,8 @@ export function EngineerPortal() {
                       value={activeTracking.planned_poles ?? ''}
                       onChange={(e) => {
                         const v = e.target.value ? Math.max(0, Math.floor(Number(e.target.value))) : undefined;
-                        const installed = activeTracking.poles_installed ?? 0;
-                        if (v != null && v < installed) {
-                          alertDialog.showError('Valor inválido', `A meta não pode ser menor que o instalado (${installed}).`);
+                        if (v != null && v < polesInstalled) {
+                          alertDialog.showError('Valor inválido', `A meta não pode ser menor que o instalado (${polesInstalled}).`);
                           return;
                         }
                         updateTracking(activeTracking.id, (t) => ({ ...t, planned_poles: v, updated_at: new Date().toISOString() }));

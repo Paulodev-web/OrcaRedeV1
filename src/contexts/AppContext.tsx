@@ -1,6 +1,6 @@
 ﻿"use client";
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
-import { Material, GrupoItem, Concessionaria, Orcamento, BudgetPostDetail, BudgetDetails, PostType, BudgetFolder } from '@/types';
+import { Material, GrupoItem, Concessionaria, Orcamento, BudgetPostDetail, BudgetDetails, PostType, BudgetFolder, PoleStandard } from '@/types';
 import { gruposItens as initialGrupos, concessionarias, orcamentos as initialOrcamentos } from '@/data/mockData';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from './AuthContext';
@@ -30,7 +30,12 @@ interface AppContextType {
   loadingCompanies: boolean;
   loadingGroups: boolean;
   currentGroup: GrupoItem | null;
-  
+
+  // Estados para padrões de poste (grupo de grupos de itens)
+  poleStandards: PoleStandard[];
+  loadingPoleStandards: boolean;
+  currentPoleStandard: PoleStandard | null;
+
   // Estados para sistema de pastas
   folders: BudgetFolder[];
   loadingFolders: boolean;
@@ -41,7 +46,8 @@ interface AppContextType {
   setCurrentView: (view: string) => void;
   setCurrentOrcamento: (orcamento: Orcamento | null) => void;
   setCurrentGroup: (group: GrupoItem | null) => void;
-  
+  setCurrentPoleStandard: (standard: PoleStandard | null) => void;
+
   // Funções de sincronização
   fetchAllCoreData: () => Promise<void>;
   
@@ -79,6 +85,10 @@ interface AppContextType {
   // Funções para concessionárias e grupos
   fetchUtilityCompanies: () => Promise<void>;
   fetchItemGroups: (companyId: string) => Promise<void>;
+
+  // Funções para padrões de poste
+  fetchPoleStandards: (companyId: string) => Promise<void>;
+
   // Funções para sistema de pastas
   fetchFolders: () => Promise<void>;
   navigateToFolder: (folderId: string | null) => void;
@@ -193,6 +203,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [loadingCompanies, setLoadingCompanies] = useState<boolean>(false);
   const [loadingGroups, setLoadingGroups] = useState<boolean>(false);
   const [currentGroup, setCurrentGroup] = useState<GrupoItem | null>(null);
+
+  // Estados para padrões de poste (grupo de grupos de itens)
+  const [poleStandards, setPoleStandards] = useState<PoleStandard[]>([]);
+  const [loadingPoleStandards, setLoadingPoleStandards] = useState<boolean>(false);
+  const [currentPoleStandard, setCurrentPoleStandard] = useState<PoleStandard | null>(null);
 
   // Estados para sistema de pastas
   const [folders, setFolders] = useState<BudgetFolder[]>([]);
@@ -330,7 +345,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Buscar TODOS os orçamentos usando a função helper de paginação
       const data = await fetchAllRecords(
         'budgets',
-        'id, project_name, company_id, client_name, city, status, updated_at, plan_image_url, folder_id',
+        'id, project_name, company_id, client_name, city, status, updated_at, plan_image_url, folder_id, is_template, template_source_id',
         'created_at',
         false,
         { user_id: user.id }
@@ -356,6 +371,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           status: normalizedStatus,
           postes: [], // Será implementado quando conectarmos os postes
           folderId: item.folder_id || null,
+          isTemplate: item.is_template || false,
+          templateSourceId: item.template_source_id || null,
           ...(item.client_name && { clientName: item.client_name }),
           ...(item.city && { city: item.city }),
           ...(item.plan_image_url && { imagemPlanta: item.plan_image_url }),
@@ -1614,6 +1631,62 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Funções para padrões de poste (grupo de grupos de itens)
+  const fetchPoleStandards = useCallback(async (companyId: string) => {
+    try {
+      setLoadingPoleStandards(true);
+
+      const { data: standardsData, error: standardsError } = await supabase
+        .from('pole_standards')
+        .select(`
+          id,
+          name,
+          description,
+          company_id,
+          post_type_id,
+          pole_standard_groups (
+            template_id,
+            quantity
+          ),
+          pole_standard_materials (
+            material_id,
+            quantity
+          )
+        `)
+        .eq('company_id', companyId)
+        .order('name', { ascending: true })
+        .range(0, 200);
+
+      if (standardsError) {
+        console.error('Erro ao buscar padrões de poste:', standardsError);
+        throw standardsError;
+      }
+
+      const padroesFormatados: PoleStandard[] = standardsData?.map(standard => ({
+        id: standard.id,
+        nome: standard.name || '',
+        descricao: standard.description || '',
+        concessionariaId: standard.company_id,
+        postTypeId: standard.post_type_id,
+        grupos: standard.pole_standard_groups?.map(g => ({
+          templateId: g.template_id,
+          quantidade: g.quantity,
+        })) || [],
+        materiais: standard.pole_standard_materials?.map(m => ({
+          materialId: m.material_id,
+          quantidade: m.quantity,
+        })) || []
+      })) || [];
+
+      setPoleStandards(padroesFormatados);
+    } catch (error) {
+      console.error('Erro ao buscar padrões de poste:', error);
+      setPoleStandards([]);
+    } finally {
+      setLoadingPoleStandards(false);
+    }
+  }, []);
+
   const addGrupoItem = (grupo: Omit<GrupoItem, 'id'>) => {
     const newGrupo = { ...grupo, id: Date.now().toString() };
     setGruposItens(prev => [...prev, newGrupo]);
@@ -1776,7 +1849,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       loadingCompanies,
       loadingGroups,
       currentGroup,
-      
+
+      // Estados para padrões de poste (grupo de grupos de itens)
+      poleStandards,
+      loadingPoleStandards,
+      currentPoleStandard,
+
       // Estados para sistema de pastas
       folders,
       loadingFolders,
@@ -1785,7 +1863,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setCurrentView,
       setCurrentOrcamento,
       setCurrentGroup,
-      
+      setCurrentPoleStandard,
+
       // Funções de sincronização
       fetchAllCoreData,
       
@@ -1823,7 +1902,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Funções para concessionárias e grupos
       fetchUtilityCompanies,
       fetchItemGroups,
-      
+
+      // Funções para padrões de poste
+      fetchPoleStandards,
+
       // Funções para sistema de pastas
       fetchFolders,
       navigateToFolder,

@@ -11,7 +11,9 @@ import { GerenciarMateriais } from '@/components/GerenciarMateriais';
 import { GerenciarGrupos } from '@/components/GerenciarGrupos';
 import { GerenciarConcessionarias } from '@/components/GerenciarConcessionarias';
 import { GerenciarTiposPostes } from '@/components/GerenciarTiposPostes';
+import { GerenciarPadroesPoste } from '@/components/GerenciarPadroesPoste';
 import { EditorGrupo } from '@/components/EditorGrupo';
+import { EditorPadraoPoste } from '@/components/EditorPadraoPoste';
 import { EngineerPortal } from '@/components/EngineerPortal';
 import { Login } from '@/components/Login';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -50,6 +52,10 @@ function AuthenticatedApp() {
         return <GerenciarTiposPostes />;
       case 'editor-grupo':
         return <EditorGrupo />;
+      case 'padroes-poste':
+        return <GerenciarPadroesPoste />;
+      case 'editor-padrao-poste':
+        return <EditorPadraoPoste />;
       default:
         return <Dashboard />;
     }

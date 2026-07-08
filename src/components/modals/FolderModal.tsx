@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { X, Folder, AlertCircle } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -219,20 +220,17 @@ export function FolderModal({ isOpen, onClose, onSave, initialName = '', initial
 
         {/* Footer */}
         <div className="flex items-center justify-end space-x-3 p-4 border-t border-gray-200 bg-gray-50">
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="px-4 py-2 text-sm text-gray-700 font-medium bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-          >
+          <Button variant="secondary" onClick={onClose} disabled={loading}>
             Cancelar
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
             onClick={handleSave}
-            disabled={loading || !name.trim()}
-            className="px-4 py-2 text-sm bg-gray-900 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={!name.trim()}
+            loading={loading}
           >
-            {loading ? 'Salvando...' : mode === 'create' ? 'Criar Pasta' : 'Salvar'}
-          </button>
+            {mode === 'create' ? 'Criar Pasta' : 'Salvar'}
+          </Button>
         </div>
       </div>
     </div>

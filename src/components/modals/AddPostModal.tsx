@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback, useMemo, useRef, ErrorInfo } from 'react';
-import { X, Loader2, Search, Plus, Minus, Package, Folder, ArrowUpDown, ArrowUp, ArrowDown, Copy } from 'lucide-react';
+import { X, Loader2, Search, Plus, Minus, Package, Folder, ArrowUpDown, ArrowUp, ArrowDown, Copy, Layers, Boxes } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { AlertDialog } from '@/components/ui/alert-dialog';
@@ -71,21 +71,24 @@ interface AddPostModalProps {
   onSubmitWithItems?: (postTypeId: string, postName: string, selectedGroups: string[], selectedMaterials: {materialId: string, quantity: number}[]) => Promise<void>;
 }
 
-type TabType = 'post' | 'groups' | 'materials' | 'duplicate';
+type TabType = 'post' | 'standard' | 'groups' | 'materials' | 'duplicate';
 type SortField = 'descricao' | 'codigo' | 'precoUnit';
 type SortOrder = 'asc' | 'desc';
 
 function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitWithItems }: AddPostModalProps) {
-  const { 
-    postTypes, 
-    loadingPostTypes, 
-    itemGroups, 
+  const {
+    postTypes,
+    loadingPostTypes,
+    itemGroups,
     loadingGroups,
     materiais,
     loadingMaterials,
     currentOrcamento,
     budgetDetails,
-    fetchItemGroups 
+    fetchItemGroups,
+    poleStandards,
+    loadingPoleStandards,
+    fetchPoleStandards
   } = useApp();
   
   const alertDialog = useAlertDialog();
@@ -101,6 +104,10 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
   // Estados dos grupos
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
   const [groupSearchTerm, setGroupSearchTerm] = useState('');
+
+  // Estados do padrão de poste aplicado
+  const [standardSearchTerm, setStandardSearchTerm] = useState('');
+  const [appliedStandardId, setAppliedStandardId] = useState<string>('');
   
   // Estados dos materiais avulsos
   const [selectedMaterials, setSelectedMaterials] = useState<{materialId: string, quantity: number}[]>([]);
@@ -127,14 +134,17 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
         setActiveTab('post');
         setInputStates({});
         setSelectedSourcePostId('');
+        setStandardSearchTerm('');
+        setAppliedStandardId('');
       }, 0);
-      
-      // Carregar grupos da concessionária atual
+
+      // Carregar grupos e padrões de poste da concessionária atual
       if (currentOrcamento?.company_id) {
         fetchItemGroups(currentOrcamento.company_id);
+        fetchPoleStandards(currentOrcamento.company_id);
       }
     }
-  }, [isOpen, currentOrcamento, fetchItemGroups]);
+  }, [isOpen, currentOrcamento, fetchItemGroups, fetchPoleStandards]);
   
   // Função para copiar configurações de outro poste
   const handleDuplicateFromPost = useCallback((sourcePostId: string) => {
@@ -171,6 +181,37 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
     );
   }, [budgetDetails, alertDialog]);
 
+  // Função para aplicar um padrão de poste (grupo de grupos de itens)
+  const handleApplyPoleStandard = useCallback((standardId: string) => {
+    const standard = poleStandards.find(s => s.id === standardId);
+    if (!standard) return;
+
+    if (standard.postTypeId) {
+      setSelectedPostType(standard.postTypeId);
+    }
+
+    // Expandir cada grupo pelo multiplicador de quantidade definido no padrão
+    const expandedGroupIds: string[] = [];
+    standard.grupos.forEach(g => {
+      for (let i = 0; i < g.quantidade; i++) {
+        expandedGroupIds.push(g.templateId);
+      }
+    });
+    setSelectedGroups(expandedGroupIds);
+
+    setSelectedMaterials(standard.materiais.map(m => ({
+      materialId: m.materialId,
+      quantity: m.quantidade
+    })));
+
+    setAppliedStandardId(standardId);
+
+    alertDialog.showSuccess(
+      'Padrão Aplicado',
+      `O padrão "${standard.nome}" foi aplicado. Revise os itens nas abas "Grupos de Itens" e "Materiais Avulsos" antes de adicionar o poste.`
+    );
+  }, [poleStandards, alertDialog]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -189,13 +230,23 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
 
 
     setIsSubmitting(true);
-    
+
     try {
       // Aguardar um tick para garantir que o estado está sincronizado
       await new Promise(resolve => setTimeout(resolve, 0));
-      
+
       if (onSubmitWithItems && (selectedGroups.length > 0 || selectedMaterials.length > 0)) {
-        await onSubmitWithItems(selectedPostType, postName.trim(), selectedGroups, selectedMaterials);
+        // Quando há grupos/materiais pré-selecionados, o material do próprio tipo de
+        // poste não é adicionado automaticamente (skipPostTypeMaterial). Por isso
+        // garantimos aqui que ele sempre entre na lista de materiais avulsos,
+        // do mesmo jeito que "Duplicar de Existente" já faz.
+        const selectedPostTypeData = postTypes.find(pt => pt.id === selectedPostType);
+        const postTypeMaterialId = selectedPostTypeData?.material_id;
+        const materialsToSubmit = postTypeMaterialId && !selectedMaterials.some(m => m.materialId === postTypeMaterialId)
+          ? [...selectedMaterials, { materialId: postTypeMaterialId, quantity: 1 }]
+          : selectedMaterials;
+
+        await onSubmitWithItems(selectedPostType, postName.trim(), selectedGroups, materialsToSubmit);
       } else {
         await onSubmit(selectedPostType, postName.trim());
       }
@@ -389,6 +440,14 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
     );
   }, [itemGroups, groupSearchTerm]);
 
+  const filteredStandards = useMemo(() => {
+    const term = standardSearchTerm.toLowerCase();
+    return poleStandards.filter(standard =>
+      standard.nome.toLowerCase().includes(term) ||
+      (standard.descricao?.toLowerCase().includes(term) ?? false)
+    );
+  }, [poleStandards, standardSearchTerm]);
+
   const filteredMaterials = useMemo(() => {
     return materiais
       .filter(material => {
@@ -576,6 +635,22 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
               <span>Dados do Poste</span>
             </button>
             <button
+              onClick={() => setActiveTab('standard')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeTab === 'standard'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Layers className="h-4 w-4" />
+              <span>Padrão de Poste</span>
+              {poleStandards.length > 0 && (
+                <span className="bg-purple-100 text-purple-600 px-2 py-1 rounded-full text-xs">
+                  {poleStandards.length}
+                </span>
+              )}
+            </button>
+            <button
               onClick={() => setActiveTab('duplicate')}
               className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 activeTab === 'duplicate'
@@ -699,6 +774,119 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
                           <p>✓ {selectedMaterials.length} material(is) avulso(s)</p>
                         )}
                       </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Aba Padrão de Poste */}
+              {activeTab === 'standard' && (
+                <div className="space-y-4">
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-purple-900 mb-2 flex items-center">
+                      <Layers className="h-5 w-5 mr-2" />
+                      Aplicar Padrão de Poste
+                    </h4>
+                    <p className="text-sm text-purple-700">
+                      Um padrão de poste combina tipo de poste, grupos de itens e materiais avulsos
+                      em uma composição pronta. Escolha um padrão para preencher o poste de uma só vez.
+                    </p>
+                  </div>
+
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <input
+                      type="text"
+                      placeholder="Buscar padrões..."
+                      value={standardSearchTerm}
+                      onChange={(e) => setStandardSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  {loadingPoleStandards ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                      <span className="ml-2 text-gray-600">Carregando padrões de poste...</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {filteredStandards.map((standard) => {
+                        const postType = postTypes.find(pt => pt.id === standard.postTypeId);
+                        const totalInstancias = standard.grupos.reduce((sum, g) => sum + g.quantidade, 0);
+                        const isApplied = appliedStandardId === standard.id;
+
+                        return (
+                          <div
+                            key={standard.id}
+                            className={`p-3 border rounded-lg transition-colors ${
+                              isApplied ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <h4 className="font-medium text-gray-900">{standard.nome}</h4>
+                                {standard.descricao && (
+                                  <p className="text-sm text-gray-600 mt-1">{standard.descricao}</p>
+                                )}
+                                <div className="flex flex-wrap items-center gap-2 mt-2">
+                                  {postType && (
+                                    <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full text-xs">
+                                      <Boxes className="h-3 w-3" />
+                                      {postType.name}
+                                    </span>
+                                  )}
+                                  <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs">
+                                    <Layers className="h-3 w-3" />
+                                    {standard.grupos.length} grupo{standard.grupos.length !== 1 ? 's' : ''}
+                                    {totalInstancias !== standard.grupos.length ? ` (${totalInstancias}x)` : ''}
+                                  </span>
+                                  {standard.materiais.length > 0 && (
+                                    <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full text-xs">
+                                      <Package className="h-3 w-3" />
+                                      {standard.materiais.length} avulso{standard.materiais.length !== 1 ? 's' : ''}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleApplyPoleStandard(standard.id)}
+                                className={`flex-shrink-0 flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                                  isApplied
+                                    ? 'bg-purple-600 text-white'
+                                    : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                                }`}
+                              >
+                                {isApplied ? (
+                                  <>
+                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                    <span>Aplicado</span>
+                                  </>
+                                ) : (
+                                  <span>Aplicar</span>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {filteredStandards.length === 0 && (
+                        <div className="text-center py-8 text-gray-500">
+                          {standardSearchTerm ? (
+                            'Nenhum padrão encontrado'
+                          ) : (
+                            <div>
+                              <p>Nenhum padrão de poste cadastrado para esta concessionária.</p>
+                              <p className="text-sm text-gray-400 mt-1">
+                                Crie padrões em Configurações → Padrões de Poste.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

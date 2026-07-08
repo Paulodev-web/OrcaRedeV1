@@ -24,6 +24,25 @@ export interface GrupoItem {
   }[];
 }
 
+/** "Grupo de grupos de itens": composição reutilizável que representa um padrão
+ * completo de poste (tipo de poste + N grupos de itens com multiplicador + materiais
+ * avulsos), aplicável de uma só vez ao adicionar um poste novo. */
+export interface PoleStandard {
+  id: string;
+  nome: string;
+  descricao: string;
+  concessionariaId: string;
+  postTypeId?: string | null;
+  grupos: {
+    templateId: string;
+    quantidade: number;
+  }[];
+  materiais: {
+    materialId: string;
+    quantidade: number;
+  }[];
+}
+
 export interface Concessionaria {
   id: string;
   nome: string;
@@ -60,6 +79,8 @@ export interface Orcamento {
   city?: string;
   folderId?: string | null;
   render_version?: number;
+  isTemplate?: boolean;
+  templateSourceId?: string | null;
 }
 
 export interface BudgetFolder {
@@ -87,6 +108,7 @@ export interface PostType {
   height_m?: number;
   price: number;
   user_id?: string;
+  material_id?: string;
 }
 
 export interface BudgetPostDetail {

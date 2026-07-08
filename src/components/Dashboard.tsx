@@ -1,10 +1,13 @@
 "use client";
 import { useState, useEffect, useMemo, useTransition } from 'react';
-import { Plus, Calendar, Building2, Loader2, Edit, Trash2, Copy, CheckCircle, Clock, BarChart3, TrendingUp, Search, Filter, X, Folder, FolderOpen, MoreVertical, FolderEdit, FileText, ArrowLeft, Home, ChevronRight } from 'lucide-react';
+import { Plus, Calendar, Building2, Loader2, Edit, Trash2, Copy, CheckCircle, Clock, BarChart3, TrendingUp, Search, Filter, X, Folder, FolderOpen, MoreVertical, FolderEdit, FileText, ArrowLeft, Home, ChevronRight, Move, Star } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { CriarOrcamentoModal } from '@/components/modals/CriarOrcamentoModal';
 import { FolderModal } from '@/components/modals/FolderModal';
 import { AlertDialog } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -14,7 +17,7 @@ import {
 } from '@/components/ui/select';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { Orcamento, BudgetFolder } from '@/types';
-import { deleteBudgetAction, duplicateBudgetAction, finalizeBudgetAction } from '@/actions/budgets';
+import { deleteBudgetAction, duplicateBudgetAction, finalizeBudgetAction, updateBudgetAction } from '@/actions/budgets';
 import { addFolderAction, updateFolderAction, deleteFolderAction, moveBudgetToFolderAction, moveFolderToFolderAction } from '@/actions/folders';
 
 const STATUS_FILTER_ALL = 'all';
@@ -55,6 +58,8 @@ export function Dashboard() {
   const [isDraggingOver, setIsDraggingOver] = useState<boolean>(false);
   const [openFolderMenu, setOpenFolderMenu] = useState<string | null>(null);
   const [openBudgetMenu, setOpenBudgetMenu] = useState<string | null>(null);
+  const [moveMenuFor, setMoveMenuFor] = useState<{ type: 'budget' | 'folder'; id: string } | null>(null);
+  const [templatesOnly, setTemplatesOnly] = useState(false);
   const alertDialog = useAlertDialog();
 
   // Buscar orçamentos e pastas na montagem do componente
@@ -154,6 +159,69 @@ export function Dashboard() {
     setEditingBudget(null);
   };
 
+  const handleToggleTemplate = (budget: Orcamento) => {
+    setOpenBudgetMenu(null);
+    startTransition(async () => {
+      const result = await updateBudgetAction(budget.id, { is_template: !budget.isTemplate });
+      if (result.success) {
+        fetchBudgets();
+        alertDialog.showSuccess(
+          budget.isTemplate ? 'Modelo Removido' : 'Marcado como Modelo',
+          budget.isTemplate
+            ? `"${budget.nome}" não é mais um modelo.`
+            : `"${budget.nome}" agora pode ser usado como modelo ao criar novos orçamentos.`
+        );
+      } else {
+        alertDialog.showError('Erro', result.error || 'Não foi possível atualizar o orçamento.');
+      }
+    });
+  };
+
+  // Lista de destinos válidos para mover um item pelo menu (alternativa ao drag-and-drop)
+  const getValidFolderTargets = (itemType: 'budget' | 'folder', itemId: string, currentParentId: string | null) => {
+    const targets: { id: string | null; name: string; color?: string }[] = [{ id: null, name: 'Raiz' }];
+    folders.forEach((folder) => {
+      if (itemType === 'folder' && (folder.id === itemId || isFolderDescendant(folder.id, itemId))) {
+        return;
+      }
+      targets.push({ id: folder.id, name: folder.name, color: folder.color });
+    });
+    return targets.filter((target) => target.id !== currentParentId);
+  };
+
+  const handleMoveViaMenu = (itemType: 'budget' | 'folder', itemId: string, itemName: string, targetFolderId: string | null) => {
+    setOpenBudgetMenu(null);
+    setOpenFolderMenu(null);
+    setMoveMenuFor(null);
+    startTransition(async () => {
+      const result = itemType === 'budget'
+        ? await moveBudgetToFolderAction(itemId, targetFolderId)
+        : await moveFolderToFolderAction(itemId, targetFolderId);
+
+      if (result.success) {
+        if (itemType === 'budget') fetchBudgets();
+        else fetchFolders();
+        const destino = targetFolderId ? folders.find((f) => f.id === targetFolderId)?.name || 'pasta' : 'raiz';
+        alertDialog.showSuccess('Item Movido', `"${itemName}" foi movido para ${destino}.`);
+      } else {
+        alertDialog.showError('Erro ao Mover', result.error || 'Não foi possível mover o item.');
+      }
+    });
+  };
+
+  // Preview leve de drag (substitui o snapshot padrão feio do navegador)
+  const setCustomDragPreview = (e: React.DragEvent, label: string) => {
+    const preview = document.createElement('div');
+    preview.textContent = label;
+    preview.style.cssText =
+      'position:absolute; top:-1000px; left:-1000px; padding:6px 12px; background:#111827; color:#fff; border-radius:8px; font-size:12px; font-weight:600; box-shadow:0 4px 12px rgba(0,0,0,0.25); white-space:nowrap; pointer-events:none;';
+    document.body.appendChild(preview);
+    e.dataTransfer.setDragImage(preview, 12, 16);
+    requestAnimationFrame(() => {
+      if (preview.parentNode) preview.parentNode.removeChild(preview);
+    });
+  };
+
   // Funções para pastas
   const handleCreateFolder = () => {
     setFolderModalMode('create');
@@ -229,6 +297,7 @@ export function Dashboard() {
     setSearchTerm('');
     setStatusFilter('all');
     setConcessionariaFilter('all');
+    setTemplatesOnly(false);
   };
 
   // Filtrar orçamentos baseado nos critérios de busca
@@ -241,13 +310,14 @@ export function Dashboard() {
         budget.city?.toLowerCase().includes(searchLower);
 
       const matchesStatus = statusFilter === 'all' || budget.status === statusFilter;
-      const matchesConcessionaria = concessionariaFilter === 'all' || 
+      const matchesConcessionaria = concessionariaFilter === 'all' ||
         budget.concessionariaId === concessionariaFilter ||
         budget.company_id === concessionariaFilter;
+      const matchesTemplate = !templatesOnly || budget.isTemplate === true;
 
-      return matchesSearch && matchesStatus && matchesConcessionaria;
+      return matchesSearch && matchesStatus && matchesConcessionaria && matchesTemplate;
     });
-  }, [budgets, searchTerm, statusFilter, concessionariaFilter]);
+  }, [budgets, searchTerm, statusFilter, concessionariaFilter, templatesOnly]);
 
   // Filtrar pastas e orçamentos do nível atual
   const currentLevelFolders = useMemo(() => {
@@ -300,12 +370,13 @@ export function Dashboard() {
   };
 
   const stats = getBudgetStats();
-  const hasActiveFilters = searchTerm !== '' || statusFilter !== 'all' || concessionariaFilter !== 'all';
+  const hasActiveFilters = searchTerm !== '' || statusFilter !== 'all' || concessionariaFilter !== 'all' || templatesOnly;
 
   // Drag and Drop handlers - SIMPLIFICADO
   const handleBudgetDragStart = (e: React.DragEvent, budget: Orcamento) => {
     e.stopPropagation();
     setDraggedBudget(budget);
+    setCustomDragPreview(e, budget.nome);
   };
 
   const handleBudgetDragEnd = () => {
@@ -317,6 +388,8 @@ export function Dashboard() {
   const handleFolderDragStart = (e: React.DragEvent, folderId: string) => {
     e.stopPropagation();
     setDraggedFolder(folderId);
+    const folder = folders.find((f) => f.id === folderId);
+    setCustomDragPreview(e, folder?.name || 'Pasta');
   };
 
   const handleFolderDragEnd = () => {
@@ -464,9 +537,13 @@ export function Dashboard() {
   const BudgetCard = ({ budget }: { budget: Orcamento }) => {
     const isDragging = draggedBudget?.id === budget.id;
     const [isClick, setIsClick] = useState(true);
-    
+    const isMoveMenuOpen = moveMenuFor?.type === 'budget' && moveMenuFor.id === budget.id;
+    const moveTargets = isMoveMenuOpen ? getValidFolderTargets('budget', budget.id, budget.folderId ?? null) : [];
+
     return (
-      <div
+      <Card
+        state={isDragging ? 'dragging' : 'default'}
+        className="group cursor-grab hover:cursor-grab active:cursor-grabbing"
         draggable={true}
         onMouseDown={(e) => {
           // Prevenir seleção de texto
@@ -487,37 +564,40 @@ export function Dashboard() {
           }
           setIsClick(true);
         }}
-        className={`group relative bg-white rounded-lg border transition-all duration-200 ${
-          isDragging
-            ? 'scale-95 border-gray-400 shadow-xl ring-2 ring-gray-300 cursor-grabbing' 
-            : 'border-gray-200 hover:border-gray-300 hover:shadow-md cursor-grab hover:cursor-grab active:cursor-grabbing'
-        }`}
         style={{ userSelect: 'none' }}
       >
       <div className="p-4">
         {/* Cabeçalho com Status */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0 pr-3">
-            <h3 className="text-base font-semibold text-gray-900 mb-1 truncate">
-              {budget.nome}
-            </h3>
+            <div className="flex items-center gap-1.5 mb-1">
+              <h3 className="text-base font-semibold text-gray-900 truncate">
+                {budget.nome}
+              </h3>
+              {budget.isTemplate && (
+                <Star className="h-3.5 w-3.5 text-purple-500 shrink-0" fill="currentColor" />
+              )}
+            </div>
             {budget.clientName && (
               <p className="text-sm text-gray-600 truncate">
                 {budget.clientName}
               </p>
             )}
           </div>
-          {budget.status === 'Finalizado' ? (
-            <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-md bg-green-50 text-green-700 border border-green-200">
-              <CheckCircle className="h-3 w-3 mr-1" />
-              Finalizado
-            </span>
-          ) : (
-            <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-md bg-amber-50 text-amber-700 border border-amber-200">
-              <Clock className="h-3 w-3 mr-1" />
-              Em Andamento
-            </span>
-          )}
+          <div className="flex flex-col items-end gap-1.5">
+            {budget.status === 'Finalizado' ? (
+              <Badge tone="green">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Finalizado
+              </Badge>
+            ) : (
+              <Badge tone="amber">
+                <Clock className="h-3 w-3 mr-1" />
+                Em Andamento
+              </Badge>
+            )}
+            {budget.isTemplate && <Badge tone="purple">Modelo</Badge>}
+          </div>
         </div>
 
         {/* Informações */}
@@ -534,172 +614,153 @@ export function Dashboard() {
 
         {/* Ações */}
         <div className="flex items-center justify-end space-x-1 relative">
-          {budget.status !== 'Finalizado' ? (
+          {budget.status !== 'Finalizado' && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEditBudget(budget);
+              }}
+              title="Editar"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDuplicateBudget(budget);
+            }}
+            disabled={isDuplicating === budget.id}
+            title="Duplicar"
+          >
+            <Copy className="h-4 w-4" />
+          </Button>
+
+          {/* Botão de menu com mais opções */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              setMoveMenuFor(null);
+              setOpenBudgetMenu(openBudgetMenu === budget.id ? null : budget.id);
+            }}
+            title="Mais opções"
+          >
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+
+          {/* Dropdown Menu */}
+          {openBudgetMenu === budget.id && (
             <>
-              <button
+              <div
+                className="fixed inset-0 z-20"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleEditBudget(budget);
+                  setOpenBudgetMenu(null);
+                  setMoveMenuFor(null);
                 }}
-                className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
-                title="Editar"
-              >
-                <Edit className="h-4 w-4" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDuplicateBudget(budget);
-                }}
-                disabled={isDuplicating === budget.id}
-                className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
-                title="Duplicar"
-              >
-                <Copy className="h-4 w-4" />
-              </button>
-              
-              {/* Botão de menu com mais opções */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpenBudgetMenu(openBudgetMenu === budget.id ? null : budget.id);
-                }}
-                className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
-                title="Mais opções"
-              >
-                <MoreVertical className="h-4 w-4" />
-              </button>
-              
-              {/* Dropdown Menu */}
-              {openBudgetMenu === budget.id && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-20" 
+              ></div>
+
+              <div className="absolute right-0 top-10 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-30 overflow-hidden">
+                {budget.status !== 'Finalizado' && (
+                  <button
                     onClick={(e) => {
                       e.stopPropagation();
+                      handleFinalize(budget);
                       setOpenBudgetMenu(null);
                     }}
-                  ></div>
-                  
-                  <div className="absolute right-0 top-10 w-52 bg-white rounded-lg shadow-lg border border-gray-200 z-30 overflow-hidden">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleFinalize(budget);
-                        setOpenBudgetMenu(null);
-                      }}
-                      disabled={isFinalizing === budget.id}
-                      className="w-full flex items-center space-x-2 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                    >
-                      <CheckCircle className="h-4 w-4" />
-                      <span>{isFinalizing === budget.id ? 'Finalizando...' : 'Finalizar Orçamento'}</span>
-                    </button>
-                    
-                    {budget.folderId && (
-                      <>
-                        <div className="border-t border-gray-100"></div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemoveFromFolder(budget.id, 'budget', budget.nome);
-                          }}
-                          className="w-full flex items-center space-x-2 px-4 py-2.5 text-left text-sm text-blue-600 hover:bg-blue-50"
-                        >
-                          <FolderOpen className="h-4 w-4" />
-                          <span>Mover para Raiz</span>
-                        </button>
-                      </>
-                    )}
-                    
+                    disabled={isFinalizing === budget.id}
+                    className="w-full flex items-center space-x-2 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    <span>{isFinalizing === budget.id ? 'Finalizando...' : 'Finalizar Orçamento'}</span>
+                  </button>
+                )}
+
+                <div className="border-t border-gray-100"></div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleTemplate(budget);
+                  }}
+                  className="w-full flex items-center space-x-2 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  <Star className="h-4 w-4" />
+                  <span>{budget.isTemplate ? 'Desmarcar Modelo' : 'Marcar como Modelo'}</span>
+                </button>
+
+                <div className="border-t border-gray-100"></div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMoveMenuFor(isMoveMenuOpen ? null : { type: 'budget', id: budget.id });
+                  }}
+                  className="w-full flex items-center space-x-2 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  <Move className="h-4 w-4" />
+                  <span>Mover para pasta...</span>
+                </button>
+                {isMoveMenuOpen && (
+                  <div className="max-h-40 overflow-y-auto border-t border-gray-100 bg-gray-50">
+                    {moveTargets.map((target) => (
+                      <button
+                        key={String(target.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMoveViaMenu('budget', budget.id, budget.nome, target.id);
+                        }}
+                        className="w-full flex items-center space-x-2 px-4 py-2 text-left text-sm text-gray-600 hover:bg-gray-100"
+                      >
+                        {target.id === null ? (
+                          <Home className="h-3.5 w-3.5" />
+                        ) : (
+                          <Folder className="h-3.5 w-3.5" style={{ color: target.color || '#6B7280' }} />
+                        )}
+                        <span className="truncate">{target.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {budget.folderId && (
+                  <>
                     <div className="border-t border-gray-100"></div>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDeleteBudget(budget);
-                        setOpenBudgetMenu(null);
+                        handleRemoveFromFolder(budget.id, 'budget', budget.nome);
                       }}
-                      className="w-full flex items-center space-x-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
+                      className="w-full flex items-center space-x-2 px-4 py-2.5 text-left text-sm text-blue-600 hover:bg-blue-50"
                     >
-                      <Trash2 className="h-4 w-4" />
-                      <span>Excluir</span>
+                      <FolderOpen className="h-4 w-4" />
+                      <span>Mover para Raiz</span>
                     </button>
-                  </div>
-                </>
-              )}
-            </>
-          ) : (
-            <>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDuplicateBudget(budget);
-                }}
-                disabled={isDuplicating === budget.id}
-                className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
-                title="Duplicar"
-              >
-                <Copy className="h-4 w-4" />
-              </button>
-              
-              {/* Botão de menu para orçamentos finalizados */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpenBudgetMenu(openBudgetMenu === budget.id ? null : budget.id);
-                }}
-                className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
-                title="Mais opções"
-              >
-                <MoreVertical className="h-4 w-4" />
-              </button>
-              
-              {/* Dropdown Menu */}
-              {openBudgetMenu === budget.id && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-20" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setOpenBudgetMenu(null);
-                    }}
-                  ></div>
-                  
-                  <div className="absolute right-0 top-10 w-52 bg-white rounded-lg shadow-lg border border-gray-200 z-30 overflow-hidden">
-                    {budget.folderId && (
-                      <>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemoveFromFolder(budget.id, 'budget', budget.nome);
-                          }}
-                          className="w-full flex items-center space-x-2 px-4 py-2.5 text-left text-sm text-blue-600 hover:bg-blue-50"
-                        >
-                          <FolderOpen className="h-4 w-4" />
-                          <span>Mover para Raiz</span>
-                        </button>
-                        <div className="border-t border-gray-100"></div>
-                      </>
-                    )}
-                    
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteBudget(budget);
-                        setOpenBudgetMenu(null);
-                      }}
-                      className="w-full flex items-center space-x-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span>Excluir</span>
-                    </button>
-                  </div>
-                </>
-              )}
+                  </>
+                )}
+
+                <div className="border-t border-gray-100"></div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteBudget(budget);
+                    setOpenBudgetMenu(null);
+                  }}
+                  className="w-full flex items-center space-x-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span>Excluir</span>
+                </button>
+              </div>
             </>
           )}
         </div>
       </div>
-      
+
       {/* Indicador visual de drag */}
       {isDragging && (
         <div className="absolute inset-0 bg-gray-900 bg-opacity-10 rounded-lg pointer-events-none flex items-center justify-center">
@@ -708,7 +769,7 @@ export function Dashboard() {
           </div>
         </div>
       )}
-    </div>
+    </Card>
     );
   };
 
@@ -721,41 +782,44 @@ export function Dashboard() {
     const isDropTarget = dropTargetFolder === folderId && isDraggingOver;
     const isDragging = draggedFolder === folderId;
     const isValidTarget = isValidDropTarget(folderId);
-    const [isDblClick, setIsDblClick] = useState(true);
+    const [isClick, setIsClick] = useState(true);
+    const isMoveMenuOpen = moveMenuFor?.type === 'folder' && moveMenuFor.id === folderId;
+    const moveTargets = isMoveMenuOpen ? getValidFolderTargets('folder', folderId, folder?.parentId ?? null) : [];
+
+    const cardState = isDragging
+      ? 'dragging'
+      : isDropTarget && isValidTarget
+      ? 'drop-valid'
+      : isDropTarget && !isValidTarget
+      ? 'drop-invalid'
+      : 'default';
 
     return (
-      <div
+      <Card
+        state={cardState}
+        className={cardState === 'drop-invalid' ? 'cursor-not-allowed' : 'cursor-grab hover:cursor-grab'}
         draggable={true}
         onMouseDown={(e) => {
           // Prevenir seleção de texto
           if (e.button === 0) { // Botão esquerdo
-            setIsDblClick(true);
+            setIsClick(true);
           }
         }}
         onDragStart={(e) => {
-          setIsDblClick(false);
+          setIsClick(false);
           handleFolderDragStart(e, folderId);
         }}
         onDragEnd={handleFolderDragEnd}
         onDragOver={(e) => handleDragOver(e, folderId)}
         onDragLeave={handleDragLeave}
         onDrop={(e) => handleDrop(e, folderId)}
-        onDoubleClick={() => {
-          // Só abre se for double click (não foi drag)
-          if (isDblClick && !isDragging) {
+        onClick={() => {
+          // Só abre se for click (não foi drag)
+          if (isClick && !isDragging) {
             handleOpenFolder(folderId);
           }
-          setIsDblClick(true);
+          setIsClick(true);
         }}
-        className={`relative bg-white rounded-lg border transition-all duration-200 ${
-          isDragging
-            ? 'scale-95 border-gray-400 shadow-xl ring-2 ring-gray-300 cursor-grabbing'
-            : isDropTarget && isValidTarget
-            ? 'border-2 border-blue-500 bg-blue-50 shadow-lg cursor-grab hover:cursor-grab transform scale-105' 
-            : isDropTarget && !isValidTarget
-            ? 'border-2 border-red-500 bg-red-50 cursor-not-allowed'
-            : 'border border-gray-200 hover:border-gray-300 hover:shadow-md cursor-grab hover:cursor-grab'
-        }`}
         style={{ userSelect: 'none' }}
       >
         {/* Cabeçalho da Pasta */}
@@ -782,25 +846,27 @@ export function Dashboard() {
             <button
               onClick={(e) => {
                 e.stopPropagation();
+                setMoveMenuFor(null);
                 setOpenFolderMenu(openFolderMenu === folderId ? null : folderId);
               }}
               className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
             >
               <MoreVertical className="h-4 w-4" />
             </button>
-            
+
             {/* Dropdown Menu */}
             {openFolderMenu === folderId && (
               <>
-                <div 
-                  className="fixed inset-0 z-20" 
+                <div
+                  className="fixed inset-0 z-20"
                   onClick={(e) => {
                     e.stopPropagation();
                     setOpenFolderMenu(null);
+                    setMoveMenuFor(null);
                   }}
                 ></div>
-                
-                <div className="absolute right-0 top-10 w-52 bg-white rounded-lg shadow-lg border border-gray-200 z-30 overflow-hidden">
+
+                <div className="absolute right-0 top-10 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-30 overflow-hidden">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -823,7 +889,40 @@ export function Dashboard() {
                     <FolderEdit className="h-4 w-4" />
                     <span>Renomear</span>
                   </button>
-                  
+
+                  <div className="border-t border-gray-100"></div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMoveMenuFor(isMoveMenuOpen ? null : { type: 'folder', id: folderId });
+                    }}
+                    className="w-full flex items-center space-x-2 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    <Move className="h-4 w-4" />
+                    <span>Mover para pasta...</span>
+                  </button>
+                  {isMoveMenuOpen && (
+                    <div className="max-h-40 overflow-y-auto border-t border-gray-100 bg-gray-50">
+                      {moveTargets.map((target) => (
+                        <button
+                          key={String(target.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMoveViaMenu('folder', folderId, folderName, target.id);
+                          }}
+                          className="w-full flex items-center space-x-2 px-4 py-2 text-left text-sm text-gray-600 hover:bg-gray-100"
+                        >
+                          {target.id === null ? (
+                            <Home className="h-3.5 w-3.5" />
+                          ) : (
+                            <Folder className="h-3.5 w-3.5" style={{ color: target.color || '#6B7280' }} />
+                          )}
+                          <span className="truncate">{target.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   {folder?.parentId && (
                     <>
                       <div className="border-t border-gray-100"></div>
@@ -839,7 +938,7 @@ export function Dashboard() {
                       </button>
                     </>
                   )}
-                  
+
                   <div className="border-t border-gray-100"></div>
                   <button
                     onClick={(e) => {
@@ -894,7 +993,7 @@ export function Dashboard() {
             </div>
           </div>
         )}
-      </div>
+      </Card>
     );
   };
 
@@ -907,26 +1006,20 @@ export function Dashboard() {
           <p className="text-sm text-gray-500 mt-1">Gerencie seus projetos</p>
         </div>
         <div className="flex items-center space-x-3">
-          <button
-            onClick={handleCreateFolder}
-            className="flex items-center space-x-2 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
-          >
+          <Button variant="secondary" onClick={handleCreateFolder}>
             <Folder className="h-4 w-4" />
             <span>Nova Pasta</span>
-          </button>
-          <button
-            onClick={() => setShowBudgetModal(true)}
-            className="flex items-center space-x-2 bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors text-sm font-medium"
-          >
+          </Button>
+          <Button variant="primary" onClick={() => setShowBudgetModal(true)}>
             <Plus className="h-4 w-4" />
             <span>Novo Orçamento</span>
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Estatísticas - Design Neutro */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
+        <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-gray-500 mb-1">Total</p>
@@ -936,9 +1029,9 @@ export function Dashboard() {
               <BarChart3 className="h-5 w-5 text-gray-600" />
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
+        <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-gray-500 mb-1">Em Andamento</p>
@@ -948,9 +1041,9 @@ export function Dashboard() {
               <Clock className="h-5 w-5 text-amber-600" />
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
+        <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-gray-500 mb-1">Finalizados</p>
@@ -960,9 +1053,9 @@ export function Dashboard() {
               <CheckCircle className="h-5 w-5 text-green-600" />
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
+        <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-gray-500 mb-1">Taxa de Conclusão</p>
@@ -972,7 +1065,7 @@ export function Dashboard() {
               <TrendingUp className="h-5 w-5 text-gray-600" />
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Barra de Busca e Filtros */}
@@ -1013,7 +1106,7 @@ export function Dashboard() {
             <span>Filtros</span>
             {hasActiveFilters && (
               <span className="bg-white text-gray-900 text-xs font-bold px-2 py-0.5 rounded-full">
-                {(statusFilter !== 'all' ? 1 : 0) + (concessionariaFilter !== 'all' ? 1 : 0)}
+                {(statusFilter !== 'all' ? 1 : 0) + (concessionariaFilter !== 'all' ? 1 : 0) + (templatesOnly ? 1 : 0)}
               </span>
             )}
           </button>
@@ -1022,7 +1115,7 @@ export function Dashboard() {
         {/* Painel de Filtros Expandido */}
         {showFilters && (
           <div className="pt-4 mt-4 border-t border-gray-200">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               {/* Status */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">
@@ -1063,15 +1156,35 @@ export function Dashboard() {
                 </Select>
               </div>
 
+              {/* Apenas Modelos */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                  Modelos
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setTemplatesOnly((prev) => !prev)}
+                  className={`w-full flex items-center justify-center space-x-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                    templatesOnly
+                      ? 'bg-purple-50 border-purple-300 text-purple-700'
+                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <Star className="h-4 w-4" fill={templatesOnly ? 'currentColor' : 'none'} />
+                  <span>Apenas modelos</span>
+                </button>
+              </div>
+
               {/* Botão Limpar */}
               <div className="flex items-end">
-                <button
+                <Button
+                  variant="secondary"
                   onClick={handleClearFilters}
                   disabled={!hasActiveFilters}
-                  className="w-full px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full"
                 >
                   Limpar Filtros
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -1354,20 +1467,14 @@ export function Dashboard() {
                       : 'Comece criando uma pasta ou orçamento'}
                   </p>
                   <div className="flex items-center justify-center space-x-3">
-                    <button
-                      onClick={handleCreateFolder}
-                      className="inline-flex items-center space-x-2 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
-                    >
+                    <Button variant="secondary" onClick={handleCreateFolder}>
                       <Folder className="h-4 w-4" />
                       <span>Nova Pasta</span>
-                    </button>
-                    <button
-                      onClick={() => setShowBudgetModal(true)}
-                      className="inline-flex items-center space-x-2 bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors text-sm font-medium"
-                    >
+                    </Button>
+                    <Button variant="primary" onClick={() => setShowBudgetModal(true)}>
                       <Plus className="h-4 w-4" />
                       <span>Novo Orçamento</span>
-                    </button>
+                    </Button>
                   </div>
                 </>
               )}
@@ -1380,13 +1487,10 @@ export function Dashboard() {
               <Search className="h-12 w-12 text-gray-400 mx-auto mb-3" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum resultado encontrado</h3>
               <p className="text-sm text-gray-500 mb-4">Tente ajustar seus filtros</p>
-              <button
-                onClick={handleClearFilters}
-                className="inline-flex items-center space-x-2 bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors text-sm font-medium"
-              >
+              <Button variant="primary" onClick={handleClearFilters}>
                 <X className="h-4 w-4" />
                 <span>Limpar Filtros</span>
-              </button>
+              </Button>
             </div>
           )}
         </div>
