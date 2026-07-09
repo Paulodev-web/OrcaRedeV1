@@ -485,7 +485,8 @@ export function EngineerPortal() {
       name: `Poste ${nextNumber}`,
       x_coord: coords.x,
       y_coord: coords.y,
-      status: 'Pendente',
+      // Todo poste colocado no mapa já é considerado instalado (o ícone é sempre renderizado verde)
+      status: 'Concluído',
       is_visible: true,
       photos: [],
       materials: [],

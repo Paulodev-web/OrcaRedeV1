@@ -110,7 +110,9 @@ export async function hideTrackedPostAction(
       .maybeSingle();
 
     if (postFetchError) return { success: false, error: postFetchError.message };
-    if (!postRow) return { success: false, error: 'Poste não encontrado nesta obra.' };
+    // Poste ainda não sincronizado com o Supabase (sync roda com debounce de 1.5s após
+    // adicionar no mapa): não há linha para ocultar, então não é erro — trata como já removido.
+    if (!postRow) return { success: true };
     if (postRow.is_visible === false) return { success: true };
 
     const { error: connFromErr } = await supabase
