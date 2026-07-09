@@ -1,5 +1,20 @@
 @import "tailwindcss";
 
+/*
+ * Tailwind v4 changed the default border color from gray-200 to currentColor.
+ * Every unstyled `border`/`border-t`/`border-b`/etc. across the app relies on
+ * the old gray default, so restore it here instead of touching every usage.
+ */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: #e5e7eb;
+  }
+}
+
 /* Prevent horizontal scroll — matches original Vite app */
 html, body {
   overflow-x: hidden;
