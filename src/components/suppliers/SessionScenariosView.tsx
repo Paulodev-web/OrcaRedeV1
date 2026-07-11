@@ -540,108 +540,125 @@ function ScenarioIdealView({
     onCloseIdeal,
   ]);
 
+  const resultado = filteredIdealTotal - scenarios.budget_original_total;
+  const isOverBudget = resultado > 0;
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        {staleCount > 0 && (
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50/60 p-1.5">
+          {staleCount > 0 && (
+            <button
+              type="button"
+              onClick={onRevalidateStale}
+              disabled={isRevalidatingStale}
+              className="inline-flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-900 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isRevalidatingStale ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <TrendingDown className="h-4 w-4" />
+              )}
+              Revalidar menores ({staleCount})
+            </button>
+          )}
           <button
             type="button"
-            onClick={onRevalidateStale}
-            disabled={isRevalidatingStale}
-            className="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={onValidateAll}
+            disabled={isValidatingAll || ideal.unvalidatedCount === 0}
+            className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-[#1D3140] transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isRevalidatingStale ? (
+            {isValidatingAll ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <TrendingDown className="h-4 w-4" />
+              <Check className="h-4 w-4" />
             )}
-            Revalidar menores ({staleCount})
+            Validar todos (menor preço)
           </button>
-        )}
-        <button
-          type="button"
-          onClick={onValidateAll}
-          disabled={isValidatingAll || ideal.unvalidatedCount === 0}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#1D3140] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#1D3140]/90 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isValidatingAll ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Check className="h-4 w-4" />
-          )}
-          Validar todos (menor preço)
-        </button>
-        <button
-          type="button"
-          onClick={handleCloseIdealClick}
-          disabled={!canExport || isClosingIdeal}
-          className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isClosingIdeal ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4" />
-          )}
-          Atualizar materiais do orçamento
-        </button>
-        <span
-          title={
-            canExport
-              ? 'Excel único com materiais, fornecedor, unidade, quantidades e preços'
-              : 'Nenhum material com necessidade de compra'
-          }
-          className="inline-flex"
-        >
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50/60 p-1.5">
+            <IdealPdfExportControls
+              sessionId={sessionId}
+              canExport={canExportPdf}
+              selectedSupplierSlug={selectedSupplierSlug}
+              onSelectedSupplierSlugChange={setSelectedSupplierSlug}
+              onConfirmExport={handleConfirmExport}
+            />
+            <div className="hidden h-6 w-px bg-gray-300 sm:block" />
+            <span
+              title={
+                canExport
+                  ? 'Excel único com materiais, fornecedor, unidade, quantidades e preços'
+                  : 'Nenhum material com necessidade de compra'
+              }
+              className="inline-flex"
+            >
+              <button
+                type="button"
+                onClick={handleExportClick}
+                disabled={!canExport || isExporting}
+                className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-[#1D3140] transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
+              >
+                {isExporting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                Excel
+              </button>
+            </span>
+          </div>
+
           <button
             type="button"
-            onClick={handleExportClick}
-            disabled={!canExport || isExporting}
-            className="inline-flex items-center gap-2 rounded-lg border border-[#64ABDE] bg-white px-4 py-2 text-sm font-medium text-[#1D3140] transition-colors hover:bg-[#64ABDE]/10 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
+            onClick={handleCloseIdealClick}
+            disabled={!canExport || isClosingIdeal}
+            className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isExporting ? (
+            {isClosingIdeal ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Download className="h-4 w-4" />
+              <Save className="h-4 w-4" />
             )}
-            Exportar Excel
+            Atualizar materiais do orçamento
           </button>
-        </span>
-        <IdealPdfExportControls
-          sessionId={sessionId}
-          canExport={canExportPdf}
-          selectedSupplierSlug={selectedSupplierSlug}
-          onSelectedSupplierSlugChange={setSelectedSupplierSlug}
-          onConfirmExport={handleConfirmExport}
-        />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs font-semibold uppercase text-gray-500">Orçado</p>
+          <p className="text-2xl font-bold text-[#1D3140] mt-1">
+            {formatCurrency(scenarios.budget_original_total)}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">Valor do orçamento vinculado</p>
+        </div>
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-          <p className="text-xs font-semibold uppercase text-blue-700">Total Cenário Ideal</p>
-          <p className="text-2xl font-bold text-[#1D3140] mt-1">{formatCurrency(ideal.total)}</p>
+          <p className="text-xs font-semibold uppercase text-blue-700">Comprando</p>
+          <p className="text-2xl font-bold text-[#1D3140] mt-1">{formatCurrency(filteredIdealTotal)}</p>
           <p className="text-xs text-gray-500 mt-1">
             {validatedLines.length} validados · {suggestedLines.length} sugeridos
           </p>
         </div>
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <p className="text-xs font-semibold uppercase text-gray-500">vs. Cenário A (pacote)</p>
+        <div
+          className={`rounded-lg border p-4 ${isOverBudget ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}`}
+        >
           <p
-            className={`text-xl font-bold mt-1 ${ideal.diffVsA < 0 ? 'text-green-700' : ideal.diffVsA > 0 ? 'text-red-600' : 'text-gray-600'}`}
+            className={`text-xs font-semibold uppercase ${isOverBudget ? 'text-red-700' : 'text-green-700'}`}
           >
-            {ideal.diffVsA < 0 ? '−' : ideal.diffVsA > 0 ? '+' : ''}
-            {formatCurrency(Math.abs(ideal.diffVsA))}
+            Resultado
           </p>
-          <p className="text-xs text-gray-400 mt-1">Referência: {formatCurrency(scenarioATotal)}</p>
-        </div>
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <p className="text-xs font-semibold uppercase text-gray-500">vs. Cenário B (por item)</p>
           <p
-            className={`text-xl font-bold mt-1 ${ideal.diffVsB < 0 ? 'text-green-700' : ideal.diffVsB > 0 ? 'text-red-600' : 'text-gray-600'}`}
+            className={`text-xl font-bold mt-1 ${isOverBudget ? 'text-red-600' : 'text-green-700'}`}
           >
-            {ideal.diffVsB < 0 ? '−' : ideal.diffVsB > 0 ? '+' : ''}
-            {formatCurrency(Math.abs(ideal.diffVsB))}
+            {isOverBudget ? '+' : '−'}
+            {formatCurrency(Math.abs(resultado))}
           </p>
-          <p className="text-xs text-gray-400 mt-1">Referência: {formatCurrency(scenarioBTotal)}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {isOverBudget ? 'Acima do orçado' : 'Economia vs. orçado'}
+          </p>
         </div>
       </div>
 

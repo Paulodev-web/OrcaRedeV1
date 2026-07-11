@@ -1027,6 +1027,8 @@ export interface ScenariosResult {
     saving_vs_cheapest_a: number;
   };
   budget_total_reference: number;
+  /** Valor total do orçamento vinculado (qtd. requerida x preço no orçamento). */
+  budget_original_total: number;
   budget_consolidated_count: number;
   excluded_material_ids: string[];
 }
@@ -1260,6 +1262,12 @@ export async function calculateScenariosAction(
     const cheapestATotal = scenarioA[0]?.total_normalizado ?? 0;
     const savingVsA = cheapestATotal - scenarioBTotal;
 
+    let budgetOriginalTotal = 0;
+    for (const row of budgetQtyMap.values()) {
+      if (excludedMaterialIds.has(row.id)) continue;
+      budgetOriginalTotal += row.required_qty * row.unit_price;
+    }
+
     return {
       success: true,
       data: {
@@ -1270,6 +1278,7 @@ export async function calculateScenariosAction(
           saving_vs_cheapest_a: savingVsA,
         },
         budget_total_reference: cheapestATotal,
+        budget_original_total: budgetOriginalTotal,
         budget_consolidated_count: scenarioBItems.length,
         excluded_material_ids: Array.from(excludedMaterialIds),
       },

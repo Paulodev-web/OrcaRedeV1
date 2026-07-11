@@ -5,7 +5,7 @@ import {
   calcularValorServicoPorPercentual,
 } from '@/lib/pricingMath';
 import { consolidateMaterialsFromBudgetDetails } from '@/services/budgetMaterialAggregation';
-import { getBudgetForImport } from '@/services/works/getBudgetForImport';
+import { getBudgetPostsForPricing } from '@/services/works/getBudgetForImport';
 import { resolveCostItemValue } from '@/components/precificacao/types';
 import type {
   CostItem,
@@ -194,7 +194,7 @@ export async function getBudgetPricingSnapshot(
   budgetId: string,
   userId: string
 ): Promise<BudgetPricingSnapshot | null> {
-  const budget = await getBudgetForImport(supabase, budgetId, userId);
+  const budget = await getBudgetPostsForPricing(supabase, budgetId, userId);
   if (!budget) {
     return null;
   }

@@ -161,6 +161,77 @@ export async function getBudgetForImport(
   };
 }
 
+export interface BudgetPostsForPricing {
+  budgetId: string;
+  projectName: string;
+  clientName: string | null;
+  city: string | null;
+  utilityCompanyId: string | null;
+  status: string | null;
+  planImageUrl: string | null;
+  renderVersion: number | null;
+  posts: BudgetPostDetail[];
+}
+
+/**
+ * Igual à primeira metade de `getBudgetForImport`, mas sem `utility_companies`
+ * nem a cadeia de `work_trackings`/`post_connections`/`tracked_posts` — usado
+ * pelo snapshot "live" do módulo de Precificação, que só consome `posts` para
+ * consolidar materiais e não usa metersPlanned/connections.
+ */
+export async function getBudgetPostsForPricing(
+  supabase: SupabaseClient,
+  budgetId: string,
+  engineerId: string,
+): Promise<BudgetPostsForPricing | null> {
+  const { data: budgetRow, error: budgetError } = await supabase
+    .from('budgets')
+    .select(
+      'id, project_name, client_name, city, company_id, status, plan_image_url, render_version, user_id',
+    )
+    .eq('id', budgetId)
+    .maybeSingle();
+
+  if (budgetError || !budgetRow) return null;
+  const budget = budgetRow as unknown as BudgetRow;
+  if (budget.user_id !== engineerId) return null;
+
+  const { data: postsData } = await supabase
+    .from('budget_posts')
+    .select(
+      `id, name, custom_name, counter, x_coord, y_coord,
+       post_types ( id, name, code, description, shape, height_m, price ),
+       post_item_groups (
+         id, name, template_id,
+         post_item_group_materials (
+           material_id, quantity, price_at_addition,
+           materials ( id, code, name, description, unit, price )
+         )
+       ),
+       post_materials (
+         id, post_id, material_id, quantity, price_at_addition,
+         materials ( id, code, name, description, unit, price )
+       )`,
+    )
+    .eq('budget_id', budgetId)
+    .order('counter', { ascending: true })
+    .limit(2000);
+
+  const posts = (postsData ?? []) as unknown as BudgetPostDetail[];
+
+  return {
+    budgetId: budget.id,
+    projectName: budget.project_name,
+    clientName: budget.client_name,
+    city: budget.city,
+    utilityCompanyId: budget.company_id,
+    status: budget.status,
+    planImageUrl: budget.plan_image_url,
+    renderVersion: budget.render_version,
+    posts,
+  };
+}
+
 interface TrackingRow {
   id: string;
   planned_bt_meters: number | null;

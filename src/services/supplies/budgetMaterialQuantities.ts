@@ -13,6 +13,8 @@ export interface BudgetMaterialQuantityRow {
   name: string;
   unit: string;
   required_qty: number;
+  /** Preço unitário do orçamento (price_at_addition ou preço atual do material). */
+  unit_price: number;
 }
 
 const BUDGET_POSTS_PAGE_SIZE = 2000;
@@ -43,6 +45,7 @@ function consolidatedRowsToMap(rows: ConsolidatedMaterialRow[]): Map<string, Bud
       name: row.nome,
       unit: row.unidade,
       required_qty: row.quantidade,
+      unit_price: row.precoUnit,
     });
   }
   return map;
@@ -86,6 +89,7 @@ export function aggregateBudgetMaterialQuantities(
       name: mat.name || 'Material sem nome',
       unit: mat.unit || '',
       required_qty: qty,
+      unit_price: 0,
     });
   };
 
