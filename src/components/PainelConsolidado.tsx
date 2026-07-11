@@ -32,7 +32,11 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
   };
 
   const getPriceOrigin = (materialId: string) => {
-    return materiais.find(m => m.id === materialId)?.priceSourceSupplierName || null;
+    const material = materiais.find(m => m.id === materialId);
+    return {
+      supplierName: material?.priceSourceSupplierName || null,
+      updatedAt: material?.priceSourceUpdatedAt || null,
+    };
   };
 
   const handleStartEdit = (materialId: string, currentPrice: number) => {
@@ -397,9 +401,21 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
                         {formatCurrency(material.subtotal)}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900">
-                        {getPriceOrigin(material.materialId) || (
-                          <span className="text-xs text-gray-400">Manual/importado</span>
-                        )}
+                        {(() => {
+                          const origin = getPriceOrigin(material.materialId);
+                          return origin.supplierName ? (
+                            <div>
+                              <p className="font-medium text-gray-800">{origin.supplierName}</p>
+                              {origin.updatedAt && (
+                                <p className="text-xs text-gray-400">
+                                  {new Date(origin.updatedAt).toLocaleDateString('pt-BR')}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">Manual/importado</span>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-center">
                         {isEditing ? (
