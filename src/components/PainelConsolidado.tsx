@@ -1,10 +1,12 @@
 "use client";
 import React, { useState } from 'react';
-import { Calculator, Package, Edit2, Check, X, FileSpreadsheet, Download, Users } from 'lucide-react';
+import { Calculator, Package, Edit2, Check, X, FileSpreadsheet, Download, Users, Trash2 } from 'lucide-react';
 import { BudgetDetails } from '@/types';
 import { useApp } from '@/contexts/AppContext';
 import { exportToExcel, exportToCSV, exportToExcelForSuppliers, exportToCSVForSuppliers, MaterialExport, ExportOptions } from '@/services/exportService';
 import { consolidateMaterialsFromBudgetDetails } from '@/services/budgetMaterialAggregation';
+import { useAlertDialog } from '@/hooks/useAlertDialog';
+import { AlertDialog } from '@/components/ui/alert-dialog';
 
 interface PainelConsolidadoProps {
   budgetDetails: BudgetDetails | null;
@@ -12,10 +14,12 @@ interface PainelConsolidadoProps {
 }
 
 export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsolidadoProps) {
-  const { updateConsolidatedMaterialPrice } = useApp();
+  const { updateConsolidatedMaterialPrice, removeMaterialFromBudget, materiais } = useApp();
   const [editingMaterialId, setEditingMaterialId] = useState<string | null>(null);
   const [editingPrice, setEditingPrice] = useState<string>('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [deletingMaterialId, setDeletingMaterialId] = useState<string | null>(null);
+  const alertDialog = useAlertDialog();
 
   const materiaisConsolidados = consolidateMaterialsFromBudgetDetails(budgetDetails);
   const custoTotal = materiaisConsolidados.reduce((total, material) => total + material.subtotal, 0);
@@ -25,6 +29,10 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
       style: 'currency',
       currency: 'BRL'
     }).format(value);
+  };
+
+  const getPriceOrigin = (materialId: string) => {
+    return materiais.find(m => m.id === materialId)?.priceSourceSupplierName || null;
   };
 
   const handleStartEdit = (materialId: string, currentPrice: number) => {
@@ -77,6 +85,33 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
     } else if (e.key === 'Escape') {
       handleCancelEdit();
     }
+  };
+
+  const handleDeleteMaterial = (materialId: string, materialName: string) => {
+    if (!budgetDetails) return;
+
+    alertDialog.showConfirm(
+      'Excluir Material do Orçamento',
+      `Tem certeza que deseja excluir "${materialName}" de todos os postes e grupos deste orçamento? Esta ação não pode ser desfeita.`,
+      async () => {
+        try {
+          setDeletingMaterialId(materialId);
+          await removeMaterialFromBudget(budgetDetails.id, materialId);
+        } catch (error) {
+          console.error('Erro ao excluir material do orçamento:', error);
+          const message =
+            error instanceof Error ? error.message : 'Erro ao excluir material. Por favor, tente novamente.';
+          alertDialog.showError('Erro ao Excluir', message);
+        } finally {
+          setDeletingMaterialId(null);
+        }
+      },
+      {
+        type: 'destructive',
+        confirmText: 'Excluir',
+        cancelText: 'Cancelar'
+      }
+    );
   };
 
   const handleExportExcel = () => {
@@ -309,6 +344,9 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Subtotal
                   </th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Origem do Preço
+                  </th>
                   <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Ações
                   </th>
@@ -358,6 +396,11 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
                       <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900">
                         {formatCurrency(material.subtotal)}
                       </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {getPriceOrigin(material.materialId) || (
+                          <span className="text-xs text-gray-400">Manual/importado</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-center">
                         {isEditing ? (
                           <div className="flex items-center justify-center space-x-1">
@@ -384,14 +427,29 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
                               </>
                             )}
                           </div>
+                        ) : deletingMaterialId === material.materialId ? (
+                          <div className="flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                          </div>
                         ) : (
-                          <button
-                            onClick={() => handleStartEdit(material.materialId, material.precoUnit)}
-                            className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
-                            title="Editar Preço"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </button>
+                          <div className="flex items-center justify-center space-x-1">
+                            <button
+                              onClick={() => handleStartEdit(material.materialId, material.precoUnit)}
+                              disabled={deletingMaterialId !== null}
+                              className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Editar Preço"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMaterial(material.materialId, material.nome)}
+                              disabled={deletingMaterialId !== null}
+                              className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Excluir Material do Orçamento"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -420,6 +478,8 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
           </div>
         </div>
       )}
+
+      <AlertDialog {...alertDialog.dialogProps} />
     </div>
   );
 }

@@ -81,6 +81,9 @@ interface AppContextType {
   
   // Função para atualizar preços consolidados
   updateConsolidatedMaterialPrice: (budgetId: string, materialId: string, newPrice: number) => Promise<void>;
+
+  // Função para remover material de todas as ocorrências no orçamento (Painel Consolidado)
+  removeMaterialFromBudget: (budgetId: string, materialId: string) => Promise<void>;
   
   // Funções para concessionárias e grupos
   fetchUtilityCompanies: () => Promise<void>;
@@ -1546,6 +1549,71 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await Promise.all([fetchBudgetDetails(budgetId), fetchMaterials(true)]);
   };
 
+  // Função para remover um material de todas as ocorrências do orçamento (grupos + avulsos)
+  const removeMaterialFromBudget = async (budgetId: string, materialId: string) => {
+    if (!budgetDetails || budgetDetails.id !== budgetId) {
+      throw new Error('Orçamento não carregado.');
+    }
+
+    try {
+      const groupIds = budgetDetails.posts.flatMap(post =>
+        post.post_item_groups
+          .filter(group =>
+            group.post_item_group_materials.some(material => material.material_id === materialId)
+          )
+          .map(group => group.id)
+      );
+      const postIds = budgetDetails.posts.map(post => post.id);
+
+      const [groupResult, looseResult] = await Promise.all([
+        groupIds.length > 0
+          ? supabase
+              .from('post_item_group_materials')
+              .delete()
+              .eq('material_id', materialId)
+              .in('post_item_group_id', groupIds)
+          : Promise.resolve({ error: null }),
+        postIds.length > 0
+          ? supabase
+              .from('post_materials')
+              .delete()
+              .eq('material_id', materialId)
+              .in('post_id', postIds)
+          : Promise.resolve({ error: null }),
+      ]);
+
+      if (groupResult.error) {
+        console.error('Erro ao remover material dos grupos do orçamento:', groupResult.error);
+        throw groupResult.error;
+      }
+      if (looseResult.error) {
+        console.error('Erro ao remover material avulso do orçamento:', looseResult.error);
+        throw looseResult.error;
+      }
+
+      setBudgetDetails(prev => {
+        if (!prev) return prev;
+
+        return {
+          ...prev,
+          posts: prev.posts.map(post => ({
+            ...post,
+            post_item_groups: post.post_item_groups.map(group => ({
+              ...group,
+              post_item_group_materials: group.post_item_group_materials.filter(
+                material => material.material_id !== materialId
+              ),
+            })),
+            post_materials: post.post_materials.filter(material => material.material_id !== materialId),
+          })),
+        };
+      });
+    } catch (error) {
+      console.error('Erro ao remover material do orçamento:', error);
+      throw error;
+    }
+  };
+
   // Funções para concessionárias
   const fetchUtilityCompanies = useCallback(async () => {
     try {
@@ -1898,7 +1966,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       
       // Função para atualizar preços consolidados
       updateConsolidatedMaterialPrice,
-      
+      removeMaterialFromBudget,
+
       // Funções para concessionárias e grupos
       fetchUtilityCompanies,
       fetchItemGroups,
