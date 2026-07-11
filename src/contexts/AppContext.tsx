@@ -755,6 +755,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         shape: item.shape || undefined,
         height_m: item.height_m || undefined,
         price: parseFloat(item.price) || 0,
+        material_id: item.material_id || undefined,
       }));
 
       setPostTypes(postTypesFormatted);

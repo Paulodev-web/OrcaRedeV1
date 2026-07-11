@@ -17,7 +17,6 @@ import { BudgetImportSelect } from './BudgetImportSelect';
 import { CostItemsTable } from './CostItemsTable';
 import { ServicePricingSummary } from './ServicePricingSummary';
 import { ServiceValueInput } from './ServiceValueInput';
-import { TaxInput } from './TaxInput';
 import type { CostItem, PricingInputMode, PricingSaveMode, SavedPricingBudget } from './types';
 
 interface PrecificacaoCalculatorProps {
@@ -72,7 +71,6 @@ export function PrecificacaoCalculator({ initialSaved }: PrecificacaoCalculatorP
     () => initialSaved?.pricingInputMode ?? 'percentual'
   );
   const [costItems, setCostItems] = useState<CostItem[]>(() => initialSaved?.costItems ?? []);
-  const [impostoPercent, setImpostoPercent] = useState(() => initialSaved?.impostoPercent ?? 0);
   const [savingMode, setSavingMode] = useState<PricingSaveMode | null>(null);
   const [isExportingExcel, setIsExportingExcel] = useState(false);
 
@@ -121,8 +119,8 @@ export function PrecificacaoCalculator({ initialSaved }: PrecificacaoCalculatorP
   }, [pricingInputMode, valorServicoInput, percentMateriaisInput, valorMateriais]);
 
   const pricingResult = useMemo(
-    () => calculateServicePricing(valorServico, costItems, impostoPercent, valorMateriais),
-    [valorServico, costItems, impostoPercent, valorMateriais]
+    () => calculateServicePricing(valorServico, costItems, 0, valorMateriais),
+    [valorServico, costItems, valorMateriais]
   );
 
   const selectedBudget = useMemo(
@@ -157,10 +155,6 @@ export function PrecificacaoCalculator({ initialSaved }: PrecificacaoCalculatorP
     setCostItems((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const handleImpostoChange = (value: number) => {
-    setImpostoPercent(parseNonNegativeNumber(String(value)));
-  };
-
   const buildPricingPayload = (saveMode: PricingSaveMode) => ({
     budgetId: selectedBudgetId,
     budgetName: selectedBudgetName,
@@ -170,7 +164,7 @@ export function PrecificacaoCalculator({ initialSaved }: PrecificacaoCalculatorP
     pricingInputMode,
     valorServicoInput,
     percentMateriaisInput,
-    impostoPercent,
+    impostoPercent: 0,
     // Persiste os custos com o valor resolvido (inclusive percentuais) no momento do save.
     costItems: pricingResult.custosDetalhados.map(({ percentualDoVS: _percentualDoVS, ...item }) => item),
     materialsSnapshot: consolidatedMaterials,
@@ -270,7 +264,7 @@ export function PrecificacaoCalculator({ initialSaved }: PrecificacaoCalculatorP
         </h1>
         <p className="mt-1 text-sm text-gray-500">
           {isEditMode
-            ? 'Altere o percentual, custos ou impostos e salve para atualizar o card no dashboard.'
+            ? 'Altere o percentual ou os custos e salve para atualizar o card no dashboard.'
             : 'Vincule um orçamento, defina o percentual sobre os materiais, adicione custos e salve no dashboard.'}
           {selectedBudgetName ? ` Orçamento selecionado: ${selectedBudgetName}.` : ''}
         </p>
@@ -314,8 +308,6 @@ export function PrecificacaoCalculator({ initialSaved }: PrecificacaoCalculatorP
           {loadingBudgetDetails && selectedBudgetId && (
             <p className="text-xs text-gray-500">Carregando itens do orçamento selecionado...</p>
           )}
-
-          <TaxInput impostoPercent={impostoPercent} onChange={handleImpostoChange} />
         </section>
 
         <ServicePricingSummary

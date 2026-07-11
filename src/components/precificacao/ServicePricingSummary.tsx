@@ -46,10 +46,12 @@ export function ServicePricingSummary({
 }: ServicePricingSummaryProps) {
   const [showSaveChoices, setShowSaveChoices] = useState(false);
   const hasVS = result.valorServico > 0;
+  const hasTotal = result.precoTotalCliente > 0;
   const lucroNegativo = result.lucroLiquido < 0;
-  const lucroBrutoNegativo = result.lucroBruto < 0;
   const hasMateriais = result.valorMateriais > 0;
   const isSaving = Boolean(savingMode);
+  const totalCustosPercentDoTotal = hasTotal ? (result.totalCustos / result.precoTotalCliente) * 100 : 0;
+  const lucroLiquidoPercentDoTotal = hasTotal ? (result.lucroLiquido / result.precoTotalCliente) * 100 : 0;
 
   return (
     <aside className="space-y-4 lg:sticky lg:top-6">
@@ -60,7 +62,7 @@ export function ServicePricingSummary({
           <h2 className="text-sm font-semibold text-[#1D3140]">Materiais</h2>
         </div>
         <p className="mt-1 text-xs text-gray-500">
-          Repassados ao cliente sem imposto. Base para o percentual do serviço.
+          Repassados ao cliente sem margem. Base para o percentual do serviço.
         </p>
 
         <div className="mt-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
@@ -70,7 +72,7 @@ export function ServicePricingSummary({
           </p>
           <p className="mt-0.5 text-[11px] text-gray-500">
             {hasMateriais
-              ? 'Importado do orçamento (não entra no cálculo de lucro/imposto).'
+              ? 'Importado do orçamento (não entra no cálculo de lucro).'
               : 'Nenhum orçamento importado.'}
           </p>
         </div>
@@ -100,32 +102,8 @@ export function ServicePricingSummary({
             <p className="mt-1 text-xl font-semibold text-[#1D3140]">
               {currencyFormatter.format(result.totalCustos)}
             </p>
-            <p className="mt-0.5 text-[11px] text-gray-500">
-              {formatPercent(result.totalCustosPercent, hasVS)} do Valor do Serviço
-            </p>
-          </div>
-
-          <div
-            className={`rounded-lg border p-3 ${
-              lucroBrutoNegativo ? 'border-red-200 bg-red-50' : 'border-emerald-200 bg-emerald-50'
-            }`}
-          >
-            <p className="text-xs uppercase tracking-wide text-gray-500">Lucro Bruto</p>
-            <p className={`mt-1 text-xl font-semibold ${lucroBrutoNegativo ? 'text-red-700' : 'text-emerald-700'}`}>
-              {currencyFormatter.format(result.lucroBruto)}
-            </p>
-            <p className="mt-0.5 text-[11px] text-gray-500">
-              {formatPercent(result.lucroBrutoPercent, hasVS)} do Valor do Serviço
-            </p>
-          </div>
-
-          <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
-            <p className="text-xs uppercase tracking-wide text-gray-500">Imposto sobre VS</p>
-            <p className="mt-1 text-xl font-semibold text-[#1D3140]">
-              {currencyFormatter.format(result.impostoValor)}
-            </p>
-            <p className="mt-0.5 text-[11px] text-gray-500">
-              {percentFormatter.format(result.impostoPercent)}% aplicado sobre o Valor do Serviço
+            <p className="mt-0.5 text-sm font-medium text-gray-600">
+              {formatPercent(totalCustosPercentDoTotal, hasTotal)} do Valor Total
             </p>
           </div>
 
@@ -138,13 +116,13 @@ export function ServicePricingSummary({
             <p className={`mt-1 text-xl font-semibold ${lucroNegativo ? 'text-red-700' : 'text-emerald-700'}`}>
               {currencyFormatter.format(result.lucroLiquido)}
             </p>
-            <p className="mt-0.5 text-[11px] text-gray-500">
-              {formatPercent(result.lucroLiquidoPercent, hasVS)} do Valor do Serviço
+            <p className="mt-0.5 text-sm font-medium text-gray-600">
+              {formatPercent(lucroLiquidoPercentDoTotal, hasTotal)} do Valor Total
             </p>
           </div>
         </div>
 
-        {lucroBrutoNegativo && hasVS && (
+        {lucroNegativo && hasVS && (
           <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
             Os custos do serviço ultrapassam o valor cobrado. O lucro está negativo.
           </div>

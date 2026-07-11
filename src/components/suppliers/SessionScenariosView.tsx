@@ -432,8 +432,13 @@ function ScenarioIdealView({
     return m;
   }, [ideal.lines]);
 
-  // Mantém todas as linhas do BOM; o filtro por fornecedor só altera resumo/total (export PDF).
-  const filteredIdealItems = items;
+  // Com fornecedor selecionado (export PDF), oculta as linhas sem cotação desse fornecedor.
+  const filteredIdealItems = useMemo(() => {
+    if (selectedSupplierSlug === 'all') return items;
+    return items.filter((item) =>
+      item.all_offers.some((o) => slugifyFileName(o.supplier_name) === selectedSupplierSlug)
+    );
+  }, [items, selectedSupplierSlug]);
 
   const filteredIdealTotal = useMemo(() => {
     if (selectedSupplierSlug === 'all') return ideal.total;
@@ -679,15 +684,13 @@ function ScenarioIdealView({
             const offer = item.all_offers.find(
               (o) => slugifyFileName(o.supplier_name) === selectedSupplierSlug
             );
-            if (!offer) {
-              return { supplierLabel: 'Sem cotação deste fornecedor', unitPrice: 0, lineTotal: 0 };
+            if (offer) {
+              return {
+                supplierLabel: offer.supplier_name,
+                unitPrice: offer.preco_normalizado,
+                lineTotal: offer.preco_normalizado * item.net_qty,
+              };
             }
-            const lineTotal = offer.preco_normalizado * item.net_qty;
-            return {
-              supplierLabel: offer.supplier_name,
-              unitPrice: offer.preco_normalizado,
-              lineTotal,
-            };
           }
           const line = lineByMaterialId.get(item.material_id);
           return {
@@ -711,18 +714,6 @@ function ScenarioIdealView({
                 Coberto por estoque
               </span>
             );
-          }
-          if (selectedSupplierSlug !== 'all') {
-            const hasSupplierOffer = item.all_offers.some(
-              (o) => slugifyFileName(o.supplier_name) === selectedSupplierSlug
-            );
-            if (!hasSupplierOffer && item.net_qty > 0) {
-              return (
-                <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-red-700 bg-red-100 border border-red-200 px-1.5 py-0.5 rounded-full">
-                  Sem preço neste fornecedor
-                </span>
-              );
-            }
           }
           if (!line || line.status === 'pending') return null;
           if (line.status === 'validated') {

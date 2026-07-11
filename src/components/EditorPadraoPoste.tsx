@@ -55,6 +55,7 @@ export function EditorPadraoPoste() {
   const [nome, setNome] = useState('');
   const [descricao, setDescricao] = useState('');
   const [concessionariaId, setConcessionariaId] = useState('');
+  const [selectedConcessionarias, setSelectedConcessionarias] = useState<string[]>([]);
   const [postTypeId, setPostTypeId] = useState('');
   const [grupos, setGrupos] = useState<GrupoEntry[]>([]);
   const [materiaisPadrao, setMateriaisPadrao] = useState<MaterialEntry[]>([]);
@@ -69,6 +70,7 @@ export function EditorPadraoPoste() {
       setNome(currentPoleStandard.nome);
       setDescricao(currentPoleStandard.descricao || '');
       setConcessionariaId(currentPoleStandard.concessionariaId);
+      setSelectedConcessionarias([currentPoleStandard.concessionariaId]);
       setPostTypeId(currentPoleStandard.postTypeId || '');
       setGrupos(currentPoleStandard.grupos.map(g => ({ templateId: g.templateId, quantidade: g.quantidade })));
       setMateriaisPadrao(currentPoleStandard.materiais.map(m => ({ materialId: m.materialId, quantidade: m.quantidade })));
@@ -76,6 +78,7 @@ export function EditorPadraoPoste() {
       setNome('');
       setDescricao('');
       setConcessionariaId('');
+      setSelectedConcessionarias([]);
       setPostTypeId('');
       setGrupos([]);
       setMateriaisPadrao([]);
@@ -90,9 +93,21 @@ export function EditorPadraoPoste() {
   // Selecionar automaticamente a primeira concessionária ao criar um padrão novo
   useEffect(() => {
     if (!currentPoleStandard && !concessionariaId && utilityCompanies.length > 0) {
-      setConcessionariaId(utilityCompanies[0].id);
+      const firstCompanyId = utilityCompanies[0].id;
+      setConcessionariaId(firstCompanyId);
+      setSelectedConcessionarias(prev => prev.includes(firstCompanyId) ? prev : [...prev, firstCompanyId]);
     }
   }, [currentPoleStandard, concessionariaId, utilityCompanies]);
+
+  // Concessionária de referência (usada para buscar grupos de itens);
+  // ao trocar, garante que ela permaneça marcada na lista de concessionárias do padrão
+  const handleConcessionariaReferenciaChange = (value: string) => {
+    const newCompanyId = value === EMPTY_COMPANY_VALUE ? '' : value;
+    setConcessionariaId(newCompanyId);
+    if (newCompanyId) {
+      setSelectedConcessionarias(prev => prev.includes(newCompanyId) ? prev : [...prev, newCompanyId]);
+    }
+  };
 
   // Buscar grupos de itens da concessionária selecionada
   useEffect(() => {
@@ -165,8 +180,8 @@ export function EditorPadraoPoste() {
       alertDialog.showError('Campo Obrigatório', 'Por favor, digite um nome para o padrão de poste.');
       return;
     }
-    if (!concessionariaId) {
-      alertDialog.showError('Campo Obrigatório', 'Por favor, selecione uma concessionária.');
+    if (!concessionariaId || selectedConcessionarias.length === 0) {
+      alertDialog.showError('Campo Obrigatório', 'Por favor, selecione ao menos uma concessionária.');
       return;
     }
     if (grupos.length === 0 && materiaisPadrao.length === 0) {
@@ -178,37 +193,79 @@ export function EditorPadraoPoste() {
     }
 
     startTransition(async () => {
-      const payload = {
-        name: nome.trim(),
-        description: descricao.trim() || undefined,
-        company_id: concessionariaId,
-        post_type_id: postTypeId || null,
-        groups: grupos.map(g => ({ template_id: g.templateId, quantity: g.quantidade })),
-        materials: materiaisPadrao.map(m => ({ material_id: m.materialId, quantity: m.quantidade })),
-      };
+      const groupsPayload = grupos.map(g => ({ template_id: g.templateId, quantity: g.quantidade }));
+      const materialsPayload = materiaisPadrao.map(m => ({ material_id: m.materialId, quantity: m.quantidade }));
 
-      const result = isEditing
-        ? await updatePoleStandardAction(currentPoleStandard!.id, payload)
-        : await addPoleStandardAction(payload);
+      if (isEditing) {
+        const currentCompanyId = currentPoleStandard!.concessionariaId;
 
-      if (!result.success) {
-        alertDialog.showError(
-          'Erro ao Salvar',
-          result.error || 'Erro ao salvar padrão de poste. Tente novamente.'
-        );
-        return;
+        const updateResult = await updatePoleStandardAction(currentPoleStandard!.id, {
+          name: nome.trim(),
+          description: descricao.trim() || undefined,
+          company_id: currentCompanyId,
+          post_type_id: postTypeId || null,
+          groups: groupsPayload,
+          materials: materialsPayload,
+        });
+
+        if (!updateResult.success) {
+          alertDialog.showError('Erro ao Salvar', updateResult.error || 'Erro ao atualizar padrão de poste. Tente novamente.');
+          return;
+        }
+
+        const additionalCompanyIds = selectedConcessionarias.filter(id => id !== currentCompanyId);
+
+        if (additionalCompanyIds.length > 0) {
+          const addResult = await addPoleStandardAction({
+            name: nome.trim(),
+            description: descricao.trim() || undefined,
+            company_ids: additionalCompanyIds,
+            post_type_id: postTypeId || null,
+            groups: groupsPayload,
+            materials: materialsPayload,
+          });
+
+          if (!addResult.success) {
+            alertDialog.showError('Erro ao Criar Cópias', addResult.error || 'Erro ao criar cópias do padrão. Tente novamente.');
+            return;
+          }
+        }
+
+        setCurrentPoleStandard(null);
+        setCurrentView('padroes-poste');
+        fetchPoleStandards(currentCompanyId);
+
+        let message = 'O padrão de poste foi atualizado com sucesso.';
+        if (additionalCompanyIds.length > 0) {
+          message += ` ${additionalCompanyIds.length} cópia(s) ${additionalCompanyIds.length > 1 ? 'foram criadas' : 'foi criada'} para ${additionalCompanyIds.length > 1 ? 'outras concessionárias' : 'outra concessionária'} selecionada${additionalCompanyIds.length > 1 ? 's' : ''}.`;
+        }
+
+        alertDialog.showSuccess('Padrão Atualizado', message);
+      } else {
+        const addResult = await addPoleStandardAction({
+          name: nome.trim(),
+          description: descricao.trim() || undefined,
+          company_ids: selectedConcessionarias,
+          post_type_id: postTypeId || null,
+          groups: groupsPayload,
+          materials: materialsPayload,
+        });
+
+        if (!addResult.success) {
+          alertDialog.showError('Erro ao Salvar', addResult.error || 'Erro ao criar padrão de poste. Tente novamente.');
+          return;
+        }
+
+        setCurrentPoleStandard(null);
+        setCurrentView('padroes-poste');
+        fetchPoleStandards(concessionariaId);
+
+        const message = selectedConcessionarias.length > 1
+          ? `${selectedConcessionarias.length} padrões foram criados com sucesso (um para cada concessionária selecionada).`
+          : 'O padrão de poste foi criado com sucesso. Ele já pode ser aplicado ao adicionar postes.';
+
+        alertDialog.showSuccess('Padrão(ões) Criado(s)', message);
       }
-
-      setCurrentPoleStandard(null);
-      setCurrentView('padroes-poste');
-      fetchPoleStandards(concessionariaId);
-
-      alertDialog.showSuccess(
-        isEditing ? 'Padrão Atualizado' : 'Padrão Criado',
-        isEditing
-          ? 'O padrão de poste foi atualizado com sucesso.'
-          : 'O padrão de poste foi criado com sucesso. Ele já pode ser aplicado ao adicionar postes.'
-      );
     });
   };
 
@@ -406,10 +463,12 @@ export function EditorPadraoPoste() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Concessionária *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Concessionária de Referência *
+              </label>
               <Select
                 value={concessionariaId || EMPTY_COMPANY_VALUE}
-                onValueChange={(value) => setConcessionariaId(value === EMPTY_COMPANY_VALUE ? '' : value)}
+                onValueChange={handleConcessionariaReferenciaChange}
                 disabled={isPending || isEditing || utilityCompanies.length === 0}
               >
                 <SelectTrigger className="w-full">
@@ -422,9 +481,11 @@ export function EditorPadraoPoste() {
                   ))}
                 </SelectContent>
               </Select>
-              {isEditing && (
-                <p className="text-xs text-gray-400 mt-1">Não é possível trocar a concessionária ao editar.</p>
-              )}
+              <p className="text-xs text-gray-400 mt-1">
+                {isEditing
+                  ? 'Não é possível trocar a concessionária original ao editar.'
+                  : 'Usada para listar os grupos de itens disponíveis ao lado.'}
+              </p>
             </div>
 
             <div>
@@ -449,6 +510,65 @@ export function EditorPadraoPoste() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Concessionária(s) que Usarão este Padrão *
+            </label>
+            <div className="border border-gray-300 rounded-md p-3 max-h-40 overflow-y-auto">
+              {utilityCompanies.length === 0 ? (
+                <p className="text-sm text-gray-500">Nenhuma concessionária disponível</p>
+              ) : (
+                <div className="space-y-2">
+                  {utilityCompanies.map((c) => {
+                    const isCurrentStandardCompany = isEditing && c.id === currentPoleStandard!.concessionariaId;
+                    return (
+                      <label
+                        key={c.id}
+                        className={`flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded ${
+                          isCurrentStandardCompany ? 'bg-blue-50' : ''
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedConcessionarias.includes(c.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedConcessionarias(prev => [...prev, c.id]);
+                            } else {
+                              if (isCurrentStandardCompany || c.id === concessionariaId) {
+                                alertDialog.showError(
+                                  'Não Permitido',
+                                  'Não é possível remover a concessionária de referência. Selecione outras concessionárias para criar cópias.'
+                                );
+                                return;
+                              }
+                              setSelectedConcessionarias(prev => prev.filter(id => id !== c.id));
+                            }
+                          }}
+                          disabled={isPending}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-700">
+                          {c.nome}
+                          {isCurrentStandardCompany && (
+                            <span className="ml-2 text-xs text-blue-600 font-medium">(atual)</span>
+                          )}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            {selectedConcessionarias.length > 1 && (
+              <p className="mt-2 text-xs text-gray-500">
+                {isEditing
+                  ? `O padrão será atualizado na concessionária atual e ${selectedConcessionarias.length - 1} cópia(s) ${selectedConcessionarias.length - 1 > 1 ? 'serão criadas' : 'será criada'} para ${selectedConcessionarias.length - 1 > 1 ? 'outras concessionárias' : 'outra concessionária'} selecionada${selectedConcessionarias.length - 1 > 1 ? 's' : ''}.`
+                  : `${selectedConcessionarias.length} concessionárias selecionadas. Serão criados padrões independentes para cada uma.`}
+              </p>
+            )}
           </div>
 
           {/* Grupos do padrão */}

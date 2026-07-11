@@ -15,7 +15,16 @@ interface MaterialEntry {
   quantity: number;
 }
 
-interface PoleStandardInput {
+interface AddPoleStandardInput {
+  name: string;
+  description?: string;
+  company_ids: string[];
+  post_type_id?: string | null;
+  groups: GroupEntry[];
+  materials: MaterialEntry[];
+}
+
+interface UpdatePoleStandardInput {
   name: string;
   description?: string;
   company_id: string;
@@ -24,54 +33,57 @@ interface PoleStandardInput {
   materials: MaterialEntry[];
 }
 
-export async function addPoleStandardAction(data: PoleStandardInput): Promise<ActionResult> {
+export async function addPoleStandardAction(data: AddPoleStandardInput): Promise<ActionResult> {
   try {
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
 
-    if (!data.company_id) {
+    if (data.company_ids.length === 0) {
       return { success: false, error: 'Nenhuma concessionária especificada.' };
     }
 
-    const { data: standard, error: standardError } = await supabase
-      .from('pole_standards')
-      .insert({
-        name: data.name,
-        description: data.description || null,
-        company_id: data.company_id,
-        post_type_id: data.post_type_id || null,
-        user_id: userId,
-      })
-      .select('id')
-      .single();
+    // Criar um padrão independente para cada concessionária selecionada
+    for (const companyId of data.company_ids) {
+      const { data: standard, error: standardError } = await supabase
+        .from('pole_standards')
+        .insert({
+          name: data.name,
+          description: data.description || null,
+          company_id: companyId,
+          post_type_id: data.post_type_id || null,
+          user_id: userId,
+        })
+        .select('id')
+        .single();
 
-    if (standardError) {
-      return { success: false, error: `Erro ao criar padrão de poste: ${standardError.message}` };
-    }
-
-    if (data.groups.length > 0) {
-      const groupsData = data.groups.map((g) => ({
-        pole_standard_id: standard.id,
-        template_id: g.template_id,
-        quantity: g.quantity,
-      }));
-
-      const { error: groupsError } = await supabase.from('pole_standard_groups').insert(groupsData);
-      if (groupsError) {
-        return { success: false, error: `Erro ao adicionar grupos ao padrão: ${groupsError.message}` };
+      if (standardError) {
+        return { success: false, error: `Erro ao criar padrão de poste: ${standardError.message}` };
       }
-    }
 
-    if (data.materials.length > 0) {
-      const materialsData = data.materials.map((m) => ({
-        pole_standard_id: standard.id,
-        material_id: m.material_id,
-        quantity: m.quantity,
-      }));
+      if (data.groups.length > 0) {
+        const groupsData = data.groups.map((g) => ({
+          pole_standard_id: standard.id,
+          template_id: g.template_id,
+          quantity: g.quantity,
+        }));
 
-      const { error: materialsError } = await supabase.from('pole_standard_materials').insert(materialsData);
-      if (materialsError) {
-        return { success: false, error: `Erro ao adicionar materiais ao padrão: ${materialsError.message}` };
+        const { error: groupsError } = await supabase.from('pole_standard_groups').insert(groupsData);
+        if (groupsError) {
+          return { success: false, error: `Erro ao adicionar grupos ao padrão: ${groupsError.message}` };
+        }
+      }
+
+      if (data.materials.length > 0) {
+        const materialsData = data.materials.map((m) => ({
+          pole_standard_id: standard.id,
+          material_id: m.material_id,
+          quantity: m.quantity,
+        }));
+
+        const { error: materialsError } = await supabase.from('pole_standard_materials').insert(materialsData);
+        if (materialsError) {
+          return { success: false, error: `Erro ao adicionar materiais ao padrão: ${materialsError.message}` };
+        }
       }
     }
 
@@ -85,7 +97,7 @@ export async function addPoleStandardAction(data: PoleStandardInput): Promise<Ac
 
 export async function updatePoleStandardAction(
   standardId: string,
-  data: PoleStandardInput
+  data: UpdatePoleStandardInput
 ): Promise<ActionResult> {
   try {
     const supabase = await createSupabaseServerClient();

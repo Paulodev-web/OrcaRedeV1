@@ -83,8 +83,6 @@ export async function buildPricingWorkbook(data: PricingWorkbookData): Promise<E
     ['Valor dos materiais', data.result.valorMateriais],
     ['Valor do serviço', data.result.valorServico],
     ['Total de custos', data.result.totalCustos],
-    ['Lucro bruto', data.result.lucroBruto],
-    ['Imposto sobre VS', data.result.impostoValor],
     ['Lucro líquido', data.result.lucroLiquido],
     ['Total ao cliente', data.result.precoTotalCliente],
   ];
@@ -104,10 +102,14 @@ export async function buildPricingWorkbook(data: PricingWorkbookData): Promise<E
       'Margem sobre materiais',
       data.result.valorMateriais > 0 ? data.result.valorServico / data.result.valorMateriais : 0,
     ],
-    ['Custos sobre VS', data.result.totalCustosPercent / 100],
-    ['Lucro bruto sobre VS', data.result.lucroBrutoPercent / 100],
-    ['Imposto informado', data.result.impostoPercent / 100],
-    ['Lucro líquido sobre VS', data.result.lucroLiquidoPercent / 100],
+    [
+      'Custos sobre o total',
+      data.result.precoTotalCliente > 0 ? data.result.totalCustos / data.result.precoTotalCliente : 0,
+    ],
+    [
+      'Lucro líquido sobre o total',
+      data.result.precoTotalCliente > 0 ? data.result.lucroLiquido / data.result.precoTotalCliente : 0,
+    ],
   ];
 
   percentRows.forEach(([label, value], index) => {

@@ -24,11 +24,6 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
 });
 
-const percentFormatter = new Intl.NumberFormat('pt-BR', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString('pt-BR', {
     day: '2-digit',
@@ -244,13 +239,6 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
                   <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
                     <span className="text-gray-600">Serviço</span>
                     <span className="font-medium text-[#1D3140]">{currencyFormatter.format(item.result.valorServico)}</span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
-                    <span className="text-gray-600">Imposto</span>
-                    <span className="font-medium text-[#1D3140]">
-                      {currencyFormatter.format(item.result.impostoValor)}
-                      <span className="ml-1 text-xs text-gray-500">({percentFormatter.format(item.result.impostoPercent)}%)</span>
-                    </span>
                   </div>
                   <div className={`flex items-center justify-between rounded-lg px-3 py-2 ${lucroNegativo ? 'bg-red-50' : 'bg-emerald-50'}`}>
                     <span className="text-gray-600">Lucro líquido</span>
