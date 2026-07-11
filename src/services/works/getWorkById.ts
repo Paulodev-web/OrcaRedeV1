@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { WorkStatus, WorkWithManager } from '@/types/works';
 
@@ -21,10 +22,10 @@ interface RawRow {
   updated_at: string;
 }
 
-export async function getWorkById(
+export const getWorkById = cache(async (
   supabase: SupabaseClient,
   workId: string,
-): Promise<WorkWithManager | null> {
+): Promise<WorkWithManager | null> => {
   const { data, error } = await supabase
     .from('works')
     .select(
@@ -68,4 +69,4 @@ export async function getWorkById(
     updatedAt: row.updated_at,
     managerName,
   };
-}
+});

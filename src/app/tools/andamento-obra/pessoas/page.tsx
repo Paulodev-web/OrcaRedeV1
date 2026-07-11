@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { createSupabaseServerClient } from '@/lib/supabaseServer';
+import { createSupabaseServerClient, getCachedAuthUser } from '@/lib/supabaseServer';
 import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
 import { getManagers } from '@/services/people/getManagers';
 import { getCrewMembers } from '@/services/people/getCrewMembers';
@@ -13,9 +13,7 @@ export const metadata: Metadata = {
 
 export default async function PessoasPage() {
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCachedAuthUser(supabase);
 
   if (!user) {
     redirect('/');

@@ -1,6 +1,7 @@
 import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
 import { getWorkTeam } from '@/services/works/getWorkTeam';
 import { getWorkAttendanceHistory } from '@/services/works/getWorkAttendanceHistory';
+import { getViewerWorkRole } from '@/services/works/getViewerWorkRole';
 import { WorkTeamSection } from '@/components/andamento-obra/works/equipe/WorkTeamSection';
 import { AttendanceTable } from '@/components/andamento-obra/works/equipe/AttendanceTable';
 
@@ -17,15 +18,10 @@ export default async function WorkTeamPage({ params }: Props) {
   const supabase = await createSupabaseServerClient();
   const userId = await requireAuthUserId(supabase);
 
-  const [team, attendance, memberRes, crewRes] = await Promise.all([
+  const [team, attendance, viewerRole, crewRes] = await Promise.all([
     getWorkTeam(supabase, workId),
     getWorkAttendanceHistory(supabase, workId),
-    supabase
-      .from('work_members')
-      .select('role')
-      .eq('work_id', workId)
-      .eq('user_id', userId)
-      .maybeSingle(),
+    getViewerWorkRole(supabase, workId, userId),
     supabase
       .from('crew_members')
       .select('id, full_name, role')
@@ -34,7 +30,7 @@ export default async function WorkTeamPage({ params }: Props) {
       .order('full_name', { ascending: true }),
   ]);
 
-  const role = (memberRes.data?.role as string) ?? 'engineer';
+  const role = viewerRole ?? 'engineer';
   const isEngineer = role === 'engineer';
   const allCrew = (crewRes.data ?? []) as Array<{ id: string; full_name: string; role: string | null }>;
   const allocatedIds = new Set(team.map((t) => t.crewMemberId));

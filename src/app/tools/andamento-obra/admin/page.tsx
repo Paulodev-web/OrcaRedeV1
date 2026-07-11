@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { createSupabaseServerClient } from '@/lib/supabaseServer';
+import { createSupabaseServerClient, getCachedAuthUser } from '@/lib/supabaseServer';
 import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
 import { AdminPanel } from './AdminPanel';
 
@@ -11,9 +11,7 @@ export const metadata: Metadata = {
 
 export default async function AdminPage() {
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCachedAuthUser(supabase);
 
   if (!user) redirect('/');
 

@@ -1,11 +1,12 @@
 import 'server-only';
+import { cache } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CurrentUserProfile, ProfileRole } from '@/types/people';
 
-export async function getCurrentUserProfile(
+export const getCurrentUserProfile = cache(async (
   supabase: SupabaseClient,
   userId: string,
-): Promise<CurrentUserProfile | null> {
+): Promise<CurrentUserProfile | null> => {
   const { data, error } = await supabase
     .from('profiles')
     .select('id, full_name, email, phone, role, is_active')
@@ -22,4 +23,4 @@ export async function getCurrentUserProfile(
     role: data.role as ProfileRole,
     isActive: Boolean(data.is_active),
   };
-}
+});

@@ -2,11 +2,11 @@ import { notFound, redirect } from 'next/navigation';
 import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
 import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
 import { getWorkById } from '@/services/works/getWorkById';
+import { getViewerWorkRole } from '@/services/works/getViewerWorkRole';
 import { getWorkProgressData } from '@/services/works/getWorkProgressData';
 import { getWorkMilestonesWithEvents } from '@/services/works/getWorkMilestonesWithEvents';
 import { ProgressOverview } from '@/components/andamento-obra/works/progresso/ProgressOverview';
 import { MilestonesList } from '@/components/andamento-obra/works/progresso/MilestonesList';
-import type { WorkMemberRole } from '@/types/works';
 
 interface ProgressoPageProps {
   params: Promise<{ workId: string }>;
@@ -28,20 +28,12 @@ export default async function ProgressoPage({ params }: ProgressoPageProps) {
     redirect('/');
   }
 
-  const { data: memberRow } = await supabase
-    .from('work_members')
-    .select('role')
-    .eq('work_id', workId)
-    .eq('user_id', userId)
-    .maybeSingle();
+  const [viewerRole, work] = await Promise.all([
+    getViewerWorkRole(supabase, workId, userId),
+    getWorkById(supabase, workId),
+  ]);
 
-  if (!memberRow) {
-    notFound();
-  }
-  const viewerRole = memberRow.role as WorkMemberRole;
-
-  const work = await getWorkById(supabase, workId);
-  if (!work) {
+  if (!viewerRole || !work) {
     notFound();
   }
 

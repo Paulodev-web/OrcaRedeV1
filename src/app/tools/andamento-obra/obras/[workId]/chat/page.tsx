@@ -2,11 +2,11 @@ import { notFound, redirect } from 'next/navigation';
 import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
 import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
 import { getWorkById } from '@/services/works/getWorkById';
+import { getViewerWorkRole } from '@/services/works/getViewerWorkRole';
 import { getWorkMessages } from '@/services/works/getWorkMessages';
 import { getAttachmentSignedUrls } from '@/services/works/getAttachmentSignedUrls';
 import { markMessagesAsRead } from '@/actions/workMessages';
 import { ChatRoom } from '@/components/andamento-obra/works/chat/ChatRoom';
-import type { WorkMessageSenderRole } from '@/types/works';
 
 interface ChatPageProps {
   params: Promise<{ workId: string }>;
@@ -28,20 +28,12 @@ export default async function ChatPage({ params }: ChatPageProps) {
     redirect('/');
   }
 
-  const { data: memberRow } = await supabase
-    .from('work_members')
-    .select('role')
-    .eq('work_id', workId)
-    .eq('user_id', userId)
-    .maybeSingle();
+  const [viewerRole, work] = await Promise.all([
+    getViewerWorkRole(supabase, workId, userId),
+    getWorkById(supabase, workId),
+  ]);
 
-  if (!memberRow) {
-    notFound();
-  }
-  const viewerRole = memberRow.role as WorkMessageSenderRole;
-
-  const work = await getWorkById(supabase, workId);
-  if (!work) {
+  if (!viewerRole || !work) {
     notFound();
   }
 

@@ -1,5 +1,6 @@
 import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
 import { getWorkAlerts } from '@/services/works/getWorkAlerts';
+import { getViewerWorkRole } from '@/services/works/getViewerWorkRole';
 import { AlertsList } from '@/components/andamento-obra/works/alertas/AlertsList';
 
 interface Props {
@@ -15,17 +16,12 @@ export default async function WorkAlertasPage({ params }: Props) {
   const supabase = await createSupabaseServerClient();
   const userId = await requireAuthUserId(supabase);
 
-  const [alertsResult, memberRes] = await Promise.all([
+  const [alertsResult, viewerRole] = await Promise.all([
     getWorkAlerts(supabase, workId),
-    supabase
-      .from('work_members')
-      .select('role')
-      .eq('work_id', workId)
-      .eq('user_id', userId)
-      .maybeSingle(),
+    getViewerWorkRole(supabase, workId, userId),
   ]);
 
-  const role = (memberRes.data?.role as string) ?? 'engineer';
+  const role = viewerRole ?? 'engineer';
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-6 lg:px-8">

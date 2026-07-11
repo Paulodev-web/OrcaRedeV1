@@ -2,10 +2,10 @@ import { notFound, redirect } from 'next/navigation';
 import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
 import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
 import { getWorkById } from '@/services/works/getWorkById';
+import { getViewerWorkRole } from '@/services/works/getViewerWorkRole';
 import { getWorkDailyLogs } from '@/services/works/getWorkDailyLogs';
 import { getDailyLogSignedUrls } from '@/services/works/getDailyLogSignedUrls';
 import { DailyLogList } from '@/components/andamento-obra/works/diario/DailyLogList';
-import type { WorkMemberRole } from '@/types/works';
 
 interface DiarioPageProps {
   params: Promise<{ workId: string }>;
@@ -27,20 +27,12 @@ export default async function DiarioPage({ params }: DiarioPageProps) {
     redirect('/');
   }
 
-  const { data: memberRow } = await supabase
-    .from('work_members')
-    .select('role')
-    .eq('work_id', workId)
-    .eq('user_id', userId)
-    .maybeSingle();
+  const [viewerRole, work] = await Promise.all([
+    getViewerWorkRole(supabase, workId, userId),
+    getWorkById(supabase, workId),
+  ]);
 
-  if (!memberRow) {
-    notFound();
-  }
-  const viewerRole = memberRow.role as WorkMemberRole;
-
-  const work = await getWorkById(supabase, workId);
-  if (!work) {
+  if (!viewerRole || !work) {
     notFound();
   }
 

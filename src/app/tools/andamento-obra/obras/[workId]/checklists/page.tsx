@@ -1,6 +1,7 @@
 import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
 import { getWorkChecklists } from '@/services/works/getWorkChecklists';
 import { getChecklistTemplates } from '@/services/works/getChecklistTemplates';
+import { getViewerWorkRole } from '@/services/works/getViewerWorkRole';
 import { ChecklistsList } from '@/components/andamento-obra/works/checklists/ChecklistsList';
 import { AssignChecklistDialog } from '@/components/andamento-obra/works/checklists/AssignChecklistDialog';
 
@@ -17,18 +18,13 @@ export default async function WorkChecklistsPage({ params }: Props) {
   const supabase = await createSupabaseServerClient();
   const userId = await requireAuthUserId(supabase);
 
-  const [checklists, templates, memberRes] = await Promise.all([
+  const [checklists, templates, viewerRole] = await Promise.all([
     getWorkChecklists(supabase, workId),
     getChecklistTemplates(supabase, userId),
-    supabase
-      .from('work_members')
-      .select('role')
-      .eq('work_id', workId)
-      .eq('user_id', userId)
-      .maybeSingle(),
+    getViewerWorkRole(supabase, workId, userId),
   ]);
 
-  const role = (memberRes.data?.role as string) ?? 'engineer';
+  const role = viewerRole ?? 'engineer';
   const isEngineer = role === 'engineer';
 
   return (

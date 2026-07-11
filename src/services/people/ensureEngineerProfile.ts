@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseServiceRoleClient } from '@/lib/supabaseServer';
 import type { CurrentUserProfile } from '@/types/people';
@@ -8,10 +9,10 @@ import { getCurrentUserProfile } from './getCurrentUserProfile';
  * Garante profile de engenheiro após sync/restore do banco (profiles podem sumir).
  * Usa service role só quando o registro não existe.
  */
-export async function ensureEngineerProfile(
+export const ensureEngineerProfile = cache(async (
   supabase: SupabaseClient,
   userId: string,
-): Promise<CurrentUserProfile | null> {
+): Promise<CurrentUserProfile | null> => {
   const existing = await getCurrentUserProfile(supabase, userId);
   if (existing) return existing;
 
@@ -51,4 +52,4 @@ export async function ensureEngineerProfile(
   }
 
   return getCurrentUserProfile(supabase, userId);
-}
+});
