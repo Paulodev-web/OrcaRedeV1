@@ -15,7 +15,6 @@ import {
 } from '@/components/ui/select';
 import { addPoleStandardAction, updatePoleStandardAction } from '@/actions/poleStandards';
 
-const EMPTY_COMPANY_VALUE = '__no_company__';
 const EMPTY_POST_TYPE_VALUE = '__no_post_type__';
 
 type PickerTab = 'grupos' | 'materiais';
@@ -42,7 +41,7 @@ export function EditorPadraoPoste() {
     currentPoleStandard,
     setCurrentView,
     setCurrentPoleStandard,
-    fetchItemGroups,
+    fetchItemGroupsByCompanies,
     fetchMaterials,
     fetchPostTypes,
     fetchPoleStandards,
@@ -54,7 +53,6 @@ export function EditorPadraoPoste() {
   const [pickerTab, setPickerTab] = useState<PickerTab>('grupos');
   const [nome, setNome] = useState('');
   const [descricao, setDescricao] = useState('');
-  const [concessionariaId, setConcessionariaId] = useState('');
   const [selectedConcessionarias, setSelectedConcessionarias] = useState<string[]>([]);
   const [postTypeId, setPostTypeId] = useState('');
   const [grupos, setGrupos] = useState<GrupoEntry[]>([]);
@@ -69,15 +67,13 @@ export function EditorPadraoPoste() {
     if (currentPoleStandard) {
       setNome(currentPoleStandard.nome);
       setDescricao(currentPoleStandard.descricao || '');
-      setConcessionariaId(currentPoleStandard.concessionariaId);
-      setSelectedConcessionarias([currentPoleStandard.concessionariaId]);
+      setSelectedConcessionarias(currentPoleStandard.concessionariaIds);
       setPostTypeId(currentPoleStandard.postTypeId || '');
       setGrupos(currentPoleStandard.grupos.map(g => ({ templateId: g.templateId, quantidade: g.quantidade })));
       setMateriaisPadrao(currentPoleStandard.materiais.map(m => ({ materialId: m.materialId, quantidade: m.quantidade })));
     } else {
       setNome('');
       setDescricao('');
-      setConcessionariaId('');
       setSelectedConcessionarias([]);
       setPostTypeId('');
       setGrupos([]);
@@ -92,34 +88,43 @@ export function EditorPadraoPoste() {
 
   // Selecionar automaticamente a primeira concessionária ao criar um padrão novo
   useEffect(() => {
-    if (!currentPoleStandard && !concessionariaId && utilityCompanies.length > 0) {
-      const firstCompanyId = utilityCompanies[0].id;
-      setConcessionariaId(firstCompanyId);
-      setSelectedConcessionarias(prev => prev.includes(firstCompanyId) ? prev : [...prev, firstCompanyId]);
+    if (!currentPoleStandard && selectedConcessionarias.length === 0 && utilityCompanies.length > 0) {
+      setSelectedConcessionarias([utilityCompanies[0].id]);
     }
-  }, [currentPoleStandard, concessionariaId, utilityCompanies]);
+  }, [currentPoleStandard, selectedConcessionarias, utilityCompanies]);
 
-  // Concessionária de referência (usada para buscar grupos de itens);
-  // ao trocar, garante que ela permaneça marcada na lista de concessionárias do padrão
-  const handleConcessionariaReferenciaChange = (value: string) => {
-    const newCompanyId = value === EMPTY_COMPANY_VALUE ? '' : value;
-    setConcessionariaId(newCompanyId);
-    if (newCompanyId) {
-      setSelectedConcessionarias(prev => prev.includes(newCompanyId) ? prev : [...prev, newCompanyId]);
+  const toggleConcessionaria = (companyId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedConcessionarias(prev => prev.includes(companyId) ? prev : [...prev, companyId]);
+      return;
     }
+    if (selectedConcessionarias.length <= 1) {
+      alertDialog.showError(
+        'Não Permitido',
+        'O padrão precisa estar vinculado a pelo menos uma concessionária.'
+      );
+      return;
+    }
+    setSelectedConcessionarias(prev => prev.filter(id => id !== companyId));
   };
 
-  // Buscar grupos de itens da concessionária selecionada
+  // Buscar grupos de itens de todas as concessionárias vinculadas ao padrão —
+  // como o padrão é compartilhado, o catálogo de grupos precisa ser a união
+  // dos catálogos de cada concessionária selecionada (senão grupos de uma
+  // concessionária "somem" ao editar um padrão também usado por outra).
   useEffect(() => {
-    if (concessionariaId) {
-      fetchItemGroups(concessionariaId);
+    if (selectedConcessionarias.length > 0) {
+      fetchItemGroupsByCompanies(selectedConcessionarias);
     }
-  }, [concessionariaId, fetchItemGroups]);
+  }, [selectedConcessionarias, fetchItemGroupsByCompanies]);
 
   const filteredGroups = useMemo(() => {
     const term = groupSearchTerm.toLowerCase();
     return itemGroups.filter(g => g.nome.toLowerCase().includes(term));
   }, [itemGroups, groupSearchTerm]);
+
+  const getCompanySigla = (companyId: string) =>
+    utilityCompanies.find(c => c.id === companyId)?.sigla || '?';
 
   const filteredMaterials = useMemo(() => {
     const term = materialSearchTerm.toLowerCase();
@@ -180,7 +185,7 @@ export function EditorPadraoPoste() {
       alertDialog.showError('Campo Obrigatório', 'Por favor, digite um nome para o padrão de poste.');
       return;
     }
-    if (!concessionariaId || selectedConcessionarias.length === 0) {
+    if (selectedConcessionarias.length === 0) {
       alertDialog.showError('Campo Obrigatório', 'Por favor, selecione ao menos uma concessionária.');
       return;
     }
@@ -196,76 +201,39 @@ export function EditorPadraoPoste() {
       const groupsPayload = grupos.map(g => ({ template_id: g.templateId, quantity: g.quantidade }));
       const materialsPayload = materiaisPadrao.map(m => ({ material_id: m.materialId, quantity: m.quantidade }));
 
-      if (isEditing) {
-        const currentCompanyId = currentPoleStandard!.concessionariaId;
-
-        const updateResult = await updatePoleStandardAction(currentPoleStandard!.id, {
-          name: nome.trim(),
-          description: descricao.trim() || undefined,
-          company_id: currentCompanyId,
-          post_type_id: postTypeId || null,
-          groups: groupsPayload,
-          materials: materialsPayload,
-        });
-
-        if (!updateResult.success) {
-          alertDialog.showError('Erro ao Salvar', updateResult.error || 'Erro ao atualizar padrão de poste. Tente novamente.');
-          return;
-        }
-
-        const additionalCompanyIds = selectedConcessionarias.filter(id => id !== currentCompanyId);
-
-        if (additionalCompanyIds.length > 0) {
-          const addResult = await addPoleStandardAction({
+      const result = isEditing
+        ? await updatePoleStandardAction(currentPoleStandard!.id, {
             name: nome.trim(),
             description: descricao.trim() || undefined,
-            company_ids: additionalCompanyIds,
+            company_ids: selectedConcessionarias,
+            post_type_id: postTypeId || null,
+            groups: groupsPayload,
+            materials: materialsPayload,
+          })
+        : await addPoleStandardAction({
+            name: nome.trim(),
+            description: descricao.trim() || undefined,
+            company_ids: selectedConcessionarias,
             post_type_id: postTypeId || null,
             groups: groupsPayload,
             materials: materialsPayload,
           });
 
-          if (!addResult.success) {
-            alertDialog.showError('Erro ao Criar Cópias', addResult.error || 'Erro ao criar cópias do padrão. Tente novamente.');
-            return;
-          }
-        }
-
-        setCurrentPoleStandard(null);
-        setCurrentView('padroes-poste');
-        fetchPoleStandards(currentCompanyId);
-
-        let message = 'O padrão de poste foi atualizado com sucesso.';
-        if (additionalCompanyIds.length > 0) {
-          message += ` ${additionalCompanyIds.length} cópia(s) ${additionalCompanyIds.length > 1 ? 'foram criadas' : 'foi criada'} para ${additionalCompanyIds.length > 1 ? 'outras concessionárias' : 'outra concessionária'} selecionada${additionalCompanyIds.length > 1 ? 's' : ''}.`;
-        }
-
-        alertDialog.showSuccess('Padrão Atualizado', message);
-      } else {
-        const addResult = await addPoleStandardAction({
-          name: nome.trim(),
-          description: descricao.trim() || undefined,
-          company_ids: selectedConcessionarias,
-          post_type_id: postTypeId || null,
-          groups: groupsPayload,
-          materials: materialsPayload,
-        });
-
-        if (!addResult.success) {
-          alertDialog.showError('Erro ao Salvar', addResult.error || 'Erro ao criar padrão de poste. Tente novamente.');
-          return;
-        }
-
-        setCurrentPoleStandard(null);
-        setCurrentView('padroes-poste');
-        fetchPoleStandards(concessionariaId);
-
-        const message = selectedConcessionarias.length > 1
-          ? `${selectedConcessionarias.length} padrões foram criados com sucesso (um para cada concessionária selecionada).`
-          : 'O padrão de poste foi criado com sucesso. Ele já pode ser aplicado ao adicionar postes.';
-
-        alertDialog.showSuccess('Padrão(ões) Criado(s)', message);
+      if (!result.success) {
+        alertDialog.showError('Erro ao Salvar', result.error || 'Erro ao salvar padrão de poste. Tente novamente.');
+        return;
       }
+
+      setCurrentPoleStandard(null);
+      setCurrentView('padroes-poste');
+      fetchPoleStandards(selectedConcessionarias[0]);
+
+      alertDialog.showSuccess(
+        isEditing ? 'Padrão Atualizado' : 'Padrão Criado',
+        isEditing
+          ? 'O padrão de poste foi atualizado com sucesso em todas as concessionárias vinculadas.'
+          : 'O padrão de poste foi criado com sucesso. Ele já pode ser aplicado ao adicionar postes.'
+      );
     });
   };
 
@@ -299,9 +267,9 @@ export function EditorPadraoPoste() {
         {pickerTab === 'grupos' ? (
           <>
             <div className="mb-3 flex-shrink-0">
-              {!concessionariaId ? (
+              {selectedConcessionarias.length === 0 ? (
                 <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                  Selecione uma concessionária no painel ao lado para ver os grupos de itens disponíveis.
+                  Selecione ao menos uma concessionária no painel ao lado para ver os grupos de itens disponíveis.
                 </p>
               ) : (
                 <div className="relative">
@@ -324,7 +292,7 @@ export function EditorPadraoPoste() {
                   <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
                 </div>
               ) : (
-                concessionariaId && filteredGroups.map((grupo) => {
+                selectedConcessionarias.length > 0 && filteredGroups.map((grupo) => {
                   const jaAdicionado = grupos.some(g => g.templateId === grupo.id);
                   return (
                     <div
@@ -332,7 +300,12 @@ export function EditorPadraoPoste() {
                       className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
                     >
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm text-gray-900">{grupo.nome}</div>
+                        <div className="font-medium text-sm text-gray-900 flex items-center gap-1.5">
+                          {grupo.nome}
+                          <span className="text-[10px] font-normal text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                            {getCompanySigla(grupo.concessionariaId)}
+                          </span>
+                        </div>
                         {grupo.descricao && (
                           <div className="text-xs text-gray-500 truncate">{grupo.descricao}</div>
                         )}
@@ -354,10 +327,10 @@ export function EditorPadraoPoste() {
                   );
                 })
               )}
-              {concessionariaId && !loadingGroups && filteredGroups.length === 0 && (
+              {selectedConcessionarias.length > 0 && !loadingGroups && filteredGroups.length === 0 && (
                 <div className="text-center py-8">
                   <p className="text-gray-500 text-sm">
-                    {groupSearchTerm ? 'Nenhum grupo encontrado com essa busca.' : 'Nenhum grupo de itens cadastrado para esta concessionária.'}
+                    {groupSearchTerm ? 'Nenhum grupo encontrado com essa busca.' : 'Nenhum grupo de itens cadastrado para as concessionárias selecionadas.'}
                   </p>
                 </div>
               )}
@@ -461,112 +434,62 @@ export function EditorPadraoPoste() {
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Concessionária de Referência *
-              </label>
-              <Select
-                value={concessionariaId || EMPTY_COMPANY_VALUE}
-                onValueChange={handleConcessionariaReferenciaChange}
-                disabled={isPending || isEditing || utilityCompanies.length === 0}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={EMPTY_COMPANY_VALUE}>Selecione uma concessionária</SelectItem>
-                  {utilityCompanies.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-gray-400 mt-1">
-                {isEditing
-                  ? 'Não é possível trocar a concessionária original ao editar.'
-                  : 'Usada para listar os grupos de itens disponíveis ao lado.'}
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo de Poste <span className="text-gray-400 font-normal">(opcional)</span>
-              </label>
-              <Select
-                value={postTypeId || EMPTY_POST_TYPE_VALUE}
-                onValueChange={(value) => setPostTypeId(value === EMPTY_POST_TYPE_VALUE ? '' : value)}
-                disabled={isPending || loadingPostTypes}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Escolher ao aplicar" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={EMPTY_POST_TYPE_VALUE}>Escolher ao aplicar o padrão</SelectItem>
-                  {postTypes.map((pt) => (
-                    <SelectItem key={pt.id} value={pt.id}>
-                      {pt.name}{pt.code ? ` (${pt.code})` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tipo de Poste <span className="text-gray-400 font-normal">(opcional)</span>
+            </label>
+            <Select
+              value={postTypeId || EMPTY_POST_TYPE_VALUE}
+              onValueChange={(value) => setPostTypeId(value === EMPTY_POST_TYPE_VALUE ? '' : value)}
+              disabled={isPending || loadingPostTypes}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Escolher ao aplicar" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={EMPTY_POST_TYPE_VALUE}>Escolher ao aplicar o padrão</SelectItem>
+                {postTypes.map((pt) => (
+                  <SelectItem key={pt.id} value={pt.id}>
+                    {pt.name}{pt.code ? ` (${pt.code})` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Concessionária(s) que Usarão este Padrão *
             </label>
+            <p className="text-xs text-gray-400 mb-2">
+              É o mesmo padrão para todas — editar nome, descrição, grupos ou materiais atualiza de uma vez em todas as concessionárias marcadas abaixo.
+            </p>
             <div className="border border-gray-300 rounded-md p-3 max-h-40 overflow-y-auto">
               {utilityCompanies.length === 0 ? (
                 <p className="text-sm text-gray-500">Nenhuma concessionária disponível</p>
               ) : (
                 <div className="space-y-2">
-                  {utilityCompanies.map((c) => {
-                    const isCurrentStandardCompany = isEditing && c.id === currentPoleStandard!.concessionariaId;
-                    return (
-                      <label
-                        key={c.id}
-                        className={`flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded ${
-                          isCurrentStandardCompany ? 'bg-blue-50' : ''
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedConcessionarias.includes(c.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedConcessionarias(prev => [...prev, c.id]);
-                            } else {
-                              if (isCurrentStandardCompany || c.id === concessionariaId) {
-                                alertDialog.showError(
-                                  'Não Permitido',
-                                  'Não é possível remover a concessionária de referência. Selecione outras concessionárias para criar cópias.'
-                                );
-                                return;
-                              }
-                              setSelectedConcessionarias(prev => prev.filter(id => id !== c.id));
-                            }
-                          }}
-                          disabled={isPending}
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-700">
-                          {c.nome}
-                          {isCurrentStandardCompany && (
-                            <span className="ml-2 text-xs text-blue-600 font-medium">(atual)</span>
-                          )}
-                        </span>
-                      </label>
-                    );
-                  })}
+                  {utilityCompanies.map((c) => (
+                    <label
+                      key={c.id}
+                      className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedConcessionarias.includes(c.id)}
+                        onChange={(e) => toggleConcessionaria(c.id, e.target.checked)}
+                        disabled={isPending}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">{c.nome}</span>
+                    </label>
+                  ))}
                 </div>
               )}
             </div>
             {selectedConcessionarias.length > 1 && (
               <p className="mt-2 text-xs text-gray-500">
-                {isEditing
-                  ? `O padrão será atualizado na concessionária atual e ${selectedConcessionarias.length - 1} cópia(s) ${selectedConcessionarias.length - 1 > 1 ? 'serão criadas' : 'será criada'} para ${selectedConcessionarias.length - 1 > 1 ? 'outras concessionárias' : 'outra concessionária'} selecionada${selectedConcessionarias.length - 1 > 1 ? 's' : ''}.`
-                  : `${selectedConcessionarias.length} concessionárias selecionadas. Serão criados padrões independentes para cada uma.`}
+                Compartilhado por {selectedConcessionarias.length} concessionárias: {selectedConcessionarias.map(getCompanySigla).join(', ')}.
               </p>
             )}
           </div>
@@ -591,8 +514,13 @@ export function EditorPadraoPoste() {
                   return (
                     <div key={templateId} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm text-gray-900 truncate">
+                        <div className="font-medium text-sm text-gray-900 truncate flex items-center gap-1.5">
                           {grupo?.nome || 'Grupo não encontrado'}
+                          {grupo && (
+                            <span className="text-[10px] font-normal text-gray-400 bg-white px-1.5 py-0.5 rounded flex-shrink-0">
+                              {getCompanySigla(grupo.concessionariaId)}
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs text-gray-500">
                           {grupo?.materiais.length ?? 0} materiais no grupo

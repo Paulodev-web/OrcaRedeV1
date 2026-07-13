@@ -53,7 +53,7 @@ export interface PoleStandard {
   id: string;
   nome: string;
   descricao: string;
-  concessionariaId: string;
+  concessionariaIds: string[];
   postTypeId?: string | null;
   grupos: {
     templateId: string;

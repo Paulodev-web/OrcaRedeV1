@@ -88,6 +88,9 @@ interface AppContextType {
   // Funções para concessionárias e grupos
   fetchUtilityCompanies: () => Promise<void>;
   fetchItemGroups: (companyId: string) => Promise<void>;
+  // Busca grupos de itens de várias concessionárias de uma vez (usado pelo
+  // editor de padrão de poste, que pode ser compartilhado entre várias)
+  fetchItemGroupsByCompanies: (companyIds: string[]) => Promise<void>;
 
   // Funções para padrões de poste
   fetchPoleStandards: (companyId: string) => Promise<void>;
@@ -1701,10 +1704,92 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Funções para padrões de poste (grupo de grupos de itens)
+  // Busca grupos de itens de várias concessionárias de uma vez. Usado pelo
+  // editor de padrão de poste: como um padrão pode ser compartilhado por
+  // várias concessionárias e cada uma tem seu próprio catálogo de grupos,
+  // o editor precisa enxergar a união dos catálogos das concessionárias
+  // selecionadas (senão grupos de uma concessionária "somem" ao editar
+  // um padrão também usado por outra).
+  const fetchItemGroupsByCompanies = useCallback(async (companyIds: string[]) => {
+    if (companyIds.length === 0) {
+      setItemGroups([]);
+      return;
+    }
+
+    try {
+      setLoadingGroups(true);
+
+      const { data: templatesData, error: templatesError } = await supabase
+        .from('item_group_templates')
+        .select(`
+          id,
+          name,
+          description,
+          company_id,
+          template_materials (
+            material_id,
+            quantity,
+            materials (
+              id,
+              code,
+              name,
+              price,
+              unit
+            )
+          )
+        `, { count: 'exact' })
+        .in('company_id', companyIds)
+        .range(0, 200);
+
+      if (templatesError) {
+        console.error('Erro ao buscar templates de grupos:', templatesError);
+        throw templatesError;
+      }
+
+      const gruposFormatados: GrupoItem[] = templatesData?.map(template => ({
+        id: template.id,
+        nome: template.name || '',
+        descricao: template.description || '',
+        concessionariaId: template.company_id,
+        materiais: template.template_materials?.map(tm => ({
+          materialId: tm.material_id,
+          quantidade: tm.quantity,
+        })) || []
+      })) || [];
+
+      setItemGroups(gruposFormatados);
+    } catch (error) {
+      console.error('Erro ao buscar grupos de itens:', error);
+      setItemGroups([]);
+    } finally {
+      setLoadingGroups(false);
+    }
+  }, []);
+
+  // Funções para padrões de poste (grupo de grupos de itens).
+  // Um padrão é uma única linha compartilhada por N concessionárias através
+  // de pole_standard_companies — não existe mais "o padrão da concessionária
+  // X", apenas "padrões que a concessionária X usa".
   const fetchPoleStandards = useCallback(async (companyId: string) => {
     try {
       setLoadingPoleStandards(true);
+
+      const { data: linksData, error: linksError } = await supabase
+        .from('pole_standard_companies')
+        .select('pole_standard_id')
+        .eq('company_id', companyId);
+
+      if (linksError) {
+        console.error('Erro ao buscar vínculos de padrões de poste:', linksError);
+        throw linksError;
+      }
+
+      const standardIds = (linksData || []).map(l => l.pole_standard_id);
+
+      if (standardIds.length === 0) {
+        setPoleStandards([]);
+        return;
+      }
 
       const { data: standardsData, error: standardsError } = await supabase
         .from('pole_standards')
@@ -1712,8 +1797,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
           id,
           name,
           description,
-          company_id,
           post_type_id,
+          pole_standard_companies (
+            company_id
+          ),
           pole_standard_groups (
             template_id,
             quantity
@@ -1723,7 +1810,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             quantity
           )
         `)
-        .eq('company_id', companyId)
+        .in('id', standardIds)
         .order('name', { ascending: true })
         .range(0, 200);
 
@@ -1736,7 +1823,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         id: standard.id,
         nome: standard.name || '',
         descricao: standard.description || '',
-        concessionariaId: standard.company_id,
+        concessionariaIds: standard.pole_standard_companies?.map(c => c.company_id) || [],
         postTypeId: standard.post_type_id,
         grupos: standard.pole_standard_groups?.map(g => ({
           templateId: g.template_id,
@@ -1973,6 +2060,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Funções para concessionárias e grupos
       fetchUtilityCompanies,
       fetchItemGroups,
+      fetchItemGroupsByCompanies,
 
       // Funções para padrões de poste
       fetchPoleStandards,

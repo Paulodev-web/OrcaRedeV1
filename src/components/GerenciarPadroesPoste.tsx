@@ -262,9 +262,20 @@ export function GerenciarPadroesPoste() {
                               {totalMateriaisAvulsos} material{totalMateriaisAvulsos !== 1 ? 'is' : ''} avulso{totalMateriaisAvulsos !== 1 ? 's' : ''}
                             </span>
                           )}
-                          <span className="text-gray-400">
-                            {concessionariaSelecionada?.sigla}
-                          </span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                          <span className="text-xs text-gray-400">Compartilhado com:</span>
+                          {padrao.concessionariaIds.map((companyId) => {
+                            const empresa = utilityCompanies.find(c => c.id === companyId);
+                            return (
+                              <span
+                                key={companyId}
+                                className="inline-flex items-center bg-green-50 text-green-700 text-xs px-2 py-0.5 rounded-full"
+                              >
+                                {empresa?.sigla || '?'}
+                              </span>
+                            );
+                          })}
                         </div>
                       </div>
                       <div className="flex space-x-2 ml-4 flex-shrink-0">
