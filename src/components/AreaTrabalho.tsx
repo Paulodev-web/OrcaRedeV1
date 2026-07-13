@@ -343,10 +343,6 @@ export function AreaTrabalho() {
 
       setIsModalOpen(false);
       setClickCoordinates(null);
-      alertDialog.showSuccess(
-        "Poste Adicionado",
-        "O poste foi adicionado com sucesso ao orçamento."
-      );
     } catch (error) {
       console.error("Falha ao adicionar poste:", error);
       alertDialog.showError(

@@ -138,6 +138,11 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
         setAppliedStandardId('');
       }, 0);
 
+      // O modal fica montado (só retorna null quando fechado), então o estado
+      // do alertDialog persiste entre uma abertura e outra. Sem isso, um alerta
+      // antigo (ex: sucesso do poste anterior) reaparecia ao abrir o modal de novo.
+      alertDialog.closeDialog();
+
       // Carregar grupos e padrões de poste da concessionária atual
       if (currentOrcamento?.company_id) {
         fetchItemGroups(currentOrcamento.company_id);
@@ -250,10 +255,6 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
         await onSubmit(selectedPostType, postName.trim());
       }
 
-      alertDialog.showSuccess(
-        'Poste Adicionado',
-        'O poste foi adicionado com sucesso ao orçamento.'
-      );
       onClose();
     } catch {
       alertDialog.showError(
