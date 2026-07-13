@@ -48,6 +48,7 @@ export function AreaTrabalho() {
     fetchBudgetDetails,
 
     fetchPostTypes,
+    postTypes,
     addPostToBudget,
     deletePostFromBudget,
     updatePostCoordinates,
@@ -329,14 +330,17 @@ export function AreaTrabalho() {
     }
     
     try {
+      const postType = postTypes.find(pt => pt.id === postTypeId);
       await addPostToBudget({
         budget_id: currentOrcamento.id,
         post_type_id: postTypeId,
         name: postName,
         x_coord: clickCoordinates.x,
         y_coord: clickCoordinates.y,
+        postTypeMaterialId: postType?.material_id,
+        postTypePrice: postType?.price,
       });
-      
+
       setIsModalOpen(false);
       setClickCoordinates(null);
       alertDialog.showSuccess(
@@ -350,7 +354,7 @@ export function AreaTrabalho() {
         "Ocorreu um erro ao salvar o poste. Tente novamente."
       );
     }
-  }, [clickCoordinates, currentOrcamento, addPostToBudget, alertDialog]);
+  }, [clickCoordinates, currentOrcamento, addPostToBudget, postTypes, alertDialog]);
 
   // Função para adicionar poste com grupos e materiais
   const handleAddPostWithItems = useCallback(async (
@@ -371,6 +375,7 @@ export function AreaTrabalho() {
       // Primeiro adicionar o poste e obter seu ID
       // IMPORTANTE: skipPostTypeMaterial=true para não adicionar o material do tipo de poste automaticamente
       // pois ele será adicionado manualmente junto com os outros materiais avulsos selecionados
+      const postType = postTypes.find(pt => pt.id === postTypeId);
       const newPostId = await addPostToBudget({
         budget_id: currentOrcamento.id,
         post_type_id: postTypeId,
@@ -378,6 +383,8 @@ export function AreaTrabalho() {
         x_coord: clickCoordinates.x,
         y_coord: clickCoordinates.y,
         skipPostTypeMaterial: true, // Não adicionar automaticamente quando há itens pré-selecionados
+        postTypeMaterialId: postType?.material_id,
+        postTypePrice: postType?.price,
       });
 
       // Adicionar grupos e materiais avulsos em paralelo (cada um é uma
@@ -412,8 +419,8 @@ export function AreaTrabalho() {
         "Ocorreu um erro ao salvar o poste e seus itens. Tente novamente."
       );
     }
-  }, [clickCoordinates, currentOrcamento, addPostToBudget, addGroupToPost, addLooseMaterialToPost, materiais, alertDialog]);
-  
+  }, [clickCoordinates, currentOrcamento, addPostToBudget, addGroupToPost, addLooseMaterialToPost, materiais, postTypes, alertDialog]);
+
   // Função para exportar materiais organizados por poste/grupo
   const handleExportByPostAndGroup = useCallback(() => {
     if (!budgetDetails || budgetDetails.posts.length === 0) {

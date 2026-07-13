@@ -64,7 +64,7 @@ interface AppContextType {
   
   // Funções de tipos de poste
   fetchPostTypes: () => Promise<void>;
-  addPostToBudget: (newPostData: { budget_id: string; post_type_id: string; name: string; x_coord: number; y_coord: number; skipPostTypeMaterial?: boolean; }) => Promise<string>;
+  addPostToBudget: (newPostData: { budget_id: string; post_type_id: string; name: string; x_coord: number; y_coord: number; skipPostTypeMaterial?: boolean; postTypeMaterialId?: string; postTypePrice?: number; }) => Promise<string>;
   addGroupToPost: (groupId: string, postId: string) => Promise<void>;
   deletePostFromBudget: (postId: string) => Promise<void>;
   updatePostCoordinates: (postId: string, x: number, y: number) => Promise<void>;
@@ -773,22 +773,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [hasFetchedPostTypes, postTypes.length]);
 
-  const addPostToBudget = async (newPostData: { budget_id: string; post_type_id: string; name: string; x_coord: number; y_coord: number; skipPostTypeMaterial?: boolean; }) => {
+  const addPostToBudget = async (newPostData: { budget_id: string; post_type_id: string; name: string; x_coord: number; y_coord: number; skipPostTypeMaterial?: boolean; postTypeMaterialId?: string; postTypePrice?: number; }) => {
     try {
       console.log(`🔄 === SUPABASE INSERT INICIADO ===`);
       console.log(`📤 Dados sendo enviados para Supabase:`, newPostData);
-      
-      // Buscar o material_id do tipo de poste e o próximo contador em paralelo,
-      // já que são consultas independentes
-      const [
-        { data: postTypeData, error: postTypeError },
-        { data: maxCounterData, error: maxCounterError },
-      ] = await Promise.all([
-        supabase
-          .from('post_types')
-          .select('material_id, price')
-          .eq('id', newPostData.post_type_id)
-          .single(),
+
+      // O chamador normalmente já tem o tipo de poste carregado em memória
+      // (contexto postTypes), então evitamos uma consulta redundante ao banco
+      // quando material_id/price já vêm prontos.
+      const hasPostTypeDataFromCaller = newPostData.postTypeMaterialId !== undefined || newPostData.postTypePrice !== undefined;
+
+      const [postTypeResult, { data: maxCounterData, error: maxCounterError }] = await Promise.all([
+        hasPostTypeDataFromCaller
+          ? Promise.resolve({ data: { material_id: newPostData.postTypeMaterialId, price: newPostData.postTypePrice ?? 0 }, error: null })
+          : supabase
+              .from('post_types')
+              .select('material_id, price')
+              .eq('id', newPostData.post_type_id)
+              .single(),
         supabase
           .from('budget_posts')
           .select('counter')
@@ -797,6 +799,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           .limit(1)
           .maybeSingle(),
       ]);
+
+      const { data: postTypeData, error: postTypeError } = postTypeResult;
 
       if (postTypeError) {
         console.error('Erro ao buscar dados do tipo de poste:', postTypeError);
@@ -852,54 +856,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.log(`📝 Material ID: ${postTypeData.material_id}`);
         console.log(`📝 Quantidade: 1`);
         console.log(`📝 Preço: ${postTypeData.price}`);
-        
-        // Verificar se já existe esse material avulso para evitar duplicação
-        const { data: existingMaterial, error: checkError } = await supabase
+
+        // O poste acabou de ser criado (data.id é novo), então não há como já
+        // existir um post_materials para ele — inserir direto, sem checagem prévia.
+        console.log(`🚀 Inserindo material avulso no banco...`);
+        const { data: materialData, error: materialError } = await supabase
           .from('post_materials')
-          .select('id')
-          .eq('post_id', data.id)
-          .eq('material_id', postTypeData.material_id)
+          .insert({
+            post_id: data.id,
+            material_id: postTypeData.material_id,
+            quantity: 1,
+            price_at_addition: postTypeData.price,
+          })
+          .select(`
+            id,
+            material_id,
+            quantity,
+            price_at_addition,
+            materials (
+              id,
+              code,
+              name,
+              description,
+              unit,
+              price
+            )
+          `)
           .single();
 
-        if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = row not found
-          console.error('❌ Erro ao verificar material avulso existente:', checkError);
-        }
-
-        // Só adicionar se não existir
-        if (!existingMaterial) {
-          console.log(`🚀 Inserindo material avulso no banco...`);
-          const { data: materialData, error: materialError } = await supabase
-            .from('post_materials')
-            .insert({
-              post_id: data.id,
-              material_id: postTypeData.material_id,
-              quantity: 1,
-              price_at_addition: postTypeData.price,
-            })
-            .select(`
-              id,
-              material_id,
-              quantity,
-              price_at_addition,
-              materials (
-                id,
-                code,
-                name,
-                description,
-                unit,
-                price
-              )
-            `)
-            .single();
-
-          if (materialError) {
-            console.error('❌ Erro ao inserir material avulso:', materialError);
-          } else {
-            console.log(`✅ Material avulso inserido com sucesso:`, materialData);
-            looseMaterialData = materialData;
-          }
+        if (materialError) {
+          console.error('❌ Erro ao inserir material avulso:', materialError);
         } else {
-          console.log(`ℹ️ Poste já existe como material avulso, pulando...`);
+          console.log(`✅ Material avulso inserido com sucesso:`, materialData);
+          looseMaterialData = materialData;
         }
       } else if (newPostData.skipPostTypeMaterial) {
         console.log(`ℹ️ skipPostTypeMaterial=true - não adicionando material do tipo de poste automaticamente`);
@@ -911,6 +900,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const newPostDetail: BudgetPostDetail = {
         id: data.id,
         name: data.name || '',
+        custom_name: data.custom_name || undefined,
         counter: data.counter || 0,
         x_coord: data.x_coord || 0,
         y_coord: data.y_coord || 0,
