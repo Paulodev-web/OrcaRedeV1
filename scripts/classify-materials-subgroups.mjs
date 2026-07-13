@@ -1,5 +1,7 @@
-// Backfill: classifica por IA (Gemini) os materiais existentes sem subgrupo definido.
-// Mantenha o prompt/schema em sync com src/services/ai/materialSubgroupClassifier.ts.
+// Backfill: classifica por IA (Gemini) os materiais do catálogo que ainda não têm subgrupo
+// definido (subgroup IS NULL), preservando o subgrupo dos que já foram classificados. O
+// resultado é sempre restrito à lista MATERIAL_SUBGROUPS abaixo (o banco também tem um CHECK
+// constraint garantindo isso).
 //
 // Uso:
 //   node scripts/classify-materials-subgroups.mjs
@@ -47,11 +49,17 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !GEMINI_API_KEY) {
   process.exit(1);
 }
 
-const BATCH_SIZE = Number.parseInt(process.env.MATERIAL_SUBGROUP_BATCH_SIZE ?? '30', 10);
+// Lotes grandes = menos chamadas à API = menos repetição do system prompt a cada chamada
+// (menos tokens gastos no total) e menor chance de estourar o limite de requisições/minuto
+// da conta Gemini. Com ~1750 materiais, 100/lote dá ~18 chamadas em vez de ~59.
+const BATCH_SIZE = Number.parseInt(process.env.MATERIAL_SUBGROUP_BATCH_SIZE ?? '100', 10);
 const CONFIDENCE_THRESHOLD = Number.parseInt(process.env.MATERIAL_SUBGROUP_CONFIDENCE_THRESHOLD ?? '70', 10);
 const GEMINI_MODEL = process.env.MATERIAL_SUBGROUP_GEMINI_MODEL ?? 'gemini-2.5-flash';
-const BATCH_DELAY_MS = Number.parseInt(process.env.MATERIAL_SUBGROUP_BATCH_DELAY_MS ?? '4000', 10);
-const RATE_LIMIT_RETRY_DELAY_MS = 45000;
+// Espaçamento generoso entre chamadas para ficar com folga do limite de RPM (rate limit
+// observado por volta de ~7-10 requisições/minuto na conta atual).
+const BATCH_DELAY_MS = Number.parseInt(process.env.MATERIAL_SUBGROUP_BATCH_DELAY_MS ?? '7000', 10);
+const RATE_LIMIT_BASE_RETRY_DELAY_MS = 20000;
+const RATE_LIMIT_MAX_ATTEMPTS = 4;
 const UPDATE_CONCURRENCY = 10;
 
 const MATERIAL_SUBGROUPS = [
@@ -134,6 +142,7 @@ const model = genAI.getGenerativeModel({
       },
     },
     temperature: 0.1,
+    thinkingConfig: { thinkingBudget: 0 },
   },
 });
 
@@ -163,9 +172,11 @@ async function classifyBatch(materials, attempt = 0) {
     return out;
   } catch (err) {
     const isRateLimit = /429|Too Many Requests|quota/i.test(err.message ?? '');
-    const maxAttempts = isRateLimit ? 3 : 1;
+    const maxAttempts = isRateLimit ? RATE_LIMIT_MAX_ATTEMPTS : 1;
     if (attempt < maxAttempts) {
-      const delay = isRateLimit ? RATE_LIMIT_RETRY_DELAY_MS : 1000;
+      // Backoff exponencial no rate limit (20s, 40s, 80s, 160s) em vez de espera fixa —
+      // dá tempo da cota de requisições/minuto se recuperar sem desperdiçar tempo à toa.
+      const delay = isRateLimit ? RATE_LIMIT_BASE_RETRY_DELAY_MS * 2 ** attempt : 1000;
       console.warn(`  [aviso] lote falhou (${isRateLimit ? 'rate limit' : err.message}), aguardando ${Math.round(delay / 1000)}s e tentando novamente...`);
       await sleep(delay);
       return classifyBatch(materials, attempt + 1);

@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef, useTransition } from 'react';
-import { Plus, Search, Edit, Trash2, Upload, Loader2, ArrowUpDown, ArrowUp, ArrowDown, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Sparkles } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Upload, Loader2, ArrowUpDown, ArrowUp, ArrowDown, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { AlertDialog } from '@/components/ui/alert-dialog';
@@ -16,7 +16,6 @@ import {
   addMaterialAction,
   updateMaterialAction,
   deleteMaterialAction,
-  classifyUnclassifiedMaterialsAction,
 } from '@/actions/materials';
 
 const EMPTY_UNIDADE_VALUE = '__no_unidade__';
@@ -37,7 +36,6 @@ export function GerenciarMateriais() {
   const [sortField, setSortField] = useState<SortField>('descricao');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [subgroupFilter, setSubgroupFilter] = useState<string>(ALL_SUBGRUPOS_VALUE);
-  const [isClassifying, setIsClassifying] = useState(false);
 
   // Estados de paginação
   const [currentPage, setCurrentPage] = useState(1);
@@ -303,34 +301,6 @@ export function GerenciarMateriais() {
     }
   };
 
-  const handleClassifySubgroups = async () => {
-    if (isClassifying) return;
-    setIsClassifying(true);
-    try {
-      const result = await classifyUnclassifiedMaterialsAction();
-      if (result.success && result.data) {
-        const { processed, classified, outros, stillUnclassified } = result.data;
-        if (processed === 0) {
-          showMessage('success', 'Todos os materiais já estão classificados.');
-        } else {
-          const continua = processed >= 300 ? ' Ainda há mais materiais pendentes — clique novamente para continuar.' : '';
-          showMessage(
-            'success',
-            `IA classificou ${classified} de ${processed} materiais (${outros} em OUTROS). ${stillUnclassified} ficaram sem classificação por baixa confiança — revise manualmente.${continua}`
-          );
-          fetchMaterials(true);
-        }
-      } else {
-        showMessage('error', (!result.success && result.error) || 'Erro ao classificar materiais por IA.');
-      }
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : 'Erro inesperado ao classificar materiais por IA.';
-      showMessage('error', msg);
-    } finally {
-      setIsClassifying(false);
-    }
-  };
-
   const handleSaveMaterial = (materialData: Omit<Material, 'id'>) => {
     startTransition(async () => {
       let result;
@@ -393,15 +363,6 @@ export function GerenciarMateriais() {
           >
             <Upload className="h-5 w-5" />
             <span>Importar Planilha</span>
-          </button>
-          <button
-            onClick={handleClassifySubgroups}
-            disabled={isPending || isClassifying}
-            className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Classifica por IA os materiais sem subgrupo definido"
-          >
-            {isClassifying ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
-            <span>{isClassifying ? 'Classificando...' : 'Classificar por IA'}</span>
           </button>
           <button
             onClick={() => setShowModal(true)}
@@ -793,10 +754,10 @@ function MaterialModal({ material, onClose, onSave, loading = false }: MaterialM
       return;
     }
 
-    if (precoUnit <= 0) {
+    if (precoUnit < 0) {
       alertDialog.showError(
         'Preço Inválido',
-        'Por favor, informe um preço válido maior que zero.'
+        'O preço não pode ser negativo.'
       );
       return;
     }
