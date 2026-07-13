@@ -7,6 +7,13 @@ import {
   syncMaterialPriceEverywhere,
   type SyncMaterialPriceEverywhereResult,
 } from '@/services/budgets/syncMaterialPrice';
+import {
+  classifyMaterialSubgroupsBatch,
+  chunkMaterials,
+  DEFAULT_SUBGROUP_CLASSIFY_BATCH_SIZE,
+  SUBGROUP_CLASSIFY_CONFIDENCE_THRESHOLD,
+  type MaterialToClassify,
+} from '@/services/ai/materialSubgroupClassifier';
 
 type ActionResult<T = void> =
   | { success: true; data?: T }
@@ -17,6 +24,7 @@ interface MaterialInput {
   descricao: string;
   precoUnit: number;
   unidade: string;
+  subgrupo?: string | null;
 }
 
 export async function addMaterialAction(material: MaterialInput): Promise<ActionResult> {
@@ -29,6 +37,7 @@ export async function addMaterialAction(material: MaterialInput): Promise<Action
       name: material.descricao,
       price: material.precoUnit,
       unit: material.unidade,
+      subgroup: material.subgrupo ?? null,
       user_id: userId,
     });
 
@@ -59,6 +68,7 @@ export async function updateMaterialAction(id: string, material: MaterialInput):
         name: material.descricao,
         price: material.precoUnit,
         unit: material.unidade,
+        subgroup: material.subgrupo ?? null,
         price_source_supplier_name: null,
         price_source_supplier_id: null,
         price_source_quote_id: null,
@@ -215,6 +225,72 @@ export async function excludeMaterialFromSessionAction(
   } catch (err: unknown) {
     const message =
       err instanceof Error ? err.message : 'Erro ao remover material desta sessão.';
+    return { success: false, error: message };
+  }
+}
+
+export interface ClassifySubgroupsSummary {
+  processed: number;
+  classified: number;
+  outros: number;
+  stillUnclassified: number;
+}
+
+/** Classifica por IA (Gemini) os materiais do usuário sem subgrupo definido. Processa até 300 por chamada; rode novamente para continuar. */
+export async function classifyUnclassifiedMaterialsAction(): Promise<ActionResult<ClassifySubgroupsSummary>> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const { data: rows, error } = await supabase
+      .from('materials')
+      .select('id, code, name, description, unit')
+      .eq('user_id', userId)
+      .is('subgroup', null)
+      .limit(300);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    const materials = (rows ?? []) as MaterialToClassify[];
+    if (materials.length === 0) {
+      return { success: true, data: { processed: 0, classified: 0, outros: 0, stillUnclassified: 0 } };
+    }
+
+    const batches = chunkMaterials(materials, DEFAULT_SUBGROUP_CLASSIFY_BATCH_SIZE);
+    let classified = 0;
+    let outros = 0;
+
+    for (const batch of batches) {
+      const result = await classifyMaterialSubgroupsBatch(batch);
+      if (!result.success) continue;
+
+      const updates = result.classifications.filter(
+        (c) => c.confidence >= SUBGROUP_CLASSIFY_CONFIDENCE_THRESHOLD
+      );
+      await Promise.all(
+        updates.map((c) =>
+          supabase.from('materials').update({ subgroup: c.subgroup }).eq('id', c.id).eq('user_id', userId)
+        )
+      );
+      classified += updates.length;
+      outros += updates.filter((c) => c.subgroup === 'OUTROS').length;
+    }
+
+    revalidatePath('/');
+    return {
+      success: true,
+      data: {
+        processed: materials.length,
+        classified,
+        outros,
+        stillUnclassified: materials.length - classified,
+      },
+    };
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : 'Erro inesperado ao classificar materiais por IA.';
     return { success: false, error: message };
   }
 }

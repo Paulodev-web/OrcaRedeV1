@@ -13,6 +13,7 @@ import {
   getSuppliesExcludedMaterialIds,
 } from '@/services/supplies/materialSuppliesFilter';
 import { applyIdealScenarioPricesToMaterials } from '@/services/supplies/applyIdealScenarioPricesToMaterials';
+import { applySupplierQuotePricesToMaterials } from '@/services/supplies/applySupplierQuotePricesToMaterials';
 import {
   assertMaterialInBudgetScope,
   loadBudgetMaterialQuantities,
@@ -2392,6 +2393,78 @@ export async function closeIdealScenarioAndUpdateMaterialsAction(
   } catch (err: unknown) {
     const message =
       err instanceof Error ? err.message : 'Erro ao atualizar materiais pelo cenário ideal.';
+    return { success: false, error: message };
+  }
+}
+
+export async function updateMaterialsFromSupplierAction(
+  sessionId: string,
+  supplierSlug: string
+): Promise<
+  ActionResult<{
+    updated: number;
+    skippedNoOffer: number;
+    supplierName: string;
+  }>
+> {
+  try {
+    if (!supplierSlug || supplierSlug === 'all') {
+      return { success: false, error: 'Selecione um fornecedor.' };
+    }
+
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    const { data: session, error: sessionError } = await supabase
+      .from('quotation_sessions')
+      .select('id, budget_id')
+      .eq('id', sessionId)
+      .eq('user_id', userId)
+      .single();
+
+    if (sessionError || !session) {
+      return { success: false, error: 'Sessão não encontrada.' };
+    }
+
+    if (!session.budget_id) {
+      return { success: false, error: 'Sessão sem orçamento vinculado.' };
+    }
+
+    const scenariosRes = await calculateScenariosAction(session.budget_id, sessionId);
+    if (!scenariosRes.success) {
+      return { success: false, error: scenariosRes.error };
+    }
+
+    const hasPurchaseDemand = scenariosRes.data.scenarioB.items.some((item) => item.net_qty > 0);
+    if (!hasPurchaseDemand) {
+      return {
+        success: false,
+        error: 'Nenhum material com necessidade de compra para atualizar.',
+      };
+    }
+
+    const result = await applySupplierQuotePricesToMaterials({
+      supabase,
+      userId,
+      sessionId,
+      budgetId: session.budget_id,
+      scenarios: scenariosRes.data,
+      supplierSlug,
+    });
+
+    if (!result.supplierName) {
+      return { success: false, error: 'Fornecedor não encontrado nesta sessão.' };
+    }
+
+    revalidatePath('/');
+    revalidatePath('/fornecedores');
+    revalidatePath(`/fornecedores/sessao/${sessionId}`);
+    revalidatePath(`/fornecedores/sessao/${sessionId}/cenarios`);
+
+    return { success: true, data: result };
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : 'Erro ao atualizar materiais deste fornecedor.';
     return { success: false, error: message };
   }
 }

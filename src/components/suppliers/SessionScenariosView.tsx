@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState, useTransition } from 
 import {
   AlertTriangle,
   Award,
+  Building2,
   Check,
   ChevronDown,
   Download,
@@ -25,6 +26,7 @@ import {
   saveIdealSelectionAction,
   bulkSaveIdealSelectionsAction,
   closeIdealScenarioAndUpdateMaterialsAction,
+  updateMaterialsFromSupplierAction,
   savePurchaseOrderAction,
   type ScenariosResult,
   type ScenarioItem,
@@ -384,9 +386,11 @@ function ScenarioIdealView({
   onValidateAll,
   onRevalidateStale,
   onCloseIdeal,
+  onUpdateSupplierMaterials,
   isValidatingAll,
   isRevalidatingStale,
   isClosingIdeal,
+  isUpdatingSupplierMaterials,
   staleCount,
   onManualQuoteRequest,
   purchaseOrders,
@@ -400,9 +404,11 @@ function ScenarioIdealView({
   onValidateAll: () => void;
   onRevalidateStale: () => void;
   onCloseIdeal: () => void | Promise<void>;
+  onUpdateSupplierMaterials: (supplierSlug: string, supplierName: string) => void | Promise<void>;
   isValidatingAll: boolean;
   isRevalidatingStale: boolean;
   isClosingIdeal: boolean;
+  isUpdatingSupplierMaterials: boolean;
   staleCount: number;
   onManualQuoteRequest?: (item: ScenarioItem) => void;
   purchaseOrders: Map<string, string>;
@@ -412,7 +418,42 @@ function ScenarioIdealView({
   const alertDialog = useAlertDialog();
   const [isExporting, setIsExporting] = useState(false);
   const [selectedSupplierSlug, setSelectedSupplierSlug] = useState('all');
+  const [updateSupplierSlug, setUpdateSupplierSlug] = useState('all');
   const items = scenarios.scenarioB.items;
+
+  // Lista de fornecedores com pelo menos uma oferta cotada nesta sessão (não só os
+  // que "venceram" no Cenário Ideal) — usada para "Atualizar materiais por fornecedor".
+  const supplierUpdateOptions = useMemo(() => {
+    const names = new Map<string, string>();
+    for (const item of items) {
+      for (const offer of item.all_offers) {
+        const slug = slugifyFileName(offer.supplier_name);
+        if (!names.has(slug)) names.set(slug, offer.supplier_name);
+      }
+    }
+    return Array.from(names.entries())
+      .map(([slug, name]) => ({ slug, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [items]);
+
+  useEffect(() => {
+    if (updateSupplierSlug !== 'all' && !supplierUpdateOptions.some((s) => s.slug === updateSupplierSlug)) {
+      setUpdateSupplierSlug('all');
+    }
+  }, [supplierUpdateOptions, updateSupplierSlug]);
+
+  const handleUpdateSupplierClick = useCallback(() => {
+    if (updateSupplierSlug === 'all' || isUpdatingSupplierMaterials) return;
+    const supplier = supplierUpdateOptions.find((s) => s.slug === updateSupplierSlug);
+    if (!supplier) return;
+
+    alertDialog.showConfirm(
+      `Atualizar materiais de ${supplier.name}?`,
+      `Somente os materiais cotados por ${supplier.name} nesta sessão terão o preço atualizado na base (com o preço deste fornecedor, mesmo que não seja o mais barato). Materiais sem cotação deste fornecedor não serão alterados.`,
+      () => onUpdateSupplierMaterials(updateSupplierSlug, supplier.name),
+      { confirmText: 'Atualizar materiais' }
+    );
+  }, [updateSupplierSlug, isUpdatingSupplierMaterials, supplierUpdateOptions, alertDialog, onUpdateSupplierMaterials]);
 
   const scenarioATotal = scenarios.scenarioA[0]?.total_normalizado ?? 0;
   const scenarioBTotal = scenarios.scenarioB.total_normalizado;
@@ -624,6 +665,45 @@ function ScenarioIdealView({
             )}
             Atualizar materiais do orçamento
           </button>
+
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50/60 p-1.5">
+            <select
+              value={updateSupplierSlug}
+              onChange={(e) => setUpdateSupplierSlug(e.target.value)}
+              disabled={supplierUpdateOptions.length === 0 || isUpdatingSupplierMaterials}
+              className="max-w-[200px] rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-[#1D3140] disabled:cursor-not-allowed disabled:opacity-50 sm:max-w-[240px]"
+              aria-label="Escolher fornecedor para atualizar materiais"
+            >
+              <option value="all">Escolher fornecedor…</option>
+              {supplierUpdateOptions.map((s) => (
+                <option key={s.slug} value={s.slug}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <span
+              title={
+                updateSupplierSlug === 'all'
+                  ? 'Escolha um fornecedor para atualizar somente os materiais que ele cotou'
+                  : `Atualiza na base apenas os materiais cotados por este fornecedor`
+              }
+              className="inline-flex"
+            >
+              <button
+                type="button"
+                onClick={handleUpdateSupplierClick}
+                disabled={updateSupplierSlug === 'all' || isUpdatingSupplierMaterials}
+                className="inline-flex items-center gap-2 rounded-md border border-[#1D3140] bg-white px-3 py-1.5 text-sm font-medium text-[#1D3140] transition-colors hover:bg-[#1D3140]/5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
+              >
+                {isUpdatingSupplierMaterials ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Building2 className="h-4 w-4" />
+                )}
+                Atualizar deste fornecedor
+              </button>
+            </span>
+          </div>
         </div>
       </div>
 
@@ -792,6 +872,7 @@ export default function SessionScenariosView({
   const [isSavingPrice, setIsSavingPrice] = useState(false);
   const [isRemovingMaterial, setIsRemovingMaterial] = useState(false);
   const [isClosingIdeal, setIsClosingIdeal] = useState(false);
+  const [isUpdatingSupplierMaterials, setIsUpdatingSupplierMaterials] = useState(false);
   const [savingOcMaterialId, setSavingOcMaterialId] = useState<string | null>(null);
 
   const [purchaseOrders, setPurchaseOrders] = useState<Map<string, string>>(() => {
@@ -1216,6 +1297,40 @@ export default function SessionScenariosView({
     }
   }, [isClosingIdeal, sessionId, alertDialog, refreshScenarios]);
 
+  const handleUpdateSupplierMaterials = useCallback(
+    async (supplierSlug: string, supplierName: string) => {
+      if (isUpdatingSupplierMaterials) return;
+
+      setIsUpdatingSupplierMaterials(true);
+      try {
+        const res = await updateMaterialsFromSupplierAction(sessionId, supplierSlug);
+        if (!res.success) {
+          alertDialog.showError(
+            'Não foi possível atualizar',
+            res.error ?? 'Erro ao atualizar materiais deste fornecedor.'
+          );
+          return;
+        }
+
+        const { updated, skippedNoOffer } = res.data;
+        const details = [
+          `${updated} material(is) tiveram o preço atualizado com base em ${supplierName}.`,
+          skippedNoOffer > 0
+            ? `${skippedNoOffer} material(is) sem cotação deste fornecedor foram ignorados.`
+            : '',
+        ]
+          .filter(Boolean)
+          .join(' ');
+
+        alertDialog.showSuccess('Materiais atualizados', details);
+        await refreshScenarios();
+      } finally {
+        setIsUpdatingSupplierMaterials(false);
+      }
+    },
+    [isUpdatingSupplierMaterials, sessionId, alertDialog, refreshScenarios]
+  );
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -1295,9 +1410,11 @@ export default function SessionScenariosView({
               onValidateAll={handleValidateAll}
               onRevalidateStale={handleRevalidateStale}
               onCloseIdeal={handleCloseIdeal}
+              onUpdateSupplierMaterials={handleUpdateSupplierMaterials}
               isValidatingAll={isValidatingAll}
               isRevalidatingStale={isRevalidatingStale}
               isClosingIdeal={isClosingIdeal}
+              isUpdatingSupplierMaterials={isUpdatingSupplierMaterials}
               staleCount={staleCount}
               onManualQuoteRequest={handleManualQuoteRequest}
               purchaseOrders={purchaseOrders}

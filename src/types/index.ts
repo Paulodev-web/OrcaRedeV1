@@ -1,9 +1,31 @@
+/** Valores válidos da coluna materials.subgroup (CHECK constraint no banco). */
+export const MATERIAL_SUBGROUPS = [
+  'POSTE',
+  'AMARRAÇÃO',
+  'PRÉ FORMADO',
+  'CIVIL',
+  'FERRAGEM',
+  'POLIMÉRICO',
+  'ILUMINAÇÃO',
+  'CONDUTOR',
+  'ATERRAMENTO',
+  'PROTEÇÃO',
+  'CONEXÃO',
+  'CABO DE AÇO',
+  'CRUZETA',
+  'ISOLAÇÃO',
+  'OUTROS',
+] as const;
+
+export type MaterialSubgroup = (typeof MATERIAL_SUBGROUPS)[number];
+
 export interface Material {
   id: string;
   codigo: string;
   descricao: string;
   precoUnit: number;
   unidade: string;
+  subgrupo?: MaterialSubgroup | null;
   user_id?: string;
   activeInSupplies?: boolean;
   priceSourceSupplierName?: string | null;

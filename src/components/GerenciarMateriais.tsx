@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef, useTransition } from 'react';
-import { Plus, Search, Edit, Trash2, Upload, Loader2, ArrowUpDown, ArrowUp, ArrowDown, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Upload, Loader2, ArrowUpDown, ArrowUp, ArrowDown, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Sparkles } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { AlertDialog } from '@/components/ui/alert-dialog';
@@ -11,10 +11,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Material } from '@/types';
-import { addMaterialAction, updateMaterialAction, deleteMaterialAction } from '@/actions/materials';
+import { Material, MATERIAL_SUBGROUPS } from '@/types';
+import {
+  addMaterialAction,
+  updateMaterialAction,
+  deleteMaterialAction,
+  classifyUnclassifiedMaterialsAction,
+} from '@/actions/materials';
 
 const EMPTY_UNIDADE_VALUE = '__no_unidade__';
+const EMPTY_SUBGRUPO_VALUE = '__no_subgrupo__';
+const ALL_SUBGRUPOS_VALUE = '__all_subgrupos__';
+const UNCLASSIFIED_SUBGRUPO_VALUE = '__unclassified_subgrupo__';
 
 type SortField = 'descricao' | 'codigo' | 'precoUnit';
 type SortOrder = 'asc' | 'desc';
@@ -28,7 +36,9 @@ export function GerenciarMateriais() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [sortField, setSortField] = useState<SortField>('descricao');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
-  
+  const [subgroupFilter, setSubgroupFilter] = useState<string>(ALL_SUBGRUPOS_VALUE);
+  const [isClassifying, setIsClassifying] = useState(false);
+
   // Estados de paginação
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
@@ -138,6 +148,15 @@ export function GerenciarMateriais() {
 
   // Filtrar e ordenar materiais
   const filteredMateriais = materiais
+    .filter(material => {
+      if (subgroupFilter === UNCLASSIFIED_SUBGRUPO_VALUE) {
+        return !material.subgrupo;
+      }
+      if (subgroupFilter !== ALL_SUBGRUPOS_VALUE) {
+        return material.subgrupo === subgroupFilter;
+      }
+      return true;
+    })
     .filter(material => {
       const searchLower = searchTerm.toLowerCase();
       return material.codigo.toLowerCase().includes(searchLower) ||
@@ -284,6 +303,34 @@ export function GerenciarMateriais() {
     }
   };
 
+  const handleClassifySubgroups = async () => {
+    if (isClassifying) return;
+    setIsClassifying(true);
+    try {
+      const result = await classifyUnclassifiedMaterialsAction();
+      if (result.success && result.data) {
+        const { processed, classified, outros, stillUnclassified } = result.data;
+        if (processed === 0) {
+          showMessage('success', 'Todos os materiais já estão classificados.');
+        } else {
+          const continua = processed >= 300 ? ' Ainda há mais materiais pendentes — clique novamente para continuar.' : '';
+          showMessage(
+            'success',
+            `IA classificou ${classified} de ${processed} materiais (${outros} em OUTROS). ${stillUnclassified} ficaram sem classificação por baixa confiança — revise manualmente.${continua}`
+          );
+          fetchMaterials(true);
+        }
+      } else {
+        showMessage('error', (!result.success && result.error) || 'Erro ao classificar materiais por IA.');
+      }
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Erro inesperado ao classificar materiais por IA.';
+      showMessage('error', msg);
+    } finally {
+      setIsClassifying(false);
+    }
+  };
+
   const handleSaveMaterial = (materialData: Omit<Material, 'id'>) => {
     startTransition(async () => {
       let result;
@@ -346,6 +393,15 @@ export function GerenciarMateriais() {
           >
             <Upload className="h-5 w-5" />
             <span>Importar Planilha</span>
+          </button>
+          <button
+            onClick={handleClassifySubgroups}
+            disabled={isPending || isClassifying}
+            className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Classifica por IA os materiais sem subgrupo definido"
+          >
+            {isClassifying ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
+            <span>{isClassifying ? 'Classificando...' : 'Classificar por IA'}</span>
           </button>
           <button
             onClick={() => setShowModal(true)}
@@ -425,6 +481,27 @@ export function GerenciarMateriais() {
               </button>
             )}
           </div>
+          <div className="mt-3 flex items-center gap-2">
+            <span className="text-sm text-gray-600">Subgrupo:</span>
+            <Select
+              value={subgroupFilter}
+              onValueChange={(value) => {
+                setSubgroupFilter(value);
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[220px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_SUBGRUPOS_VALUE}>Todos os subgrupos</SelectItem>
+                <SelectItem value={UNCLASSIFIED_SUBGRUPO_VALUE}>Não classificado</SelectItem>
+                {MATERIAL_SUBGROUPS.map((sg) => (
+                  <SelectItem key={sg} value={sg}>{sg}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="mt-2 flex items-center justify-between text-sm">
             <div>
               {searchTerm ? (
@@ -503,6 +580,9 @@ export function GerenciarMateriais() {
                       Unidade
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Subgrupo
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Origem do Preço
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -524,6 +604,15 @@ export function GerenciarMateriais() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {material.unidade}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {material.subgrupo ? (
+                          <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium">
+                            {material.subgrupo}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">Não classificado</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
                         {material.priceSourceSupplierName ? (
@@ -686,6 +775,7 @@ function MaterialModal({ material, onClose, onSave, loading = false }: MaterialM
     descricao: material?.descricao || '',
     precoUnit: material?.precoUnit?.toString() || '',
     unidade: material?.unidade || '',
+    subgrupo: material?.subgrupo || '',
   });
   
   const alertDialog = useAlertDialog();
@@ -713,7 +803,8 @@ function MaterialModal({ material, onClose, onSave, loading = false }: MaterialM
 
     onSave({
       ...formData,
-      precoUnit
+      precoUnit,
+      subgrupo: formData.subgrupo ? (formData.subgrupo as Material['subgrupo']) : null,
     });
   };
 
@@ -788,6 +879,28 @@ function MaterialModal({ material, onClose, onSave, loading = false }: MaterialM
                 <SelectItem value="L">L - Litro</SelectItem>
                 <SelectItem value="M²">M² - Metro Quadrado</SelectItem>
                 <SelectItem value="M³">M³ - Metro Cúbico</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Subgrupo
+            </label>
+            <Select
+              value={formData.subgrupo || EMPTY_SUBGRUPO_VALUE}
+              onValueChange={(value) =>
+                setFormData({ ...formData, subgrupo: value === EMPTY_SUBGRUPO_VALUE ? '' : value })
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Não classificado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={EMPTY_SUBGRUPO_VALUE}>Não classificado</SelectItem>
+                {MATERIAL_SUBGROUPS.map((sg) => (
+                  <SelectItem key={sg} value={sg}>{sg}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
