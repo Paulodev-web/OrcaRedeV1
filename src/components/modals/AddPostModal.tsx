@@ -136,6 +136,7 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
         setSelectedSourcePostId('');
         setStandardSearchTerm('');
         setAppliedStandardId('');
+        setIsSubmitting(false);
       }, 0);
 
       // O modal fica montado (só retorna null quando fechado), então o estado
@@ -219,9 +220,9 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
     );
   }, [poleStandards, alertDialog]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedPostType || !postName.trim()) {
       alertDialog.showError(
         'Campos Obrigatórios',
@@ -235,35 +236,28 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
       return;
     }
 
-
     setIsSubmitting(true);
 
-    try {
-      if (onSubmitWithItems && (selectedGroups.length > 0 || selectedMaterials.length > 0)) {
-        // Quando há grupos/materiais pré-selecionados, o material do próprio tipo de
-        // poste não é adicionado automaticamente (skipPostTypeMaterial). Por isso
-        // garantimos aqui que ele sempre entre na lista de materiais avulsos,
-        // do mesmo jeito que "Duplicar de Existente" já faz.
-        const selectedPostTypeData = postTypes.find(pt => pt.id === selectedPostType);
-        const postTypeMaterialId = selectedPostTypeData?.material_id;
-        const materialsToSubmit = postTypeMaterialId && !selectedMaterials.some(m => m.materialId === postTypeMaterialId)
-          ? [...selectedMaterials, { materialId: postTypeMaterialId, quantity: 1 }]
-          : selectedMaterials;
+    // Não bloqueamos o modal esperando a gravação terminar: o poste aparece
+    // no mapa assim que a chamada resolver, e erros já são tratados e
+    // exibidos pelos handlers do componente pai (onSubmit/onSubmitWithItems).
+    if (onSubmitWithItems && (selectedGroups.length > 0 || selectedMaterials.length > 0)) {
+      // Quando há grupos/materiais pré-selecionados, o material do próprio tipo de
+      // poste não é adicionado automaticamente (skipPostTypeMaterial). Por isso
+      // garantimos aqui que ele sempre entre na lista de materiais avulsos,
+      // do mesmo jeito que "Duplicar de Existente" já faz.
+      const selectedPostTypeData = postTypes.find(pt => pt.id === selectedPostType);
+      const postTypeMaterialId = selectedPostTypeData?.material_id;
+      const materialsToSubmit = postTypeMaterialId && !selectedMaterials.some(m => m.materialId === postTypeMaterialId)
+        ? [...selectedMaterials, { materialId: postTypeMaterialId, quantity: 1 }]
+        : selectedMaterials;
 
-        await onSubmitWithItems(selectedPostType, postName.trim(), selectedGroups, materialsToSubmit);
-      } else {
-        await onSubmit(selectedPostType, postName.trim());
-      }
-
-      onClose();
-    } catch {
-      alertDialog.showError(
-        'Erro ao Adicionar Poste',
-        'Não foi possível adicionar o poste. Tente novamente.'
-      );
-    } finally {
-      setIsSubmitting(false);
+      onSubmitWithItems(selectedPostType, postName.trim(), selectedGroups, materialsToSubmit);
+    } else {
+      onSubmit(selectedPostType, postName.trim());
     }
+
+    onClose();
   };
 
   // Funções para grupos
