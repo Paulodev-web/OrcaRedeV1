@@ -778,32 +778,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
       console.log(`🔄 === SUPABASE INSERT INICIADO ===`);
       console.log(`📤 Dados sendo enviados para Supabase:`, newPostData);
       
-      // Primeiro, buscar o material_id do tipo de poste
-      const { data: postTypeData, error: postTypeError } = await supabase
-        .from('post_types')
-        .select('material_id, price')
-        .eq('id', newPostData.post_type_id)
-        .single();
+      // Buscar o material_id do tipo de poste e o próximo contador em paralelo,
+      // já que são consultas independentes
+      const [
+        { data: postTypeData, error: postTypeError },
+        { data: maxCounterData, error: maxCounterError },
+      ] = await Promise.all([
+        supabase
+          .from('post_types')
+          .select('material_id, price')
+          .eq('id', newPostData.post_type_id)
+          .single(),
+        supabase
+          .from('budget_posts')
+          .select('counter')
+          .eq('budget_id', newPostData.budget_id)
+          .order('counter', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
 
       if (postTypeError) {
         console.error('Erro ao buscar dados do tipo de poste:', postTypeError);
         throw postTypeError;
       }
-      
-      // Calcular o próximo contador para este orçamento
-      const { data: maxCounterData, error: maxCounterError } = await supabase
-        .from('budget_posts')
-        .select('counter')
-        .eq('budget_id', newPostData.budget_id)
-        .order('counter', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
+
       if (maxCounterError) {
         console.error('Erro ao buscar contador máximo:', maxCounterError);
         throw maxCounterError;
       }
-      
+
       const nextCounter = maxCounterData?.counter ? maxCounterData.counter + 1 : 1;
       console.log(`📊 Próximo contador: ${nextCounter}`);
       
@@ -987,19 +991,43 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
 
       
-      // a. Primeiro, buscar os dados do template de grupo
-      const { data: groupTemplate, error: groupError } = await supabase
-        .from('item_group_templates')
-        .select('id, name, description')
-        .eq('id', groupId)
-        .single();
+      // a. Buscar os dados do template de grupo e c. os materiais do template
+      // em paralelo, pois ambas as consultas dependem apenas do groupId
+      const [
+        { data: groupTemplate, error: groupError },
+        { data: templateMaterials, error: materialsError },
+      ] = await Promise.all([
+        supabase
+          .from('item_group_templates')
+          .select('id, name, description')
+          .eq('id', groupId)
+          .single(),
+        supabase
+          .from('template_materials')
+          .select(`
+            material_id,
+            quantity,
+            materials (
+              id,
+              code,
+              name,
+              description,
+              unit,
+              price
+            )
+          `)
+          .eq('template_id', groupId),
+      ]);
 
       if (groupError) {
         console.error('Erro ao buscar template do grupo:', groupError);
         throw groupError;
       }
 
-
+      if (materialsError) {
+        console.error('Erro ao buscar materiais do template:', materialsError);
+        throw materialsError;
+      }
 
       // b. Criar novo registro na tabela post_item_groups
       const { data: newGroupInstance, error: instanceError } = await supabase
@@ -1015,30 +1043,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (instanceError) {
         console.error('Erro ao criar instância do grupo:', instanceError);
         throw instanceError;
-      }
-
-
-
-      // c. Buscar todos os materiais e suas quantidades do template
-      const { data: templateMaterials, error: materialsError } = await supabase
-        .from('template_materials')
-        .select(`
-          material_id,
-          quantity,
-          materials (
-            id,
-            code,
-            name,
-            description,
-            unit,
-            price
-          )
-        `)
-        .eq('template_id', groupId);
-
-      if (materialsError) {
-        console.error('Erro ao buscar materiais do template:', materialsError);
-        throw materialsError;
       }
 
 

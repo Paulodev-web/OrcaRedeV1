@@ -379,45 +379,30 @@ export function AreaTrabalho() {
         y_coord: clickCoordinates.y,
         skipPostTypeMaterial: true, // Não adicionar automaticamente quando há itens pré-selecionados
       });
-      
-      // Aguardar um pouco para garantir que o estado foi atualizado
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Adicionar grupos selecionados
-      for (const groupId of selectedGroups) {
-        try {
-          await addGroupToPost(groupId, newPostId);
-          // Pequena pausa entre operações
-          await new Promise(resolve => setTimeout(resolve, 50));
-        } catch (error) {
-          console.error(`Erro ao adicionar grupo ${groupId}:`, error);
-          // Continue com outros grupos mesmo se um falhar
-        }
-      }
-      
-      // Adicionar materiais avulsos selecionados
-      for (const selectedMaterial of selectedMaterials) {
-        try {
+
+      // Adicionar grupos e materiais avulsos em paralelo (cada um é uma
+      // operação independente no banco), em vez de sequencialmente com
+      // pausas artificiais, para o poste aparecer quase instantaneamente
+      await Promise.all([
+        ...selectedGroups.map(groupId =>
+          addGroupToPost(groupId, newPostId).catch(error => {
+            console.error(`Erro ao adicionar grupo ${groupId}:`, error);
+          })
+        ),
+        ...selectedMaterials.map(selectedMaterial => {
           const material = materiais.find(m => m.id === selectedMaterial.materialId);
-          if (material) {
-            await addLooseMaterialToPost(
-              newPostId, 
-              selectedMaterial.materialId, 
-              selectedMaterial.quantity, 
-              material.precoUnit
-            );
-            // Pequena pausa entre operações
-            await new Promise(resolve => setTimeout(resolve, 50));
-          }
-        } catch (error) {
-          console.error(`Erro ao adicionar material ${selectedMaterial.materialId}:`, error);
-          // Continue com outros materiais mesmo se um falhar
-        }
-      }
-      
-      // Aguardar um pouco antes de fechar o modal para garantir que todas as atualizações foram processadas
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
+          if (!material) return Promise.resolve();
+          return addLooseMaterialToPost(
+            newPostId,
+            selectedMaterial.materialId,
+            selectedMaterial.quantity,
+            material.precoUnit
+          ).catch(error => {
+            console.error(`Erro ao adicionar material ${selectedMaterial.materialId}:`, error);
+          });
+        }),
+      ]);
+
       setIsModalOpen(false);
       setClickCoordinates(null);
     } catch (error) {

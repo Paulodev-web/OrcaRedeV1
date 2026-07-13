@@ -190,6 +190,8 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
       setSelectedPostType(standard.postTypeId);
     }
 
+    setPostName(standard.nome);
+
     // Expandir cada grupo pelo multiplicador de quantidade definido no padrão
     const expandedGroupIds: string[] = [];
     standard.grupos.forEach(g => {
@@ -232,9 +234,6 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
     setIsSubmitting(true);
 
     try {
-      // Aguardar um tick para garantir que o estado está sincronizado
-      await new Promise(resolve => setTimeout(resolve, 0));
-
       if (onSubmitWithItems && (selectedGroups.length > 0 || selectedMaterials.length > 0)) {
         // Quando há grupos/materiais pré-selecionados, o material do próprio tipo de
         // poste não é adicionado automaticamente (skipPostTypeMaterial). Por isso
@@ -250,9 +249,7 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
       } else {
         await onSubmit(selectedPostType, postName.trim());
       }
-      
-      // Aguardar um tick antes de fechar o modal
-      await new Promise(resolve => setTimeout(resolve, 100));
+
       alertDialog.showSuccess(
         'Poste Adicionado',
         'O poste foi adicionado com sucesso ao orçamento.'
@@ -819,9 +816,10 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
                         return (
                           <div
                             key={standard.id}
-                            className={`p-3 border rounded-lg transition-colors ${
+                            className={`p-3 border rounded-lg cursor-pointer transition-colors ${
                               isApplied ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'
                             }`}
+                            onClick={() => handleApplyPoleStandard(standard.id)}
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0 flex-1">
@@ -849,26 +847,17 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
                                   )}
                                 </div>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => handleApplyPoleStandard(standard.id)}
-                                className={`flex-shrink-0 flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                                  isApplied
-                                    ? 'bg-purple-600 text-white'
-                                    : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                                }`}
-                              >
-                                {isApplied ? (
-                                  <>
-                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                    </svg>
-                                    <span>Aplicado</span>
-                                  </>
-                                ) : (
-                                  <span>Aplicar</span>
+                              <div className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center ${
+                                isApplied
+                                  ? 'border-purple-500 bg-purple-500'
+                                  : 'border-gray-300'
+                              }`}>
+                                {isApplied && (
+                                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
                                 )}
-                              </button>
+                              </div>
                             </div>
                           </div>
                         );
