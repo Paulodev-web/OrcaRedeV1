@@ -75,7 +75,6 @@ export default function SupplierPickerModal({
     }
     const selected = suppliers.find((s) => s.id === selectedId);
     onConfirm(selectedId, selected?.name ?? '', applyToRemaining && remainingInBatch > 0);
-    onOpenChange(false);
   };
 
   return (
