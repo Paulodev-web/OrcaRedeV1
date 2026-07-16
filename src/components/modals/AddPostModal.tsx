@@ -68,7 +68,7 @@ interface AddPostModalProps {
   onClose: () => void;
   coordinates: {x: number, y: number} | null;
   onSubmit: (postTypeId: string, postName: string) => Promise<void>;
-  onSubmitWithItems?: (postTypeId: string, postName: string, selectedGroups: string[], selectedMaterials: {materialId: string, quantity: number}[]) => Promise<void>;
+  onSubmitWithItems?: (postTypeId: string, postName: string, selectedGroups: string[], selectedMaterials: {materialId: string, quantity: number}[], appliedStandardId?: string) => Promise<void>;
 }
 
 type TabType = 'post' | 'standard' | 'groups' | 'materials' | 'duplicate';
@@ -252,7 +252,7 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
         ? [...selectedMaterials, { materialId: postTypeMaterialId, quantity: 1 }]
         : selectedMaterials;
 
-      onSubmitWithItems(selectedPostType, postName.trim(), selectedGroups, materialsToSubmit);
+      onSubmitWithItems(selectedPostType, postName.trim(), selectedGroups, materialsToSubmit, appliedStandardId || undefined);
     } else {
       onSubmit(selectedPostType, postName.trim());
     }

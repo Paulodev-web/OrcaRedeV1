@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo, useTransition } from 'react';
+import { useState, useEffect, useMemo, useRef, useTransition } from 'react';
 import {
   Search, Plus, Minus, Save, Loader2, X, Trash2, Layers, Package, Boxes
 } from 'lucide-react';
@@ -85,6 +85,40 @@ export function EditorPadraoPoste() {
     fetchMaterials();
     fetchPostTypes();
   }, [fetchMaterials, fetchPostTypes]);
+
+  // O poste do tipo escolhido é, ele mesmo, um material — sempre que o tipo de
+  // poste padrão muda, garantimos que esse material entre (ou seja trocado)
+  // na lista de materiais avulsos do padrão, sem duplicar nem depender do
+  // usuário lembrar de adicioná-lo manualmente.
+  const previousPostTypeMaterialIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!postTypeId) {
+      const previousMaterialId = previousPostTypeMaterialIdRef.current;
+      if (previousMaterialId) {
+        setMateriaisPadrao(prev => prev.filter(m => m.materialId !== previousMaterialId));
+      }
+      previousPostTypeMaterialIdRef.current = null;
+      return;
+    }
+
+    const selectedType = postTypes.find(pt => pt.id === postTypeId);
+    const materialId = selectedType?.material_id;
+    if (!materialId) return;
+
+    setMateriaisPadrao(prev => {
+      const previousMaterialId = previousPostTypeMaterialIdRef.current;
+      let next = prev;
+      if (previousMaterialId && previousMaterialId !== materialId) {
+        next = next.filter(m => m.materialId !== previousMaterialId);
+      }
+      if (!next.some(m => m.materialId === materialId)) {
+        next = [...next, { materialId, quantidade: 1 }];
+      }
+      return next;
+    });
+    previousPostTypeMaterialIdRef.current = materialId;
+  }, [postTypeId, postTypes]);
 
   // Selecionar automaticamente a primeira concessionária ao criar um padrão novo
   useEffect(() => {
@@ -231,7 +265,7 @@ export function EditorPadraoPoste() {
       alertDialog.showSuccess(
         isEditing ? 'Padrão Atualizado' : 'Padrão Criado',
         isEditing
-          ? 'O padrão de poste foi atualizado com sucesso em todas as concessionárias vinculadas.'
+          ? 'O padrão de poste foi atualizado e a mudança foi aplicada em cascata a todos os postes de orçamentos que já usavam este padrão.'
           : 'O padrão de poste foi criado com sucesso. Ele já pode ser aplicado ao adicionar postes.'
       );
     });
@@ -455,6 +489,11 @@ export function EditorPadraoPoste() {
                 ))}
               </SelectContent>
             </Select>
+            {postTypeId && (
+              <p className="mt-1.5 text-xs text-gray-500">
+                O material do poste selecionado entra automaticamente em Materiais Avulsos.
+              </p>
+            )}
           </div>
 
           <div>

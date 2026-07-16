@@ -64,8 +64,8 @@ interface AppContextType {
   
   // Funções de tipos de poste
   fetchPostTypes: () => Promise<void>;
-  addPostToBudget: (newPostData: { budget_id: string; post_type_id: string; name: string; x_coord: number; y_coord: number; skipPostTypeMaterial?: boolean; postTypeMaterialId?: string; postTypePrice?: number; }) => Promise<string>;
-  addGroupToPost: (groupId: string, postId: string) => Promise<void>;
+  addPostToBudget: (newPostData: { budget_id: string; post_type_id: string; name: string; x_coord: number; y_coord: number; skipPostTypeMaterial?: boolean; postTypeMaterialId?: string; postTypePrice?: number; pole_standard_id?: string; }) => Promise<string>;
+  addGroupToPost: (groupId: string, postId: string, poleStandardId?: string) => Promise<void>;
   deletePostFromBudget: (postId: string) => Promise<void>;
   updatePostCoordinates: (postId: string, x: number, y: number) => Promise<void>;
   updatePostCustomName: (postId: string, customName: string) => Promise<void>;
@@ -75,7 +75,7 @@ interface AppContextType {
   removeMaterialFromPostGroup: (postGroupId: string, materialId: string) => Promise<void>;
   
   // Funções para materiais avulsos
-  addLooseMaterialToPost: (postId: string, materialId: string, quantity: number, price: number) => Promise<void>;
+  addLooseMaterialToPost: (postId: string, materialId: string, quantity: number, price: number, poleStandardId?: string) => Promise<void>;
   updateLooseMaterialQuantity: (postMaterialId: string, newQuantity: number) => Promise<void>;
   removeLooseMaterialFromPost: (postMaterialId: string) => Promise<void>;
   
@@ -773,7 +773,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [hasFetchedPostTypes, postTypes.length]);
 
-  const addPostToBudget = async (newPostData: { budget_id: string; post_type_id: string; name: string; x_coord: number; y_coord: number; skipPostTypeMaterial?: boolean; postTypeMaterialId?: string; postTypePrice?: number; }) => {
+  const addPostToBudget = async (newPostData: { budget_id: string; post_type_id: string; name: string; x_coord: number; y_coord: number; skipPostTypeMaterial?: boolean; postTypeMaterialId?: string; postTypePrice?: number; pole_standard_id?: string; }) => {
     try {
       console.log(`🔄 === SUPABASE INSERT INICIADO ===`);
       console.log(`📤 Dados sendo enviados para Supabase:`, newPostData);
@@ -825,6 +825,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           counter: nextCounter, // Contador automático
           x_coord: newPostData.x_coord,
           y_coord: newPostData.y_coord,
+          pole_standard_id: newPostData.pole_standard_id || null,
         })
         .select(`
           *,
@@ -977,7 +978,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const addGroupToPost = async (groupId: string, postId: string) => {
+  const addGroupToPost = async (groupId: string, postId: string, poleStandardId?: string) => {
     try {
 
       
@@ -1026,6 +1027,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           budget_post_id: postId,
           template_id: groupId,
           name: groupTemplate.name,
+          pole_standard_id: poleStandardId || null,
         })
         .select('id')
         .single();
@@ -1373,7 +1375,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   // Função para adicionar material avulso ao poste (usado quando usuário adiciona manualmente)
-  const addLooseMaterialToPost = async (postId: string, materialId: string, quantity: number, price: number) => {
+  const addLooseMaterialToPost = async (postId: string, materialId: string, quantity: number, price: number, poleStandardId?: string) => {
     try {
       const { data, error } = await supabase
         .from('post_materials')
@@ -1382,6 +1384,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           material_id: materialId,
           quantity,
           price_at_addition: price,
+          pole_standard_id: poleStandardId || null,
         })
         .select(`
           id,

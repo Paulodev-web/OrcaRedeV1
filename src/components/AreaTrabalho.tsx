@@ -354,10 +354,11 @@ export function AreaTrabalho() {
 
   // Função para adicionar poste com grupos e materiais
   const handleAddPostWithItems = useCallback(async (
-    postTypeId: string, 
-    postName: string, 
-    selectedGroups: string[], 
-    selectedMaterials: {materialId: string, quantity: number}[]
+    postTypeId: string,
+    postName: string,
+    selectedGroups: string[],
+    selectedMaterials: {materialId: string, quantity: number}[],
+    appliedStandardId?: string
   ) => {
     if (!clickCoordinates || !currentOrcamento?.id) {
       alertDialog.showError(
@@ -381,14 +382,17 @@ export function AreaTrabalho() {
         skipPostTypeMaterial: true, // Não adicionar automaticamente quando há itens pré-selecionados
         postTypeMaterialId: postType?.material_id,
         postTypePrice: postType?.price,
+        pole_standard_id: appliedStandardId,
       });
 
       // Adicionar grupos e materiais avulsos em paralelo (cada um é uma
       // operação independente no banco), em vez de sequencialmente com
-      // pausas artificiais, para o poste aparecer quase instantaneamente
+      // pausas artificiais, para o poste aparecer quase instantaneamente.
+      // Tagueamos cada item com o padrão aplicado (se houver) para que uma
+      // futura edição do padrão saiba quais itens deste poste cascatear.
       await Promise.all([
         ...selectedGroups.map(groupId =>
-          addGroupToPost(groupId, newPostId).catch(error => {
+          addGroupToPost(groupId, newPostId, appliedStandardId).catch(error => {
             console.error(`Erro ao adicionar grupo ${groupId}:`, error);
           })
         ),
@@ -399,7 +403,8 @@ export function AreaTrabalho() {
             newPostId,
             selectedMaterial.materialId,
             selectedMaterial.quantity,
-            material.precoUnit
+            material.precoUnit,
+            appliedStandardId
           ).catch(error => {
             console.error(`Erro ao adicionar material ${selectedMaterial.materialId}:`, error);
           });
