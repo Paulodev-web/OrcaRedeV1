@@ -8,6 +8,7 @@ import {
   BarChart3,
   Users,
 } from 'lucide-react';
+import SessionNotesBox from '@/components/suppliers/SessionNotesBox';
 
 type HeaderStep = 'fornecedores' | 'cotacoes' | 'conciliacao' | 'cenarios';
 
@@ -64,54 +65,60 @@ export default function SuppliesHeader({
         )}
       </div>
 
-      <div className="mt-4 flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#64ABDE]/40 bg-[#64ABDE]/15">
-          <Building2 className="h-5 w-5 text-[#1D3140]" />
-        </div>
+      <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-bold text-[#1D3140] sm:text-2xl">{title}</h1>
-          <p className="mt-1 text-sm text-slate-500">{description}</p>
-        </div>
-      </div>
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#64ABDE]/40 bg-[#64ABDE]/15">
+              <Building2 className="h-5 w-5 text-[#1D3140]" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl font-bold text-[#1D3140] sm:text-2xl">{title}</h1>
+              <p className="mt-1 text-sm text-slate-500">{description}</p>
+            </div>
+          </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <Link href={fornecedoresHref} className={stepClass(activeStep === 'fornecedores')}>
-          <Users className="h-3.5 w-3.5" />
-          Fornecedores
-        </Link>
-        <Link href={cotacoesHref} className={stepClass(activeStep === 'cotacoes')}>
-          <Package className="h-3.5 w-3.5" />
-          Cotações
-        </Link>
-        {sessionId ? (
-          <Link href={conciliacaoHref} className={stepClass(activeStep === 'conciliacao')}>
-            <GitMerge className="h-3.5 w-3.5" />
-            Conciliação
-          </Link>
-        ) : (
-          <span className={stepClass(false, true)}>
-            <GitMerge className="h-3.5 w-3.5" />
-            Conciliação
-          </span>
-        )}
-        {showCenariosLink ? (
-          <Link href={cenariosHref} className={stepClass(activeStep === 'cenarios')}>
-            <BarChart3 className="h-3.5 w-3.5" />
-            Cenários
-          </Link>
-        ) : (
-          <span
-            className={stepClass(false, true)}
-            title={
-              sessionId && !hasBudget
-                ? 'Vincule um orçamento à sessão para comparar cenários de compra.'
-                : undefined
-            }
-          >
-            <BarChart3 className="h-3.5 w-3.5" />
-            Cenários
-          </span>
-        )}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <Link href={fornecedoresHref} className={stepClass(activeStep === 'fornecedores')}>
+              <Users className="h-3.5 w-3.5" />
+              Fornecedores
+            </Link>
+            <Link href={cotacoesHref} className={stepClass(activeStep === 'cotacoes')}>
+              <Package className="h-3.5 w-3.5" />
+              Cotações
+            </Link>
+            {sessionId ? (
+              <Link href={conciliacaoHref} className={stepClass(activeStep === 'conciliacao')}>
+                <GitMerge className="h-3.5 w-3.5" />
+                Conciliação
+              </Link>
+            ) : (
+              <span className={stepClass(false, true)}>
+                <GitMerge className="h-3.5 w-3.5" />
+                Conciliação
+              </span>
+            )}
+            {showCenariosLink ? (
+              <Link href={cenariosHref} className={stepClass(activeStep === 'cenarios')}>
+                <BarChart3 className="h-3.5 w-3.5" />
+                Cenários
+              </Link>
+            ) : (
+              <span
+                className={stepClass(false, true)}
+                title={
+                  sessionId && !hasBudget
+                    ? 'Vincule um orçamento à sessão para comparar cenários de compra.'
+                    : undefined
+                }
+              >
+                <BarChart3 className="h-3.5 w-3.5" />
+                Cenários
+              </span>
+            )}
+          </div>
+        </div>
+
+        {sessionId ? <SessionNotesBox sessionId={sessionId} /> : null}
       </div>
     </div>
   );
