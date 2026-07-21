@@ -17,7 +17,7 @@ interface MaterialInput {
   descricao: string;
   precoUnit: number;
   unidade: string;
-  subgrupo?: string | null;
+  subgrupoId?: string | null;
 }
 
 export async function addMaterialAction(material: MaterialInput): Promise<ActionResult> {
@@ -30,7 +30,7 @@ export async function addMaterialAction(material: MaterialInput): Promise<Action
       name: material.descricao,
       price: material.precoUnit,
       unit: material.unidade,
-      subgroup: material.subgrupo ?? null,
+      subgroup_id: material.subgrupoId ?? null,
       user_id: userId,
     });
 
@@ -61,7 +61,7 @@ export async function updateMaterialAction(id: string, material: MaterialInput):
         name: material.descricao,
         price: material.precoUnit,
         unit: material.unidade,
-        subgroup: material.subgrupo ?? null,
+        subgroup_id: material.subgrupoId ?? null,
         price_source_supplier_name: null,
         price_source_supplier_id: null,
         price_source_quote_id: null,

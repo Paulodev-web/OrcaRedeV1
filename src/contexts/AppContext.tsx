@@ -1,6 +1,6 @@
 ﻿"use client";
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
-import { Material, GrupoItem, Concessionaria, Orcamento, BudgetPostDetail, BudgetDetails, PostType, BudgetFolder, PoleStandard } from '@/types';
+import { Material, GrupoItem, Concessionaria, Orcamento, BudgetPostDetail, BudgetDetails, PostType, BudgetFolder, PoleStandard, MaterialSubgroupEntity } from '@/types';
 import { gruposItens as initialGrupos, concessionarias, orcamentos as initialOrcamentos } from '@/data/mockData';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from './AuthContext';
@@ -30,6 +30,10 @@ interface AppContextType {
   loadingCompanies: boolean;
   loadingGroups: boolean;
   currentGroup: GrupoItem | null;
+
+  // Estados para subgrupos de materiais
+  materialSubgroups: MaterialSubgroupEntity[];
+  loadingMaterialSubgroups: boolean;
 
   // Estados para padrões de poste (grupo de grupos de itens)
   poleStandards: PoleStandard[];
@@ -85,6 +89,9 @@ interface AppContextType {
   // Função para remover material de todas as ocorrências no orçamento (Painel Consolidado)
   removeMaterialFromBudget: (budgetId: string, materialId: string) => Promise<void>;
   
+  // Funções para subgrupos de materiais
+  fetchMaterialSubgroups: () => Promise<void>;
+
   // Funções para concessionárias e grupos
   fetchUtilityCompanies: () => Promise<void>;
   fetchItemGroups: (companyId: string) => Promise<void>;
@@ -210,6 +217,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [loadingGroups, setLoadingGroups] = useState<boolean>(false);
   const [currentGroup, setCurrentGroup] = useState<GrupoItem | null>(null);
 
+  // Estados para subgrupos de materiais
+  const [materialSubgroups, setMaterialSubgroups] = useState<MaterialSubgroupEntity[]>([]);
+  const [loadingMaterialSubgroups, setLoadingMaterialSubgroups] = useState<boolean>(false);
+
   // Estados para padrões de poste (grupo de grupos de itens)
   const [poleStandards, setPoleStandards] = useState<PoleStandard[]>([]);
   const [loadingPoleStandards, setLoadingPoleStandards] = useState<boolean>(false);
@@ -252,7 +263,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         descricao: item.name || '',
         precoUnit: parseFloat(item.price) || 0,
         unidade: item.unit || '',
-        subgrupo: item.subgroup ?? null,
+        subgrupoId: item.subgroup_id ?? null,
         priceSourceSupplierName: item.price_source_supplier_name ?? null,
         priceSourceSupplierId: item.price_source_supplier_id ?? null,
         priceSourceQuoteId: item.price_source_quote_id ?? null,
@@ -1616,6 +1627,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Funções para subgrupos de materiais
+  const fetchMaterialSubgroups = useCallback(async () => {
+    try {
+      setLoadingMaterialSubgroups(true);
+
+      const data = await fetchAllRecords('material_subgroups', '*', 'name', true);
+
+      const formatted: MaterialSubgroupEntity[] = data.map(item => ({
+        id: item.id,
+        name: item.name || '',
+        user_id: item.user_id,
+      }));
+
+      setMaterialSubgroups(formatted);
+    } catch (error) {
+      console.error('Erro ao buscar subgrupos de materiais:', error);
+      setMaterialSubgroups([]);
+    } finally {
+      setLoadingMaterialSubgroups(false);
+    }
+  }, []);
+
   // Funções para concessionárias
   const fetchUtilityCompanies = useCallback(async () => {
     try {
@@ -2004,6 +2037,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       loadingGroups,
       currentGroup,
 
+      // Estados para subgrupos de materiais
+      materialSubgroups,
+      loadingMaterialSubgroups,
+
       // Estados para padrões de poste (grupo de grupos de itens)
       poleStandards,
       loadingPoleStandards,
@@ -2053,6 +2090,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Função para atualizar preços consolidados
       updateConsolidatedMaterialPrice,
       removeMaterialFromBudget,
+
+      // Funções para subgrupos de materiais
+      fetchMaterialSubgroups,
 
       // Funções para concessionárias e grupos
       fetchUtilityCompanies,

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef, useTransition } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useTransition } from 'react';
 import { Plus, Search, Edit, Trash2, Upload, Loader2, ArrowUpDown, ArrowUp, ArrowDown, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Material, MATERIAL_SUBGROUPS } from '@/types';
+import { Material } from '@/types';
 import {
   addMaterialAction,
   updateMaterialAction,
@@ -27,7 +27,7 @@ type SortField = 'descricao' | 'codigo' | 'precoUnit';
 type SortOrder = 'asc' | 'desc';
 
 export function GerenciarMateriais() {
-  const { materiais, loadingMaterials, fetchMaterials, deleteAllMaterials, importMaterialsFromCSV } = useApp();
+  const { materiais, loadingMaterials, fetchMaterials, deleteAllMaterials, importMaterialsFromCSV, materialSubgroups, fetchMaterialSubgroups } = useApp();
   const [isPending, startTransition] = useTransition();
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -51,6 +51,15 @@ export function GerenciarMateriais() {
   useEffect(() => {
     fetchMaterials();
   }, [fetchMaterials]);
+
+  useEffect(() => {
+    fetchMaterialSubgroups();
+  }, [fetchMaterialSubgroups]);
+
+  const subgroupNameById = useMemo(
+    () => new Map(materialSubgroups.map(sg => [sg.id, sg.name])),
+    [materialSubgroups]
+  );
 
   // Auto-hide messages after 5 seconds
   useEffect(() => {
@@ -148,10 +157,10 @@ export function GerenciarMateriais() {
   const filteredMateriais = materiais
     .filter(material => {
       if (subgroupFilter === UNCLASSIFIED_SUBGRUPO_VALUE) {
-        return !material.subgrupo;
+        return !material.subgrupoId;
       }
       if (subgroupFilter !== ALL_SUBGRUPOS_VALUE) {
-        return material.subgrupo === subgroupFilter;
+        return material.subgrupoId === subgroupFilter;
       }
       return true;
     })
@@ -457,8 +466,8 @@ export function GerenciarMateriais() {
               <SelectContent>
                 <SelectItem value={ALL_SUBGRUPOS_VALUE}>Todos os subgrupos</SelectItem>
                 <SelectItem value={UNCLASSIFIED_SUBGRUPO_VALUE}>Não classificado</SelectItem>
-                {MATERIAL_SUBGROUPS.map((sg) => (
-                  <SelectItem key={sg} value={sg}>{sg}</SelectItem>
+                {materialSubgroups.map((sg) => (
+                  <SelectItem key={sg.id} value={sg.id}>{sg.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -567,9 +576,9 @@ export function GerenciarMateriais() {
                         {material.unidade}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {material.subgrupo ? (
+                        {material.subgrupoId ? (
                           <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium">
-                            {material.subgrupo}
+                            {subgroupNameById.get(material.subgrupoId) ?? material.subgrupoId}
                           </span>
                         ) : (
                           <span className="text-xs text-gray-400">Não classificado</span>
@@ -731,14 +740,15 @@ interface MaterialModalProps {
 }
 
 function MaterialModal({ material, onClose, onSave, loading = false }: MaterialModalProps) {
+  const { materialSubgroups } = useApp();
   const [formData, setFormData] = useState({
     codigo: material?.codigo || '',
     descricao: material?.descricao || '',
     precoUnit: material?.precoUnit?.toString() || '',
     unidade: material?.unidade || '',
-    subgrupo: material?.subgrupo || '',
+    subgrupoId: material?.subgrupoId || '',
   });
-  
+
   const alertDialog = useAlertDialog();
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -765,7 +775,7 @@ function MaterialModal({ material, onClose, onSave, loading = false }: MaterialM
     onSave({
       ...formData,
       precoUnit,
-      subgrupo: formData.subgrupo ? (formData.subgrupo as Material['subgrupo']) : null,
+      subgrupoId: formData.subgrupoId || null,
     });
   };
 
@@ -849,9 +859,9 @@ function MaterialModal({ material, onClose, onSave, loading = false }: MaterialM
               Subgrupo
             </label>
             <Select
-              value={formData.subgrupo || EMPTY_SUBGRUPO_VALUE}
+              value={formData.subgrupoId || EMPTY_SUBGRUPO_VALUE}
               onValueChange={(value) =>
-                setFormData({ ...formData, subgrupo: value === EMPTY_SUBGRUPO_VALUE ? '' : value })
+                setFormData({ ...formData, subgrupoId: value === EMPTY_SUBGRUPO_VALUE ? '' : value })
               }
             >
               <SelectTrigger className="w-full">
@@ -859,8 +869,8 @@ function MaterialModal({ material, onClose, onSave, loading = false }: MaterialM
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={EMPTY_SUBGRUPO_VALUE}>Não classificado</SelectItem>
-                {MATERIAL_SUBGROUPS.map((sg) => (
-                  <SelectItem key={sg} value={sg}>{sg}</SelectItem>
+                {materialSubgroups.map((sg) => (
+                  <SelectItem key={sg.id} value={sg.id}>{sg.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

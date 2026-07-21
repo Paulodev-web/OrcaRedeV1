@@ -8,6 +8,7 @@ import { Dashboard } from '@/components/Dashboard';
 import { AreaTrabalho } from '@/components/AreaTrabalho';
 import { Configuracoes } from '@/components/Configuracoes';
 import { GerenciarMateriais } from '@/components/GerenciarMateriais';
+import { GerenciarMaterialSubgroups } from '@/components/GerenciarMaterialSubgroups';
 import { GerenciarGrupos } from '@/components/GerenciarGrupos';
 import { GerenciarConcessionarias } from '@/components/GerenciarConcessionarias';
 import { GerenciarTiposPostes } from '@/components/GerenciarTiposPostes';
@@ -44,6 +45,8 @@ function AuthenticatedApp() {
         return <Configuracoes />;
       case 'materiais':
         return <GerenciarMateriais />;
+      case 'material-subgroups':
+        return <GerenciarMaterialSubgroups />;
       case 'grupos':
         return <GerenciarGrupos />;
       case 'concessionarias':

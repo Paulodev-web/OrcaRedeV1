@@ -18,6 +18,7 @@ export function Layout({ children }: LayoutProps) {
       case 'orcamento': return 'Área de Trabalho do Orçamento';
       case 'configuracoes': return 'Painel de Configurações';
       case 'materiais': return 'Gerenciar Materiais';
+      case 'material-subgroups': return 'Gerenciar Subgrupos de Materiais';
       case 'grupos': return 'Gerenciar Grupos de Itens';
       case 'concessionarias': return 'Gerenciar Concessionárias';
       case 'tipos-postes': return 'Gerenciar Tipos de Poste';
@@ -34,6 +35,7 @@ export function Layout({ children }: LayoutProps) {
       case 'orcamento': return 'Crie e edite orçamentos de projetos elétricos';
       case 'configuracoes': return 'Configure as opções do sistema';
       case 'materiais': return 'Gerencie o catálogo de materiais disponíveis';
+      case 'material-subgroups': return 'Cadastre e gerencie os subgrupos usados para classificar e filtrar materiais';
       case 'grupos': return 'Organize materiais em grupos reutilizáveis';
       case 'concessionarias': return 'Cadastre e gerencie concessionárias de energia';
       case 'tipos-postes': return 'Configure os tipos de postes disponíveis';

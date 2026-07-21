@@ -8,6 +8,7 @@ import {
   Building,
   Pilcrow,
   Layers,
+  Tag,
   Menu,
   X,
   LogOut,
@@ -54,6 +55,13 @@ const configurationItems: NavItem[] = [
     icon: Package,
     view: 'materiais',
     description: 'Gerenciar materiais'
+  },
+  {
+    id: 'material-subgroups',
+    label: 'Subgrupos de Materiais',
+    icon: Tag,
+    view: 'material-subgroups',
+    description: 'Gerenciar subgrupos de materiais'
   },
   {
     id: 'concessionarias',
