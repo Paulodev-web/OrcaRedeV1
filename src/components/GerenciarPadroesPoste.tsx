@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useTransition } from 'react';
-import { Plus, Edit, Trash2, Filter, Loader2, Search, Layers, Package, Boxes } from 'lucide-react';
+import { Plus, Edit, Trash2, Filter, Loader2, Search, Layers, Package, Boxes, Copy } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { AlertDialog } from '@/components/ui/alert-dialog';
@@ -70,6 +70,11 @@ export function GerenciarPadroesPoste() {
 
   const handleEdit = (padrao: PoleStandard) => {
     setCurrentPoleStandard(padrao);
+    setCurrentView('editor-padrao-poste');
+  };
+
+  const handleCreateFrom = (padrao: PoleStandard) => {
+    setCurrentPoleStandard({ ...padrao, id: '' });
     setCurrentView('editor-padrao-poste');
   };
 
@@ -286,6 +291,14 @@ export function GerenciarPadroesPoste() {
                           title="Editar padrão"
                         >
                           <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleCreateFrom(padrao)}
+                          disabled={isPending}
+                          className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Criar a partir de"
+                        >
+                          <Copy className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(padrao.id, padrao.nome)}

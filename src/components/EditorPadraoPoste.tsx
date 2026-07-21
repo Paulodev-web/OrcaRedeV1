@@ -60,7 +60,7 @@ export function EditorPadraoPoste() {
   const [groupSearchTerm, setGroupSearchTerm] = useState('');
   const [materialSearchTerm, setMaterialSearchTerm] = useState('');
 
-  const isEditing = !!currentPoleStandard;
+  const isEditing = !!currentPoleStandard?.id;
 
   // Inicializar / resetar campos
   useEffect(() => {
