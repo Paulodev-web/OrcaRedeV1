@@ -6,6 +6,8 @@ import type { BudgetDetails } from '@/types';
  * src/services/supplies/budgetMaterialQuantities.ts
  */
 
+const SEM_SUBGRUPO = 'Não classificado';
+
 export interface ConsolidatedMaterialRow {
   materialId: string;
   codigo: string;
@@ -14,6 +16,7 @@ export interface ConsolidatedMaterialRow {
   precoUnit: number;
   quantidade: number;
   subtotal: number;
+  subgrupo: string;
 }
 
 export function consolidateMaterialsFromBudgetDetails(
@@ -47,6 +50,7 @@ export function consolidateMaterialsFromBudgetDetails(
           precoUnit: priceToUse,
           quantidade: material.quantity,
           subtotal: priceToUse * material.quantity,
+          subgrupo: materialData.material_subgroups?.name || SEM_SUBGRUPO,
         });
       });
     });
@@ -71,6 +75,7 @@ export function consolidateMaterialsFromBudgetDetails(
         precoUnit: priceToUse,
         quantidade: material.quantity,
         subtotal: priceToUse * material.quantity,
+        subgrupo: materialData.material_subgroups?.name || SEM_SUBGRUPO,
       });
     });
   });

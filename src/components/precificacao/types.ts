@@ -114,6 +114,7 @@ export interface PricingMaterialSnapshot {
   precoUnit: number;
   quantidade: number;
   subtotal: number;
+  subgrupo: string;
 }
 
 export interface SavePricingBudgetInput {

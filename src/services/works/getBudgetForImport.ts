@@ -205,12 +205,12 @@ export async function getBudgetPostsForPricing(
          id, name, template_id,
          post_item_group_materials (
            material_id, quantity, price_at_addition,
-           materials ( id, code, name, description, unit, price )
+           materials ( id, code, name, description, unit, price, subgroup_id, material_subgroups ( name ) )
          )
        ),
        post_materials (
          id, post_id, material_id, quantity, price_at_addition,
-         materials ( id, code, name, description, unit, price )
+         materials ( id, code, name, description, unit, price, subgroup_id, material_subgroups ( name ) )
        )`,
     )
     .eq('budget_id', budgetId)

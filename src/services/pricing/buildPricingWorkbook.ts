@@ -148,7 +148,7 @@ export async function buildPricingWorkbook(data: PricingWorkbookData): Promise<E
 
   const materials = workbook.addWorksheet('Materiais');
   const materialHeader = materials.getRow(1);
-  ['Código', 'Material', 'Unidade', 'Quantidade', 'Preço unitário', 'Subtotal'].forEach((label, index) => {
+  ['Código', 'Material', 'Subgrupo', 'Unidade', 'Quantidade', 'Preço unitário', 'Subtotal'].forEach((label, index) => {
     materialHeader.getCell(index + 1).value = label;
   });
   styleHeader(materialHeader);
@@ -160,16 +160,17 @@ export async function buildPricingWorkbook(data: PricingWorkbookData): Promise<E
       const row = materials.getRow(index + 2);
       row.getCell(1).value = item.codigo;
       row.getCell(2).value = item.nome;
-      row.getCell(3).value = item.unidade;
-      row.getCell(4).value = item.quantidade;
-      row.getCell(4).numFmt = QTY_FMT;
-      row.getCell(5).value = item.precoUnit;
-      row.getCell(5).numFmt = MONEY_FMT;
-      row.getCell(6).value = item.subtotal;
+      row.getCell(3).value = item.subgrupo || 'Não classificado';
+      row.getCell(4).value = item.unidade;
+      row.getCell(5).value = item.quantidade;
+      row.getCell(5).numFmt = QTY_FMT;
+      row.getCell(6).value = item.precoUnit;
       row.getCell(6).numFmt = MONEY_FMT;
+      row.getCell(7).value = item.subtotal;
+      row.getCell(7).numFmt = MONEY_FMT;
     });
   }
-  autoFitColumns(materials, 6);
+  autoFitColumns(materials, 7);
 
   return workbook;
 }

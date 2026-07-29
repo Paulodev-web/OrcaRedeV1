@@ -607,7 +607,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 code,
                 name,
                 unit,
-                price
+                price,
+                subgroup_id,
+                material_subgroups ( name )
               )
             )
           ),
@@ -621,7 +623,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
               code,
               name,
               unit,
-              price
+              price,
+              subgroup_id,
+              material_subgroups ( name )
             )
           )
         `)
@@ -676,14 +680,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 name: (material.materials as any).name || '',
                 description: undefined, // ⚡ Não carregado para otimização
                 unit: (material.materials as any).unit || '',
-                price: (material.materials as any).price || 0
+                price: (material.materials as any).price || 0,
+                subgroup_id: (material.materials as any).subgroup_id ?? null,
+                material_subgroups: (material.materials as any).material_subgroups ?? null
               } : {
                 id: '',
                 code: '',
                 name: 'Material não encontrado',
                 description: undefined,
                 unit: '',
-                price: 0
+                price: 0,
+                subgroup_id: null,
+                material_subgroups: null
               }
             };
           }) || []
@@ -700,14 +708,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
             name: (material.materials as any).name || '',
             description: undefined, // ⚡ Não carregado para otimização
             unit: (material.materials as any).unit || '',
-            price: (material.materials as any).price || 0
+            price: (material.materials as any).price || 0,
+            subgroup_id: (material.materials as any).subgroup_id ?? null,
+            material_subgroups: (material.materials as any).material_subgroups ?? null
           } : {
             id: '',
             code: '',
             name: 'Material não encontrado',
             description: undefined,
             unit: '',
-            price: 0
+            price: 0,
+            subgroup_id: null,
+            material_subgroups: null
           }
         })) || []
         };

@@ -157,6 +157,8 @@ export interface PostItemGroupMaterial {
     description?: string;
     unit: string;
     price: number;
+    subgroup_id?: string | null;
+    material_subgroups?: { name: string } | null;
   };
 }
 
@@ -173,6 +175,8 @@ export interface PostMaterial {
     description?: string;
     unit: string;
     price: number;
+    subgroup_id?: string | null;
+    material_subgroups?: { name: string } | null;
   };
 }
 

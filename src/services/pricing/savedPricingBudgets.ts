@@ -146,6 +146,7 @@ function sanitizeMaterials(value: unknown): PricingMaterialSnapshot[] {
       precoUnit: Math.max(toNumber(row.precoUnit), 0),
       quantidade: Math.max(toNumber(row.quantidade), 0),
       subtotal: Math.max(toNumber(row.subtotal), 0),
+      subgrupo: typeof row.subgrupo === 'string' && row.subgrupo ? row.subgrupo : 'Não classificado',
     };
   });
 }
