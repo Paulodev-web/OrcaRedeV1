@@ -5,11 +5,17 @@ import { Sidebar } from './Sidebar';
 import { useApp } from '@/contexts/AppContext';
 import { ON_ENGENHARIA_LOGO_SRC } from '@/lib/branding';
 
-interface LayoutProps {
+interface LegacyLayoutProps {
   children: React.ReactNode;
 }
 
-export function Layout({ children }: LayoutProps) {
+/**
+ * Chrome do OrçaRede legado (sidebar + header por currentView).
+ * Substituído por src/components/layout/AppLayout conforme os módulos migram;
+ * removido na Fase 7. O nome do arquivo evita colidir com a pasta layout/ em
+ * filesystem case-insensitive.
+ */
+export function LegacyLayout({ children }: LegacyLayoutProps) {
   const { currentView, setActiveModule } = useApp();
 
   const getPageTitle = () => {

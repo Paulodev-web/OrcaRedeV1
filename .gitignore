@@ -40,3 +40,14 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# backups
+/backups/
+
+# supabase CLI local state (gerado por `supabase link`, específico da máquina)
+/supabase/.temp/*
+!/supabase/.temp/cli-latest
+
+# scratch local
+/tmp/
+.claude/settings.local.json

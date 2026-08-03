@@ -1,119 +1,47 @@
 "use client";
 import Link from 'next/link';
-import {
-  LogOut,
-  ChevronRight,
-  Zap,
-  Clock,
-  ArrowRight,
-  User,
-  Bell,
-  Grid3X3,
-  Shield,
-  Hammer,
-  Package,
-  Calculator,
-  ClipboardList,
-} from 'lucide-react';
+import { useCallback, useMemo } from 'react';
+import { ArrowRight, Bell, Clock, LayoutGrid, LogOut, Shield, Sparkles } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { ON_ENGENHARIA_LOGO_SRC } from '@/lib/branding';
+// ⚠️ Importar sempre pelo caminho completo do arquivo: no Windows/macOS o
+// especificador `@/components/layout` resolve para o `Layout.tsx` legado, que
+// difere apenas no caixa-alta. Some com o problema quando a Fase 7 remover o
+// legado.
+import { ActivityDot } from '@/components/layout/ActivityDot';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { ModuleHeader } from '@/components/layout/ModuleHeader';
+import { buildAppSidebarSections, getPortalModules, type AppModule } from '@/components/layout/modules';
+import { onBrandGradientClass, onBrandHeroGradientClass } from '@/lib/branding';
 
-interface Module {
-  id: string;
-  title: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string; size?: number }>;
-  status: 'active' | 'soon';
-  /** Quando definido, o cartão navega com `Link` (prefetch do App Router). */
-  href?: string;
-  badge?: string;
-  color: string;
-  bgColor: string;
-  borderColor: string;
-  stats?: { label: string; value: string }[];
-}
-
-const ON_COLORS = { navy: '#1D3140', blue: '#64ABDE' };
-
-const modules: Module[] = [
-  {
-    id: 'orca-rede',
-    title: 'OrçaRede',
-    description: 'Sistema de orçamentos para projetos de redes elétricas',
-    icon: Zap,
-    status: 'active',
-    badge: 'Financeiro',
-    color: 'text-[#1D3140]',
-    bgColor: 'bg-[#64ABDE]/15',
-    borderColor: 'border-[#64ABDE]/40',
-    stats: [
-      { label: 'Módulo principal', value: 'Ativo' },
-    ],
-  },
-  {
-    id: 'portal-engenheiro',
-    title: 'Portal do Engenheiro',
-    description: 'Gestão e acompanhamento de instalações em campo',
-    icon: Hammer,
-    status: 'active',
-    badge: 'Obras',
-    color: 'text-[#1D3140]',
-    bgColor: 'bg-[#64ABDE]/15',
-    borderColor: 'border-[#64ABDE]/40',
-  },
-  {
-    id: 'andamento-obra',
-    title: 'Andamento de Obra',
-    description: 'Cronograma, marcos e status das obras em execução',
-    icon: ClipboardList,
-    status: 'active',
-    href: '/tools/andamento-obra',
-    badge: 'Obras',
-    color: 'text-[#1D3140]',
-    bgColor: 'bg-[#64ABDE]/15',
-    borderColor: 'border-[#64ABDE]/40',
-  },
-  {
-    id: 'fornecedores',
-    title: 'Suprimentos e Cotações',
-    description: 'Importação de PDFs de fornecedores, conciliação de itens e cenários de compra',
-    icon: Package,
-    status: 'active',
-    href: '/fornecedores',
-    badge: 'Compras',
-    color: 'text-[#1D3140]',
-    bgColor: 'bg-[#64ABDE]/15',
-    borderColor: 'border-[#64ABDE]/40',
-  },
-  {
-    id: 'precificacao',
-    title: 'Módulo de Precificação',
-    description: 'Precificação de serviços: custos, lucro, imposto sobre VS e materiais faturados por fora',
-    icon: Calculator,
-    status: 'active',
-    href: '/tools/precificacao',
-    badge: 'Comercial',
-    color: 'text-[#1D3140]',
-    bgColor: 'bg-[#64ABDE]/15',
-    borderColor: 'border-[#64ABDE]/40',
-  },
-];
+/**
+ * Contagem de atividade não vista por módulo.
+ *
+ * Fica em zero até `user_module_seen` e as queries de badge existirem — a
+ * `ActivityDot` não renderiza nada com zero. É o único ponto a trocar quando a
+ * fonte de dados chegar.
+ */
+const ACTIVITY_COUNTS = {} as const;
 
 export function AdminPortal() {
   const { setActiveModule, setCurrentView } = useApp();
   const { signOut, user } = useAuth();
-  const activeModuleCount = modules.filter((m) => m.status === 'active').length;
-  const handleOpenModule = (moduleId: string) => {
-    if (moduleId === 'orca-rede') {
-      setActiveModule('orcamentos');
-    } else if (moduleId === 'portal-engenheiro') {
-      setActiveModule('portal-engenheiro');
-      setCurrentView('portal-engenheiro');
-    } else {
-      setActiveModule(moduleId);
-    }
-  };
+
+  const portalModules = getPortalModules();
+
+  /** Módulos que ainda vivem no roteamento por estado do `AppContext`. */
+  const openLegacyModule = useCallback(
+    (mod: AppModule) => {
+      if (mod.legacyModule) setActiveModule(mod.legacyModule);
+      if (mod.legacyView) setCurrentView(mod.legacyView);
+    },
+    [setActiveModule, setCurrentView],
+  );
+
+  const sections = useMemo(
+    () => buildAppSidebarSections({ activityCounts: ACTIVITY_COUNTS, onLegacySelect: openLegacyModule }),
+    [openLegacyModule],
+  );
 
   const handleLogout = async () => {
     try {
@@ -123,17 +51,14 @@ export function AdminPortal() {
     }
   };
 
-  const getUserInitials = () => {
-    if (!user?.email) return 'U';
-    return user.email.charAt(0).toUpperCase();
-  };
+  const userInitial = user?.email ? user.email.charAt(0).toUpperCase() : 'U';
 
-  const getGreeting = () => {
+  const greeting = (() => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Bom dia';
     if (hour < 18) return 'Boa tarde';
     return 'Boa noite';
-  };
+  })();
 
   const today = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long',
@@ -142,210 +67,191 @@ export function AdminPortal() {
     day: 'numeric',
   });
 
+  const sidebarFooter = ({ collapsed }: { collapsed: boolean }) =>
+    collapsed ? (
+      <button
+        type="button"
+        onClick={handleLogout}
+        title="Sair"
+        className="flex w-full items-center justify-center rounded-xl p-2.5 text-white/60 transition-colors hover:bg-red-500/20 hover:text-white"
+      >
+        <LogOut className="h-5 w-5" />
+        <span className="sr-only">Sair</span>
+      </button>
+    ) : (
+      <div className="space-y-1">
+        <div className="flex items-center gap-2.5 rounded-xl bg-white/5 px-3 py-2.5">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-blue/20 text-sm font-semibold text-brand-blue-soft">
+            {userInitial}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-medium text-white">{user?.email}</span>
+            <span className="block text-xs text-white/40">Administrador</span>
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/60 transition-colors hover:bg-red-500/20 hover:text-white"
+        >
+          <LogOut className="h-4 w-4 shrink-0" />
+          Sair
+        </button>
+      </div>
+    );
+
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col">
-      {/* Top Navigation */}
-      <header className="bg-white/95 border-b border-slate-200 shadow-sm sticky top-0 z-50 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Brand */}
-            <div className="flex items-center space-x-3">
-              <img
-                src={ON_ENGENHARIA_LOGO_SRC}
-                alt="ON Engenharia"
-                className="h-9 w-auto max-h-9 object-contain"
-              />
-              <div>
-                <span className="text-base font-bold text-[#1D3140] leading-tight block">
-                  ON Engenharia
-                </span>
-                <span className="text-xs text-slate-500 leading-tight block">
-                  Portal Administrativo
-                </span>
-              </div>
-            </div>
+    <AppLayout
+      sections={sections}
+      activeItemId="portal"
+      sidebarFooter={sidebarFooter}
+      header={
+        <ModuleHeader
+          icon={LayoutGrid}
+          title="Portal Administrativo"
+          description="Ponto de entrada do sistema — escolha um módulo para continuar."
+          actions={
+            <button
+              type="button"
+              aria-label="Notificações"
+              className="relative rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-brand-navy"
+            >
+              <Bell className="h-5 w-5" />
+              <ActivityDot count={0} dotOnly className="absolute right-1.5 top-1.5" />
+            </button>
+          }
+        />
+      }
+    >
+      <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Saudação */}
+        <section
+          className={`relative mb-8 overflow-hidden rounded-2xl p-8 text-white shadow-xl ${onBrandHeroGradientClass}`}
+        >
+          <div
+            aria-hidden
+            className="absolute right-0 top-0 h-64 w-64 -translate-y-1/2 translate-x-1/4 rounded-full bg-white opacity-5"
+          />
+          <div
+            aria-hidden
+            className="absolute bottom-0 left-0 h-48 w-48 -translate-x-1/4 translate-y-1/2 rounded-full bg-white opacity-5"
+          />
 
-            {/* Right side */}
-            <div className="flex items-center space-x-3">
-              <button className="relative p-2 rounded-lg text-slate-500 hover:text-[#1D3140] hover:bg-slate-100 transition-colors">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style={{ backgroundColor: ON_COLORS.blue }}></span>
-              </button>
-
-              <div className="flex items-center space-x-2 pl-3 border-l border-slate-200">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${ON_COLORS.blue}20` }}>
-                  <span className="text-sm font-semibold" style={{ color: ON_COLORS.navy }}>{getUserInitials()}</span>
-                </div>
-                <div className="hidden sm:block">
-                  <p className="text-sm font-medium text-[#1D3140] leading-tight max-w-[180px] truncate">
-                    {user?.email}
-                  </p>
-                  <p className="text-xs text-slate-500 leading-tight">Administrador</p>
-                </div>
-              </div>
-
-              <button
-                onClick={handleLogout}
-                className="flex items-center space-x-1.5 px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors ml-1"
-                title="Sair"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline font-medium">Sair</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
-
-        {/* Welcome Hero */}
-        <div className="mb-8">
-          <div className="rounded-2xl p-8 text-white relative overflow-hidden shadow-xl" style={{ background: `linear-gradient(140deg, ${ON_COLORS.navy} 0%, #223f52 45%, ${ON_COLORS.blue} 100%)` }}>
-            {/* Decorative elements */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -translate-y-1/2 translate-x-1/4"></div>
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white opacity-5 rounded-full translate-y-1/2 -translate-x-1/4"></div>
-            <div className="absolute top-1/2 right-1/4 w-32 h-32 bg-white opacity-5 rounded-full -translate-y-1/2"></div>
-
-            <div className="relative z-10 flex items-start justify-between">
-              <div>
-                <div className="flex items-center space-x-2 mb-2">
-                  <Grid3X3 className="w-4 h-4 text-white/70" />
-                  <span className="text-white/80 text-sm font-medium">Portal Administrativo</span>
-                </div>
-                <h1 className="text-3xl font-bold mb-2">
-                  {getGreeting()}, seja bem-vindo!
-                </h1>
-                <p className="text-white/90 text-base max-w-lg">
-                  Selecione um módulo abaixo para começar. Todos os seus projetos e dados estão aqui.
-                </p>
-                <div className="flex items-center space-x-1.5 mt-4 text-white/80 text-sm">
-                  <Clock className="w-4 h-4" />
-                  <span className="capitalize">{today}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Section title */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl font-bold text-[#1D3140]">Módulos disponíveis</h2>
-            <p className="text-sm text-slate-500 mt-0.5">Clique em um módulo ativo para acessá-lo</p>
-          </div>
-          <div className="flex items-center space-x-2 px-3 py-1.5 rounded-full text-sm font-medium border" style={{ backgroundColor: `${ON_COLORS.blue}15`, color: ON_COLORS.navy, borderColor: `${ON_COLORS.blue}40` }}>
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ON_COLORS.blue }}></span>
-            <span>{activeModuleCount} ativos</span>
-          </div>
-        </div>
-
-        {/* Modules Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {modules.map((mod) => {
-            const Icon = mod.icon;
-            const isActive = mod.status === 'active';
-            const cardClass = `
-                  relative block bg-white rounded-2xl border transition-all duration-200 overflow-hidden
-                  ${isActive
-                    ? 'border-[#64ABDE]/40 shadow-md hover:shadow-xl hover:-translate-y-1 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#64ABDE]'
-                    : 'border-slate-200 shadow-sm opacity-70 cursor-not-allowed'
-                  }
-                `;
-
-            const cardBody = (
-              <>
-                {isActive && (
-                  <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl" style={{ background: `linear-gradient(90deg, ${ON_COLORS.navy} 0%, ${ON_COLORS.blue} 100%)` }}></div>
-                )}
-
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className={`w-12 h-12 ${mod.bgColor} rounded-xl flex items-center justify-center border ${mod.borderColor}`}>
-                      <Icon className={`w-6 h-6 ${mod.color}`} />
-                    </div>
-                    {mod.badge ? (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                        {mod.badge}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
-                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5 animate-pulse"></span>
-                        Ativo
-                      </span>
-                    )}
-                  </div>
-
-                  <h3 className="text-base font-bold text-[#1D3140] mb-2">{mod.title}</h3>
-                  <p className="text-sm text-slate-500 leading-relaxed mb-4">{mod.description}</p>
-
-                  {isActive ? (
-                    <span
-                      className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl text-white text-sm font-semibold transition-all duration-200 shadow-sm group-hover:shadow-md"
-                      style={{ background: `linear-gradient(135deg, ${ON_COLORS.navy} 0%, ${ON_COLORS.blue} 100%)` }}
-                    >
-                      <span>Acessar módulo</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </span>
-                  ) : (
-                    <div className="w-full flex items-center justify-center py-2.5 px-4 rounded-xl bg-slate-100 text-sm font-medium text-slate-500 border border-slate-200">
-                      <Clock className="w-4 h-4 mr-2" />
-                      Em desenvolvimento
-                    </div>
-                  )}
-                </div>
-              </>
-            );
-
-            if (isActive && mod.href) {
-              return (
-                <Link key={mod.id} href={mod.href} prefetch className={`group ${cardClass}`}>
-                  {cardBody}
-                </Link>
-              );
-            }
-
-            return (
-              <div
-                key={mod.id}
-                className={cardClass}
-                role={isActive ? 'button' : undefined}
-                tabIndex={isActive ? 0 : undefined}
-                onClick={() => isActive && handleOpenModule(mod.id)}
-                onKeyDown={(e) => {
-                  if (!isActive) return;
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleOpenModule(mod.id);
-                  }
-                }}
-              >
-                {cardBody}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Bottom info */}
-        <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${ON_COLORS.blue}20` }}>
-              <User className="w-4 h-4" style={{ color: ON_COLORS.navy }} />
-            </div>
+          <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-sm font-medium text-[#1D3140]">Conta ativa</p>
+              <h2 className="text-3xl font-bold">{greeting}, seja bem-vindo!</h2>
+              <p className="mt-2 max-w-lg text-base text-white/90">
+                Todos os módulos ficam acessíveis pela navegação lateral, sem passar por aqui de novo.
+              </p>
+              <p className="mt-4 flex items-center gap-1.5 text-sm text-white/80">
+                <Clock className="h-4 w-4" />
+                <span className="capitalize">{today}</span>
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 self-start rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-sm font-medium backdrop-blur-sm lg:self-auto">
+              <Sparkles className="h-4 w-4" />
+              <span>{portalModules.length} módulos ativos</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Módulos */}
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-brand-navy">Módulos disponíveis</h2>
+          <p className="mt-0.5 text-sm text-slate-500">
+            Clique em um módulo para acessá-lo.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {portalModules.map((mod) => (
+            <ModuleCard key={mod.id} module={mod} onOpenLegacy={openLegacyModule} />
+          ))}
+        </div>
+
+        {/* Rodapé */}
+        <div className="mt-8 flex flex-col items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row">
+          <div className="flex items-center gap-3">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-brand-blue/40 bg-brand-blue/15 text-sm font-semibold text-brand-navy">
+              {userInitial}
+            </span>
+            <div>
+              <p className="text-sm font-medium text-brand-navy">Conta ativa</p>
               <p className="text-xs text-slate-500">{user?.email}</p>
             </div>
           </div>
-          <div className="flex items-center space-x-1 text-xs text-slate-500">
-            <Shield className="w-3.5 h-3.5" />
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+            <Shield className="h-3.5 w-3.5" />
             <span>Conexão segura</span>
-            <ChevronRight className="w-3 h-3 mx-1" />
+            <span aria-hidden>·</span>
             <span>ON Engenharia Elétrica © {new Date().getFullYear()}</span>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </AppLayout>
+  );
+}
+
+interface ModuleCardProps {
+  module: AppModule;
+  onOpenLegacy: (module: AppModule) => void;
+}
+
+function ModuleCard({ module: mod, onOpenLegacy }: ModuleCardProps) {
+  const Icon = mod.icon;
+
+  // `h-full` + coluna flex mantêm o CTA alinhado entre cartões de descrição
+  // com alturas diferentes.
+  const cardClass =
+    'group relative flex h-full flex-col overflow-hidden rounded-2xl border border-brand-blue/40 bg-white text-left shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue';
+
+  const cardBody = (
+    <>
+      <span
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-brand-navy to-brand-blue"
+      />
+
+      <div className="flex flex-1 flex-col p-6">
+        <div className="mb-4 flex items-start justify-between">
+          <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-brand-blue/40 bg-brand-blue/15">
+            <Icon className="h-6 w-6 text-brand-navy" />
+          </span>
+          <span className="flex items-center gap-2">
+            <ActivityDot count={0} label={`novidades em ${mod.label}`} />
+            {mod.tag ? (
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                {mod.tag}
+              </span>
+            ) : null}
+          </span>
+        </div>
+
+        <h3 className="mb-2 text-base font-bold text-brand-navy">{mod.label}</h3>
+        <p className="mb-4 text-sm leading-relaxed text-slate-500">{mod.description}</p>
+
+        <span
+          className={`mt-auto flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm text-white group-hover:shadow-md ${onBrandGradientClass}`}
+        >
+          <span>Acessar módulo</span>
+          <ArrowRight className="h-4 w-4" />
+        </span>
+      </div>
+    </>
+  );
+
+  if (mod.href) {
+    return (
+      <Link href={mod.href} prefetch className={cardClass}>
+        {cardBody}
+      </Link>
+    );
+  }
+
+  return (
+    <button type="button" onClick={() => onOpenLegacy(mod)} className={`w-full ${cardClass}`}>
+      {cardBody}
+    </button>
   );
 }

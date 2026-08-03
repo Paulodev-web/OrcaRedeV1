@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
 import { renderPdfFromTemplate } from '@/services/pdf/renderPdfFromTemplate';
 import { validateGeneratePdfRequest } from '@/services/pdf/validateGeneratePdfRequest';
 import { PdfTemplateError } from '@/types/pdfExport';
@@ -6,6 +7,17 @@ import { PdfTemplateError } from '@/types/pdfExport';
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
+  // Renderizar PDF é trabalho de CPU no servidor: exige sessão válida antes de
+  // qualquer parse de body. O único consumidor é o formulário em /tools/gerador-pdf,
+  // que chama do browser e portanto já envia o cookie de sessão.
+  // (O export de cenário ideal não passa por aqui — usa renderPdfFromTemplate direto.)
+  const supabase = await createSupabaseServerClient();
+  try {
+    await requireAuthUserId(supabase);
+  } catch {
+    return NextResponse.json({ error: 'Usuário não autenticado.' }, { status: 401 });
+  }
+
   let body: unknown;
   try {
     body = await request.json();

@@ -5,9 +5,17 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { WorkCard } from './WorkCard';
 import type { WorksGrouped, WorkWithManager } from '@/types/works';
 
+/** Contagem de alertas ativos por obra, já agregada em batch pela page. */
+export interface WorkAlertCounts {
+  critical: number;
+  totalActive: number;
+}
+
 interface AcompanhamentoCenterProps {
   grouped: WorksGrouped;
   unreadCountsByWorkId?: Record<string, number>;
+  alertCountsByWorkId?: Record<string, WorkAlertCounts>;
+  checklistCountsByWorkId?: Record<string, number>;
 }
 
 interface GroupConfig {
@@ -52,6 +60,8 @@ const GROUPS: GroupConfig[] = [
 export function AcompanhamentoCenter({
   grouped,
   unreadCountsByWorkId,
+  alertCountsByWorkId,
+  checklistCountsByWorkId,
 }: AcompanhamentoCenterProps) {
   const [openKey, setOpenKey] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(GROUPS.map((g) => [g.key, g.defaultOpen])),
@@ -96,13 +106,19 @@ export function AcompanhamentoCenter({
                   <p className="text-xs text-gray-400">{group.emptyHint}</p>
                 ) : (
                   <div className="grid gap-3 sm:grid-cols-2">
-                    {items.map((work) => (
-                      <WorkCard
-                        key={work.id}
-                        work={work}
-                        unreadCount={unreadCountsByWorkId?.[work.id] ?? 0}
-                      />
-                    ))}
+                    {items.map((work) => {
+                      const alerts = alertCountsByWorkId?.[work.id];
+                      return (
+                        <WorkCard
+                          key={work.id}
+                          work={work}
+                          unreadCount={unreadCountsByWorkId?.[work.id] ?? 0}
+                          criticalAlertsCount={alerts?.critical ?? 0}
+                          totalActiveAlertsCount={alerts?.totalActive ?? 0}
+                          checklistsAwaitingCount={checklistCountsByWorkId?.[work.id] ?? 0}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </div>

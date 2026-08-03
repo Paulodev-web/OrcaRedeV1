@@ -1,8 +1,9 @@
 "use client";
 
+import { useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Layout } from '@/components/Layout';
+import { LegacyLayout } from '@/components/LegacyLayout';
 import { AdminPortal } from '@/components/AdminPortal';
 import { Dashboard } from '@/components/Dashboard';
 import { AreaTrabalho } from '@/components/AreaTrabalho';
@@ -21,7 +22,18 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ON_ENGENHARIA_LOGO_SRC } from '@/lib/branding';
 
 function AuthenticatedApp() {
-  const { currentView, activeModule } = useApp();
+  const { currentView, activeModule, setActiveModule } = useApp();
+
+  // O módulo ativo vive em estado do AppContext, que fica no provider raiz e
+  // sobrevive à navegação client-side. Limpar na saída de "/" garante que voltar
+  // ao Portal vindo de outra rota caia na tela de entrada, e não no último módulo
+  // aberto. Feito na saída, e não na chegada, para o Portal já renderizar certo no
+  // primeiro frame. Some quando o roteamento por estado sair na Fase 3.
+  useEffect(() => {
+    return () => {
+      setActiveModule(null);
+    };
+  }, [setActiveModule]);
 
   if (!activeModule) {
     return <AdminPortal />;
@@ -65,11 +77,11 @@ function AuthenticatedApp() {
   };
 
   return (
-    <Layout>
+    <LegacyLayout>
       <ErrorBoundary>
         {renderCurrentView()}
       </ErrorBoundary>
-    </Layout>
+    </LegacyLayout>
   );
 }
 

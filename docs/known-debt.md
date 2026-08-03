@@ -162,7 +162,21 @@ Como consequência, `createWorkFromBudget` falhava silenciosamente ao tentar `st
 
 **Sugestão de solução**:
 
-Script de backfill em `scripts/backfill-pdfs-to-dev.ts` que: (1) lista budgets com `plan_image_url` apontando para prod; (2) fetch HTTP público; (3) upload no bucket `plans` do dev; (4) atualiza `plan_image_url` para URL do dev; (5) execução one-shot.
+Script de backfill que: (1) lista budgets com `plan_image_url` apontando para prod; (2) fetch HTTP público; (3) upload no bucket `plans` do dev; (4) atualiza `plan_image_url` para URL do dev; (5) execução one-shot.
+
+**Script entregue (ainda não executado)**: `scripts/backfill-plans-to-dev.mjs`
+
+Dry-run é o padrão — sem `--apply` nada é escrito:
+
+```bash
+node scripts/backfill-plans-to-dev.mjs                    # plano completo
+node scripts/backfill-plans-to-dev.mjs --limit=3          # amostra
+node scripts/backfill-plans-to-dev.mjs --report=out.jsonl # + relatório JSONL
+```
+
+Guardas: whitelist de hosts; recusa `--apply` se o destino for o Supabase de produção; `--apply` exige confirmar o ref do projeto em terminal interativo; valida magic bytes antes do upload (evita gravar página de erro HTML por cima da planta); limite de 10 MB; idempotente (não sobrescreve sem `--overwrite`, ignora registros já normalizados).
+
+Marcar este DEBT como resolvido depois de rodar com `--apply` no dev e confirmar que o bucket `plans` local serve as plantas.
 
 **Re-importação manual de obra existente** (ex.: obra criada antes da mitigação, `pdf_storage_path` NULL no snapshot):
 

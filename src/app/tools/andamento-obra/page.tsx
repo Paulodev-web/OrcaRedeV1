@@ -9,6 +9,7 @@ import { getWorkPendingApprovals } from '@/services/works/getWorkPendingApproval
 import { categorizeWorks } from '@/services/works/categorizeWorks';
 import { getManagers } from '@/services/people/getManagers';
 import { WorksHomeView } from '@/components/andamento-obra/works/WorksHomeView';
+import type { WorkAlertCounts } from '@/components/andamento-obra/works/AcompanhamentoCenter';
 import { PENDING_DAILY_LOG_RED_THRESHOLD_HOURS } from '@/types/works';
 
 export const metadata: Metadata = {
@@ -50,6 +51,11 @@ export default async function AndamentoObraPage() {
   const redWorkIds = new Set<string>();
   const yellowWorkIds = new Set<string>();
 
+  // Badges dos WorkCards: reaproveitam o mesmo `pendingApprovals` da categorizacao,
+  // que ja agrega alertas e checklists em batch. Nenhuma query nova por obra.
+  const alertCountsByWorkId: Record<string, WorkAlertCounts> = {};
+  const checklistCountsByWorkId: Record<string, number> = {};
+
   for (const item of pendingApprovals.pendingDailyLogs) {
     if (item.hoursWaiting > PENDING_DAILY_LOG_RED_THRESHOLD_HOURS) {
       redWorkIds.add(item.workId);
@@ -64,7 +70,13 @@ export default async function AndamentoObraPage() {
   }
   for (const item of pendingApprovals.activeAlerts) {
     const work = works.find((w) => w.id === item.workId);
+    // Obra cancelada nao acende faixa vermelha; o badge segue a mesma regra
+    // para o card nao contradizer o grupo em que ele aparece.
     if (work?.status === 'cancelled') continue;
+    alertCountsByWorkId[item.workId] = {
+      critical: item.criticalCount,
+      totalActive: item.totalActiveCount,
+    };
     if (item.criticalCount > 0) {
       redWorkIds.add(item.workId);
     } else if (item.totalActiveCount > 0) {
@@ -72,6 +84,7 @@ export default async function AndamentoObraPage() {
     }
   }
   for (const item of pendingApprovals.pendingChecklists) {
+    checklistCountsByWorkId[item.workId] = item.count;
     if (!redWorkIds.has(item.workId)) {
       yellowWorkIds.add(item.workId);
     }
@@ -91,6 +104,8 @@ export default async function AndamentoObraPage() {
           managers={managers}
           hasAnyWork={works.length > 0}
           unreadCountsByWorkId={unreadCounts}
+          alertCountsByWorkId={alertCountsByWorkId}
+          checklistCountsByWorkId={checklistCountsByWorkId}
         />
       </div>
     </main>

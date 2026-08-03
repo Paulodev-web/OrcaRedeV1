@@ -8,6 +8,8 @@ import { getWorkProjectPostsCount } from '@/services/works/getWorkProjectPostsCo
 import { getUnreadMessagesCount } from '@/services/works/getUnreadMessagesCount';
 import { getUnreadDailyLogsCount } from '@/services/works/getUnreadDailyLogsCount';
 import { getPendingMilestonesCount } from '@/services/works/getPendingMilestonesCount';
+import { getPendingChecklistsCount } from '@/services/works/getPendingChecklistsCount';
+import { getActiveAlertsCount } from '@/services/works/getActiveAlertsCount';
 import { getInstallationsCountByWork } from '@/services/works/getInstallationsCountByWork';
 import { getManagers } from '@/services/people/getManagers';
 import { WorkHeader } from '@/components/andamento-obra/works/WorkHeader';
@@ -41,6 +43,8 @@ export default async function WorkDetailLayout({ children, params }: LayoutProps
     chatUnread,
     diarioPending,
     progressoPending,
+    checklistsPending,
+    alertsActive,
     installationsCounts,
   ] = await Promise.all([
     getWorkMilestones(supabase, workId),
@@ -49,6 +53,8 @@ export default async function WorkDetailLayout({ children, params }: LayoutProps
     getUnreadMessagesCount(supabase, workId, 'engineer'),
     getUnreadDailyLogsCount(supabase, workId),
     getPendingMilestonesCount(supabase, workId),
+    getPendingChecklistsCount(supabase, workId),
+    getActiveAlertsCount(supabase, workId),
     getInstallationsCountByWork(supabase, [workId]),
   ]);
 
@@ -68,6 +74,8 @@ export default async function WorkDetailLayout({ children, params }: LayoutProps
         chatUnreadCount={chatUnread}
         diarioPendingCount={diarioPending}
         progressoPendingCount={progressoPending}
+        checklistsPendingCount={checklistsPending}
+        alertsActiveCount={alertsActive}
       />
       <main className="p-6 lg:p-8">
         <div className="mx-auto max-w-7xl">{children}</div>

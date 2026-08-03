@@ -53,9 +53,37 @@ html {
   to { height: 0 }
 }
 
+/* Entrada do drawer de navegação mobile (AppSidebar) */
+@keyframes drawer-in {
+  from { transform: translateX(-100%) }
+  to { transform: translateX(0) }
+}
+@keyframes overlay-in {
+  from { opacity: 0 }
+  to { opacity: 1 }
+}
+
 @theme inline {
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-drawer-in: drawer-in 0.25s ease-out;
+  --animate-overlay-in: overlay-in 0.2s ease-out;
+}
+
+/*
+ * Tokens de marca ON Engenharia.
+ *
+ * ⚠️ Espelho de `src/lib/branding.ts` (`ON_BRAND`). Alterou aqui, altere lá.
+ * Este bloco é a origem das classes utilitárias nomeadas — `bg-brand-navy`,
+ * `text-brand-navy`, `border-brand-blue/40`, `from-brand-navy`, … — que devem
+ * ser usadas no lugar de qualquer hex escrito à mão.
+ */
+@theme {
   --color-brand-navy: #1D3140;
+  --color-brand-navy-deep: #14232E;
+  --color-brand-navy-soft: #223F52;
   --color-brand-blue: #64ABDE;
+  --color-brand-blue-soft: #8EC3E8;
+  --color-brand-blue-deep: #3F8EC5;
+  --color-brand-surface: #F1F5F9;
 }
