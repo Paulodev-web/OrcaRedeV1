@@ -1,6 +1,7 @@
 import {
   Calculator,
   ClipboardList,
+  FileText,
   Hammer,
   LayoutGrid,
   Package,
@@ -14,6 +15,7 @@ import type { SidebarNavItem, SidebarSection } from "./AppSidebar";
 export type AppModuleId =
   | "portal"
   | "orca-rede"
+  | "propostas"
   | "portal-engenheiro"
   | "andamento-obra"
   | "fornecedores"
@@ -58,10 +60,19 @@ export const APP_MODULES: AppModule[] = [
     description: "Orçamentos de projetos de redes elétricas",
     icon: Zap,
     tag: "Orçamentos",
-    href: null,
-    legacyModule: "orcamentos",
+    href: "/orcamentos",
     status: "active",
     section: "principal",
+  },
+  {
+    id: "propostas",
+    label: "Propostas",
+    description: "Propostas comerciais, link público e PDF",
+    icon: FileText,
+    tag: "Comercial",
+    href: "/propostas",
+    status: "active",
+    section: "operacao",
   },
   {
     id: "fornecedores",
@@ -108,10 +119,11 @@ export const APP_MODULES: AppModule[] = [
   {
     id: "configuracoes",
     label: "Configurações",
-    description: "Catálogos e cadastros do sistema",
+    description: "Catálogos, dados da empresa e cadastros do sistema",
     icon: Settings,
-    href: null,
-    status: "soon",
+    tag: "Sistema",
+    href: "/configuracoes",
+    status: "active",
     section: "sistema",
   },
 ];

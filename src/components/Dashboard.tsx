@@ -23,8 +23,17 @@ import { addFolderAction, updateFolderAction, deleteFolderAction, moveBudgetToFo
 const STATUS_FILTER_ALL = 'all';
 const CONCESSIONARIA_FILTER_ALL = 'all';
 
-export function Dashboard() {
-  const { 
+export interface DashboardProps {
+  /**
+   * Destino do clique no cartão do orçamento. É o que a rota `/orcamentos`
+   * passa para abrir a etapa 1 da esteira. Ausente, vale o roteamento por
+   * estado do `AppContext` (OrçaRede legado dentro do `AppShell`).
+   */
+  onOpenBudget?: (budget: Orcamento) => void;
+}
+
+export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
+  const {
     budgets, 
     folders,
     loadingBudgets, 
@@ -559,8 +568,12 @@ export function Dashboard() {
         onClick={() => {
           // Só abre se for click (não foi drag)
           if (isClick && !isDragging) {
-            setCurrentOrcamento(budget);
-            setCurrentView('orcamento');
+            if (onOpenBudget) {
+              onOpenBudget(budget);
+            } else {
+              setCurrentOrcamento(budget);
+              setCurrentView('orcamento');
+            }
           }
           setIsClick(true);
         }}

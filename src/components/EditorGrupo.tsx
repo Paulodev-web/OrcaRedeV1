@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Material } from '@/types';
+import { GrupoItem, Material } from '@/types';
 import { addItemGroupAction, updateItemGroupAction } from '@/actions/itemGroups';
 
 const EMPTY_CLONE_GROUP_VALUE = '__no_clone_group__';
@@ -25,18 +25,48 @@ interface MaterialGrupo {
   quantidade: number;
 }
 
-export function EditorGrupo() {
-  const { 
-    materiais, 
-    utilityCompanies, 
+export interface EditorGrupoProps {
+  /**
+   * Grupo carregado pela rota (`/configuracoes/grupos/[id]`), ou `null` para o
+   * modo criação. Quando a prop é omitida — caso do `AppShell` legado —, o
+   * editor continua lendo `currentGroup` do `AppContext`.
+   */
+  grupo?: GrupoItem | null;
+  /**
+   * Saída do editor (salvar ou cancelar). Sem a prop, volta pela navegação por
+   * estado do `AppContext`.
+   */
+  onExit?: () => void;
+  /** Altura do grid. A rota troca o `h-screen` legado, que não cabe sob o `ModuleHeader`. */
+  heightClassName?: string;
+}
+
+export function EditorGrupo({
+  grupo: grupoProp,
+  onExit,
+  heightClassName = 'h-screen',
+}: EditorGrupoProps = {}) {
+  const {
+    materiais,
+    utilityCompanies,
     itemGroups,
     loadingGroups,
-    currentGroup,
+    currentGroup: contextGroup,
     setCurrentView,
     setCurrentGroup,
     fetchMaterials,
     fetchItemGroups
   } = useApp();
+
+  // `undefined` = rota não informou nada, então vale o estado legado. `null` é
+  // uma resposta válida da rota: modo criação.
+  const currentGroup = grupoProp !== undefined ? grupoProp : contextGroup;
+
+  const exitEditor = () => {
+    setCurrentGroup(null);
+    if (onExit) onExit();
+    else setCurrentView('grupos');
+  };
   const [isPending, startTransition] = useTransition();
   const [searchTerm, setSearchTerm] = useState('');
   const [nomeGrupo, setNomeGrupo] = useState('');
@@ -338,10 +368,9 @@ export function EditorGrupo() {
           }
         }
         
-        setCurrentGroup(null);
-        setCurrentView('grupos');
+        exitEditor();
         fetchItemGroups(currentCompanyId);
-        
+
         let message = 'O grupo foi atualizado com sucesso. Todos os orçamentos que utilizam este grupo foram automaticamente atualizados!';
         if (additionalCompanyIds.length > 0) {
           message += ` ${additionalCompanyIds.length} cópia(s) ${additionalCompanyIds.length > 1 ? 'foram criadas' : 'foi criada'} para ${additionalCompanyIds.length > 1 ? 'outras concessionárias' : 'outra concessionária'} selecionada${additionalCompanyIds.length > 1 ? 's' : ''}.`;
@@ -361,8 +390,7 @@ export function EditorGrupo() {
           return;
         }
         
-        setCurrentGroup(null);
-        setCurrentView('grupos');
+        exitEditor();
         if (selectedConcessionarias.length > 0) {
           fetchItemGroups(selectedConcessionarias[0]);
         }
@@ -414,7 +442,7 @@ export function EditorGrupo() {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-screen">
+    <div className={`grid grid-cols-1 lg:grid-cols-2 gap-6 ${heightClassName}`}>
       {/* Painel Esquerdo - Materiais Disponíveis */}
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -874,10 +902,7 @@ export function EditorGrupo() {
           </button>
           
           <button
-            onClick={() => {
-              setCurrentGroup(null);
-              setCurrentView('grupos');
-            }}
+            onClick={exitEditor}
             disabled={isPending}
             className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >

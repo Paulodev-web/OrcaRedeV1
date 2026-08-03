@@ -19,10 +19,26 @@ import type {
   ServicePricingResult,
 } from '@/components/precificacao/types';
 
+/**
+ * Cenário único gravado enquanto não existe UI de múltiplos cenários (Escopo §7.4).
+ * A migration 20260803130000 já admite N cenários por orçamento.
+ */
+export const DEFAULT_PRICING_SCENARIO = 'Principal';
+
+/**
+ * Alvo do ON CONFLICT do upsert, espelhando
+ * `saved_pricing_budgets_user_budget_scenario_key`. Fica junto do builder da linha
+ * porque as duas coisas têm de mudar juntas: a UNIQUE antiga era (user_id, budget_id)
+ * e o upsert quebrou com 42P10 quando a migration a substituiu.
+ */
+export const SAVED_PRICING_CONFLICT_TARGET = 'user_id,budget_id,scenario_name';
+
 export interface SavedPricingBudgetRow {
   id: string;
   user_id: string;
   budget_id: string;
+  scenario_name: string;
+  is_primary: boolean;
   save_mode: string;
   budget_name: string;
   client_name: string | null;
@@ -228,6 +244,12 @@ export function buildSavedPricingUpsertRow(input: SavePricingBudgetInput, userId
   return {
     user_id: userId,
     budget_id: input.budgetId,
+    scenario_name: DEFAULT_PRICING_SCENARIO,
+    // Com um cenário só por orçamento, ele é necessariamente o principal — é o que o
+    // gate de publicar proposta (§7.2) procura. Seguro perante o índice único parcial
+    // `uq_saved_pricing_budgets_primary` justamente porque só 'Principal' é gravado
+    // aqui; quem introduzir a UI de cenários passa a decidir este campo.
+    is_primary: true,
     save_mode: input.saveMode,
     budget_name: input.budgetName,
     client_name: input.clientName || null,
@@ -319,6 +341,39 @@ export async function listSavedPricingBudgets(
 
   const rows = (data ?? []) as unknown as SavedPricingBudgetRow[];
   return Promise.all(rows.map((row) => resolveSavedPricingBudget(supabase, row, userId)));
+}
+
+/**
+ * Precificação de um orçamento específico, preferindo o cenário principal.
+ *
+ * Existe para a etapa 3 da esteira: usar `listSavedPricingBudgets` e filtrar
+ * resolveria todas as linhas do usuário — e cada resolução em modo `live`
+ * relê o orçamento — só para descartar quase tudo.
+ */
+export async function getSavedPricingBudgetForBudget(
+  supabase: SupabaseClient,
+  userId: string,
+  budgetId: string
+): Promise<SavedPricingBudget | null> {
+  const { data, error } = await supabase
+    .from('saved_pricing_budgets')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('budget_id', budgetId)
+    .order('is_primary', { ascending: false })
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  return resolveSavedPricingBudget(supabase, data as unknown as SavedPricingBudgetRow, userId);
 }
 
 export async function getSavedPricingBudgetById(

@@ -11,7 +11,15 @@ import {
   deleteUtilityCompanyAction,
 } from '@/actions/utilityCompanies';
 
-export function GerenciarConcessionarias() {
+export interface GerenciarConcessionariasProps {
+  /**
+   * Esconde o título interno. As rotas de `/configuracoes` já exibem o título
+   * no `ModuleHeader`; o `AppShell` legado não passa a prop e nada muda lá.
+   */
+  hideHeading?: boolean;
+}
+
+export function GerenciarConcessionarias({ hideHeading = false }: GerenciarConcessionariasProps = {}) {
   const { utilityCompanies, loadingCompanies, fetchUtilityCompanies } = useApp();
 
   const [showModal, setShowModal] = useState(false);
@@ -94,10 +102,14 @@ export function GerenciarConcessionarias() {
   return (
     <div className="flex flex-col h-full space-y-6">
       <div className="flex justify-between items-center flex-shrink-0">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Gerenciar Concessionárias</h2>
-          <p className="text-gray-600">Cadastre e gerencie as concessionárias do sistema</p>
-        </div>
+        {hideHeading ? (
+          <div />
+        ) : (
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Gerenciar Concessionárias</h2>
+            <p className="text-gray-600">Cadastre e gerencie as concessionárias do sistema</p>
+          </div>
+        )}
         <div className="flex space-x-3">
           <button
             onClick={handleRefresh}

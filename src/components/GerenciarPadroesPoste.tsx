@@ -16,7 +16,32 @@ import { deletePoleStandardAction } from '@/actions/poleStandards';
 
 const EMPTY_COMPANY_VALUE = '__no_company__';
 
-export function GerenciarPadroesPoste() {
+export interface GerenciarPadroesPosteProps {
+  /**
+   * Esconde o título interno. As rotas de `/configuracoes` já exibem o título
+   * no `ModuleHeader`.
+   */
+  hideHeading?: boolean;
+  /**
+   * Abre o editor de um padrão existente. Sem a prop, cai na navegação por
+   * estado do `AppContext` — é o caminho do `AppShell` legado.
+   */
+  onEditStandard?: (padrao: PoleStandard) => void;
+  /**
+   * Abre o editor em modo criação a partir de um padrão existente (o "duplicar").
+   * Sem a prop, usa o `AppContext`.
+   */
+  onCreateFromStandard?: (padrao: PoleStandard) => void;
+  /** Abre o editor em modo criação vazio. Sem a prop, usa o `AppContext`. */
+  onNewStandard?: () => void;
+}
+
+export function GerenciarPadroesPoste({
+  hideHeading = false,
+  onEditStandard,
+  onCreateFromStandard,
+  onNewStandard,
+}: GerenciarPadroesPosteProps = {}) {
   const {
     utilityCompanies,
     poleStandards,
@@ -69,11 +94,19 @@ export function GerenciarPadroesPoste() {
   };
 
   const handleEdit = (padrao: PoleStandard) => {
+    if (onEditStandard) {
+      onEditStandard(padrao);
+      return;
+    }
     setCurrentPoleStandard(padrao);
     setCurrentView('editor-padrao-poste');
   };
 
   const handleCreateFrom = (padrao: PoleStandard) => {
+    if (onCreateFromStandard) {
+      onCreateFromStandard(padrao);
+      return;
+    }
     setCurrentPoleStandard({ ...padrao, id: '' });
     setCurrentView('editor-padrao-poste');
   };
@@ -113,6 +146,10 @@ export function GerenciarPadroesPoste() {
   };
 
   const handleNovoPadrao = () => {
+    if (onNewStandard) {
+      onNewStandard();
+      return;
+    }
     setCurrentPoleStandard(null);
     setCurrentView('editor-padrao-poste');
   };
@@ -120,12 +157,14 @@ export function GerenciarPadroesPoste() {
   if (loadingCompanies) {
     return (
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Padrões de Poste</h2>
-            <p className="text-gray-600">Combine grupos de itens em um padrão completo reutilizável</p>
+        {!hideHeading && (
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Padrões de Poste</h2>
+              <p className="text-gray-600">Combine grupos de itens em um padrão completo reutilizável</p>
+            </div>
           </div>
-        </div>
+        )}
         <div className="bg-white rounded-lg shadow">
           <div className="p-12 text-center">
             <Loader2 className="h-8 w-8 animate-spin text-blue-500 mx-auto mb-4" />
@@ -141,16 +180,20 @@ export function GerenciarPadroesPoste() {
   return (
     <div className="flex flex-col h-full space-y-6">
       <div className="flex justify-between items-center flex-shrink-0">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Layers className="h-6 w-6 text-blue-600" />
-            Padrões de Poste
-          </h2>
-          <p className="text-gray-600">
-            Um &quot;grupo de grupos de itens&quot; — combine vários grupos de itens, um tipo de poste
-            e materiais avulsos em um padrão que se aplica de uma só vez.
-          </p>
-        </div>
+        {hideHeading ? (
+          <div />
+        ) : (
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <Layers className="h-6 w-6 text-blue-600" />
+              Padrões de Poste
+            </h2>
+            <p className="text-gray-600">
+              Um &quot;grupo de grupos de itens&quot; — combine vários grupos de itens, um tipo de poste
+              e materiais avulsos em um padrão que se aplica de uma só vez.
+            </p>
+          </div>
+        )}
         <button
           onClick={handleNovoPadrao}
           className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex-shrink-0"

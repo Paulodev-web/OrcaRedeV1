@@ -53,6 +53,28 @@ export const createSupabaseServerClient = cache(async () => {
   );
 });
 
+/**
+ * Cliente anônimo que apresenta o token da proposta no header `x-proposal-token`.
+ *
+ * É o caminho de leitura de `/proposta/[token]`. Anônimo de propósito: com um
+ * cliente autenticado, a policy do dono responderia no lugar da anônima, e o
+ * dono veria a própria proposta mesmo despublicada ou revogada — a página
+ * mentiria sobre o que o cliente enxerga.
+ *
+ * Não usa cookies e não persiste sessão. Toda a autorização fica no RLS, que
+ * compara o token; sem correspondência, nenhuma linha volta.
+ */
+export function createSupabasePublicProposalClient(shareToken: string): SupabaseClient {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { 'x-proposal-token': shareToken } },
+    }
+  );
+}
+
 /** JWT do cookie; lança se não houver sessão válida (alinhado a políticas RLS com auth.uid() = user_id). */
 export const requireAuthUserId = cache(async (supabase: SupabaseClient): Promise<string> => {
   const {

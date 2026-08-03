@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
 import {
+  SAVED_PRICING_CONFLICT_TARGET,
   buildSavedPricingUpsertRow,
   getSavedPricingBudgetById,
 } from '@/services/pricing/savedPricingBudgets';
@@ -64,7 +65,7 @@ export async function savePricingBudgetAction(
 
     const { data: savedRow, error: saveError } = await supabase
       .from('saved_pricing_budgets')
-      .upsert(row, { onConflict: 'user_id,budget_id' })
+      .upsert(row, { onConflict: SAVED_PRICING_CONFLICT_TARGET })
       .select('id')
       .single();
 

@@ -16,13 +16,32 @@ import { deleteItemGroupAction } from '@/actions/itemGroups';
 
 const EMPTY_COMPANY_VALUE = '__no_company__';
 
-export function GerenciarGrupos() {
-  const { 
-    utilityCompanies, 
-    itemGroups, 
-    loadingCompanies, 
+export interface GerenciarGruposProps {
+  /**
+   * Esconde o título interno. As rotas de `/configuracoes` já exibem o título
+   * no `ModuleHeader`.
+   */
+  hideHeading?: boolean;
+  /**
+   * Abre o editor de um grupo existente. Sem a prop, cai na navegação por
+   * estado do `AppContext` — é o caminho do `AppShell` legado.
+   */
+  onEditGroup?: (grupo: GrupoItem) => void;
+  /** Abre o editor em modo criação. Sem a prop, usa o `AppContext`. */
+  onNewGroup?: () => void;
+}
+
+export function GerenciarGrupos({
+  hideHeading = false,
+  onEditGroup,
+  onNewGroup,
+}: GerenciarGruposProps = {}) {
+  const {
+    utilityCompanies,
+    itemGroups,
+    loadingCompanies,
     loadingGroups,
-    fetchUtilityCompanies, 
+    fetchUtilityCompanies,
     fetchItemGroups,
     setCurrentView,
     setCurrentGroup
@@ -64,6 +83,10 @@ export function GerenciarGrupos() {
   });
 
   const handleEdit = (grupo: GrupoItem) => {
+    if (onEditGroup) {
+      onEditGroup(grupo);
+      return;
+    }
     setCurrentGroup(grupo);
     setCurrentView('editor-grupo');
   };
@@ -103,6 +126,10 @@ export function GerenciarGrupos() {
   };
 
   const handleNovoGrupo = () => {
+    if (onNewGroup) {
+      onNewGroup();
+      return;
+    }
     setCurrentGroup(null); // Limpar grupo atual para modo criação
     setCurrentView('editor-grupo');
   };
@@ -111,12 +138,14 @@ export function GerenciarGrupos() {
   if (loadingCompanies) {
     return (
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Gerenciar Grupos de Itens</h2>
-            <p className="text-gray-600">Crie e gerencie kits de materiais por concessionária</p>
+        {!hideHeading && (
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Gerenciar Grupos de Itens</h2>
+              <p className="text-gray-600">Crie e gerencie kits de materiais por concessionária</p>
+            </div>
           </div>
-        </div>
+        )}
         <div className="bg-white rounded-lg shadow">
           <div className="p-12 text-center">
             <Loader2 className="h-8 w-8 animate-spin text-blue-500 mx-auto mb-4" />
@@ -132,10 +161,14 @@ export function GerenciarGrupos() {
   return (
     <div className="flex flex-col h-full space-y-6">
       <div className="flex justify-between items-center flex-shrink-0">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Gerenciar Grupos de Itens</h2>
-          <p className="text-gray-600">Crie e gerencie kits de materiais por concessionária</p>
-        </div>
+        {hideHeading ? (
+          <div />
+        ) : (
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Gerenciar Grupos de Itens</h2>
+            <p className="text-gray-600">Crie e gerencie kits de materiais por concessionária</p>
+          </div>
+        )}
         <button
           onClick={handleNovoGrupo}
           className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"

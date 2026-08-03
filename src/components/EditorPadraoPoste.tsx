@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { PoleStandard } from '@/types';
 import { addPoleStandardAction, updatePoleStandardAction } from '@/actions/poleStandards';
 
 const EMPTY_POST_TYPE_VALUE = '__no_post_type__';
@@ -29,7 +30,27 @@ interface MaterialEntry {
   quantidade: number;
 }
 
-export function EditorPadraoPoste() {
+export interface EditorPadraoPosteProps {
+  /**
+   * Padrão carregado pela rota (`/configuracoes/padroes-poste/[id]`), ou `null`
+   * para o modo criação. Omitida — caso do `AppShell` legado —, o editor
+   * continua lendo `currentPoleStandard` do `AppContext`.
+   */
+  padrao?: PoleStandard | null;
+  /**
+   * Saída do editor (salvar ou cancelar). Sem a prop, volta pela navegação por
+   * estado do `AppContext`.
+   */
+  onExit?: () => void;
+  /** Altura do grid. A rota troca o `h-screen` legado, que não cabe sob o `ModuleHeader`. */
+  heightClassName?: string;
+}
+
+export function EditorPadraoPoste({
+  padrao: padraoProp,
+  onExit,
+  heightClassName = 'h-screen',
+}: EditorPadraoPosteProps = {}) {
   const {
     utilityCompanies,
     itemGroups,
@@ -38,7 +59,7 @@ export function EditorPadraoPoste() {
     loadingGroups,
     loadingMaterials,
     loadingPostTypes,
-    currentPoleStandard,
+    currentPoleStandard: contextPoleStandard,
     setCurrentView,
     setCurrentPoleStandard,
     fetchItemGroupsByCompanies,
@@ -46,6 +67,16 @@ export function EditorPadraoPoste() {
     fetchPostTypes,
     fetchPoleStandards,
   } = useApp();
+
+  // `undefined` = rota não informou nada, então vale o estado legado. `null` é
+  // uma resposta válida da rota: modo criação.
+  const currentPoleStandard = padraoProp !== undefined ? padraoProp : contextPoleStandard;
+
+  const exitEditor = () => {
+    setCurrentPoleStandard(null);
+    if (onExit) onExit();
+    else setCurrentView('padroes-poste');
+  };
 
   const [isPending, startTransition] = useTransition();
   const alertDialog = useAlertDialog();
@@ -210,8 +241,7 @@ export function EditorPadraoPoste() {
   };
 
   const handleCancel = () => {
-    setCurrentPoleStandard(null);
-    setCurrentView('padroes-poste');
+    exitEditor();
   };
 
   const handleSave = () => {
@@ -258,8 +288,7 @@ export function EditorPadraoPoste() {
         return;
       }
 
-      setCurrentPoleStandard(null);
-      setCurrentView('padroes-poste');
+      exitEditor();
       fetchPoleStandards(selectedConcessionarias[0]);
 
       alertDialog.showSuccess(
@@ -274,7 +303,7 @@ export function EditorPadraoPoste() {
   const totalGrupoInstancias = grupos.reduce((sum, g) => sum + g.quantidade, 0);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-screen">
+    <div className={`grid grid-cols-1 lg:grid-cols-2 gap-6 ${heightClassName}`}>
       {/* Painel Esquerdo - Seletor de itens disponíveis */}
       <div className="bg-white rounded-lg shadow p-6 flex flex-col overflow-hidden">
         <div className="flex space-x-1 bg-gray-100 rounded-lg p-1 mb-4 flex-shrink-0">

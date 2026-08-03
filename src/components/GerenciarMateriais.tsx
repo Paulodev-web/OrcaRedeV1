@@ -26,7 +26,17 @@ const UNCLASSIFIED_SUBGRUPO_VALUE = '__unclassified_subgrupo__';
 type SortField = 'descricao' | 'codigo' | 'precoUnit';
 type SortOrder = 'asc' | 'desc';
 
-export function GerenciarMateriais() {
+export interface GerenciarMateriaisProps {
+  /**
+   * Esconde o título interno. As rotas de `/configuracoes` já exibem o título
+   * no `ModuleHeader`; o `AppShell` legado não passa a prop e nada muda lá.
+   * A contagem de materiais carregados continua visível, porque é dinâmica e
+   * não cabe na descrição estática do cabeçalho.
+   */
+  hideHeading?: boolean;
+}
+
+export function GerenciarMateriais({ hideHeading = false }: GerenciarMateriaisProps = {}) {
   const { materiais, loadingMaterials, fetchMaterials, deleteAllMaterials, importMaterialsFromCSV, materialSubgroups, fetchMaterialSubgroups } = useApp();
   const [isPending, startTransition] = useTransition();
   const [searchTerm, setSearchTerm] = useState('');
@@ -332,17 +342,27 @@ export function GerenciarMateriais() {
   return (
     <div className="flex flex-col h-full space-y-6">
       <div className="flex justify-between items-center flex-shrink-0">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Gerenciar Materiais</h2>
-          <p className="text-gray-600">
-            Cadastre e gerencie o catálogo completo de materiais
+        {hideHeading ? (
+          <p className="text-sm text-gray-600">
             {materiais.length > 0 && (
-              <span className="ml-2 text-blue-600 font-semibold">
-                ({materiais.length} {materiais.length === 1 ? 'material' : 'materiais'} carregados)
+              <span className="text-blue-600 font-semibold">
+                {materiais.length} {materiais.length === 1 ? 'material' : 'materiais'} carregados
               </span>
             )}
           </p>
-        </div>
+        ) : (
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Gerenciar Materiais</h2>
+            <p className="text-gray-600">
+              Cadastre e gerencie o catálogo completo de materiais
+              {materiais.length > 0 && (
+                <span className="ml-2 text-blue-600 font-semibold">
+                  ({materiais.length} {materiais.length === 1 ? 'material' : 'materiais'} carregados)
+                </span>
+              )}
+            </p>
+          </div>
+        )}
         <div className="flex space-x-3">
           <button 
             onClick={handleRefresh}

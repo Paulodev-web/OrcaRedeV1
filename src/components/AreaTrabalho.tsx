@@ -13,8 +13,23 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { getPostDisplayName } from '@/lib/utils';
 import { exportByPostAndGroupToExcel, PostWithMaterials } from '@/services/exportService';
+import { PostItemGroupSegmentField, PostSegmentBadge, PostSegmentField } from '@/components/orcamentos/segments/SegmentFields';
 
-export function AreaTrabalho() {
+export type AreaTrabalhoView = 'main' | 'consolidation';
+
+export interface AreaTrabalhoProps {
+  /**
+   * Modo rota (`/orcamentos/[budgetId]/*`): o cabeçalho da entidade, as abas de
+   * etapa e a carga inicial dos dados são responsabilidade da rota. Sem isso, o
+   * componente se comporta como no `AppShell` legado.
+   */
+  embedded?: boolean;
+  /** Etapa exibida. Ausente, a troca de etapa fica em estado interno (legado). */
+  view?: AreaTrabalhoView;
+  onViewChange?: (view: AreaTrabalhoView) => void;
+}
+
+export function AreaTrabalho({ embedded = false, view, onViewChange }: AreaTrabalhoProps = {}) {
   const [splitPercent, setSplitPercent] = useState(50);
   const isDragging = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -74,9 +89,12 @@ export function AreaTrabalho() {
   } = useApp();
   
   const alertDialog = useAlertDialog();
-  
-  // Estado de visualização local
-  const [activeView, setActiveView] = useState<'main' | 'consolidation'>('main');
+
+  // Estado de visualização local — usado só fora do modo rota, onde a etapa
+  // vem da URL.
+  const [internalView, setInternalView] = useState<AreaTrabalhoView>('main');
+  const activeView = view ?? internalView;
+  const setActiveView = onViewChange ?? setInternalView;
   const [selectedPoste, setSelectedPoste] = useState<Poste | null>(null);
   const [selectedPostDetail, setSelectedPostDetail] = useState<BudgetPostDetail | null>(null);
   const [deletingPost, setDeletingPost] = useState<string | null>(null);
@@ -285,10 +303,14 @@ export function AreaTrabalho() {
   }, [capturedPastePoints.length, copiedPostDetail, handlePasteCapturedPoints, selectedPostDetail]);
 
   // ⚡ OTIMIZADO: Efeito principal para carregar dados da AreaTrabalho
+  // No modo rota quem carrega é o layout da esteira, que sobrevive à troca de
+  // etapa — repetir aqui refaria a consulta pesada de postes a cada aba.
   useEffect(() => {
+    if (embedded) return;
+
     const budgetId = currentOrcamento?.id;
     const companyId = currentOrcamento?.company_id;
-    
+
     // Só executa se tivermos um ID de orçamento
     if (budgetId) {
       // Sempre busca detalhes do orçamento (necessário)
@@ -305,7 +327,7 @@ export function AreaTrabalho() {
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentOrcamento?.id, currentOrcamento?.company_id]); // Funções useCallback são estáveis
+  }, [embedded, currentOrcamento?.id, currentOrcamento?.company_id]); // Funções useCallback são estáveis
   
   // Função para ser chamada pelo clique direito no canvas
   const handleRightClick = useCallback((coords: { x: number, y: number }) => {
@@ -705,20 +727,22 @@ export function AreaTrabalho() {
   if (activeView === 'consolidation') {
     return (
       <div className="flex flex-col gap-6">
-        {/* Cabeçalho da Consolidação */}
-        <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setActiveView('main')}
-                className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <span>Voltar para Área de Trabalho</span>
-              </button>
+        {/* Cabeçalho da Consolidação — no modo rota quem navega são as abas de etapa */}
+        {!embedded && (
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={() => setActiveView('main')}
+                  className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  <span>Voltar para Área de Trabalho</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Conteúdo Principal - PainelConsolidado */}
         <div>
@@ -734,30 +758,33 @@ export function AreaTrabalho() {
   // Visualização Principal ('main')
   return (
     <div className="flex flex-col">
-      {/* Cabeçalho da Visualização Principal */}
-      <div className="bg-white border-b border-gray-200 p-4 mb-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">{currentOrcamento.nome}</h2>
-            <p className="text-sm text-gray-600 mt-1">Cliente: {currentOrcamento.clientName || 'Não definido'} • Cidade: {currentOrcamento.city || 'Não definida'}</p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setActiveView('consolidation')}
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium"
-            >
-              <Eye className="h-4 w-4" />
-              <span>Ver Materiais Consolidados</span>
-            </button>
+      {/* Cabeçalho da Visualização Principal — no modo rota, o `ModuleHeader` da
+          esteira já traz nome, cliente, cidade e as abas de etapa */}
+      {!embedded && (
+        <div className="bg-white border-b border-gray-200 p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">{currentOrcamento.nome}</h2>
+              <p className="text-sm text-gray-600 mt-1">Cliente: {currentOrcamento.clientName || 'Não definido'} • Cidade: {currentOrcamento.city || 'Não definida'}</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setActiveView('consolidation')}
+                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium"
+              >
+                <Eye className="h-4 w-4" />
+                <span>Ver Materiais Consolidados</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Split redimensionável: Lista (esquerda) | Divisor | Mapa (direita) */}
       <div
         ref={containerRef}
         className="flex items-start px-4 gap-0"
-        style={{ height: 'calc(100vh - 8rem)' }}
+        style={{ height: embedded ? 'calc(100vh - 14rem)' : 'calc(100vh - 8rem)', minHeight: '28rem' }}
       >
         {/* Coluna Esquerda - Lista de Postes */}
         <div
@@ -1293,6 +1320,7 @@ function PostListAccordion({
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
+                      <PostSegmentBadge postId={post.id} />
                       <span className="text-xs text-gray-400 whitespace-nowrap tabular-nums">
                         x:{post.x_coord}, y:{post.y_coord}
                       </span>
@@ -1324,6 +1352,9 @@ function PostListAccordion({
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-4 px-4">
+                    {/* Segmento de obra do poste (§7.3) — some fora da esteira */}
+                    <PostSegmentField postId={post.id} />
+
                     {/* Seção para Adicionar Grupos */}
                     <div className="border-b pb-4">
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1402,6 +1433,9 @@ function PostListAccordion({
                             </AccordionTrigger>
                             <AccordionContent>
                               <div className="pl-6 space-y-3 py-2">
+                                {/* Override de segmento do grupo — vence o do poste */}
+                                <PostItemGroupSegmentField postId={post.id} postItemGroupId={group.id} />
+
                                 {// Materiais do Supabase
                                   group.post_item_group_materials?.length > 0 ? (
                                     group.post_item_group_materials.map((material: PostItemGroupMaterial) => (

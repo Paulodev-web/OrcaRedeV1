@@ -7,8 +7,16 @@ import { AlertDialog } from '@/components/ui/alert-dialog';
 import { PostType } from '@/types';
 import { addPostTypeAction, updatePostTypeAction, deletePostTypeAction } from '@/actions/postTypes';
 
-export function GerenciarTiposPostes() {
-  const { 
+export interface GerenciarTiposPostesProps {
+  /**
+   * Esconde o título interno. As rotas de `/configuracoes` já exibem o título
+   * no `ModuleHeader`; o `AppShell` legado não passa a prop e nada muda lá.
+   */
+  hideHeading?: boolean;
+}
+
+export function GerenciarTiposPostes({ hideHeading = false }: GerenciarTiposPostesProps = {}) {
+  const {
     postTypes, 
     loadingPostTypes, 
     fetchPostTypes,
@@ -108,10 +116,14 @@ export function GerenciarTiposPostes() {
   return (
     <div className="flex flex-col h-full space-y-6">
       <div className="flex justify-between items-center flex-shrink-0">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Gerenciar Tipos de Poste</h2>
-          <p className="text-gray-600">Cadastre e gerencie o catálogo de tipos de postes</p>
-        </div>
+        {hideHeading ? (
+          <div />
+        ) : (
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Gerenciar Tipos de Poste</h2>
+            <p className="text-gray-600">Cadastre e gerencie o catálogo de tipos de postes</p>
+          </div>
+        )}
         <div className="flex space-x-3">
           <button 
             onClick={handleRefresh}

@@ -20,7 +20,18 @@ import { ServiceValueInput } from './ServiceValueInput';
 import type { CostItem, PricingInputMode, PricingSaveMode, SavedPricingBudget } from './types';
 
 interface PrecificacaoCalculatorProps {
+  /**
+   * Orçamento a precificar. Informado = modo embutido na esteira (§7.4): o select de
+   * importação some e o id deixa de ser estado interno. Omitido = fluxo standalone de
+   * `/tools/precificacao`, onde o usuário escolhe o orçamento na mão.
+   */
+  budgetId?: string;
   initialSaved?: SavedPricingBudget;
+  /**
+   * Chamado depois de salvar, no lugar do redirect para o dashboard — é assim que a
+   * etapa 3 da esteira segue o fluxo sem sair da rota do orçamento.
+   */
+  onSaved?: (saved: SavedPricingBudget) => void;
 }
 
 function parseNonNegativeNumber(value: string): number {
@@ -47,8 +58,13 @@ function createCostItem(): CostItem {
   };
 }
 
-export function PrecificacaoCalculator({ initialSaved }: PrecificacaoCalculatorProps) {
+export function PrecificacaoCalculator({
+  budgetId,
+  initialSaved,
+  onSaved,
+}: PrecificacaoCalculatorProps) {
   const router = useRouter();
+  const isEmbedded = budgetId !== undefined;
   const isEditMode = Boolean(initialSaved);
   const { user, loading: loadingAuth } = useAuth();
   const {
@@ -62,7 +78,9 @@ export function PrecificacaoCalculator({ initialSaved }: PrecificacaoCalculatorP
     fetchBudgetDetails,
   } = useApp();
 
-  const [selectedBudgetId, setSelectedBudgetId] = useState(() => initialSaved?.budgetId ?? '');
+  // Só serve ao select do modo standalone; embutido, o id vem sempre da prop.
+  const [pickedBudgetId, setPickedBudgetId] = useState(() => initialSaved?.budgetId ?? '');
+  const activeBudgetId = budgetId ?? pickedBudgetId;
   const [valorServicoInput, setValorServicoInput] = useState(() => initialSaved?.valorServicoInput ?? 0);
   const [percentMateriaisInput, setPercentMateriaisInput] = useState(
     () => initialSaved?.percentMateriaisInput ?? 0
@@ -75,29 +93,34 @@ export function PrecificacaoCalculator({ initialSaved }: PrecificacaoCalculatorP
   const [isExportingExcel, setIsExportingExcel] = useState(false);
 
   useEffect(() => {
-    if (!user) {
+    // A lista completa de orçamentos existe só para alimentar o select do standalone.
+    if (!user || isEmbedded) {
       return;
     }
 
     fetchBudgets();
     fetchFolders();
-  }, [fetchBudgets, fetchFolders, user]);
+  }, [fetchBudgets, fetchFolders, isEmbedded, user]);
 
   useEffect(() => {
-    if (!selectedBudgetId) {
+    if (!activeBudgetId) {
       return;
     }
 
-    fetchBudgetDetails(selectedBudgetId);
-  }, [fetchBudgetDetails, selectedBudgetId]);
+    fetchBudgetDetails(activeBudgetId);
+  }, [fetchBudgetDetails, activeBudgetId]);
+
+  // Os detalhes ficam num contexto compartilhado: enquanto não forem os do orçamento
+  // ativo, os materiais consolidados não valem nada (e não podem ser salvos).
+  const budgetDetailsLoaded = Boolean(activeBudgetId && budgetDetails?.id === activeBudgetId);
 
   const consolidatedMaterials = useMemo(() => {
-    if (!selectedBudgetId || !budgetDetails || budgetDetails.id !== selectedBudgetId) {
+    if (!budgetDetailsLoaded || !budgetDetails) {
       return [];
     }
 
     return consolidateMaterialsFromBudgetDetails(budgetDetails);
-  }, [budgetDetails, selectedBudgetId]);
+  }, [budgetDetails, budgetDetailsLoaded]);
 
   const valorMateriais = useMemo(
     () => consolidatedMaterials.reduce((acc, m) => acc + m.subtotal, 0),
@@ -124,12 +147,19 @@ export function PrecificacaoCalculator({ initialSaved }: PrecificacaoCalculatorP
   );
 
   const selectedBudget = useMemo(
-    () => budgets.find((budget) => budget.id === selectedBudgetId) ?? null,
-    [budgets, selectedBudgetId]
+    () => budgets.find((budget) => budget.id === activeBudgetId) ?? null,
+    [budgets, activeBudgetId]
   );
 
-  const selectedBudgetName = selectedBudget?.nome ?? '';
-  const canPersistPricing = Boolean(selectedBudgetId && selectedBudgetName);
+  // Embutido não carrega a lista de orçamentos, então o nome vem dos detalhes.
+  const selectedBudgetName =
+    (budgetDetailsLoaded ? budgetDetails?.name : undefined) ??
+    selectedBudget?.nome ??
+    initialSaved?.budgetName ??
+    '';
+
+  // Salvar antes dos detalhes chegarem gravaria materiais vazios e VS zerado.
+  const canPersistPricing = budgetDetailsLoaded;
 
   const handleValorServicoChange = (value: number) => {
     setValorServicoInput(parseNonNegativeNumber(String(value)));
@@ -156,7 +186,7 @@ export function PrecificacaoCalculator({ initialSaved }: PrecificacaoCalculatorP
   };
 
   const buildPricingPayload = (saveMode: PricingSaveMode) => ({
-    budgetId: selectedBudgetId,
+    budgetId: activeBudgetId,
     budgetName: selectedBudgetName,
     clientName: budgetDetails?.client_name ?? selectedBudget?.clientName ?? null,
     city: budgetDetails?.city ?? selectedBudget?.city ?? null,
@@ -173,7 +203,11 @@ export function PrecificacaoCalculator({ initialSaved }: PrecificacaoCalculatorP
 
   const handleSavePricing = async (saveMode: PricingSaveMode) => {
     if (!canPersistPricing) {
-      toast.error('Selecione um orçamento antes de salvar a precificação.');
+      toast.error(
+        activeBudgetId
+          ? 'Aguarde os itens do orçamento carregarem antes de salvar.'
+          : 'Selecione um orçamento antes de salvar a precificação.'
+      );
       return;
     }
 
@@ -181,20 +215,28 @@ export function PrecificacaoCalculator({ initialSaved }: PrecificacaoCalculatorP
     const result = await savePricingBudgetAction(buildPricingPayload(saveMode));
     setSavingMode(null);
 
-    if (result.success) {
-      toast.success(
-        isEditMode ? 'Precificação atualizada no dashboard.' : 'Precificação salva no dashboard.'
-      );
-      router.push('/tools/precificacao');
+    if (!result.success) {
+      toast.error(result.error);
       return;
     }
 
-    toast.error(result.error);
+    toast.success(isEditMode ? 'Precificação atualizada.' : 'Precificação salva.');
+
+    if (onSaved) {
+      onSaved(result.data.saved);
+      return;
+    }
+
+    router.push('/tools/precificacao');
   };
 
   const handleExportExcel = async () => {
     if (!canPersistPricing) {
-      toast.error('Selecione um orçamento antes de exportar.');
+      toast.error(
+        activeBudgetId
+          ? 'Aguarde os itens do orçamento carregarem antes de exportar.'
+          : 'Selecione um orçamento antes de exportar.'
+      );
       return;
     }
 
@@ -246,46 +288,51 @@ export function PrecificacaoCalculator({ initialSaved }: PrecificacaoCalculatorP
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-        <p className="text-xs text-gray-400">
-          <Link href="/" className="hover:text-[#64ABDE]">
-            Portal
+      {/* Embutido na esteira, o chrome (breadcrumb + volta ao dashboard) é da rota do orçamento. */}
+      {!isEmbedded && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs text-gray-400">
+              <Link href="/" className="hover:text-[#64ABDE]">
+                Portal
+              </Link>
+              <span className="mx-1">/</span>
+              <Link href="/tools/precificacao" className="hover:text-[#64ABDE]">
+                Módulo de Precificação
+              </Link>
+              <span className="mx-1">/</span>
+              <span className="text-gray-600">{isEditMode ? 'Editar precificação' : 'Nova precificação'}</span>
+            </p>
+            <h1 className="mt-1 text-2xl font-bold text-[#1D3140]">
+              {isEditMode ? 'Editar Precificação' : 'Nova Precificação'}
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">
+              {isEditMode
+                ? 'Altere o percentual ou os custos e salve para atualizar o card no dashboard.'
+                : 'Vincule um orçamento, defina o percentual sobre os materiais, adicione custos e salve no dashboard.'}
+              {selectedBudgetName ? ` Orçamento selecionado: ${selectedBudgetName}.` : ''}
+            </p>
+          </div>
+          <Link
+            href="/tools/precificacao"
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-[#64ABDE]/30 bg-white px-4 text-sm font-medium text-[#1D3140] shadow-sm transition hover:border-[#64ABDE] hover:text-[#64ABDE]"
+          >
+            Voltar ao dashboard
           </Link>
-          <span className="mx-1">/</span>
-          <Link href="/tools/precificacao" className="hover:text-[#64ABDE]">
-            Módulo de Precificação
-          </Link>
-          <span className="mx-1">/</span>
-          <span className="text-gray-600">{isEditMode ? 'Editar precificação' : 'Nova precificação'}</span>
-        </p>
-        <h1 className="mt-1 text-2xl font-bold text-[#1D3140]">
-          {isEditMode ? 'Editar Precificação' : 'Nova Precificação'}
-        </h1>
-        <p className="mt-1 text-sm text-gray-500">
-          {isEditMode
-            ? 'Altere o percentual ou os custos e salve para atualizar o card no dashboard.'
-            : 'Vincule um orçamento, defina o percentual sobre os materiais, adicione custos e salve no dashboard.'}
-          {selectedBudgetName ? ` Orçamento selecionado: ${selectedBudgetName}.` : ''}
-        </p>
         </div>
-        <Link
-          href="/tools/precificacao"
-          className="inline-flex h-10 items-center justify-center rounded-lg border border-[#64ABDE]/30 bg-white px-4 text-sm font-medium text-[#1D3140] shadow-sm transition hover:border-[#64ABDE] hover:text-[#64ABDE]"
-        >
-          Voltar ao dashboard
-        </Link>
-      </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
         <section className="space-y-4">
-          <BudgetImportSelect
-            budgets={budgets}
-            folders={folders}
-            selectedBudgetId={selectedBudgetId}
-            loading={loadingBudgets}
-            onBudgetChange={setSelectedBudgetId}
-          />
+          {!isEmbedded && (
+            <BudgetImportSelect
+              budgets={budgets}
+              folders={folders}
+              selectedBudgetId={pickedBudgetId}
+              loading={loadingBudgets}
+              onBudgetChange={setPickedBudgetId}
+            />
+          )}
 
           <ServiceValueInput
             valorMateriais={valorMateriais}
@@ -305,8 +352,12 @@ export function PrecificacaoCalculator({ initialSaved }: PrecificacaoCalculatorP
             onRemoveCostItem={handleRemoveCostItem}
           />
 
-          {loadingBudgetDetails && selectedBudgetId && (
-            <p className="text-xs text-gray-500">Carregando itens do orçamento selecionado...</p>
+          {activeBudgetId && !budgetDetailsLoaded && (
+            <p className="text-xs text-gray-500">
+              {loadingBudgetDetails
+                ? 'Carregando itens do orçamento selecionado...'
+                : 'Itens do orçamento ainda não carregados — salvar e exportar ficam bloqueados até chegarem.'}
+            </p>
           )}
         </section>
 
