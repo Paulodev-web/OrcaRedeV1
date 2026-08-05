@@ -110,12 +110,12 @@ function RevisionItem({
   return (
     <li className="rounded-lg border border-gray-200 bg-white p-3">
       <div className="mb-2 flex items-center justify-between">
-        <p className="text-sm font-semibold text-[#1D3140]">
+        <p className="text-sm font-semibold text-neutral-900">
           Versão #{revision.revisionNumber}
         </p>
         <div className="flex items-center gap-2 text-[11px]">
           {isCurrent && (
-            <span className="rounded-full bg-[#64ABDE]/15 px-2 py-0.5 font-medium text-[#1D3140]">
+            <span className="rounded-full bg-accent-500/15 px-2 py-0.5 font-medium text-neutral-900">
               Atual
             </span>
           )}

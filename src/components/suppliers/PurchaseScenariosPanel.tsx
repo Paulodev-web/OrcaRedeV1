@@ -103,14 +103,14 @@ function ScenarioACard({ scenarios }: { scenarios: ScenariosResult }) {
                         Mais barato
                       </span>
                     )}
-                    <span className="text-sm font-medium text-[#1D3140]">{supplier.supplier_name}</span>
+                    <span className="text-sm font-medium text-neutral-900">{supplier.supplier_name}</span>
                   </div>
                 </td>
                 <td className="px-4 py-3 text-right text-sm text-gray-700">
                   {supplier.items_covered} / {supplier.total_items}
                   <div className="w-full bg-gray-100 rounded-full h-1 mt-1">
                     <div
-                      className="h-1 rounded-full bg-[#64ABDE]"
+                      className="h-1 rounded-full bg-accent-600"
                       style={{
                         width: `${Math.round((supplier.items_covered / supplier.total_items) * 100)}%`,
                       }}
@@ -118,7 +118,7 @@ function ScenarioACard({ scenarios }: { scenarios: ScenariosResult }) {
                   </div>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <p className={`text-sm font-bold ${isBest ? 'text-green-700' : 'text-[#1D3140]'}`}>
+                  <p className={`text-sm font-bold ${isBest ? 'text-green-700' : 'text-neutral-900'}`}>
                     {formatCurrency(supplier.total_normalizado)}
                   </p>
                   {!isBest && diff > 0 && (
@@ -130,7 +130,7 @@ function ScenarioACard({ scenarios }: { scenarios: ScenariosResult }) {
                 <td className="px-4 py-3">
                   <a
                     href={`/fornecedores/trabalho?tab=conciliar&quoteId=${encodeURIComponent(supplier.quote_id)}`}
-                    className="text-xs text-[#64ABDE] transition-colors hover:text-[#1D3140] hover:underline"
+                    className="text-xs text-accent-600 transition-colors hover:text-neutral-900 hover:underline"
                   >
                     Ver cotação
                   </a>
@@ -165,11 +165,11 @@ function ScenarioBCard({ scenarios }: { scenarios: ScenariosResult }) {
     <div className="space-y-4">
       {/* Resumo */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-lg border border-[#64ABDE]/40 bg-[#64ABDE]/10 p-4">
-          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-[#64ABDE]">
+        <div className="rounded-lg border border-accent-500/40 bg-accent-500/10 p-4">
+          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-accent-600">
             Total Cenário B
           </p>
-          <p className="text-2xl font-bold text-[#1D3140]">
+          <p className="text-2xl font-bold text-neutral-900">
             {formatCurrency(scenarioB.total_normalizado)}
           </p>
         </div>
@@ -231,10 +231,10 @@ function ScenarioBCard({ scenarios }: { scenarios: ScenariosResult }) {
                 <>
                   <tr
                     key={item.material_id}
-                    className={`hover:bg-gray-50 transition-colors ${isExpanded ? 'bg-[#64ABDE]/10' : ''}`}
+                    className={`hover:bg-gray-50 transition-colors ${isExpanded ? 'bg-accent-500/10' : ''}`}
                   >
                     <td className="px-4 py-3">
-                      <p className="text-sm font-medium text-[#1D3140]">{item.material_name}</p>
+                      <p className="text-sm font-medium text-neutral-900">{item.material_name}</p>
                       <p className="text-xs text-gray-400">
                         <span className="font-mono">{item.material_code}</span>
                         {' · '}Qtd {formatNumber(item.net_qty)}
@@ -247,12 +247,12 @@ function ScenarioBCard({ scenarios }: { scenarios: ScenariosResult }) {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <p className="text-sm font-bold text-[#1D3140]">
+                      <p className="text-sm font-bold text-neutral-900">
                         {formatCurrency(item.best_price_normalized)}
                       </p>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <p className="text-sm font-semibold text-[#64ABDE]">
+                      <p className="text-sm font-semibold text-accent-600">
                         {formatCurrency(item.best_total)}
                       </p>
                     </td>
@@ -279,29 +279,29 @@ function ScenarioBCard({ scenarios }: { scenarios: ScenariosResult }) {
                   {/* Todas as ofertas expandidas */}
                   {isExpanded && (
                     <tr key={`${item.material_id}-expanded`}>
-                      <td colSpan={5} className="bg-[#64ABDE]/10 px-4 pb-4 pt-0">
-                        <div className="mt-2 overflow-hidden rounded-lg border border-[#64ABDE]/30">
-                          <table className="min-w-full divide-y divide-[#64ABDE]/20">
-                            <thead className="bg-[#64ABDE]/15">
+                      <td colSpan={5} className="bg-accent-500/10 px-4 pb-4 pt-0">
+                        <div className="mt-2 overflow-hidden rounded-lg border border-accent-500/30">
+                          <table className="min-w-full divide-y divide-accent-500/20">
+                            <thead className="bg-accent-500/15">
                               <tr>
-                                <th className="px-3 py-2 text-left text-xs font-medium uppercase text-[#1D3140]">
+                                <th className="px-3 py-2 text-left text-xs font-medium uppercase text-neutral-900">
                                   Fornecedor
                                 </th>
-                                <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">
+                                <th className="px-3 py-2 text-right text-xs font-medium uppercase text-neutral-900">
                                   Preço Unit.
                                 </th>
-                                <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">
+                                <th className="px-3 py-2 text-right text-xs font-medium uppercase text-neutral-900">
                                   Fator
                                 </th>
-                                <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">
+                                <th className="px-3 py-2 text-right text-xs font-medium uppercase text-neutral-900">
                                   Preço unit.
                                 </th>
-                                <th className="px-3 py-2 text-right text-xs font-medium uppercase text-[#1D3140]">
+                                <th className="px-3 py-2 text-right text-xs font-medium uppercase text-neutral-900">
                                   Total
                                 </th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-[#64ABDE]/10 bg-white">
+                            <tbody className="divide-y divide-accent-500/10 bg-white">
                               {item.all_offers
                                 .slice()
                                 .sort((a, b) => a.preco_normalizado - b.preco_normalizado)
@@ -349,7 +349,7 @@ function ScenarioBCard({ scenarios }: { scenarios: ScenariosResult }) {
               <td colSpan={3} className="px-4 py-3 text-sm font-semibold text-gray-700 text-right">
                 Total Cenário B:
               </td>
-              <td className="px-4 py-3 text-right text-sm font-bold text-[#1D3140]">
+              <td className="px-4 py-3 text-right text-sm font-bold text-neutral-900">
                 {formatCurrency(scenarioB.total_normalizado)}
               </td>
               <td />
@@ -392,7 +392,7 @@ export default function PurchaseScenariosPanel({
       <div className="rounded-lg border border-gray-100 bg-gray-50/60 p-5">
         <label
           htmlFor="scenarios-budget-select"
-          className="mb-2 block text-sm font-medium text-[#1D3140]"
+          className="mb-2 block text-sm font-medium text-neutral-900"
         >
           Selecione o Orçamento / Obra
         </label>
@@ -423,16 +423,16 @@ export default function PurchaseScenariosPanel({
           {/* Resumo das cotações */}
           {quotes && quotes.length > 0 && (
             <div className="rounded-lg border border-gray-100 bg-gray-50/60 p-5">
-              <h3 className="mb-3 text-sm font-semibold text-[#1D3140]">
+              <h3 className="mb-3 text-sm font-semibold text-neutral-900">
                 Cotações disponíveis para:{' '}
-                <span className="text-[#1D3140]">{selectedBudgetName}</span>
+                <span className="text-neutral-900">{selectedBudgetName}</span>
               </h3>
               <div className="flex flex-wrap gap-2">
                 {quotes.map((q) => (
                   <a
                     key={q.id}
                     href={`/fornecedores/trabalho?tab=conciliar&quoteId=${encodeURIComponent(q.id)}`}
-                    className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors hover:border-[#64ABDE]/50 ${
+                    className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors hover:border-accent-500/50 ${
                       q.status === 'conciliado'
                         ? 'border-green-200 bg-green-50 text-green-700'
                         : 'border-amber-200 bg-amber-50 text-amber-700'
@@ -456,7 +456,7 @@ export default function PurchaseScenariosPanel({
               </p>
               <a
                 href="/fornecedores/trabalho?tab=importar"
-                className="mt-3 inline-block text-sm font-medium text-[#64ABDE] transition-colors hover:text-[#1D3140] hover:underline"
+                className="mt-3 inline-block text-sm font-medium text-accent-600 transition-colors hover:text-neutral-900 hover:underline"
               >
                 Importar proposta →
               </a>
@@ -473,8 +473,8 @@ export default function PurchaseScenariosPanel({
                     onClick={() => setActiveTab('A')}
                     className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
                       activeTab === 'A'
-                        ? 'border-[#64ABDE] text-[#64ABDE]'
-                        : 'border-transparent text-gray-500 hover:text-[#1D3140]'
+                        ? 'border-accent-500 text-accent-600'
+                        : 'border-transparent text-gray-500 hover:text-neutral-900'
                     }`}
                   >
                     <Package className="h-4 w-4" />
@@ -485,8 +485,8 @@ export default function PurchaseScenariosPanel({
                     onClick={() => setActiveTab('B')}
                     className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
                       activeTab === 'B'
-                        ? 'border-[#64ABDE] text-[#64ABDE]'
-                        : 'border-transparent text-gray-500 hover:text-[#1D3140]'
+                        ? 'border-accent-500 text-accent-600'
+                        : 'border-transparent text-gray-500 hover:text-neutral-900'
                     }`}
                   >
                     <Shuffle className="h-4 w-4" />

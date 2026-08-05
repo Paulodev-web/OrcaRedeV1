@@ -656,7 +656,7 @@ function PagamentoCard({
             checked={hasDownPayment}
             onChange={(event) => setHasDownPayment(event.target.checked)}
             disabled={locked}
-            className="h-4 w-4 accent-[#1D3140]"
+            className="h-4 w-4 accent-accent-600"
           />
           Com entrada
         </label>

@@ -25,7 +25,7 @@ export function BudgetImportSelect({
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 className="text-sm font-semibold text-[#1D3140]">Importação de Orçamento</h2>
+      <h2 className="text-sm font-semibold text-neutral-900">Importação de Orçamento</h2>
       <p className="mt-1 text-xs text-gray-500">
         Selecione uma obra para carregar automaticamente os materiais e serviços estimados.
       </p>

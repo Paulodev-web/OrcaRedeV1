@@ -84,10 +84,10 @@ export default function ScenarioFiltersPanel({
         className="flex w-full items-center justify-between px-5 py-4 text-left hover:bg-gray-50/50 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <Filter className="h-5 w-5 text-[#64ABDE]" />
-          <span className="text-sm font-semibold text-[#1D3140]">Filtros e visualização</span>
+          <Filter className="h-5 w-5 text-accent-600" />
+          <span className="text-sm font-semibold text-neutral-900">Filtros e visualização</span>
           {activeFilterCount > 0 && (
-            <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 text-xs font-medium text-white bg-[#64ABDE] rounded-full">
+            <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 text-xs font-medium text-white bg-accent-600 rounded-full">
               {activeFilterCount}
             </span>
           )}
@@ -111,7 +111,7 @@ export default function ScenarioFiltersPanel({
                 value={filterState.searchTerm}
                 onChange={(e) => updateFilter('searchTerm', e.target.value)}
                 placeholder="Nome ou código do material..."
-                className="w-full rounded-lg border border-gray-200 pl-10 pr-4 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]/30"
+                className="w-full rounded-lg border border-gray-200 pl-10 pr-4 py-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500/30"
               />
               {filterState.searchTerm && (
                 <button
@@ -135,7 +135,7 @@ export default function ScenarioFiltersPanel({
                 <button
                   type="button"
                   onClick={selectAllQuotes}
-                  className="text-xs text-[#64ABDE] hover:underline"
+                  className="text-xs text-accent-600 hover:underline"
                 >
                   Todos
                 </button>
@@ -143,7 +143,7 @@ export default function ScenarioFiltersPanel({
                 <button
                   type="button"
                   onClick={clearAllQuotes}
-                  className="text-xs text-[#64ABDE] hover:underline"
+                  className="text-xs text-accent-600 hover:underline"
                 >
                   Nenhum
                 </button>
@@ -159,12 +159,12 @@ export default function ScenarioFiltersPanel({
                     onClick={() => toggleQuote(quote.id)}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
                       isEnabled
-                        ? 'bg-[#64ABDE]/10 border-[#64ABDE]/30 text-[#1D3140]'
+                        ? 'bg-accent-500/10 border-accent-500/30 text-neutral-900'
                         : 'bg-gray-50 border-gray-200 text-gray-400 line-through'
                     }`}
                   >
                     <span
-                      className={`w-2 h-2 rounded-full ${isEnabled ? 'bg-[#64ABDE]' : 'bg-gray-300'}`}
+                      className={`w-2 h-2 rounded-full ${isEnabled ? 'bg-accent-600' : 'bg-gray-300'}`}
                     />
                     {getSupplierDisplayName(quote)}
                   </button>
@@ -183,7 +183,7 @@ export default function ScenarioFiltersPanel({
               <select
                 value={filterState.sortBy}
                 onChange={(e) => updateFilter('sortBy', e.target.value as SortOption)}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none"
               >
                 <option value="name">Nome do material</option>
                 <option value="price">Menor preço</option>
@@ -206,7 +206,7 @@ export default function ScenarioFiltersPanel({
                   updateFilter('priceMin', e.target.value ? parseFloat(e.target.value) : null)
                 }
                 placeholder="R$ 0,00"
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none"
               />
             </div>
 
@@ -224,7 +224,7 @@ export default function ScenarioFiltersPanel({
                   updateFilter('priceMax', e.target.value ? parseFloat(e.target.value) : null)
                 }
                 placeholder="Sem limite"
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none"
               />
             </div>
 
@@ -236,7 +236,7 @@ export default function ScenarioFiltersPanel({
               <select
                 value={filterState.groupBySupplier ? 'supplier' : 'quote'}
                 onChange={(e) => updateFilter('groupBySupplier', e.target.value === 'supplier')}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none"
               >
                 <option value="supplier">Por fornecedor</option>
                 <option value="quote">Por orçamento (PDF)</option>
@@ -251,7 +251,7 @@ export default function ScenarioFiltersPanel({
                 type="checkbox"
                 checked={filterState.showOnlyUncovered}
                 onChange={(e) => updateFilter('showOnlyUncovered', e.target.checked)}
-                className="rounded border-gray-300 text-[#64ABDE] focus:ring-[#64ABDE]/30"
+                className="rounded border-gray-300 text-accent-600 focus:ring-accent-500/30"
               />
               <span className="text-sm text-gray-700">Apenas sem cobertura</span>
             </label>
@@ -261,7 +261,7 @@ export default function ScenarioFiltersPanel({
                 type="checkbox"
                 checked={filterState.showOnlyDivergent}
                 onChange={(e) => updateFilter('showOnlyDivergent', e.target.checked)}
-                className="rounded border-gray-300 text-[#64ABDE] focus:ring-[#64ABDE]/30"
+                className="rounded border-gray-300 text-accent-600 focus:ring-accent-500/30"
               />
               <span className="text-sm text-gray-700">Apenas divergentes (2+ preços)</span>
             </label>
@@ -271,7 +271,7 @@ export default function ScenarioFiltersPanel({
                 type="checkbox"
                 checked={filterState.showOnlyDifferences}
                 onChange={(e) => updateFilter('showOnlyDifferences', e.target.checked)}
-                className="rounded border-gray-300 text-[#64ABDE] focus:ring-[#64ABDE]/30"
+                className="rounded border-gray-300 text-accent-600 focus:ring-accent-500/30"
               />
               <span className="text-sm text-gray-700">Onde B difere de A</span>
             </label>
@@ -283,7 +283,7 @@ export default function ScenarioFiltersPanel({
               <button
                 type="button"
                 onClick={clearFilters}
-                className="text-sm text-[#64ABDE] hover:underline"
+                className="text-sm text-accent-600 hover:underline"
               >
                 Limpar todos os filtros
               </button>

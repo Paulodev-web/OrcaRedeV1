@@ -66,7 +66,7 @@ export function AttachmentChip({ attachment, onRemove, onRetry }: AttachmentChip
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate font-medium text-[#1D3140]">{attachment.file.name}</span>
+        <span className="truncate font-medium text-neutral-900">{attachment.file.name}</span>
         <span className="text-[10px] text-gray-500">
           {isError
             ? attachment.errorMessage ?? 'Erro no upload'
@@ -78,7 +78,7 @@ export function AttachmentChip({ attachment, onRemove, onRetry }: AttachmentChip
         {isUploading && (
           <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-gray-100">
             <div
-              className="h-full bg-[#64ABDE] transition-all"
+              className="h-full bg-accent-600 transition-all"
               style={{ width: `${Math.max(2, Math.min(100, attachment.progress))}%` }}
             />
           </div>

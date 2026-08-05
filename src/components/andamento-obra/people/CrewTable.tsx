@@ -86,7 +86,7 @@ export function CrewTable({ crew, onChange }: CrewTableProps) {
                 const busy = pending && pendingId === member.id;
                 return (
                   <tr key={member.id} className="hover:bg-gray-50/60">
-                    <td className="px-4 py-3 font-medium text-[#1D3140]">{member.fullName}</td>
+                    <td className="px-4 py-3 font-medium text-neutral-900">{member.fullName}</td>
                     <td className="px-4 py-3 text-gray-600">{member.role ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-600">{member.phone ?? '—'}</td>
                     <td className="px-4 py-3">
@@ -106,7 +106,7 @@ export function CrewTable({ crew, onChange }: CrewTableProps) {
                           type="button"
                           aria-label={`Editar ${member.fullName}`}
                           onClick={() => setDialogState({ mode: 'edit', member })}
-                          className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-[#1D3140]"
+                          className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-neutral-900"
                         >
                           <Pencil className="h-4 w-4" />
                         </button>
@@ -119,7 +119,7 @@ export function CrewTable({ crew, onChange }: CrewTableProps) {
                               : `Reativar ${member.fullName}`
                           }
                           onClick={() => handleToggleActive(member)}
-                          className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-[#1D3140] disabled:opacity-50"
+                          className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-neutral-900 disabled:opacity-50"
                         >
                           {member.isActive ? (
                             <Power className="h-4 w-4" />

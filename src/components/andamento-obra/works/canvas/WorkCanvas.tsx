@@ -401,7 +401,7 @@ export function WorkCanvas({
         {planLoading && pdfSignedUrl && !planError && (
           <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-white/70 backdrop-blur-[1px]">
             <div className="flex items-center gap-2 rounded-md bg-white px-3 py-2 text-xs text-gray-700 shadow">
-              <Loader2 className="h-4 w-4 animate-spin text-[#1D3140]" />
+              <Loader2 className="h-4 w-4 animate-spin text-neutral-900" />
               Carregando {planLabel.toLowerCase()} do projeto...
             </div>
           </div>
@@ -467,7 +467,7 @@ export function WorkCanvas({
                       onLoadSuccess={onDocumentLoadSuccess}
                       onLoadError={onDocumentLoadError}
                       loading={
-                        <div className="flex items-center justify-center rounded bg-white p-8 text-[#1D3140]">
+                        <div className="flex items-center justify-center rounded bg-white p-8 text-neutral-900">
                           <Loader2 className="mr-3 h-8 w-8 animate-spin" />
                           <span className="text-lg">Carregando PDF...</span>
                         </div>

@@ -549,8 +549,8 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
               </div>
 
               {/* Mensagem personalizada / Foco atual */}
-              <div className="rounded-xl p-4 sm:p-6 shadow-lg text-white" style={{ backgroundColor: '#1D3140' }}>
-                <p className="text-xs uppercase tracking-wider font-semibold mb-2" style={{ color: '#64ABDE' }}>
+              <div className="rounded-xl p-4 sm:p-6 shadow-lg text-white" style={{ backgroundColor: '#262623' }}>
+                <p className="text-xs uppercase tracking-wider font-semibold mb-2" style={{ color: '#5f8dd1' }}>
                   {workData.current_focus_title?.trim() || 'Mensagem personalizada'}
                 </p>
                 <p className="text-sm sm:text-base leading-relaxed text-white/90">

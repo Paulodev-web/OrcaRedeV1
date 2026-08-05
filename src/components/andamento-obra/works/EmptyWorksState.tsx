@@ -10,10 +10,10 @@ interface EmptyWorksStateProps {
 export function EmptyWorksState({ onNewWork }: EmptyWorksStateProps) {
   return (
     <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-white px-6 py-16 text-center">
-      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#64ABDE]/10 text-[#64ABDE]">
+      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-accent-500/10 text-accent-600">
         <HardHat className="h-8 w-8" />
       </div>
-      <h2 className="text-lg font-semibold text-[#1D3140]">
+      <h2 className="text-lg font-semibold text-neutral-900">
         Você ainda não tem obras
       </h2>
       <p className="mt-1 max-w-sm text-sm text-gray-500">

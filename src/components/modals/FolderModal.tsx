@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { X, Folder, AlertCircle } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
+import { DEFAULT_FOLDER_COLOR, FOLDER_COLORS, resolveFolderColor } from '@/lib/folderColors';
 import {
   Select,
   SelectContent,
@@ -20,23 +21,15 @@ interface FolderModalProps {
   mode: 'create' | 'edit';
 }
 
-const FOLDER_COLORS = [
-  { name: 'Azul', value: '#3B82F6' },
-  { name: 'Verde', value: '#10B981' },
-  { name: 'Amarelo', value: '#F59E0B' },
-  { name: 'Vermelho', value: '#EF4444' },
-  { name: 'Roxo', value: '#8B5CF6' },
-  { name: 'Rosa', value: '#EC4899' },
-  { name: 'Cinza', value: '#6B7280' },
-  { name: 'Laranja', value: '#F97316' },
-];
-
 const ROOT_FOLDER_VALUE = '__root_folder__';
 
-export function FolderModal({ isOpen, onClose, onSave, initialName = '', initialColor = '#3B82F6', mode }: FolderModalProps) {
+export function FolderModal({ isOpen, onClose, onSave, initialName = '', initialColor = DEFAULT_FOLDER_COLOR, mode }: FolderModalProps) {
   const { folders, currentFolderId } = useApp();
   const [name, setName] = useState(initialName);
-  const [color, setColor] = useState(initialColor);
+  // `resolveFolderColor`: pastas criadas antes da virada de paleta guardam um
+  // hex legado que não bate com nenhuma opção — sem traduzir, o modal abriria
+  // sem nenhum swatch marcado.
+  const [color, setColor] = useState(() => resolveFolderColor(initialColor));
   const [parentId, setParentId] = useState<string | null>(currentFolderId);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +37,7 @@ export function FolderModal({ isOpen, onClose, onSave, initialName = '', initial
   useEffect(() => {
     if (isOpen) {
       setName(initialName);
-      setColor(initialColor);
+      setColor(resolveFolderColor(initialColor));
       setParentId(mode === 'create' ? currentFolderId : null);
       setError(null);
     }
@@ -166,7 +159,8 @@ export function FolderModal({ isOpen, onClose, onSave, initialName = '', initial
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Cor da Pasta
             </label>
-            <div className="grid grid-cols-4 gap-2">
+            {/* 3 colunas para as 9 cores fecharem uma grade cheia (3×3). */}
+            <div className="grid grid-cols-3 gap-2">
               {FOLDER_COLORS.map((folderColor) => (
                 <button
                   key={folderColor.value}

@@ -149,13 +149,13 @@ function QuickLinks({ workId }: { workId: string }) {
       aria-label="Atalhos para outras abas da obra"
       className="rounded-2xl border border-gray-200 bg-white p-4"
     >
-      <h2 className="text-sm font-semibold text-[#1D3140]">Atalhos</h2>
+      <h2 className="text-sm font-semibold text-neutral-900">Atalhos</h2>
       <ul className="mt-3 space-y-1.5">
         {items.map(({ href, label, icon: Icon }) => (
           <li key={href}>
             <Link
               href={href}
-              className="flex items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-xs font-medium text-[#1D3140] transition-colors hover:border-[#1D3140] hover:bg-gray-50"
+              className="flex items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-xs font-medium text-neutral-900 transition-colors hover:border-neutral-900 hover:bg-gray-50"
             >
               <Icon className="h-3.5 w-3.5 text-gray-500" aria-hidden="true" />
               {label}

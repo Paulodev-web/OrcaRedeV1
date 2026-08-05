@@ -35,7 +35,7 @@ export function WorksHomeView({
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#1D3140]">Andamento de Obra</h1>
+          <h1 className="text-2xl font-bold text-neutral-900">Andamento de Obra</h1>
           <p className="mt-1 max-w-2xl text-sm text-gray-500">
             Central de Acompanhamento e Notificações das suas obras em campo.
           </p>

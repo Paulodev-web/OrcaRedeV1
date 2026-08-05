@@ -30,7 +30,7 @@ export function AdminPanel() {
 
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-6">
-      <h2 className="text-sm font-semibold text-[#1D3140]">
+      <h2 className="text-sm font-semibold text-neutral-900">
         Limpeza de uploads órfãos
       </h2>
       <p className="mt-1 text-xs text-gray-500">
@@ -43,7 +43,7 @@ export function AdminPanel() {
           type="button"
           onClick={() => runCleanup(true)}
           disabled={isPending}
-          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-[#1D3140] shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-neutral-900 shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-60"
         >
           {isPending ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -79,23 +79,23 @@ export function AdminPanel() {
             <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs sm:grid-cols-4">
               <div>
                 <dt className="text-gray-500">Modo</dt>
-                <dd className="font-semibold text-[#1D3140]">
+                <dd className="font-semibold text-neutral-900">
                   {result.dryRun ? 'Preview' : 'Execução real'}
                 </dd>
               </div>
               <div>
                 <dt className="text-gray-500">Escaneados</dt>
-                <dd className="font-semibold text-[#1D3140]">{result.scanned}</dd>
+                <dd className="font-semibold text-neutral-900">{result.scanned}</dd>
               </div>
               <div>
                 <dt className="text-gray-500">
                   {result.dryRun ? 'A remover' : 'Removidos'}
                 </dt>
-                <dd className="font-semibold text-[#1D3140]">{result.removed}</dd>
+                <dd className="font-semibold text-neutral-900">{result.removed}</dd>
               </div>
               <div>
                 <dt className="text-gray-500">Erros</dt>
-                <dd className="font-semibold text-[#1D3140]">{result.errors.length}</dd>
+                <dd className="font-semibold text-neutral-900">{result.errors.length}</dd>
               </div>
             </dl>
           </div>

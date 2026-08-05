@@ -29,7 +29,7 @@ export function CanvasEmptyState({ variant }: CanvasEmptyStateProps) {
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-500">
             <Layers3 className="h-5 w-5" aria-hidden="true" />
           </div>
-          <h2 className="mt-4 text-base font-semibold text-[#1D3140]">
+          <h2 className="mt-4 text-base font-semibold text-neutral-900">
             Esta obra não tem projeto importado
           </h2>
           <p className="mt-2 text-sm text-gray-600">
@@ -40,7 +40,7 @@ export function CanvasEmptyState({ variant }: CanvasEmptyStateProps) {
           <div className="mt-5 flex flex-col items-center gap-2">
             <Link
               href="/tools/andamento-obra"
-              className="inline-flex items-center justify-center rounded-md bg-[#1D3140] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#16242F]"
+              className="inline-flex items-center justify-center rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-950"
             >
               Importar do OrçaRede
             </Link>
@@ -60,7 +60,7 @@ export function CanvasEmptyState({ variant }: CanvasEmptyStateProps) {
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-amber-600">
           <FileX2 className="h-5 w-5" aria-hidden="true" />
         </div>
-        <h2 className="mt-4 text-base font-semibold text-[#1D3140]">
+        <h2 className="mt-4 text-base font-semibold text-neutral-900">
           Snapshot do projeto indisponível
         </h2>
         <p className="mt-2 text-sm text-gray-600">

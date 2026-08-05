@@ -28,7 +28,7 @@ export function WorkTeamSection({ team, availableCrew, workId, isEngineer }: Pro
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-[#1D3140]">Equipe Atual</h2>
+        <h2 className="text-lg font-semibold text-neutral-900">Equipe Atual</h2>
         {isEngineer && availableCrew.length > 0 && (
           <AllocateCrewDialog workId={workId} availableCrew={availableCrew} />
         )}
@@ -46,7 +46,7 @@ export function WorkTeamSection({ team, availableCrew, workId, isEngineer }: Pro
               className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-3 shadow-sm"
             >
               <div>
-                <p className="text-sm font-medium text-[#1D3140]">
+                <p className="text-sm font-medium text-neutral-900">
                   {m.crewMemberName}
                   {!m.crewMemberIsActive && (
                     <span className="ml-1 rounded bg-red-50 px-1 py-0.5 text-[10px] text-red-500">

@@ -268,11 +268,11 @@ function ChatHeader({
 }) {
   return (
     <div className="flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-3">
-      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[#64ABDE]/15 text-[#1D3140]">
+      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-accent-500/15 text-neutral-900">
         <User className="h-4 w-4" />
       </div>
       <div className="min-w-0 flex-1">
-        <h2 className="truncate text-sm font-semibold text-[#1D3140]">
+        <h2 className="truncate text-sm font-semibold text-neutral-900">
           {managerName ?? 'Sem gerente atribuído'}
         </h2>
         <p className="truncate text-[11px] text-gray-500">{workName}</p>

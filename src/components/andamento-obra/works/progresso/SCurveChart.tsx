@@ -62,7 +62,7 @@ function Legend() {
         Planejado
       </span>
       <span className="inline-flex items-center gap-1">
-        <span className="inline-block h-2 w-2 rounded-sm bg-[#64ABDE]" />
+        <span className="inline-block h-2 w-2 rounded-sm bg-accent-600" />
         Realizado
       </span>
     </div>
@@ -172,7 +172,7 @@ function SvgChart({
             y={y}
             width={barW}
             height={Math.max(0, h)}
-            fill="#64ABDE"
+            fill="#5f8dd1"
             opacity={0.85}
           />
         );

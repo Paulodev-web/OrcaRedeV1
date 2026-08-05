@@ -204,7 +204,7 @@ export function NovaPropostaForm({
                             type="checkbox"
                             checked={checked}
                             onChange={() => toggleScenario(scenario.id)}
-                            className="h-4 w-4 accent-[#1D3140]"
+                            className="h-4 w-4 accent-accent-600"
                           />
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm font-medium text-slate-700">

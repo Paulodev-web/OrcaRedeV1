@@ -295,7 +295,7 @@ export function ChatComposer({
           aria-label="Anexar mídia"
           className={cn(
             'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-gray-500 transition-colors',
-            'hover:bg-gray-100 hover:text-[#1D3140]',
+            'hover:bg-gray-100 hover:text-neutral-900',
             'disabled:cursor-not-allowed disabled:opacity-50',
           )}
         >
@@ -321,7 +321,7 @@ export function ChatComposer({
           className={cn(
             'min-h-[40px] flex-1 resize-none rounded-2xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm leading-snug',
             'outline-none transition-colors placeholder:text-gray-400',
-            'focus:border-[#64ABDE]/60 focus:bg-white focus:ring-2 focus:ring-[#64ABDE]/20',
+            'focus:border-accent-500/60 focus:bg-white focus:ring-2 focus:ring-accent-500/20',
             'disabled:cursor-wait disabled:opacity-70',
           )}
         />
@@ -334,7 +334,7 @@ export function ChatComposer({
           className={cn(
             'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full transition-colors',
             canSend
-              ? 'bg-[#64ABDE] text-white hover:bg-[#4f9ad0]'
+              ? 'bg-accent-600 text-white hover:bg-accent-500'
               : 'cursor-not-allowed bg-gray-200 text-gray-400',
           )}
         >

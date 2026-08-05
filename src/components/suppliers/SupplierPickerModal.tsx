@@ -104,7 +104,7 @@ export default function SupplierPickerModal({
           <button
             type="button"
             onClick={() => setFormOpen(true)}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[#64ABDE]/60 py-2 text-sm font-medium text-[#1D3140] hover:bg-[#64ABDE]/10"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-accent-500/60 py-2 text-sm font-medium text-neutral-900 hover:bg-accent-500/10"
           >
             <Plus className="h-4 w-4" />
             Criar novo fornecedor
@@ -113,7 +113,7 @@ export default function SupplierPickerModal({
           <div className="max-h-56 overflow-y-auto rounded-lg border border-gray-200">
             {loading ? (
               <div className="flex justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-[#64ABDE]" />
+                <Loader2 className="h-6 w-6 animate-spin text-accent-600" />
               </div>
             ) : filtered.length === 0 ? (
               <p className="px-4 py-6 text-center text-sm text-gray-500">
@@ -132,7 +132,7 @@ export default function SupplierPickerModal({
                       className={[
                         'w-full px-4 py-3 text-left text-sm transition-colors',
                         selectedId === s.id
-                          ? 'bg-[#64ABDE]/15 font-semibold text-[#1D3140]'
+                          ? 'bg-accent-500/15 font-semibold text-neutral-900'
                           : 'hover:bg-gray-50 text-gray-800',
                       ].join(' ')}
                     >
@@ -145,7 +145,7 @@ export default function SupplierPickerModal({
           </div>
 
           {remainingInBatch > 0 && (
-            <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-[#64ABDE]/30 bg-[#64ABDE]/5 px-3 py-2.5 text-sm text-gray-700">
+            <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-accent-500/30 bg-accent-500/5 px-3 py-2.5 text-sm text-gray-700">
               <input
                 type="checkbox"
                 checked={applyToRemaining}
@@ -175,7 +175,7 @@ export default function SupplierPickerModal({
               type="button"
               onClick={handleConfirm}
               disabled={!selectedId}
-              className="rounded-lg bg-[#1D3140] px-4 py-2 text-sm font-medium text-white hover:bg-[#2a4558] disabled:opacity-50"
+              className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
             >
               Confirmar e processar
             </button>

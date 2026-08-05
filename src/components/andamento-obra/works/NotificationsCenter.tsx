@@ -56,10 +56,10 @@ export function NotificationsCenter({ initialItems }: NotificationsCenterProps) 
     >
       <header className="flex items-center justify-between gap-2 border-b border-gray-100 px-4 py-3">
         <div className="flex items-center gap-2">
-          <Bell className="h-4 w-4 text-[#64ABDE]" />
-          <h2 className="text-sm font-semibold text-[#1D3140]">Notificações</h2>
+          <Bell className="h-4 w-4 text-accent-600" />
+          <h2 className="text-sm font-semibold text-neutral-900">Notificações</h2>
           {unreadCount > 0 && (
-            <span className="rounded-full bg-[#64ABDE] px-2 py-0.5 text-[10px] font-medium text-white">
+            <span className="rounded-full bg-accent-600 px-2 py-0.5 text-[10px] font-medium text-white">
               {unreadCount}
             </span>
           )}

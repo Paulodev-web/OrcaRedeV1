@@ -73,7 +73,7 @@ export function NotificationsFullList({ initialItems, initialHasMore }: Props) {
             type="button"
             onClick={() => setFilterUnread(false)}
             className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-              !filterUnread ? 'bg-[#1D3140] text-white' : 'text-gray-600 hover:bg-gray-100'
+              !filterUnread ? 'bg-neutral-900 text-white' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
             Todas
@@ -82,7 +82,7 @@ export function NotificationsFullList({ initialItems, initialHasMore }: Props) {
             type="button"
             onClick={() => setFilterUnread(true)}
             className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-              filterUnread ? 'bg-[#1D3140] text-white' : 'text-gray-600 hover:bg-gray-100'
+              filterUnread ? 'bg-neutral-900 text-white' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
             Não lidas
@@ -91,7 +91,7 @@ export function NotificationsFullList({ initialItems, initialHasMore }: Props) {
         <button
           type="button"
           onClick={handleMarkAll}
-          className="text-xs font-medium text-[#64ABDE] hover:underline"
+          className="text-xs font-medium text-accent-600 hover:underline"
         >
           Marcar todas como lidas
         </button>
@@ -111,19 +111,19 @@ export function NotificationsFullList({ initialItems, initialHasMore }: Props) {
                 type="button"
                 onClick={() => handleClick(n)}
                 className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50 ${
-                  n.isRead ? '' : 'bg-[#64ABDE]/5'
+                  n.isRead ? '' : 'bg-accent-500/5'
                 }`}
               >
                 <span
                   className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${
-                    n.isRead ? 'bg-transparent' : 'bg-[#64ABDE]'
+                    n.isRead ? 'bg-transparent' : 'bg-accent-600'
                   }`}
                   aria-hidden
                 />
                 <div className="min-w-0 flex-1">
                   <p
                     className={`text-sm font-semibold ${
-                      n.isRead ? 'text-gray-700' : 'text-[#1D3140]'
+                      n.isRead ? 'text-gray-700' : 'text-neutral-900'
                     }`}
                   >
                     {n.title}

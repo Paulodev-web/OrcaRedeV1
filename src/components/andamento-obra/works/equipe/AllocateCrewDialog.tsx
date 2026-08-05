@@ -51,7 +51,7 @@ export function AllocateCrewDialog({ workId, availableCrew }: Props) {
       <button
         type="button"
         onClick={handleOpen}
-        className="rounded-lg bg-[#64ABDE] px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#4A8FC2]"
+        className="rounded-lg bg-accent-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent-700"
       >
         + Adicionar membro
       </button>
@@ -62,7 +62,7 @@ export function AllocateCrewDialog({ workId, availableCrew }: Props) {
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} />
       <div className="relative w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-        <h3 className="mb-4 text-lg font-semibold text-[#1D3140]">Adicionar à equipe</h3>
+        <h3 className="mb-4 text-lg font-semibold text-neutral-900">Adicionar à equipe</h3>
 
         <div className="space-y-3">
           <div>
@@ -111,7 +111,7 @@ export function AllocateCrewDialog({ workId, availableCrew }: Props) {
               type="button"
               onClick={handleSubmit}
               disabled={pending}
-              className="rounded-md bg-[#1D3140] px-4 py-2 text-sm font-medium text-white hover:bg-[#2A4557] disabled:opacity-50"
+              className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
             >
               {pending ? 'Adicionando...' : 'Adicionar'}
             </button>

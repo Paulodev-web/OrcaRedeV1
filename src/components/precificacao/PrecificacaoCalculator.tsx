@@ -279,7 +279,7 @@ export function PrecificacaoCalculator({
     return (
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <p className="text-sm text-gray-700">Faça login no portal principal para acessar o módulo de precificação.</p>
-        <Link href="/" className="mt-3 inline-flex text-sm font-medium text-[#64ABDE] hover:brightness-95">
+        <Link href="/" className="mt-3 inline-flex text-sm font-medium text-accent-600 hover:brightness-95">
           Ir para o portal
         </Link>
       </div>
@@ -293,17 +293,17 @@ export function PrecificacaoCalculator({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs text-gray-400">
-              <Link href="/" className="hover:text-[#64ABDE]">
+              <Link href="/" className="hover:text-accent-600">
                 Portal
               </Link>
               <span className="mx-1">/</span>
-              <Link href="/tools/precificacao" className="hover:text-[#64ABDE]">
+              <Link href="/tools/precificacao" className="hover:text-accent-600">
                 Módulo de Precificação
               </Link>
               <span className="mx-1">/</span>
               <span className="text-gray-600">{isEditMode ? 'Editar precificação' : 'Nova precificação'}</span>
             </p>
-            <h1 className="mt-1 text-2xl font-bold text-[#1D3140]">
+            <h1 className="mt-1 text-2xl font-bold text-neutral-900">
               {isEditMode ? 'Editar Precificação' : 'Nova Precificação'}
             </h1>
             <p className="mt-1 text-sm text-gray-500">
@@ -315,7 +315,7 @@ export function PrecificacaoCalculator({
           </div>
           <Link
             href="/tools/precificacao"
-            className="inline-flex h-10 items-center justify-center rounded-lg border border-[#64ABDE]/30 bg-white px-4 text-sm font-medium text-[#1D3140] shadow-sm transition hover:border-[#64ABDE] hover:text-[#64ABDE]"
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-accent-500/30 bg-white px-4 text-sm font-medium text-neutral-900 shadow-sm transition hover:border-accent-500 hover:text-accent-600"
           >
             Voltar ao dashboard
           </Link>

@@ -102,7 +102,7 @@ export function GalleryItemView({ item, onOpenImage }: GalleryItemProps) {
       </div>
 
       <div className="flex flex-col gap-1 px-2.5 py-2">
-        <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#1D3140]">
+        <div className="flex items-center gap-1.5 text-[11px] font-medium text-neutral-900">
           <SourceIcon className="h-3 w-3 text-gray-500" aria-hidden="true" />
           <span className="truncate">{item.contextLabel}</span>
         </div>
@@ -112,7 +112,7 @@ export function GalleryItemView({ item, onOpenImage }: GalleryItemProps) {
           </span>
           <Link
             href={item.linkPath}
-            className="inline-flex items-center gap-0.5 text-[10px] font-medium text-[#64ABDE] hover:underline"
+            className="inline-flex items-center gap-0.5 text-[10px] font-medium text-accent-600 hover:underline"
             title="Ver no contexto"
           >
             Ver no contexto

@@ -77,7 +77,7 @@ export default function SupplierListView({ initialSuppliers }: Props) {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-[#64ABDE]/30 bg-white shadow-sm">
+    <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-accent-500/30 bg-white shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 px-6 py-4">
         <div className="flex items-center gap-3">
           <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-600">
@@ -93,7 +93,7 @@ export default function SupplierListView({ initialSuppliers }: Props) {
         <button
           type="button"
           onClick={openCreate}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#1D3140] px-4 py-2 text-sm font-medium text-white hover:bg-[#2a4558]"
+          className="inline-flex items-center gap-2 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800"
         >
           <Plus className="h-4 w-4" />
           Novo fornecedor
@@ -127,7 +127,7 @@ export default function SupplierListView({ initialSuppliers }: Props) {
             ) : (
               visible.map((s) => (
                 <tr key={s.id} className={!s.is_active ? 'bg-gray-50/80 text-gray-500' : ''}>
-                  <td className="px-6 py-3 font-medium text-[#1D3140]">
+                  <td className="px-6 py-3 font-medium text-neutral-900">
                     {s.name}
                     {!s.is_active && (
                       <span className="ml-2 rounded-full bg-gray-200 px-2 py-0.5 text-xs font-normal text-gray-600">
@@ -143,7 +143,7 @@ export default function SupplierListView({ initialSuppliers }: Props) {
                       <button
                         type="button"
                         onClick={() => openHistory(s)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-[#64ABDE]/40 px-2.5 py-1.5 text-xs font-medium text-[#1D3140] hover:bg-[#64ABDE]/10"
+                        className="inline-flex items-center gap-1 rounded-lg border border-accent-500/40 px-2.5 py-1.5 text-xs font-medium text-neutral-900 hover:bg-accent-500/10"
                       >
                         <History className="h-3.5 w-3.5" />
                         Histórico

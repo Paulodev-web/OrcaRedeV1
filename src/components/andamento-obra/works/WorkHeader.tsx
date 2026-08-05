@@ -33,13 +33,13 @@ export function WorkHeader({
         <p className="flex flex-wrap items-center gap-1 text-xs text-gray-400">
           <Link
             href="/"
-            className="inline-flex items-center gap-1 transition-colors hover:text-[#64ABDE]"
+            className="inline-flex items-center gap-1 transition-colors hover:text-accent-600"
           >
             <Grid3X3 className="h-3.5 w-3.5 shrink-0" />
             Portal
           </Link>
           <ChevronRight className="h-3 w-3 shrink-0 text-gray-300" aria-hidden />
-          <Link href="/tools/andamento-obra" className="transition-colors hover:text-[#64ABDE]">
+          <Link href="/tools/andamento-obra" className="transition-colors hover:text-accent-600">
             Obras
           </Link>
           <ChevronRight className="h-3 w-3 shrink-0 text-gray-300" aria-hidden />
@@ -49,7 +49,7 @@ export function WorkHeader({
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold text-[#1D3140]">{work.name}</h1>
+              <h1 className="text-2xl font-bold text-neutral-900">{work.name}</h1>
               {work.budgetId && <ImportedBudgetBadge />}
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
@@ -63,7 +63,7 @@ export function WorkHeader({
               {work.budgetId && (
                 <Link
                   href={`/?budgetId=${work.budgetId}`}
-                  className="text-[#64ABDE] hover:underline"
+                  className="text-accent-600 hover:underline"
                   title="Abrir o orçamento original no OrçaRede"
                 >
                   Ver orçamento original
@@ -76,7 +76,7 @@ export function WorkHeader({
             <button
               type="button"
               onClick={() => setEditOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-[#1D3140] hover:bg-gray-50"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-900 hover:bg-gray-50"
             >
               <Pencil className="h-3.5 w-3.5" />
               Editar obra

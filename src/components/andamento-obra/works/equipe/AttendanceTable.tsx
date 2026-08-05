@@ -36,7 +36,7 @@ export function AttendanceTable({ attendance, team, workId }: Props) {
             const isAllocated = allocatedIds.has(row.crewMemberId);
             return (
               <tr key={row.id}>
-                <td className="px-4 py-2 text-[#1D3140]">
+                <td className="px-4 py-2 text-neutral-900">
                   {row.crewMemberName}
                 </td>
                 <td className="px-4 py-2 text-gray-600">
@@ -46,7 +46,7 @@ export function AttendanceTable({ attendance, team, workId }: Props) {
                   {row.dailyLogId ? (
                     <Link
                       href={`/tools/andamento-obra/obras/${workId}/diario`}
-                      className="text-xs text-[#64ABDE] hover:underline"
+                      className="text-xs text-accent-600 hover:underline"
                     >
                       Ver diário
                     </Link>

@@ -234,11 +234,11 @@ export default function FornecedoresHub({
         <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {initialSessions.map((s) => (
             <li key={s.id}>
-              <div className="relative flex h-full flex-col rounded-2xl border border-[#64ABDE]/40 bg-white shadow-md transition-shadow hover:shadow-lg">
+              <div className="relative flex h-full flex-col rounded-2xl border border-accent-500/40 bg-white shadow-md transition-shadow hover:shadow-lg">
                 <Link
                   prefetch
                   href={`/fornecedores/sessao/${s.id}`}
-                  className="absolute inset-0 z-0 rounded-2xl outline-none ring-2 ring-transparent ring-offset-2 focus-visible:ring-[#64ABDE]"
+                  className="absolute inset-0 z-0 rounded-2xl outline-none ring-2 ring-transparent ring-offset-2 focus-visible:ring-accent-500"
                   aria-label={`Abrir sessão: ${s.title}`}
                   onMouseEnter={() => prefetchSession(s.id)}
                   onFocus={() => prefetchSession(s.id)}
@@ -246,7 +246,7 @@ export default function FornecedoresHub({
                 <div className="relative z-10 flex flex-1 flex-col p-5 pointer-events-none">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <h2 className="truncate font-semibold text-[#1D3140]">{s.title}</h2>
+                      <h2 className="truncate font-semibold text-neutral-900">{s.title}</h2>
                       <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
                         {s.budget_id ? (
                           <>
@@ -289,7 +289,7 @@ export default function FornecedoresHub({
                   <dl className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-600">
                     <div className="rounded-lg bg-slate-50 px-2 py-1.5">
                       <dt className="text-slate-400">Cotações</dt>
-                      <dd className="font-semibold text-[#1D3140]">{s.quotesCount}</dd>
+                      <dd className="font-semibold text-neutral-900">{s.quotesCount}</dd>
                     </div>
                     <div className="rounded-lg bg-slate-50 px-2 py-1.5">
                       <dt className="text-slate-400">Jobs pendentes</dt>

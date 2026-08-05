@@ -26,7 +26,7 @@ export default async function WorkAlertasPage({ params }: Props) {
   return (
     <div className="mx-auto max-w-4xl px-6 py-6 lg:px-8">
       <div className="mb-5">
-        <h2 className="text-lg font-semibold text-[#1D3140]">Alertas</h2>
+        <h2 className="text-lg font-semibold text-neutral-900">Alertas</h2>
         <p className="mt-0.5 text-xs text-gray-500">
           {alertsResult.items.length} {alertsResult.items.length === 1 ? 'alerta registrado' : 'alertas registrados'}
         </p>

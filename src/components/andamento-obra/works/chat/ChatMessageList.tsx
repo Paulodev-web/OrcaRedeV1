@@ -116,7 +116,7 @@ export const ChatMessageList = forwardRef<ChatMessageListHandle, ChatMessageList
                     'inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-600 shadow-sm transition-colors',
                     loadingOlder
                       ? 'cursor-wait opacity-70'
-                      : 'hover:border-[#64ABDE]/40 hover:text-[#1D3140]',
+                      : 'hover:border-accent-500/40 hover:text-neutral-900',
                   )}
                 >
                   {loadingOlder ? (
@@ -168,7 +168,7 @@ export const ChatMessageList = forwardRef<ChatMessageListHandle, ChatMessageList
               const el = scrollRef.current;
               if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
             }}
-            className="absolute bottom-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-md transition-colors hover:bg-gray-50 hover:text-[#1D3140]"
+            className="absolute bottom-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-md transition-colors hover:bg-gray-50 hover:text-neutral-900"
             aria-label="Ir para o final"
           >
             <ArrowDown className="h-4 w-4" />
@@ -189,10 +189,10 @@ export const ChatMessageList = forwardRef<ChatMessageListHandle, ChatMessageList
 function EmptyState() {
   return (
     <div className="mx-auto mt-12 flex max-w-sm flex-col items-center px-4 text-center">
-      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#64ABDE]/10 text-[#64ABDE]">
+      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-accent-500/10 text-accent-600">
         <MessageCircle className="h-5 w-5" />
       </div>
-      <h3 className="text-sm font-semibold text-[#1D3140]">Nenhuma mensagem ainda</h3>
+      <h3 className="text-sm font-semibold text-neutral-900">Nenhuma mensagem ainda</h3>
       <p className="mt-1 text-xs text-gray-500">
         Envie a primeira mensagem para iniciar a conversa com o gerente da obra.
       </p>

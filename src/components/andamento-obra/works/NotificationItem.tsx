@@ -64,12 +64,12 @@ export function NotificationItem({ notification, onRead }: NotificationItemProps
       type="button"
       onClick={handleClick}
       className={`group flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors ${
-        notification.isRead ? 'hover:bg-gray-50' : 'bg-[#64ABDE]/5 hover:bg-[#64ABDE]/10'
+        notification.isRead ? 'hover:bg-gray-50' : 'bg-accent-500/5 hover:bg-accent-500/10'
       }`}
     >
       <div
         className={`mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ${
-          notification.isRead ? 'bg-gray-100 text-gray-500' : 'bg-[#64ABDE]/15 text-[#64ABDE]'
+          notification.isRead ? 'bg-gray-100 text-gray-500' : 'bg-accent-500/15 text-accent-600'
         }`}
       >
         <Icon className="h-3.5 w-3.5" />
@@ -78,7 +78,7 @@ export function NotificationItem({ notification, onRead }: NotificationItemProps
         <div className="flex items-baseline justify-between gap-2">
           <p
             className={`truncate text-xs font-semibold ${
-              notification.isRead ? 'text-gray-700' : 'text-[#1D3140]'
+              notification.isRead ? 'text-gray-700' : 'text-neutral-900'
             }`}
           >
             {notification.title}
@@ -93,7 +93,7 @@ export function NotificationItem({ notification, onRead }: NotificationItemProps
       </div>
       {!notification.isRead && (
         <span
-          className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#64ABDE]"
+          className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent-600"
           aria-label="Não lida"
         />
       )}

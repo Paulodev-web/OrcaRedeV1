@@ -59,7 +59,7 @@ function ImageBubble({
     <button
       type="button"
       onClick={() => onOpen(attachment.storagePath)}
-      className="group relative block w-full max-w-xs overflow-hidden rounded-lg bg-gray-100 outline-none focus-visible:ring-2 focus-visible:ring-[#64ABDE]"
+      className="group relative block w-full max-w-xs overflow-hidden rounded-lg bg-gray-100 outline-none focus-visible:ring-2 focus-visible:ring-accent-500"
       aria-label="Abrir imagem"
     >
       {!loaded && (

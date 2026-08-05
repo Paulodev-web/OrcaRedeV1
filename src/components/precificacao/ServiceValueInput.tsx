@@ -41,7 +41,7 @@ export function ServiceValueInput({
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 className="text-sm font-semibold text-[#1D3140]">Valor do Serviço</h2>
+      <h2 className="text-sm font-semibold text-neutral-900">Valor do Serviço</h2>
       <p className="mt-1 text-xs text-gray-500">
         Defina o percentual sobre o total dos materiais para calcular o valor do serviço, ou digite o valor
         diretamente para descobrir o percentual.
@@ -52,7 +52,7 @@ export function ServiceValueInput({
           <Package className="h-4 w-4 text-gray-400" />
           Total dos materiais importados
         </span>
-        <span className="text-sm font-semibold text-[#1D3140]">
+        <span className="text-sm font-semibold text-neutral-900">
           {hasMateriais ? currencyFormatter.format(valorMateriais) : 'Nenhum orçamento importado'}
         </span>
       </div>
@@ -69,7 +69,7 @@ export function ServiceValueInput({
             placeholder="Ex: 40"
             className={`h-10 w-full rounded-lg border px-3 text-sm outline-none transition focus:ring-2 ${
               inputMode === 'percentual'
-                ? 'border-[#64ABDE] bg-white text-[#1D3140] focus:border-[#64ABDE]/80 focus:ring-[#64ABDE]/20'
+                ? 'border-accent-500 bg-white text-neutral-900 focus:border-accent-500/80 focus:ring-accent-500/20'
                 : 'border-gray-200 bg-gray-50 text-gray-700 focus:border-gray-300 focus:ring-gray-200'
             }`}
           />
@@ -88,7 +88,7 @@ export function ServiceValueInput({
             onValueChange={onValorServicoChange}
             className={`h-10 w-full rounded-lg border px-3 text-sm outline-none transition focus:ring-2 ${
               inputMode === 'valor'
-                ? 'border-[#64ABDE] bg-white text-[#1D3140] focus:border-[#64ABDE]/80 focus:ring-[#64ABDE]/20'
+                ? 'border-accent-500 bg-white text-neutral-900 focus:border-accent-500/80 focus:ring-accent-500/20'
                 : 'border-gray-200 bg-gray-50 text-gray-700 focus:border-gray-300 focus:ring-gray-200'
             }`}
           />
@@ -108,14 +108,14 @@ export function ServiceValueInput({
         </div>
       )}
 
-      <div className="mt-4 rounded-lg bg-[#1D3140]/5 px-3 py-2">
+      <div className="mt-4 rounded-lg bg-neutral-900/5 px-3 py-2">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
           <span className="text-gray-600">Total ao cliente (materiais + serviço):</span>
-          <span className="font-semibold text-[#1D3140]">{currencyFormatter.format(totalCliente)}</span>
+          <span className="font-semibold text-neutral-900">{currencyFormatter.format(totalCliente)}</span>
         </div>
         <div className="mt-1 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
           <span className="text-gray-600">Verba para executar a obra (serviço):</span>
-          <span className="font-medium text-[#1D3140]">
+          <span className="font-medium text-neutral-900">
             {currencyFormatter.format(valorServico)}{' '}
             <span className="text-xs font-normal text-gray-500">
               ({hasMateriais ? `${percentFormatter.format(percentMateriais)}% dos materiais` : '--'})

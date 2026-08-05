@@ -35,7 +35,7 @@ export function TemplatesList({ templates }: Props) {
         <p className="text-sm text-gray-500">Nenhum modelo criado ainda.</p>
         <Link
           href="/tools/andamento-obra/checklists/novo"
-          className="mt-3 inline-block text-sm font-medium text-[#64ABDE] hover:underline"
+          className="mt-3 inline-block text-sm font-medium text-accent-600 hover:underline"
         >
           Criar primeiro modelo
         </Link>
@@ -55,9 +55,9 @@ export function TemplatesList({ templates }: Props) {
             className="flex-1"
           >
             <div className="flex items-center gap-2">
-              <span className="font-medium text-[#1D3140]">{t.name}</span>
+              <span className="font-medium text-neutral-900">{t.name}</span>
               {t.isDefault && (
-                <span className="rounded bg-[#64ABDE]/15 px-2 py-0.5 text-xs font-medium text-[#1D3140]">
+                <span className="rounded bg-accent-500/15 px-2 py-0.5 text-xs font-medium text-neutral-900">
                   Padrão
                 </span>
               )}
@@ -73,7 +73,7 @@ export function TemplatesList({ templates }: Props) {
               <button
                 type="button"
                 onClick={() => handleSetDefault(t.id)}
-                className="rounded px-2 py-1 text-xs text-gray-500 transition-colors hover:bg-gray-100 hover:text-[#1D3140]"
+                className="rounded px-2 py-1 text-xs text-gray-500 transition-colors hover:bg-gray-100 hover:text-neutral-900"
                 disabled={pending}
               >
                 Definir padrão

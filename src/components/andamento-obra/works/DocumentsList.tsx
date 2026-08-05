@@ -37,7 +37,7 @@ export function DocumentsList({ documents, emptyHint }: DocumentsListProps) {
             <FileText className="h-4 w-4" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-[#1D3140]">{doc.name}</p>
+            <p className="truncate text-sm font-medium text-neutral-900">{doc.name}</p>
             <p className="text-[11px] text-gray-500">{formatDate(doc.uploadedAt)}</p>
             {doc.unavailableReason && (
               <p className="mt-0.5 text-[11px] text-amber-700">{doc.unavailableReason}</p>
@@ -49,7 +49,7 @@ export function DocumentsList({ documents, emptyHint }: DocumentsListProps) {
               target="_blank"
               rel="noopener noreferrer"
               download
-              className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-[#1D3140] hover:bg-gray-50"
+              className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-neutral-900 hover:bg-gray-50"
             >
               <Download className="h-3.5 w-3.5" /> Baixar
             </a>

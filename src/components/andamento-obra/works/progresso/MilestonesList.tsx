@@ -113,8 +113,8 @@ export function MilestonesList({
   return (
     <section className="space-y-3">
       <div className="flex items-center gap-2">
-        <ListChecks className="h-4 w-4 text-[#64ABDE]" />
-        <h2 className="text-sm font-semibold text-[#1D3140]">Marcos da obra</h2>
+        <ListChecks className="h-4 w-4 text-accent-600" />
+        <h2 className="text-sm font-semibold text-neutral-900">Marcos da obra</h2>
       </div>
 
       {realtimeStatus === 'disconnected' && (
@@ -132,7 +132,7 @@ export function MilestonesList({
               onClick={() => setOpenId(m.id)}
               className={cn(
                 'flex w-full items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-left text-sm shadow-sm transition',
-                'hover:border-[#64ABDE]/50 hover:shadow',
+                'hover:border-accent-500/50 hover:shadow',
               )}
             >
               <div className="min-w-0 flex-1">
@@ -140,7 +140,7 @@ export function MilestonesList({
                   <span className="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-[10px] font-semibold text-gray-600">
                     {m.orderIndex}
                   </span>
-                  <span className="truncate font-medium text-[#1D3140]">{m.name}</span>
+                  <span className="truncate font-medium text-neutral-900">{m.name}</span>
                 </div>
                 <div className="mt-1 flex items-center gap-2">
                   <MilestoneStatusBadge status={m.status} />

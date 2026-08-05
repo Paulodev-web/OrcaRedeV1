@@ -65,7 +65,7 @@ export default async function SessionCenariosPage({ params }: Props) {
           </p>
           <Link
             href={`/fornecedores/sessao/${sessionId}`}
-            className="mt-4 inline-block text-sm font-medium text-[#64ABDE] transition-colors hover:text-[#1D3140] hover:underline"
+            className="mt-4 inline-block text-sm font-medium text-accent-600 transition-colors hover:text-neutral-900 hover:underline"
           >
             ← Voltar para a sessão
           </Link>

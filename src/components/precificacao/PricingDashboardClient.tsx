@@ -128,13 +128,13 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-xs text-gray-400">
-            <Link href="/" className="hover:text-[#64ABDE]">
+            <Link href="/" className="hover:text-accent-600">
               Portal
             </Link>
             <span className="mx-1">/</span>
             <span className="text-gray-600">Módulo de Precificação</span>
           </p>
-          <h1 className="mt-1 text-2xl font-bold text-[#1D3140]">Dashboard de Precificação</h1>
+          <h1 className="mt-1 text-2xl font-bold text-neutral-900">Dashboard de Precificação</h1>
           <p className="mt-1 text-sm text-gray-500">
             Orçamentos precificados salvos como cards. Clique em um card para editar.
           </p>
@@ -143,7 +143,7 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
         <div className="flex flex-wrap gap-2">
           <Link
             href="/tools/precificacao/nova"
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#64ABDE] px-4 text-sm font-medium text-white shadow-sm transition hover:brightness-95"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-accent-600 px-4 text-sm font-medium text-white shadow-sm transition hover:brightness-95"
           >
             <Calculator className="h-4 w-4" />
             Nova precificação
@@ -154,11 +154,11 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
       <section className="grid gap-4 md:grid-cols-3">
         <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
           <p className="text-xs uppercase tracking-wide text-gray-500">Cards salvos</p>
-          <p className="mt-1 text-2xl font-bold text-[#1D3140]">{items.length}</p>
+          <p className="mt-1 text-2xl font-bold text-neutral-900">{items.length}</p>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
           <p className="text-xs uppercase tracking-wide text-gray-500">Total ao cliente</p>
-          <p className="mt-1 text-2xl font-bold text-[#1D3140]">
+          <p className="mt-1 text-2xl font-bold text-neutral-900">
             {currencyFormatter.format(totals.totalCliente)}
           </p>
         </div>
@@ -177,7 +177,7 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Buscar por orçamento, cliente ou cidade..."
-            className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-[#64ABDE] focus:ring-2 focus:ring-[#64ABDE]/15"
+            className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-accent-500 focus:ring-2 focus:ring-accent-500/15"
           />
         </div>
       </div>
@@ -185,13 +185,13 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
       {filteredItems.length === 0 ? (
         <div className="rounded-xl border-2 border-dashed border-gray-200 bg-white p-10 text-center">
           <Calculator className="mx-auto h-10 w-10 text-gray-300" />
-          <h2 className="mt-3 text-lg font-semibold text-[#1D3140]">Nenhuma precificação salva</h2>
+          <h2 className="mt-3 text-lg font-semibold text-neutral-900">Nenhuma precificação salva</h2>
           <p className="mt-1 text-sm text-gray-500">
             Crie uma precificação vinculada a um orçamento para gerar o primeiro card.
           </p>
           <Link
             href="/tools/precificacao/nova"
-            className="mt-4 inline-flex h-10 items-center justify-center rounded-lg bg-[#64ABDE] px-4 text-sm font-medium text-white transition hover:brightness-95"
+            className="mt-4 inline-flex h-10 items-center justify-center rounded-lg bg-accent-600 px-4 text-sm font-medium text-white transition hover:brightness-95"
           >
             Criar precificação
           </Link>
@@ -215,18 +215,18 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
                     router.push(`/tools/precificacao/editar/${item.id}`);
                   }
                 }}
-                className="cursor-pointer rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-[#64ABDE]/40 hover:shadow-md"
+                className="cursor-pointer rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-accent-500/40 hover:shadow-md"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h2 className="truncate text-base font-semibold text-[#1D3140]" title={item.budgetName}>
+                    <h2 className="truncate text-base font-semibold text-neutral-900" title={item.budgetName}>
                       {item.budgetName}
                     </h2>
                     <p className="mt-0.5 truncate text-sm text-gray-500">
                       {[item.clientName, item.city].filter(Boolean).join(' · ') || 'Sem cliente/cidade'}
                     </p>
                   </div>
-                  <span className="rounded-full border border-[#64ABDE]/30 bg-[#64ABDE]/10 px-2.5 py-1 text-xs font-medium text-[#1D3140]">
+                  <span className="rounded-full border border-accent-500/30 bg-accent-500/10 px-2.5 py-1 text-xs font-medium text-neutral-900">
                     {modeLabel(item)}
                   </span>
                 </div>
@@ -234,11 +234,11 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
                 <div className="mt-4 grid gap-2 text-sm">
                   <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
                     <span className="text-gray-600">Materiais</span>
-                    <span className="font-medium text-[#1D3140]">{currencyFormatter.format(item.result.valorMateriais)}</span>
+                    <span className="font-medium text-neutral-900">{currencyFormatter.format(item.result.valorMateriais)}</span>
                   </div>
                   <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
                     <span className="text-gray-600">Serviço</span>
-                    <span className="font-medium text-[#1D3140]">{currencyFormatter.format(item.result.valorServico)}</span>
+                    <span className="font-medium text-neutral-900">{currencyFormatter.format(item.result.valorServico)}</span>
                   </div>
                   <div className={`flex items-center justify-between rounded-lg px-3 py-2 ${lucroNegativo ? 'bg-red-50' : 'bg-emerald-50'}`}>
                     <span className="text-gray-600">Lucro líquido</span>
@@ -246,9 +246,9 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
                       {currencyFormatter.format(item.result.lucroLiquido)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between rounded-lg border border-[#64ABDE]/30 bg-[#64ABDE]/5 px-3 py-2">
-                    <span className="font-semibold text-[#1D3140]">Total ao cliente</span>
-                    <span className="text-lg font-bold text-[#64ABDE]">
+                  <div className="flex items-center justify-between rounded-lg border border-accent-500/30 bg-accent-500/5 px-3 py-2">
+                    <span className="font-semibold text-neutral-900">Total ao cliente</span>
+                    <span className="text-lg font-bold text-accent-600">
                       {currencyFormatter.format(item.result.precoTotalCliente)}
                     </span>
                   </div>
@@ -257,7 +257,7 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
                 <p className="mt-3 text-xs text-gray-500">
                   Atualizado em {formatDate(item.updatedAt)}
                   <span className="mx-1">·</span>
-                  <span className="text-[#64ABDE]">Clique para editar</span>
+                  <span className="text-accent-600">Clique para editar</span>
                 </p>
 
                 <div className="mt-4 flex gap-2" onClick={(event) => event.stopPropagation()}>
@@ -280,7 +280,7 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
                       handleExport(item);
                     }}
                     disabled={exporting}
-                    className="inline-flex h-9 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:text-[#1D3140] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex h-9 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:text-neutral-900 disabled:cursor-not-allowed disabled:opacity-60"
                     title="Baixar Excel"
                   >
                     <Download className="h-4 w-4" />

@@ -80,7 +80,7 @@ export function RejectMilestoneDialog({
             rows={5}
             maxLength={MILESTONE_REJECTION_REASON_MAX}
             placeholder="Ex.: fotos não evidenciam a conclusão; faltam metragens medidas."
-            className="w-full resize-none rounded-md border border-gray-200 px-3 py-2 text-sm text-[#1D3140] focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE] disabled:bg-gray-50 disabled:text-gray-500"
+            className="w-full resize-none rounded-md border border-gray-200 px-3 py-2 text-sm text-neutral-900 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500 disabled:bg-gray-50 disabled:text-gray-500"
           />
           <div className="flex items-center justify-between text-[11px] text-gray-500">
             <span>Mínimo {MILESTONE_REJECTION_REASON_MIN} caracteres</span>

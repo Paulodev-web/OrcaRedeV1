@@ -99,8 +99,8 @@ function parseContentDispositionFilename(header: string | null): string | null {
 const tabBtnClass = (active: boolean) =>
   `flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
     active
-      ? 'border-[#64ABDE] text-[#64ABDE]'
-      : 'border-transparent text-slate-500 hover:text-[#1D3140]'
+      ? 'border-accent-500 text-accent-600'
+      : 'border-transparent text-slate-500 hover:text-neutral-900'
   }`;
 
 // ---------------------------------------------------------------------------
@@ -131,8 +131,8 @@ function StockEditor({
         className="flex w-full items-center justify-between px-5 py-4 text-left"
       >
         <div className="flex items-center gap-2">
-          <Warehouse className="h-5 w-5 text-[#1D3140]" />
-          <span className="text-sm font-semibold text-[#1D3140]">Estoque em mãos</span>
+          <Warehouse className="h-5 w-5 text-neutral-900" />
+          <span className="text-sm font-semibold text-neutral-900">Estoque em mãos</span>
           <span className="text-xs text-gray-400">
             ({stockMap.size > 0 ? `${stockMap.size} materiais com estoque` : 'nenhum informado'})
           </span>
@@ -162,7 +162,7 @@ function StockEditor({
                   return (
                     <tr key={item.material_id}>
                       <td className="py-2 pr-2">
-                        <p className="text-sm font-medium text-[#1D3140] truncate max-w-[260px]">{item.material_name}</p>
+                        <p className="text-sm font-medium text-neutral-900 truncate max-w-[260px]">{item.material_name}</p>
                         <p className="text-xs text-gray-400 font-mono">{item.material_code}</p>
                       </td>
                       <td className="py-2 text-right text-gray-600">{formatNumber(item.required_qty)}</td>
@@ -173,11 +173,11 @@ function StockEditor({
                           step="any"
                           value={stock || ''}
                           onChange={(e) => onStockChange(item.material_id, parseFloat(e.target.value) || 0)}
-                          className="w-24 rounded border border-gray-200 px-2 py-1 text-right text-sm focus:border-[#64ABDE] focus:outline-none"
+                          className="w-24 rounded border border-gray-200 px-2 py-1 text-right text-sm focus:border-accent-500 focus:outline-none"
                           placeholder="0"
                         />
                       </td>
-                      <td className={`py-2 text-right font-medium ${net === 0 ? 'text-green-600' : 'text-[#1D3140]'}`}>
+                      <td className={`py-2 text-right font-medium ${net === 0 ? 'text-green-600' : 'text-neutral-900'}`}>
                         {formatNumber(net)}
                       </td>
                     </tr>
@@ -191,7 +191,7 @@ function StockEditor({
               type="button"
               onClick={onSave}
               disabled={isSaving || !hasChanges}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#1D3140] px-4 py-2 text-sm font-medium text-white hover:bg-[#1D3140]/90 disabled:opacity-50 transition-colors"
+              className="inline-flex items-center gap-2 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-900/90 disabled:opacity-50 transition-colors"
             >
               {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Salvar e recalcular
@@ -318,15 +318,15 @@ function TabelonaView({
               return (
                 <tr
                   key={item.material_id}
-                  className={`hover:bg-[#64ABDE]/5 transition-colors ${isFullyStocked ? 'opacity-50' : ''} ${isEvenRow ? 'bg-white' : 'bg-gray-50/50'}`}
+                  className={`hover:bg-accent-500/5 transition-colors ${isFullyStocked ? 'opacity-50' : ''} ${isEvenRow ? 'bg-white' : 'bg-gray-50/50'}`}
                 >
                   <td className={`sticky left-0 z-10 px-4 py-3 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] ${isEvenRow ? 'bg-white' : 'bg-gray-50/50'}`}>
-                    <p className="max-w-[240px] truncate font-medium text-[#1D3140]">{item.material_name}</p>
+                    <p className="max-w-[240px] truncate font-medium text-neutral-900">{item.material_name}</p>
                     <p className="text-xs text-gray-400 font-mono">{item.material_code}</p>
                   </td>
                   <td className="px-3 py-3 text-right text-gray-600">{formatNumber(item.required_qty)}</td>
                   <td className="px-3 py-3 text-right text-gray-400">{item.stock_qty > 0 ? formatNumber(item.stock_qty) : '—'}</td>
-                  <td className={`px-3 py-3 text-right font-medium ${isFullyStocked ? 'text-green-600' : 'text-[#1D3140]'}`}>
+                  <td className={`px-3 py-3 text-right font-medium ${isFullyStocked ? 'text-green-600' : 'text-neutral-900'}`}>
                     {isFullyStocked ? '✓' : formatNumber(item.net_qty)}
                   </td>
                   {columns.map((col) => {
@@ -607,7 +607,7 @@ function ScenarioIdealView({
             type="button"
             onClick={onValidateAll}
             disabled={isValidatingAll || ideal.unvalidatedCount === 0}
-            className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-[#1D3140] transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isValidatingAll ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -640,7 +640,7 @@ function ScenarioIdealView({
                 type="button"
                 onClick={handleExportClick}
                 disabled={!canExport || isExporting}
-                className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-[#1D3140] transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
+                className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
               >
                 {isExporting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -671,7 +671,7 @@ function ScenarioIdealView({
               value={updateSupplierSlug}
               onChange={(e) => setUpdateSupplierSlug(e.target.value)}
               disabled={supplierUpdateOptions.length === 0 || isUpdatingSupplierMaterials}
-              className="max-w-[200px] rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-[#1D3140] disabled:cursor-not-allowed disabled:opacity-50 sm:max-w-[240px]"
+              className="max-w-[200px] rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-neutral-900 disabled:cursor-not-allowed disabled:opacity-50 sm:max-w-[240px]"
               aria-label="Escolher fornecedor para atualizar materiais"
             >
               <option value="all">Escolher fornecedor…</option>
@@ -693,7 +693,7 @@ function ScenarioIdealView({
                 type="button"
                 onClick={handleUpdateSupplierClick}
                 disabled={updateSupplierSlug === 'all' || isUpdatingSupplierMaterials}
-                className="inline-flex items-center gap-2 rounded-md border border-[#1D3140] bg-white px-3 py-1.5 text-sm font-medium text-[#1D3140] transition-colors hover:bg-[#1D3140]/5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
+                className="inline-flex items-center gap-2 rounded-md border border-neutral-900 bg-white px-3 py-1.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-900/5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
               >
                 {isUpdatingSupplierMaterials ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -710,14 +710,14 @@ function ScenarioIdealView({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <p className="text-xs font-semibold uppercase text-gray-500">Orçado</p>
-          <p className="text-2xl font-bold text-[#1D3140] mt-1">
+          <p className="text-2xl font-bold text-neutral-900 mt-1">
             {formatCurrency(scenarios.budget_original_total)}
           </p>
           <p className="text-xs text-gray-400 mt-1">Valor do orçamento vinculado</p>
         </div>
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
           <p className="text-xs font-semibold uppercase text-blue-700">Comprando</p>
-          <p className="text-2xl font-bold text-[#1D3140] mt-1">{formatCurrency(filteredIdealTotal)}</p>
+          <p className="text-2xl font-bold text-neutral-900 mt-1">{formatCurrency(filteredIdealTotal)}</p>
           <p className="text-xs text-gray-500 mt-1">
             {validatedLines.length} validados · {suggestedLines.length} sugeridos
           </p>
@@ -744,14 +744,14 @@ function ScenarioIdealView({
 
       <p className="text-sm text-slate-600">
         Exibindo{' '}
-        <span className="font-semibold text-[#1D3140]">{filteredIdealItems.length}</span> material(is) do
+        <span className="font-semibold text-neutral-900">{filteredIdealItems.length}</span> material(is) do
         orçamento consolidado
         {filteredIdealItems.filter((i) => i.net_qty > 0 && !i.is_session_excluded).length !==
           filteredIdealItems.length && (
           <span className="text-slate-500">
             {' '}
             ·{' '}
-            <span className="font-semibold text-[#1D3140]">
+            <span className="font-semibold text-neutral-900">
               {filteredIdealItems.filter((i) => i.net_qty > 0 && !i.is_session_excluded).length}
             </span>{' '}
             com necessidade de compra
@@ -760,7 +760,7 @@ function ScenarioIdealView({
         {scenarios.excluded_material_ids.length > 0 && (
           <span className="text-slate-500">
             {' '}
-            · <span className="font-semibold text-[#1D3140]">{scenarios.excluded_material_ids.length}</span>{' '}
+            · <span className="font-semibold text-neutral-900">{scenarios.excluded_material_ids.length}</span>{' '}
             excluído(s) da sessão
           </span>
         )}
@@ -1352,7 +1352,7 @@ export default function SessionScenariosView({
         />
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#64ABDE]/40 bg-white shadow-md">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-accent-500/40 bg-white shadow-md">
         <div className="flex shrink-0 border-b border-gray-200 bg-white/80">
           <button type="button" onClick={() => setActiveTab('tabelona')} className={tabBtnClass(activeTab === 'tabelona')}>
             <Table2 className="h-4 w-4" /> Tabela de Avaliação

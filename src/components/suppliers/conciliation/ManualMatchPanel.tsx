@@ -80,12 +80,12 @@ export default function ManualMatchPanel({
 
   return (
     <div
-      className={`rounded-lg border border-[#64ABDE]/40 bg-[#64ABDE]/10 ${padding}`}
+      className={`rounded-lg border border-accent-500/40 bg-accent-500/10 ${padding}`}
       role="region"
       aria-label={`Vincular material ao item ${item.descricao.slice(0, 80)}`}
     >
-      <p className="text-xs font-semibold uppercase tracking-wide text-[#1D3140]">
-        Vincular: <span className="font-normal normal-case text-[#64ABDE]">{item.descricao}</span>
+      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-900">
+        Vincular: <span className="font-normal normal-case text-accent-600">{item.descricao}</span>
       </p>
 
       <div className="relative">
@@ -95,7 +95,7 @@ export default function ManualMatchPanel({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar material do orçamento..."
-          className="w-full rounded-md border border-gray-300 bg-white py-2 pl-8 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+          className="w-full rounded-md border border-gray-300 bg-white py-2 pl-8 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent-500"
         />
       </div>
 
@@ -108,8 +108,8 @@ export default function ManualMatchPanel({
               key={mat.id}
               type="button"
               onClick={() => setSelectedMaterialId(mat.id)}
-              className={`w-full px-3 py-2 text-left text-sm transition-colors hover:bg-[#64ABDE]/10 ${
-                selectedMaterialId === mat.id ? 'bg-[#64ABDE]/20 font-medium text-[#1D3140]' : 'text-gray-700'
+              className={`w-full px-3 py-2 text-left text-sm transition-colors hover:bg-accent-500/10 ${
+                selectedMaterialId === mat.id ? 'bg-accent-500/20 font-medium text-neutral-900' : 'text-gray-700'
               }`}
             >
               <span className="font-mono text-xs text-gray-400 mr-2">{mat.code}</span>
@@ -131,7 +131,7 @@ export default function ManualMatchPanel({
                 step="any"
                 value={conversionFactor}
                 onChange={(e) => setConversionFactor(e.target.value)}
-                className="w-28 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+                className="w-28 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent-500"
               />
               <p className="text-xs text-gray-500">
                 Fornecedor vende em <span className="font-medium">{item.unidade}</span>

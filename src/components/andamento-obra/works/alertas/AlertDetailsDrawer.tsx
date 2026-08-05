@@ -117,7 +117,7 @@ export function AlertDetailsDrawer({ alertId, workId, role, onClose }: Props) {
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
       <div className="relative h-full w-full max-w-lg overflow-y-auto bg-white shadow-xl">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
-          <h2 className="text-lg font-semibold text-[#1D3140]">Detalhes do Alerta</h2>
+          <h2 className="text-lg font-semibold text-neutral-900">Detalhes do Alerta</h2>
           <button
             type="button"
             onClick={onClose}
@@ -138,7 +138,7 @@ export function AlertDetailsDrawer({ alertId, workId, role, onClose }: Props) {
           {!loading && data && (
             <div className="space-y-4">
               <div>
-                <h3 className="text-base font-semibold text-[#1D3140]">{data.alert.title}</h3>
+                <h3 className="text-base font-semibold text-neutral-900">{data.alert.title}</h3>
                 <div className="mt-1 flex items-center gap-2">
                   <AlertSeverityBadge severity={data.alert.severity} />
                   <AlertStatusBadge status={data.alert.status} />
@@ -156,7 +156,7 @@ export function AlertDetailsDrawer({ alertId, workId, role, onClose }: Props) {
                   href={`https://maps.google.com/?q=${data.alert.gpsLat},${data.alert.gpsLng}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-[#64ABDE] hover:underline"
+                  className="text-xs text-accent-600 hover:underline"
                 >
                   Abrir no mapa
                 </a>
@@ -181,7 +181,7 @@ export function AlertDetailsDrawer({ alertId, workId, role, onClose }: Props) {
                   {data.alert.updates.map((u) => (
                     <div key={u.id} className="rounded border border-gray-100 bg-gray-50 p-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-[#1D3140]">
+                        <span className="text-xs font-medium text-neutral-900">
                           {UPDATE_TYPE_LABELS[u.updateType] ?? u.updateType}
                         </span>
                         <span className="text-[10px] text-gray-400">
@@ -286,7 +286,7 @@ export function AlertDetailsDrawer({ alertId, workId, role, onClose }: Props) {
                     type="button"
                     onClick={handleComment}
                     disabled={pending || !commentText.trim()}
-                    className="rounded bg-[#1D3140] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+                    className="rounded bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
                   >
                     Enviar
                   </button>

@@ -101,7 +101,7 @@ export function ImportWorkForm({ budget, managers, onBack, onClose }: ImportWork
             minLength={3}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
           />
         </div>
 
@@ -114,7 +114,7 @@ export function ImportWorkForm({ budget, managers, onBack, onClose }: ImportWork
             type="text"
             value={clientName}
             onChange={(e) => setClientName(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
           />
         </div>
 
@@ -128,7 +128,7 @@ export function ImportWorkForm({ budget, managers, onBack, onClose }: ImportWork
             value={utilityCompany}
             onChange={(e) => setUtilityCompany(e.target.value)}
             placeholder="Herda do orçamento se vazio"
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
           />
         </div>
 
@@ -141,7 +141,7 @@ export function ImportWorkForm({ budget, managers, onBack, onClose }: ImportWork
             type="text"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
           />
         </div>
 
@@ -153,7 +153,7 @@ export function ImportWorkForm({ budget, managers, onBack, onClose }: ImportWork
             id="import-manager"
             value={managerId}
             onChange={(e) => setManagerId(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
           >
             <option value="">Sem gerente atribuído</option>
             {activeManagers.map((m) => (
@@ -175,7 +175,7 @@ export function ImportWorkForm({ budget, managers, onBack, onClose }: ImportWork
             type="date"
             value={startedAt}
             onChange={(e) => setStartedAt(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
           />
         </div>
 
@@ -188,7 +188,7 @@ export function ImportWorkForm({ budget, managers, onBack, onClose }: ImportWork
             type="date"
             value={expectedEndAt}
             onChange={(e) => setExpectedEndAt(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
           />
         </div>
 
@@ -201,7 +201,7 @@ export function ImportWorkForm({ budget, managers, onBack, onClose }: ImportWork
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
           />
         </div>
 

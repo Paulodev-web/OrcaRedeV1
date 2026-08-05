@@ -89,10 +89,10 @@ export default function SessionWorkspace({
 
       {/* Conciliation CTA */}
       {hasQuotes && (
-        <section className="rounded-2xl border border-[#64ABDE]/40 bg-white p-6 shadow-md">
+        <section className="rounded-2xl border border-accent-500/40 bg-white p-6 shadow-md">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold text-[#1D3140]">Conciliação de materiais</h2>
+              <h2 className="text-lg font-semibold text-neutral-900">Conciliação de materiais</h2>
               <p className="mt-0.5 text-sm text-slate-500">
                 {conciliationQuotes.length} proposta{conciliationQuotes.length > 1 ? 's' : ''} &middot;{' '}
                 {totalMatched} de {totalItems} itens validados ({progressPct}%)
@@ -100,7 +100,7 @@ export default function SessionWorkspace({
               <div className="mt-2 h-2 w-64 rounded-full bg-slate-200">
                 <div
                   className={`h-2 rounded-full transition-all duration-500 ${
-                    progressPct === 100 ? 'bg-green-500' : 'bg-[#64ABDE]'
+                    progressPct === 100 ? 'bg-green-500' : 'bg-accent-600'
                   }`}
                   style={{ width: `${progressPct}%` }}
                 />
@@ -149,7 +149,7 @@ export default function SessionWorkspace({
               return (
                 <div key={q.id} className="flex items-center justify-between gap-3 px-4 py-3">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-[#1D3140]">{q.supplier_name}</p>
+                    <p className="truncate text-sm font-medium text-neutral-900">{q.supplier_name}</p>
                     <p className="text-xs text-slate-500">
                       {q.matched_count} de {q.item_count} itens vinculados
                     </p>
@@ -208,7 +208,7 @@ export default function SessionWorkspace({
 
           <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm font-medium text-[#1D3140]">Status do processamento por IA</p>
+              <p className="text-sm font-medium text-neutral-900">Status do processamento por IA</p>
               <p className="text-xs text-slate-500">
                 {finalizedJobs} de {totalJobs} finalizados
               </p>
@@ -216,14 +216,14 @@ export default function SessionWorkspace({
             <div className="h-2 w-full rounded-full bg-slate-200">
               <div
                 className={`h-2 rounded-full transition-all duration-500 ${
-                  hasErroredJobs ? 'bg-amber-500' : processingPct === 100 ? 'bg-green-500' : 'bg-[#64ABDE]'
+                  hasErroredJobs ? 'bg-amber-500' : processingPct === 100 ? 'bg-green-500' : 'bg-accent-600'
                 }`}
                 style={{ width: `${processingPct}%` }}
               />
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
               <span className="text-amber-700">Pendentes: {jobsSummary.pending}</span>
-              <span className="text-[#1D3140]">Processando: {jobsSummary.processing}</span>
+              <span className="text-neutral-900">Processando: {jobsSummary.processing}</span>
               <span className="text-green-700">Concluídos: {jobsSummary.completed}</span>
               <span className="text-red-700">Erros: {jobsSummary.error}</span>
             </div>

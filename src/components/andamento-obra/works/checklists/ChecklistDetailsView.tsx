@@ -23,7 +23,7 @@ export function ChecklistDetailsView({ checklist, workId, role, onClose }: Props
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold text-[#1D3140]">{checklist.name}</h2>
+              <h2 className="text-lg font-semibold text-neutral-900">{checklist.name}</h2>
               <ChecklistStatusBadge status={checklist.status} />
             </div>
             <p className="mt-0.5 text-xs text-gray-500">
@@ -60,7 +60,7 @@ export function ChecklistDetailsView({ checklist, workId, role, onClose }: Props
 
           <div className="mb-2 h-2 w-full overflow-hidden rounded-full bg-gray-200">
             <div
-              className="h-full rounded-full bg-[#64ABDE] transition-all"
+              className="h-full rounded-full bg-accent-600 transition-all"
               style={{ width: `${progressPct}%` }}
             />
           </div>

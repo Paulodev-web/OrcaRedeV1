@@ -382,9 +382,9 @@ export default function ScenarioComparisonTable({
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
                 {purchasable.map((item) => (
-                  <tr key={item.material_id} className="hover:bg-[#64ABDE]/5">
+                  <tr key={item.material_id} className="hover:bg-accent-500/5">
                     <td className="px-4 py-2.5">
-                      <p className="font-medium text-[#1D3140]">{item.material_name}</p>
+                      <p className="font-medium text-neutral-900">{item.material_name}</p>
                       <p className="text-xs text-gray-400 font-mono">{item.material_code}</p>
                     </td>
                     <td className="px-2 py-2.5 text-right text-xs font-medium">
@@ -395,7 +395,7 @@ export default function ScenarioComparisonTable({
                         <button
                           type="button"
                           onClick={() => onManualQuoteRequest(item)}
-                          className="text-xs font-medium text-[#64ABDE] hover:text-[#1D3140] hover:underline"
+                          className="text-xs font-medium text-accent-600 hover:text-neutral-900 hover:underline"
                         >
                           Cotação manual
                         </button>
@@ -421,18 +421,18 @@ export default function ScenarioComparisonTable({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <p className="shrink-0 text-sm text-slate-600">
-        Exibindo <span className="font-semibold text-[#1D3140]">{items.length}</span>
+        Exibindo <span className="font-semibold text-neutral-900">{items.length}</span>
         {isFiltered && totalItemCount != null && totalItemCount !== items.length ? (
           <>
             {' '}
-            de <span className="font-semibold text-[#1D3140]">{totalItemCount}</span>
+            de <span className="font-semibold text-neutral-900">{totalItemCount}</span>
           </>
         ) : null}{' '}
         material(is) do orçamento consolidado
         {withPurchaseCount !== items.length && (
           <span className="text-slate-500">
             {' '}
-            · <span className="font-semibold text-[#1D3140]">{withPurchaseCount}</span> com necessidade de
+            · <span className="font-semibold text-neutral-900">{withPurchaseCount}</span> com necessidade de
             compra
           </span>
         )}
@@ -514,10 +514,10 @@ export default function ScenarioComparisonTable({
                   <tr
                     key={item.material_id}
                     onClick={() => onMaterialClick?.(item)}
-                    className={`hover:bg-[#64ABDE]/5 transition-colors cursor-pointer ${isFullyStocked || isSessionExcluded ? 'opacity-50' : ''} ${rowBg}`}
+                    className={`hover:bg-accent-500/5 transition-colors cursor-pointer ${isFullyStocked || isSessionExcluded ? 'opacity-50' : ''} ${rowBg}`}
                   >
                     <td className={`sticky left-0 z-10 px-4 py-2.5 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] ${rowBg}`}>
-                      <p className="font-medium text-[#1D3140] truncate max-w-[200px]" title={item.material_name}>
+                      <p className="font-medium text-neutral-900 truncate max-w-[200px]" title={item.material_name}>
                         {item.material_name}
                       </p>
                       <p className="text-xs text-gray-400 font-mono">{item.material_code}</p>
@@ -531,7 +531,7 @@ export default function ScenarioComparisonTable({
                     <td className="px-2 py-2.5 text-right text-gray-400 text-xs">
                       {item.stock_qty > 0 ? formatNumber(item.stock_qty) : '—'}
                     </td>
-                    <td className={`px-2 py-2.5 text-right text-xs font-medium ${isFullyStocked ? 'text-green-600' : isSessionExcluded ? 'text-slate-400' : 'text-[#1D3140]'}`}>
+                    <td className={`px-2 py-2.5 text-right text-xs font-medium ${isFullyStocked ? 'text-green-600' : isSessionExcluded ? 'text-slate-400' : 'text-neutral-900'}`}>
                       {isSessionExcluded ? '—' : isFullyStocked ? '✓' : formatNumber(item.net_qty)}
                     </td>
                     {visibleQuotes.map((q) => {
@@ -591,7 +591,7 @@ export default function ScenarioComparisonTable({
                           <button
                             type="button"
                             onClick={() => onManualQuoteRequest(item)}
-                            className="text-xs font-medium text-[#64ABDE] hover:text-[#1D3140] hover:underline"
+                            className="text-xs font-medium text-accent-600 hover:text-neutral-900 hover:underline"
                           >
                             Cotação manual
                           </button>

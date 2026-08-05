@@ -129,7 +129,7 @@ export function TemplateEditor({ template }: Props) {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-[#1D3140]">
+      <h1 className="mb-6 text-2xl font-bold text-neutral-900">
         {isNew ? 'Novo modelo' : 'Editar modelo'}
       </h1>
 
@@ -149,7 +149,7 @@ export function TemplateEditor({ template }: Props) {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#64ABDE] focus:ring-1 focus:ring-[#64ABDE]"
+            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-accent-500 focus:ring-1 focus:ring-accent-500"
             maxLength={200}
           />
         </div>
@@ -163,7 +163,7 @@ export function TemplateEditor({ template }: Props) {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#64ABDE] focus:ring-1 focus:ring-[#64ABDE]"
+            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-accent-500 focus:ring-1 focus:ring-accent-500"
           />
         </div>
 
@@ -172,7 +172,7 @@ export function TemplateEditor({ template }: Props) {
             type="checkbox"
             checked={isDefault}
             onChange={(e) => setIsDefault(e.target.checked)}
-            className="h-4 w-4 rounded border-gray-300 text-[#64ABDE] focus:ring-[#64ABDE]"
+            className="h-4 w-4 rounded border-gray-300 text-accent-600 focus:ring-accent-500"
           />
           Modelo padrão (aparece como sugestão ao atribuir)
         </label>
@@ -183,7 +183,7 @@ export function TemplateEditor({ template }: Props) {
             <button
               type="button"
               onClick={addItem}
-              className="text-xs font-medium text-[#64ABDE] hover:underline"
+              className="text-xs font-medium text-accent-600 hover:underline"
             >
               + Adicionar item
             </button>
@@ -249,7 +249,7 @@ export function TemplateEditor({ template }: Props) {
             type="button"
             onClick={handleSubmit}
             disabled={pending}
-            className="rounded-lg bg-[#1D3140] px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#2A4557] disabled:opacity-50"
+            className="rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-neutral-800 disabled:opacity-50"
           >
             {pending ? 'Salvando...' : isNew ? 'Criar modelo' : 'Salvar alterações'}
           </button>

@@ -241,7 +241,7 @@ export default function SupplierPdfImporter({ budgets, embedded = false }: Props
       {/* ------------------------------------------------------------------ */}
       <div className={`${cardSurface} flex-shrink-0`}>
         <div className="p-6">
-          <h2 className="text-base font-semibold text-[#1D3140] mb-4">
+          <h2 className="text-base font-semibold text-neutral-900 mb-4">
             1. Contexto da cotação
           </h2>
           <div>
@@ -295,7 +295,7 @@ export default function SupplierPdfImporter({ budgets, embedded = false }: Props
       {!items && (
         <div className={`${cardSurface} flex-shrink-0`}>
           <div className="p-6">
-            <h2 className="text-base font-semibold text-[#1D3140] mb-4">2. Arquivo PDF</h2>
+            <h2 className="text-base font-semibold text-neutral-900 mb-4">2. Arquivo PDF</h2>
 
             {/* Zona de drop */}
             <label
@@ -304,16 +304,16 @@ export default function SupplierPdfImporter({ budgets, embedded = false }: Props
                 'flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-lg transition-colors',
                 canUpload
                   ? selectedFile
-                    ? 'border-[#64ABDE] bg-[#64ABDE]/10 cursor-pointer'
+                    ? 'border-accent-500 bg-accent-500/10 cursor-pointer'
                     : 'border-gray-300 bg-gray-50 hover:bg-gray-100 hover:border-gray-400 cursor-pointer'
                   : 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60',
               ].join(' ')}
             >
               {selectedFile ? (
                 <div className="flex flex-col items-center gap-2">
-                  <FileText className="h-10 w-10 text-[#64ABDE]" />
-                  <p className="text-sm font-medium text-[#1D3140]">{selectedFile.name}</p>
-                  <p className="text-xs text-[#64ABDE]">
+                  <FileText className="h-10 w-10 text-accent-600" />
+                  <p className="text-sm font-medium text-neutral-900">{selectedFile.name}</p>
+                  <p className="text-xs text-accent-600">
                     {(selectedFile.size / 1024).toFixed(1)} KB
                   </p>
                 </div>
@@ -354,7 +354,7 @@ export default function SupplierPdfImporter({ budgets, embedded = false }: Props
                 type="button"
                 onClick={handleProcess}
                 disabled={!selectedFile || !canUpload || isPending}
-                className="flex items-center gap-2 px-5 py-2 bg-[#64ABDE] text-white rounded-md hover:brightness-95 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-5 py-2 bg-accent-600 text-white rounded-md hover:brightness-95 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isPending ? (
                   <>
@@ -381,7 +381,7 @@ export default function SupplierPdfImporter({ budgets, embedded = false }: Props
           {/* Cabeçalho da tabela */}
           <div className="p-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
             <div>
-              <h2 className="text-base font-semibold text-[#1D3140]">
+              <h2 className="text-base font-semibold text-neutral-900">
                 3. Revisão dos itens extraídos
               </h2>
               <p className="text-sm text-gray-500 mt-0.5">

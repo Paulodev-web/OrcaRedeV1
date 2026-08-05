@@ -283,7 +283,7 @@ export function ProposalEditor(props: ProposalEditorProps) {
                       disabled={locked || pending}
                       onChange={(event) => toggleSection(section.id, event.target.checked)}
                       title={section.enabled ? 'Seção ligada' : 'Seção desligada'}
-                      className="ml-2 h-3.5 w-3.5 shrink-0 accent-[#1D3140]"
+                      className="ml-2 h-3.5 w-3.5 shrink-0 accent-accent-600"
                     />
                     <button
                       type="button"

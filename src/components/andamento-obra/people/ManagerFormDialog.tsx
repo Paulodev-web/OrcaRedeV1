@@ -154,7 +154,7 @@ export function ManagerFormDialog({
                 Senha temporária
               </label>
               <div className="flex items-center gap-2">
-                <code className="flex-1 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 font-mono text-base text-[#1D3140]">
+                <code className="flex-1 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 font-mono text-base text-neutral-900">
                   {createdPassword}
                 </code>
                 <button
@@ -210,7 +210,7 @@ export function ManagerFormDialog({
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
               />
             </div>
 
@@ -225,7 +225,7 @@ export function ManagerFormDialog({
                 disabled={mode === 'edit'}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE] disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500"
               />
             </div>
 
@@ -238,7 +238,7 @@ export function ManagerFormDialog({
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
               />
             </div>
 
@@ -256,7 +256,7 @@ export function ManagerFormDialog({
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Mínimo 8 caracteres"
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
                   />
                   <button
                     type="button"
@@ -279,7 +279,7 @@ export function ManagerFormDialog({
                   type="checkbox"
                   checked={isActive}
                   onChange={(e) => setIsActive(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-[#64ABDE] focus:ring-[#64ABDE]"
+                  className="h-4 w-4 rounded border-gray-300 text-accent-600 focus:ring-accent-500"
                 />
                 Conta ativa
               </label>

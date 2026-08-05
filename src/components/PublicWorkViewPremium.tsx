@@ -17,7 +17,7 @@ interface PublicWorkViewProps {
 }
 
 // ── SVG Donut ────────────────────────────────────────────────────────────────
-function DonutChart({ percent, color = '#64ABDE', size = 80, stroke = 8 }: {
+function DonutChart({ percent, color = '#5f8dd1', size = 80, stroke = 8 }: {
   percent: number; color?: string; size?: number; stroke?: number;
 }) {
   const r = (size - stroke) / 2;
@@ -48,7 +48,7 @@ function MetricDonut({ title, installed, planned, suffix = '' }: {
         </div>
       </div>
       <div className="min-w-0">
-        <p className="text-[11px] font-semibold text-[#64ABDE] uppercase tracking-wider leading-tight">
+        <p className="text-[11px] font-semibold text-accent-600 uppercase tracking-wider leading-tight">
           {title}
         </p>
         <p className="text-lg font-bold text-white leading-tight mt-0.5">
@@ -63,7 +63,7 @@ function MetricDonut({ title, installed, planned, suffix = '' }: {
 }
 
 // ── Progress Bar ─────────────────────────────────────────────────────────────
-function ProgressBar({ label, value, total, color = '#64ABDE', weight }: {
+function ProgressBar({ label, value, total, color = '#5f8dd1', weight }: {
   label: string; value: number; total: number; color?: string; weight?: number;
 }) {
   const pct = total > 0 ? Math.min(Math.round((value / total) * 100), 100) : 0;
@@ -92,7 +92,7 @@ function ProgressBar({ label, value, total, color = '#64ABDE', weight }: {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export function PublicWorkView({ workId }: PublicWorkViewProps) {
-  const ON = { navy: '#1D3140', blue: '#64ABDE', accent: '#4E90C1' };
+  const ON = { navy: '#262623', blue: '#5f8dd1', accent: '#4472b4' };
 
   const [workData, setWorkData] = useState<WorkTracking | null>(null);
   const [, setWorkImages] = useState<Array<{
@@ -313,7 +313,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
 
       {/* ── HEADER: logos à esquerda, nome do orçamento no centro ───────────── */}
       <div className="flex-shrink-0 relative overflow-hidden min-w-0"
-        style={{ background: `linear-gradient(140deg, ${ON.navy} 0%, #223f52 45%, ${ON.accent} 100%)` }}>
+        style={{ background: `linear-gradient(140deg, ${ON.navy} 0%, #353530 45%, ${ON.accent} 100%)` }}>
         <div className="absolute inset-0 opacity-20"
           style={{ backgroundImage: 'radial-gradient(circle at 20% 20%, #ffffff 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
         <div className="relative px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-5 lg:py-7 text-white min-w-0">
@@ -363,7 +363,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
               </div>
               <div className="flex items-center gap-3 sm:gap-4">
                 <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full p-2 flex-shrink-0" style={donutBg}>
-                  <div className="w-full h-full rounded-full bg-[#173040] flex items-center justify-center">
+                  <div className="w-full h-full rounded-full bg-neutral-900 flex items-center justify-center">
                     <span className="text-sm sm:text-base font-bold">{realPct}%</span>
                   </div>
                 </div>
@@ -437,7 +437,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
               <p className="text-sm font-semibold text-slate-900 mb-2.5">Painel de execucao</p>
               <div className="space-y-2">
                 <ProgressBar label="Postes" value={completedPosts} total={totalPosts} color={ON.blue} />
-                <ProgressBar label="Rede MT (m)" value={mtInstalled} total={mtPlanned} color="#4E90C1" />
+                <ProgressBar label="Rede MT (m)" value={mtInstalled} total={mtPlanned} color="#4472b4" />
                 <ProgressBar label="Rede BT (m)" value={btInstalled} total={btPlanned} color="#2dd4bf" />
                 <ProgressBar label="Equipamentos" value={equipInstalled} total={equipPlanned} color="#a78bfa" />
                 <ProgressBar label="Iluminacao" value={lightInstalled} total={lightPlanned} color="#fb923c" />
@@ -487,7 +487,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
           {/* ── LEFT: sidebar de métricas ────────────────────────────────── */}
           <div className="h-full min-w-0 rounded-2xl flex flex-col overflow-hidden" style={{ backgroundColor: ON.navy }}>
             <div className="px-4 xl:px-6 pt-5 pb-3 flex-shrink-0">
-              <p className="text-[11px] font-bold text-[#64ABDE] uppercase tracking-widest">Avanco fisico</p>
+              <p className="text-[11px] font-bold text-accent-600 uppercase tracking-widest">Avanco fisico</p>
             </div>
             <div className="flex-1 overflow-y-auto px-4 xl:px-6 pb-5 space-y-5 [scrollbar-width:thin]">
               <MetricDonut title="Postes" installed={completedPosts} planned={totalPosts} />
@@ -548,7 +548,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
               <p className="text-sm font-semibold text-slate-900 mb-2.5">Painel de execucao</p>
               <div className="space-y-2">
                 <ProgressBar label="Postes" value={completedPosts} total={totalPosts} color={ON.blue} />
-                <ProgressBar label="Rede MT (m)" value={mtInstalled} total={mtPlanned} color="#4E90C1" />
+                <ProgressBar label="Rede MT (m)" value={mtInstalled} total={mtPlanned} color="#4472b4" />
                 <ProgressBar label="Rede BT (m)" value={btInstalled} total={btPlanned} color="#2dd4bf" />
                 <ProgressBar label="Equipamentos" value={equipInstalled} total={equipPlanned} color="#a78bfa" />
                 <ProgressBar label="Iluminacao" value={lightInstalled} total={lightPlanned} color="#fb923c" />

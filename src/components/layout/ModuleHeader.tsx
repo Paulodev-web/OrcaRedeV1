@@ -52,7 +52,7 @@ export function ModuleHeader({
   return (
     <header
       className={cn(
-        "border-b border-slate-200 bg-white/95 backdrop-blur-sm",
+        "border-b border-neutral-200 bg-surface/90 backdrop-blur-md",
         sticky && "sticky top-0 z-30",
         className,
       )}
@@ -61,7 +61,7 @@ export function ModuleHeader({
         {crumbs.length > 0 ? (
           <nav
             aria-label="Trilha de navegação"
-            className="flex flex-wrap items-center gap-1.5 text-xs text-slate-400"
+            className="flex flex-wrap items-center gap-1.5 text-xs text-neutral-400"
           >
             {crumbs.map((crumb, index) => {
               const CrumbIcon = crumb.icon;
@@ -79,13 +79,13 @@ export function ModuleHeader({
                   {crumb.href && !isLast ? (
                     <Link
                       href={crumb.href}
-                      className="inline-flex items-center gap-1 transition-colors hover:text-brand-blue"
+                      className="inline-flex items-center gap-1 rounded-sm transition-colors hover:text-accent-600"
                     >
                       {body}
                     </Link>
                   ) : (
                     <span
-                      className="inline-flex items-center gap-1 font-medium text-slate-600"
+                      className="inline-flex items-center gap-1 font-medium text-neutral-600"
                       aria-current={isLast ? "page" : undefined}
                     >
                       {body}
@@ -100,13 +100,17 @@ export function ModuleHeader({
         <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex min-w-0 items-start gap-3">
             {Icon ? (
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-brand-blue/40 bg-brand-blue/15">
-                <Icon className="h-5 w-5 text-brand-navy" />
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-accent-200 bg-accent-50">
+                <Icon className="h-5 w-5 text-accent-600" />
               </span>
             ) : null}
             <div className="min-w-0">
-              <h1 className="truncate text-xl font-bold text-brand-navy sm:text-2xl">{title}</h1>
-              {description ? <p className="mt-1 text-sm text-slate-500">{description}</p> : null}
+              {/* `tracking-tight` no título: em pesos altos o espacejamento
+                  padrão fica frouxo e o título perde densidade. */}
+              <h1 className="truncate text-xl font-semibold tracking-tight text-neutral-900 sm:text-2xl">
+                {title}
+              </h1>
+              {description ? <p className="mt-1 text-sm text-neutral-500">{description}</p> : null}
             </div>
           </div>
 

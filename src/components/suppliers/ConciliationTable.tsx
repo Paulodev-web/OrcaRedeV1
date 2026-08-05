@@ -31,7 +31,7 @@ const formatNumber = (v: number) =>
 const STATUS_CONFIG = {
   exact_memory: {
     label: 'Memória',
-    className: 'border border-[#64ABDE]/40 bg-[#64ABDE]/15 text-[#1D3140]',
+    className: 'border border-accent-500/40 bg-accent-500/15 text-neutral-900',
     icon: <Database className="h-3 w-3" />,
   },
   semantic_ai: {
@@ -158,7 +158,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
         </div>
         <div className="w-full bg-gray-100 rounded-full h-2">
           <div
-            className="h-2 rounded-full bg-[#64ABDE] transition-all duration-500"
+            className="h-2 rounded-full bg-accent-600 transition-all duration-500"
             style={{ width: `${progressPct}%` }}
           />
         </div>
@@ -221,7 +221,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
 
                     {/* Descrição do fornecedor */}
                     <td className="px-4 py-3">
-                      <p className="text-sm text-[#1D3140] line-clamp-2 max-w-xs" title={item.descricao}>
+                      <p className="text-sm text-neutral-900 line-clamp-2 max-w-xs" title={item.descricao}>
                         {item.descricao}
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5">
@@ -238,7 +238,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
                     <td className="px-4 py-3">
                       {item.matched_material_id ? (
                         <div>
-                          <p className="text-sm text-[#1D3140] font-medium">{item.material_name}</p>
+                          <p className="text-sm text-neutral-900 font-medium">{item.material_name}</p>
                           <p className="text-xs text-gray-400">
                             <span className="font-mono">{item.material_code}</span>
                             {item.conversion_factor !== 1 && (
@@ -252,7 +252,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
                         <button
                           type="button"
                           onClick={() => setExpandedId(isExpanded ? null : item.id)}
-                          className="text-sm text-[#64ABDE] transition-colors hover:text-[#1D3140] hover:underline"
+                          className="text-sm text-accent-600 transition-colors hover:text-neutral-900 hover:underline"
                         >
                           + Vincular material
                         </button>
@@ -263,7 +263,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
                     <td className="px-4 py-3 text-right">
                       {item.matched_material_id ? (
                         <div>
-                          <p className="text-sm font-semibold text-[#1D3140]">
+                          <p className="text-sm font-semibold text-neutral-900">
                             {formatCurrency(preco_normalizado)}
                           </p>
                           <p className="text-xs text-gray-400">/{item.material_unit ?? item.unidade}</p>

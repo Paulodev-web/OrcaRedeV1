@@ -50,12 +50,12 @@ export function AppLayout({
       />
 
       <div className="flex min-h-screen w-full min-w-0 flex-1 flex-col">
-        <div className="sticky top-0 z-40 flex items-center gap-3 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur-sm lg:hidden">
+        <div className="sticky top-0 z-40 flex items-center gap-3 border-b border-neutral-200 bg-surface/90 px-4 py-3 backdrop-blur-md lg:hidden">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
             aria-label="Abrir navegação"
-            className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-brand-navy"
+            className="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
           >
             <Menu className="h-5 w-5" />
           </button>
@@ -66,7 +66,7 @@ export function AppLayout({
             height={ON_ENGENHARIA_LOGO_SIZE.height}
             className="h-7 w-auto object-contain"
           />
-          <span className="text-sm font-bold text-brand-navy">ON Engenharia</span>
+          <span className="text-sm font-semibold text-neutral-900">ON Engenharia</span>
         </div>
 
         {header}

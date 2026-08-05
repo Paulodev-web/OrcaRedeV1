@@ -173,7 +173,7 @@ export default function ExtractionCurationModal({
             value={budgetName}
             onChange={(e) => setBudgetName(e.target.value)}
             placeholder="Ex: Cotação Fornecedor ABC - Abril 2026"
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]/30"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500/30"
           />
           <p className="mt-1 text-xs text-gray-400">
             Esse nome será usado para identificar o orçamento na análise de cenários.
@@ -232,7 +232,7 @@ export default function ExtractionCurationModal({
                         <td className="px-3 py-2">
                           {isEditing ? (
                             <input
-                              className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-[#64ABDE] focus:outline-none"
+                              className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-accent-500 focus:outline-none"
                               value={editState!.descricao}
                               onChange={(e) =>
                                 setEditState((s) => (s ? { ...s, descricao: e.target.value } : s))
@@ -245,7 +245,7 @@ export default function ExtractionCurationModal({
                         <td className="px-3 py-2">
                           {isEditing ? (
                             <input
-                              className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-[#64ABDE] focus:outline-none"
+                              className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-accent-500 focus:outline-none"
                               value={editState!.unidade}
                               onChange={(e) =>
                                 setEditState((s) => (s ? { ...s, unidade: e.target.value } : s))
@@ -259,7 +259,7 @@ export default function ExtractionCurationModal({
                           {isEditing ? (
                             <input
                               type="number"
-                              className="w-full rounded border border-gray-300 px-2 py-1 text-right text-sm focus:border-[#64ABDE] focus:outline-none"
+                              className="w-full rounded border border-gray-300 px-2 py-1 text-right text-sm focus:border-accent-500 focus:outline-none"
                               value={editState!.quantidade}
                               onChange={(e) =>
                                 setEditState((s) => (s ? { ...s, quantidade: e.target.value } : s))
@@ -274,7 +274,7 @@ export default function ExtractionCurationModal({
                             <input
                               type="number"
                               step="0.01"
-                              className="w-full rounded border border-gray-300 px-2 py-1 text-right text-sm focus:border-[#64ABDE] focus:outline-none"
+                              className="w-full rounded border border-gray-300 px-2 py-1 text-right text-sm focus:border-accent-500 focus:outline-none"
                               value={editState!.preco_unit}
                               onChange={(e) =>
                                 setEditState((s) => (s ? { ...s, preco_unit: e.target.value } : s))
@@ -292,7 +292,7 @@ export default function ExtractionCurationModal({
                               <input
                                 type="number"
                                 step="0.01"
-                                className="w-full rounded border border-blue-300 px-2 py-1 text-right text-sm focus:border-[#64ABDE] focus:outline-none"
+                                className="w-full rounded border border-blue-300 px-2 py-1 text-right text-sm focus:border-accent-500 focus:outline-none"
                                 value={editState!.preco_unit_desconto}
                                 onChange={(e) =>
                                   setEditState((s) => (s ? { ...s, preco_unit_desconto: e.target.value } : s))
@@ -310,7 +310,7 @@ export default function ExtractionCurationModal({
                             <input
                               type="number"
                               step="0.01"
-                              className="w-full rounded border border-gray-300 px-2 py-1 text-right text-sm focus:border-[#64ABDE] focus:outline-none"
+                              className="w-full rounded border border-gray-300 px-2 py-1 text-right text-sm focus:border-accent-500 focus:outline-none"
                               value={editState!.total_item}
                               onChange={(e) =>
                                 setEditState((s) => (s ? { ...s, total_item: e.target.value } : s))
@@ -349,7 +349,7 @@ export default function ExtractionCurationModal({
                             <button
                               type="button"
                               onClick={() => startEditing(item)}
-                              className="rounded p-1 text-gray-400 hover:bg-[#64ABDE]/10 hover:text-[#64ABDE]"
+                              className="rounded p-1 text-gray-400 hover:bg-accent-500/10 hover:text-accent-600"
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </button>
@@ -364,7 +364,7 @@ export default function ExtractionCurationModal({
                     <td colSpan={hasDesconto ? 6 : 5} className="px-3 py-2 text-right text-gray-700">
                       Total geral
                     </td>
-                    <td className="px-3 py-2 text-right text-[#1D3140]">{fmtCurrency(totalGeral)}</td>
+                    <td className="px-3 py-2 text-right text-neutral-900">{fmtCurrency(totalGeral)}</td>
                     <td />
                   </tr>
                 </tfoot>

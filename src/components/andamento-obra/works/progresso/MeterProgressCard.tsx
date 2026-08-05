@@ -27,7 +27,7 @@ export function MeterProgressCard({ meters }: MeterProgressCardProps) {
           return (
             <div key={c.key}>
               <div className="mb-1 flex items-center justify-between text-xs">
-                <span className="font-medium text-[#1D3140]">{c.label}</span>
+                <span className="font-medium text-neutral-900">{c.label}</span>
                 <span className="text-gray-500">
                   {realized.toFixed(1)} / {planned.toFixed(1)} m
                 </span>

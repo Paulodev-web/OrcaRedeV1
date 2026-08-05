@@ -43,7 +43,7 @@ export function DailyLogFilters({ value, onChange, monthOptions }: DailyLogFilte
             className={cn(
               'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
               value.status === t.id
-                ? 'bg-[#64ABDE]/15 text-[#1D3140]'
+                ? 'bg-accent-500/15 text-neutral-900'
                 : 'text-gray-600 hover:bg-gray-100',
             )}
             aria-pressed={value.status === t.id}

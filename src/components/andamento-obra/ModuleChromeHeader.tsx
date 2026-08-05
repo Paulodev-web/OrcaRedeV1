@@ -13,7 +13,7 @@ export function ModuleChromeHeader() {
         <div className="flex flex-wrap items-center gap-1 text-xs text-gray-400">
           <Link
             href="/"
-            className="inline-flex items-center gap-1 transition-colors hover:text-[#64ABDE]"
+            className="inline-flex items-center gap-1 transition-colors hover:text-accent-600"
           >
             <Grid3X3 className="h-3.5 w-3.5 shrink-0" />
             Portal
@@ -21,7 +21,7 @@ export function ModuleChromeHeader() {
           <ChevronRight className="h-3 w-3 shrink-0 text-gray-300" aria-hidden />
           <Link
             href="/tools/andamento-obra"
-            className="font-medium text-gray-600 transition-colors hover:text-[#64ABDE]"
+            className="font-medium text-gray-600 transition-colors hover:text-accent-600"
           >
             Andamento de obra
           </Link>
@@ -33,7 +33,7 @@ export function ModuleChromeHeader() {
             className="h-8 w-auto shrink-0 object-contain sm:h-9"
           />
           <div className="min-w-0">
-            <p className="text-sm font-bold leading-tight text-[#1D3140] sm:text-base">
+            <p className="text-sm font-bold leading-tight text-neutral-900 sm:text-base">
               Andamento de Obra
             </p>
             <p className="text-xs leading-tight text-slate-500">

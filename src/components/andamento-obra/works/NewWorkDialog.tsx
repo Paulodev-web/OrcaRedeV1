@@ -120,12 +120,12 @@ function ModeStep({
         <button
           type="button"
           onClick={onPickCreate}
-          className="group flex flex-col items-start gap-2 rounded-xl border border-gray-200 bg-white p-4 text-left transition-all hover:border-[#64ABDE]/60 hover:shadow-md"
+          className="group flex flex-col items-start gap-2 rounded-xl border border-gray-200 bg-white p-4 text-left transition-all hover:border-accent-500/60 hover:shadow-md"
         >
-          <span className="rounded-lg bg-[#64ABDE]/10 p-2 text-[#1D3140] group-hover:bg-[#64ABDE]/20">
+          <span className="rounded-lg bg-accent-500/10 p-2 text-neutral-900 group-hover:bg-accent-500/20">
             <FilePlus2 className="h-5 w-5" />
           </span>
-          <span className="text-sm font-semibold text-[#1D3140]">Criar do zero</span>
+          <span className="text-sm font-semibold text-neutral-900">Criar do zero</span>
           <span className="text-xs text-gray-500">
             Cadastra uma obra sem vínculo com orçamento. Você adiciona postes e materiais
             depois, manualmente.
@@ -135,12 +135,12 @@ function ModeStep({
         <button
           type="button"
           onClick={onPickImport}
-          className="group flex flex-col items-start gap-2 rounded-xl border border-gray-200 bg-white p-4 text-left transition-all hover:border-[#64ABDE]/60 hover:shadow-md"
+          className="group flex flex-col items-start gap-2 rounded-xl border border-gray-200 bg-white p-4 text-left transition-all hover:border-accent-500/60 hover:shadow-md"
         >
-          <span className="rounded-lg bg-[#64ABDE]/10 p-2 text-[#1D3140] group-hover:bg-[#64ABDE]/20">
+          <span className="rounded-lg bg-accent-500/10 p-2 text-neutral-900 group-hover:bg-accent-500/20">
             <FileSearch className="h-5 w-5" />
           </span>
-          <span className="text-sm font-semibold text-[#1D3140]">Importar do OrçaRede</span>
+          <span className="text-sm font-semibold text-neutral-900">Importar do OrçaRede</span>
           <span className="text-xs text-gray-500">
             Importa PDF, postes, materiais e metragem de um orçamento finalizado. Snapshot
             fixo: alterações posteriores no orçamento não alteram a obra.
@@ -260,7 +260,7 @@ function WorkForm({ managers, work, onClose, onBack }: WorkFormProps) {
             minLength={3}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
           />
         </div>
 
@@ -273,7 +273,7 @@ function WorkForm({ managers, work, onClose, onBack }: WorkFormProps) {
             type="text"
             value={clientName}
             onChange={(e) => setClientName(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
           />
         </div>
 
@@ -286,7 +286,7 @@ function WorkForm({ managers, work, onClose, onBack }: WorkFormProps) {
             type="text"
             value={utilityCompany}
             onChange={(e) => setUtilityCompany(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
           />
         </div>
 
@@ -299,7 +299,7 @@ function WorkForm({ managers, work, onClose, onBack }: WorkFormProps) {
             type="text"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
           />
         </div>
 
@@ -311,7 +311,7 @@ function WorkForm({ managers, work, onClose, onBack }: WorkFormProps) {
             id="work-manager"
             value={managerId}
             onChange={(e) => setManagerId(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
           >
             <option value="">Sem gerente atribuído</option>
             {activeManagers.map((m) => (
@@ -338,7 +338,7 @@ function WorkForm({ managers, work, onClose, onBack }: WorkFormProps) {
             type="date"
             value={startedAt}
             onChange={(e) => setStartedAt(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
           />
         </div>
 
@@ -351,7 +351,7 @@ function WorkForm({ managers, work, onClose, onBack }: WorkFormProps) {
             type="date"
             value={expectedEndAt}
             onChange={(e) => setExpectedEndAt(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
           />
         </div>
 
@@ -364,7 +364,7 @@ function WorkForm({ managers, work, onClose, onBack }: WorkFormProps) {
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
           />
         </div>
 

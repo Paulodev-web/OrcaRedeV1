@@ -32,11 +32,11 @@ export function WorkCard({
   return (
     <Link
       href={`/tools/andamento-obra/obras/${work.id}`}
-      className="relative block rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:border-[#64ABDE]/50 hover:shadow-md"
+      className="relative block rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:border-accent-500/50 hover:shadow-md"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-semibold text-[#1D3140]">{work.name}</h3>
+          <h3 className="truncate text-sm font-semibold text-neutral-900">{work.name}</h3>
           {work.clientName && (
             <p className="mt-0.5 truncate text-xs text-gray-500">{work.clientName}</p>
           )}
@@ -101,7 +101,7 @@ export function WorkCard({
       {unreadCount > 0 && (
         <span
           aria-hidden
-          className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#64ABDE] px-1 text-[10px] font-bold text-white shadow-md"
+          className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-600 px-1 text-[10px] font-bold text-white shadow-md"
         >
           {unreadCount > 99 ? '99+' : unreadCount}
         </span>

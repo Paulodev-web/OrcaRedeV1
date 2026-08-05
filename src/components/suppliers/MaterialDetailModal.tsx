@@ -89,7 +89,7 @@ export default function MaterialDetailModal({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5 text-[#64ABDE]" />
+            <Package className="h-5 w-5 text-accent-600" />
             {item.material_name}
           </DialogTitle>
           <DialogDescription>
@@ -102,7 +102,7 @@ export default function MaterialDetailModal({
           <div className="grid grid-cols-3 gap-4">
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-center">
               <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Necessidade (orçamento)</p>
-              <p className="text-lg font-bold text-[#1D3140]">{formatNumber(item.required_qty)}</p>
+              <p className="text-lg font-bold text-neutral-900">{formatNumber(item.required_qty)}</p>
             </div>
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-center">
               <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Estoque</p>
@@ -110,9 +110,9 @@ export default function MaterialDetailModal({
                 {item.stock_qty > 0 ? formatNumber(item.stock_qty) : '—'}
               </p>
             </div>
-            <div className={`rounded-lg border p-3 text-center ${isFullyStocked ? 'border-green-200 bg-green-50' : 'border-[#64ABDE]/30 bg-[#64ABDE]/5'}`}>
+            <div className={`rounded-lg border p-3 text-center ${isFullyStocked ? 'border-green-200 bg-green-50' : 'border-accent-500/30 bg-accent-500/5'}`}>
               <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Compra</p>
-              <p className={`text-lg font-bold ${isFullyStocked ? 'text-green-600' : 'text-[#1D3140]'}`}>
+              <p className={`text-lg font-bold ${isFullyStocked ? 'text-green-600' : 'text-neutral-900'}`}>
                 {isFullyStocked ? '✓ Atendido' : formatNumber(item.net_qty)}
               </p>
             </div>
@@ -129,7 +129,7 @@ export default function MaterialDetailModal({
           {!isFullyStocked && sortedOffers.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                <TrendingDown className="h-4 w-4 text-[#64ABDE]" />
+                <TrendingDown className="h-4 w-4 text-accent-600" />
                 Comparação de Preços
               </h3>
               <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -222,8 +222,8 @@ export default function MaterialDetailModal({
 
           {/* Resumo de Economia */}
           {!isFullyStocked && metrics.priceSpread > 0 && (
-            <div className="rounded-lg border border-[#64ABDE]/30 bg-[#64ABDE]/5 p-4">
-              <h3 className="text-sm font-semibold text-[#1D3140] mb-2 flex items-center gap-2">
+            <div className="rounded-lg border border-accent-500/30 bg-accent-500/5 p-4">
+              <h3 className="text-sm font-semibold text-neutral-900 mb-2 flex items-center gap-2">
                 <TrendingDown className="h-4 w-4 text-green-600" />
                 Economia Potencial
               </h3>

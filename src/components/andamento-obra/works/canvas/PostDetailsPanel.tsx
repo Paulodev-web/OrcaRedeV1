@@ -170,7 +170,7 @@ function PlannedHeader({
         </p>
         <h2
           id="post-details-title"
-          className="mt-0.5 truncate text-base font-semibold text-[#1D3140]"
+          className="mt-0.5 truncate text-base font-semibold text-neutral-900"
         >
           {numbering}
         </h2>
@@ -181,7 +181,7 @@ function PlannedHeader({
         type="button"
         onClick={onClose}
         aria-label="Fechar painel de detalhes do poste"
-        className="rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1D3140]"
+        className="rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900"
       >
         <X className="h-4 w-4" />
       </button>
@@ -250,7 +250,7 @@ function PlannedBody({
                     <button
                       type="button"
                       onClick={() => onSelectInstallation(inst)}
-                      className="flex w-full items-center justify-between gap-2 rounded-md border border-gray-200 px-3 py-2 text-left text-xs text-[#1D3140] transition-colors hover:border-[#10B981] hover:bg-emerald-50/50"
+                      className="flex w-full items-center justify-between gap-2 rounded-md border border-gray-200 px-3 py-2 text-left text-xs text-neutral-900 transition-colors hover:border-green-500 hover:bg-emerald-50/50"
                     >
                       <span className="truncate">
                         <span className="font-medium">{label}</span>
@@ -299,7 +299,7 @@ function InstallationHeader({
         </p>
         <h2
           id="post-details-title"
-          className="mt-0.5 truncate text-base font-semibold text-[#1D3140]"
+          className="mt-0.5 truncate text-base font-semibold text-neutral-900"
         >
           {numbering}
         </h2>
@@ -312,7 +312,7 @@ function InstallationHeader({
         type="button"
         onClick={onClose}
         aria-label="Fechar painel de detalhes da instalação"
-        className="rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1D3140]"
+        className="rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900"
       >
         <X className="h-4 w-4" />
       </button>
@@ -477,7 +477,7 @@ function InstallationBody({
             href={mapHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-[#64ABDE] hover:underline"
+            className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-accent-600 hover:underline"
           >
             <MapPin className="h-3 w-3" />
             Abrir no mapa ({installation.gpsLat?.toFixed(5)},{' '}
@@ -623,7 +623,7 @@ function KeyValue({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3 border-b border-gray-100 py-1 last:border-b-0">
       <span className="text-[11px] font-medium text-gray-500">{label}</span>
-      <span className="truncate text-xs text-[#1D3140]" title={value}>
+      <span className="truncate text-xs text-neutral-900" title={value}>
         {value}
       </span>
     </div>

@@ -41,7 +41,7 @@ export function ChecklistCard({ checklist, workId, role }: Props) {
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-[#1D3140]">{checklist.name}</span>
+              <span className="font-medium text-neutral-900">{checklist.name}</span>
               <ChecklistStatusBadge status={checklist.status} />
             </div>
             <span className="text-xs text-gray-500">

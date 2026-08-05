@@ -220,7 +220,7 @@ export function DailyLogList({
     <div className="space-y-4">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-[#1D3140]">Diário de obra</h1>
+          <h1 className="text-xl font-bold text-neutral-900">Diário de obra</h1>
           <p className="text-xs text-gray-500">
             Registro diário publicado pelo gerente. O engenheiro aprova ou rejeita.
           </p>
@@ -267,7 +267,7 @@ function EmptyState() {
   return (
     <div className="rounded-xl border border-dashed border-gray-200 bg-white p-8 text-center">
       <ClipboardList className="mx-auto h-8 w-8 text-gray-400" />
-      <p className="mt-2 text-sm font-medium text-[#1D3140]">
+      <p className="mt-2 text-sm font-medium text-neutral-900">
         Nenhum diário publicado ainda.
       </p>
       <p className="mt-1 text-xs text-gray-500">

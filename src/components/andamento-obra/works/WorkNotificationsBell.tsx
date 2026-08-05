@@ -44,12 +44,12 @@ export function WorkNotificationsBell() {
         <button
           type="button"
           aria-label={`Notificações${unreadCount > 0 ? ` (${unreadCount} não lidas)` : ''}`}
-          className="relative inline-flex h-9 w-9 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-gray-100 hover:text-[#1D3140]"
+          className="relative inline-flex h-9 w-9 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-gray-100 hover:text-neutral-900"
         >
           <Bell className="h-4.5 w-4.5" />
           {unreadCount > 0 && (
             <span
-              className={`absolute -right-0.5 -top-0.5 inline-flex min-w-[1rem] items-center justify-center rounded-full bg-[#64ABDE] px-1 text-[9px] font-semibold text-white ring-2 ring-white${
+              className={`absolute -right-0.5 -top-0.5 inline-flex min-w-[1rem] items-center justify-center rounded-full bg-accent-600 px-1 text-[9px] font-semibold text-white ring-2 ring-white${
                 pulse ? ' animate-pulse' : ''
               }`}
             >
@@ -65,12 +65,12 @@ export function WorkNotificationsBell() {
           className="z-50 w-[320px] rounded-xl border border-gray-200 bg-white shadow-lg"
         >
           <header className="flex items-center justify-between gap-2 border-b border-gray-100 px-4 py-3">
-            <p className="text-sm font-semibold text-[#1D3140]">Notificações</p>
+            <p className="text-sm font-semibold text-neutral-900">Notificações</p>
             <button
               type="button"
               onClick={handleMarkAll}
               disabled={unreadCount === 0}
-              className="text-xs font-medium text-[#64ABDE] hover:underline disabled:cursor-not-allowed disabled:opacity-40"
+              className="text-xs font-medium text-accent-600 hover:underline disabled:cursor-not-allowed disabled:opacity-40"
             >
               Marcar todas
             </button>
@@ -88,19 +88,19 @@ export function WorkNotificationsBell() {
                       type="button"
                       onClick={() => handleClickItem(n)}
                       className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50 ${
-                        n.isRead ? '' : 'bg-[#64ABDE]/5'
+                        n.isRead ? '' : 'bg-accent-500/5'
                       }`}
                     >
                       <span
                         className={`mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full ${
-                          n.isRead ? 'bg-transparent' : 'bg-[#64ABDE]'
+                          n.isRead ? 'bg-transparent' : 'bg-accent-600'
                         }`}
                         aria-hidden
                       />
                       <div className="min-w-0 flex-1">
                         <p
                           className={`truncate text-xs font-semibold ${
-                            n.isRead ? 'text-gray-700' : 'text-[#1D3140]'
+                            n.isRead ? 'text-gray-700' : 'text-neutral-900'
                           }`}
                         >
                           {n.title}
@@ -122,7 +122,7 @@ export function WorkNotificationsBell() {
             <Link
               href="/tools/andamento-obra/notificacoes"
               onClick={() => setOpen(false)}
-              className="text-xs font-medium text-[#64ABDE] hover:underline"
+              className="text-xs font-medium text-accent-600 hover:underline"
             >
               Ver tudo
             </Link>

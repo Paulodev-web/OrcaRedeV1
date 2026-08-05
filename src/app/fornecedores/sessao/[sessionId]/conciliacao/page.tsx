@@ -39,7 +39,7 @@ export default async function SessionConciliacaoPage({ params }: Props) {
         />
 
         <section className="rounded-2xl border border-amber-200 bg-white p-6 shadow-sm">
-          <h1 className="text-xl font-semibold text-[#1D3140]">Conciliação ainda indisponível</h1>
+          <h1 className="text-xl font-semibold text-neutral-900">Conciliação ainda indisponível</h1>
           <p className="mt-2 text-sm text-slate-600">
             {hasActiveJobs
               ? 'A IA ainda está processando os PDFs desta sessão. Aguarde a fila terminar para abrir a conciliação.'
@@ -50,7 +50,7 @@ export default async function SessionConciliacaoPage({ params }: Props) {
           </p>
           <Link
             href={`/fornecedores/sessao/${sessionId}`}
-            className="mt-4 inline-flex items-center rounded-lg bg-[#1D3140] px-4 py-2 text-sm font-medium text-white hover:bg-[#223f52]"
+            className="mt-4 inline-flex items-center rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800"
           >
             Voltar para a sessão
           </Link>

@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { resolveFolderColor } from '@/lib/folderColors';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { Orcamento, BudgetFolder } from '@/types';
 import { deleteBudgetAction, duplicateBudgetAction, finalizeBudgetAction, updateBudgetAction } from '@/actions/budgets';
@@ -590,7 +591,7 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0 pr-3">
             <div className="flex items-center gap-1.5 mb-1">
-              <h3 className="text-base font-semibold text-gray-900 truncate group-hover:text-[#1D3140] transition-colors">
+              <h3 className="text-base font-semibold text-gray-900 truncate group-hover:text-neutral-900 transition-colors">
                 {budget.nome}
               </h3>
               {budget.isTemplate && (
@@ -606,12 +607,12 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
           <div className="flex flex-col items-end gap-1.5 shrink-0">
             {budget.status === 'Finalizado' ? (
               <Badge tone="green">
-                <CheckCircle className="h-3 w-3 mr-1" />
+                <CheckCircle className="h-3 w-3" />
                 Finalizado
               </Badge>
             ) : (
               <Badge tone="teal">
-                <Clock className="h-3 w-3 mr-1" />
+                <Clock className="h-3 w-3" />
                 Em Andamento
               </Badge>
             )}
@@ -753,7 +754,7 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
                         e.stopPropagation();
                         handleRemoveFromFolder(budget.id, 'budget', budget.nome);
                       }}
-                      className="w-[calc(100%-8px)] mx-1 flex items-center space-x-2.5 px-3 py-2 text-left text-sm text-[#1D3140] rounded-lg hover:bg-[#64ABDE]/10"
+                      className="w-[calc(100%-8px)] mx-1 flex items-center space-x-2.5 px-3 py-2 text-left text-sm text-neutral-900 rounded-lg hover:bg-accent-500/10"
                     >
                       <FolderOpen className="h-4 w-4" />
                       <span>Mover para Raiz</span>
@@ -845,11 +846,11 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
           <div className="flex items-center space-x-3 flex-1 min-w-0 pointer-events-none">
             <div
               className="p-2.5 rounded-lg shrink-0"
-              style={{ backgroundColor: `${folderColor || '#6B7280'}1A` }}
+              style={{ backgroundColor: `${resolveFolderColor(folderColor)}1A` }}
             >
               <Folder
                 className="h-5 w-5"
-                style={{ color: folderColor || '#6B7280' }}
+                style={{ color: resolveFolderColor(folderColor) }}
               />
             </div>
 
@@ -872,7 +873,7 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
                 setMoveMenuFor(null);
                 setOpenFolderMenu(openFolderMenu === folderId ? null : folderId);
               }}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#64ABDE]"
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500"
             >
               <MoreVertical className="h-4 w-4" />
             </button>
@@ -954,7 +955,7 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
                           e.stopPropagation();
                           handleRemoveFromFolder(folderId, 'folder', folderName);
                         }}
-                        className="w-[calc(100%-8px)] mx-1 flex items-center space-x-2.5 px-3 py-2 text-left text-sm text-[#1D3140] rounded-lg hover:bg-[#64ABDE]/10"
+                        className="w-[calc(100%-8px)] mx-1 flex items-center space-x-2.5 px-3 py-2 text-left text-sm text-neutral-900 rounded-lg hover:bg-accent-500/10"
                       >
                         <Home className="h-4 w-4" />
                         <span>Mover para Raiz</span>
@@ -1048,8 +1049,8 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
               <p className="text-xs font-medium text-gray-500 mb-1">Total de Projetos</p>
               <p className="text-2xl font-bold text-gray-900 tabular-nums">{stats.total}</p>
             </div>
-            <div className="p-2.5 rounded-lg" style={{ backgroundColor: '#64ABDE1A' }}>
-              <BarChart3 className="h-5 w-5" style={{ color: '#1D3140' }} />
+            <div className="p-2.5 rounded-lg" style={{ backgroundColor: '#5f8dd11A' }}>
+              <BarChart3 className="h-5 w-5" style={{ color: '#262623' }} />
             </div>
           </div>
         </Card>
@@ -1110,7 +1111,7 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
               placeholder="Buscar por nome do projeto, cliente ou cidade..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#64ABDE]/40 focus:border-[#64ABDE] text-sm transition-shadow"
+              className="block w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-500/40 focus:border-accent-500 text-sm transition-shadow"
             />
             {searchTerm && (
               <button
@@ -1125,7 +1126,7 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
           {/* Botão de Filtros */}
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#64ABDE] ${
+            className={`flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 ${
               hasActiveFilters
                 ? 'bg-gray-900 text-white hover:bg-gray-800'
                 : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
@@ -1229,7 +1230,7 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full text-xs font-medium bg-[#64ABDE]/10 text-[#1D3140] hover:bg-[#64ABDE]/20 transition-colors"
+                className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full text-xs font-medium bg-accent-500/10 text-neutral-900 hover:bg-accent-500/20 transition-colors"
               >
                 “{searchTerm}” <X className="h-3 w-3" />
               </button>
@@ -1237,7 +1238,7 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
             {statusFilter !== 'all' && (
               <button
                 onClick={() => setStatusFilter('all')}
-                className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full text-xs font-medium bg-[#64ABDE]/10 text-[#1D3140] hover:bg-[#64ABDE]/20 transition-colors"
+                className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full text-xs font-medium bg-accent-500/10 text-neutral-900 hover:bg-accent-500/20 transition-colors"
               >
                 {statusFilter} <X className="h-3 w-3" />
               </button>
@@ -1245,7 +1246,7 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
             {concessionariaFilter !== 'all' && (
               <button
                 onClick={() => setConcessionariaFilter('all')}
-                className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full text-xs font-medium bg-[#64ABDE]/10 text-[#1D3140] hover:bg-[#64ABDE]/20 transition-colors"
+                className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full text-xs font-medium bg-accent-500/10 text-neutral-900 hover:bg-accent-500/20 transition-colors"
               >
                 {getConcessionariaNome(concessionariaFilter)} <X className="h-3 w-3" />
               </button>
@@ -1270,7 +1271,7 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
               {/* Botão Voltar */}
               <button
                 onClick={handleGoBack}
-                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#64ABDE] shrink-0"
+                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 shrink-0"
                 title="Voltar"
               >
                 <ArrowLeft className="h-5 w-5" />
@@ -1336,7 +1337,7 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
 
               {/* Indicador de Drag Ativo */}
               {(draggedBudget || draggedFolder) && (
-                <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 bg-[#64ABDE]/10 border border-[#64ABDE]/30 rounded-lg text-xs text-[#1D3140] font-medium shrink-0 ml-2">
+                <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 bg-accent-500/10 border border-accent-500/30 rounded-lg text-xs text-neutral-900 font-medium shrink-0 ml-2">
                   <span>💡 Arraste para os breadcrumbs para mover</span>
                 </div>
               )}
@@ -1542,9 +1543,9 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
                 <>
                   <div
                     className="h-16 w-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
-                    style={{ backgroundColor: '#64ABDE1A' }}
+                    style={{ backgroundColor: '#5f8dd11A' }}
                   >
-                    <Folder className="h-8 w-8" style={{ color: '#64ABDE' }} />
+                    <Folder className="h-8 w-8" style={{ color: '#5f8dd1' }} />
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-1.5">
                     {currentFolderId ? 'Pasta vazia' : 'Nenhum orçamento por aqui ainda'}

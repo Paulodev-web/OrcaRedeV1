@@ -98,7 +98,7 @@ export default function SupplierFormModal({
           rows={3}
           value={form[id] ?? ''}
           onChange={(e) => setForm((f) => ({ ...f, [id]: e.target.value }))}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
         />
       ) : (
         <input
@@ -106,7 +106,7 @@ export default function SupplierFormModal({
           type="text"
           value={form[id] ?? ''}
           onChange={(e) => setForm((f) => ({ ...f, [id]: e.target.value }))}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
         />
       )}
     </div>
@@ -151,7 +151,7 @@ export default function SupplierFormModal({
             <button
               type="submit"
               disabled={saving || !form.name.trim()}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#1D3140] px-4 py-2 text-sm font-medium text-white hover:bg-[#2a4558] disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               Salvar

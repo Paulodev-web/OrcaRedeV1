@@ -35,7 +35,10 @@ export function Login() {
   return (
     <div className="min-h-screen flex">
       {/* Lado esquerdo - Visual/Ilustração */}
-      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 overflow-hidden">
+      {/* Painel de marca: grafite quente com o azul só nos halos. Um slab azul
+          chapado nesta escala vira a cor dominante do produto — o accent tem
+          que continuar sendo acento, inclusive na primeira tela. */}
+      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-neutral-800 via-neutral-900 to-neutral-950 overflow-hidden">
         {/* Elementos decorativos de fundo */}
         <div className="absolute inset-0">
           <div className="absolute top-20 left-20 w-32 h-32 bg-blue-400 rounded-full opacity-20 blur-xl"></div>

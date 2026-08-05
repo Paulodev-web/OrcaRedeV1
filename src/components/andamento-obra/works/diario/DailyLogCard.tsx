@@ -77,7 +77,7 @@ export function DailyLogCard({
       >
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-semibold text-[#1D3140]">{dateLabel}</p>
+            <p className="text-sm font-semibold text-neutral-900">{dateLabel}</p>
             <DailyLogStatusBadge status={log.status} />
           </div>
           {rev && (
@@ -170,7 +170,7 @@ export function DailyLogCard({
               <button
                 type="button"
                 onClick={() => setHistoryOpen(true)}
-                className="inline-flex items-center gap-1 text-[#64ABDE] hover:underline"
+                className="inline-flex items-center gap-1 text-accent-600 hover:underline"
               >
                 <History className="h-3 w-3" /> Ver histórico de versões
               </button>

@@ -3,8 +3,18 @@
  *
  * Os valores de cor e a geometria das faixas foram medidos diretamente das duas
  * propostas de referência (Andora 287.1 e Maxif4 163.4), extraindo as artes de
- * fundo e amostrando os pixels. Não são chutes: `#1D3140` e `#64ABDE` são
- * exatamente os tokens de marca em `src/lib/branding.ts`.
+ * fundo e amostrando os pixels. Não são chutes.
+ *
+ * ⚠️ ESTES VALORES DIVERGEM DE `src/lib/branding.ts` DE PROPÓSITO.
+ *
+ * A UI do sistema migrou para a identidade nova (grafite quente + slate blue,
+ * ver DESIGN_SYSTEM.md). O PDF NÃO migrou junto, e não deve migrar sozinho: a
+ * proposta é um artefato que a ON já enviou a clientes em papel e em e-mail.
+ * Alinhar o PDF à paleta nova faria as propostas futuras destoarem de todo o
+ * histórico comercial da empresa — decisão de marca, não de código.
+ *
+ * Enquanto essa decisão não for tomada, o navy/azul abaixo permanecem nos
+ * valores medidos da peça original. Não "corrija" para os tokens novos.
  */
 
 /** A4 retrato, em pontos — igual às propostas de referência (596 x 842). */

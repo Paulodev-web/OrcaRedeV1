@@ -7,7 +7,7 @@ import { ChevronsLeft, ChevronsRight, X } from "lucide-react";
 import {
   ON_ENGENHARIA_LOGO_SIZE,
   ON_ENGENHARIA_LOGO_SRC,
-  onBrandRailGradientClass,
+  onBrandRailClass,
 } from "@/lib/branding";
 import { cn } from "@/lib/utils";
 import { useSidebarCollapsed } from "./sidebarState";
@@ -94,9 +94,15 @@ export function AppSidebar({
 
   return (
     <>
+      {/*
+        `h-dvh` (não `h-screen`): em navegador móvel `100vh` ignora a barra de
+        endereço retrátil e o rodapé do rail fica cortado. `sticky top-0`
+        depende de NENHUM ancestral ser scroll container — ver a nota sobre
+        `overflow-x: clip` em globals.css.
+      */}
       <aside
         className={cn(
-          "sticky top-0 hidden h-screen shrink-0 transition-[width] duration-300 ease-in-out lg:block",
+          "sticky top-0 hidden h-dvh shrink-0 self-start transition-[width] duration-300 ease-in-out lg:block",
           collapsed ? "w-18" : "w-64",
           className,
         )}
@@ -161,7 +167,7 @@ function SidebarPanel({
   const resolvedFooter = typeof footer === "function" ? footer({ collapsed }) : footer;
 
   return (
-    <div className={cn("flex h-full flex-col text-white", onBrandRailGradientClass)}>
+    <div className={cn("flex h-full flex-col text-white", onBrandRailClass)}>
       <div
         className={cn(
           "flex shrink-0 items-center border-b border-white/10 px-4 py-4",
@@ -273,28 +279,37 @@ function SidebarItem({ item, collapsed, active, onNavigate }: SidebarItemProps) 
   const disabled = Boolean(item.disabled) || (!item.href && !item.onSelect);
 
   const itemClass = cn(
-    "group/nav relative flex w-full items-center rounded-xl text-sm transition-colors",
+    "group/nav relative flex w-full items-center rounded-lg text-sm transition-colors duration-150",
     collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5",
+    "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent-400",
     disabled
-      ? "cursor-not-allowed text-white/30"
+      ? "cursor-not-allowed text-white/25"
       : active
-        ? "bg-brand-blue/20 text-white ring-1 ring-inset ring-brand-blue/40"
-        : "text-white/70 hover:bg-white/10 hover:text-white",
+        // Item ativo: tinta do accent + barra à esquerda. A barra carrega o
+        // estado sozinha se o usuário não distinguir a diferença de fundo.
+        ? "bg-accent-500/15 text-white"
+        : "text-white/65 hover:bg-white/[0.07] hover:text-white",
   );
 
   const iconClass = cn(
-    "h-5 w-5 shrink-0 transition-colors",
+    "h-5 w-5 shrink-0 transition-colors duration-150",
     disabled
-      ? "text-white/25"
+      ? "text-white/20"
       : active
-        ? "text-brand-blue-soft"
-        : "text-white/60 group-hover/nav:text-brand-blue-soft",
+        ? "text-accent-300"
+        : "text-white/55 group-hover/nav:text-white/90",
   );
 
   const title = collapsed ? [item.label, item.hint].filter(Boolean).join(" — ") : item.hint;
 
   const content = (
     <>
+      {active && !disabled ? (
+        <span
+          aria-hidden
+          className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-accent-400"
+        />
+      ) : null}
       <Icon className={iconClass} />
       {collapsed ? (
         <span className="sr-only">{item.label}</span>

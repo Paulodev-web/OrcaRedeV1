@@ -2,7 +2,7 @@ export default function FornecedoresLoading() {
   return (
     <main className="min-h-screen bg-slate-100 p-6 lg:p-8">
       <div className="mx-auto max-w-7xl space-y-8">
-        <div className="animate-pulse rounded-2xl border border-[#64ABDE]/30 bg-white p-6 shadow-sm">
+        <div className="animate-pulse rounded-2xl border border-accent-500/30 bg-white p-6 shadow-sm">
           <div className="h-3 w-40 rounded bg-slate-200" />
           <div className="mt-6 h-8 max-w-md rounded bg-slate-200" />
           <div className="mt-2 h-4 max-w-lg rounded bg-slate-100" />

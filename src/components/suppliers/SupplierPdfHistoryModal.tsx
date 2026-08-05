@@ -150,7 +150,7 @@ function SupplierPdfHistoryBody({ supplierId }: { supplierId: string }) {
                       <td className="px-3 py-3">
                         <div className="flex items-start gap-2">
                           <FileText className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
-                          <span className="font-medium text-[#1D3140]">{item.label}</span>
+                          <span className="font-medium text-neutral-900">{item.label}</span>
                         </div>
                         {item.error_message && (
                           <p className="mt-1 text-xs text-red-600">{item.error_message}</p>
@@ -189,7 +189,7 @@ function SupplierPdfHistoryBody({ supplierId }: { supplierId: string }) {
                           {item.session_id && (
                             <Link
                               href={`/fornecedores/sessao/${item.session_id}`}
-                              className="inline-flex items-center gap-1 rounded-lg border border-[#64ABDE]/40 px-2 py-1 text-xs font-medium text-[#1D3140] hover:bg-[#64ABDE]/10"
+                              className="inline-flex items-center gap-1 rounded-lg border border-accent-500/40 px-2 py-1 text-xs font-medium text-neutral-900 hover:bg-accent-500/10"
                             >
                               Sessão
                             </Link>

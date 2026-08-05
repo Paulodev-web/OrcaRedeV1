@@ -66,7 +66,7 @@ type LinkedItem = SupplierQuoteItemWithMaterial & {
 function StatusBadge({ item }: { item: SupplierQuoteItemWithMaterial }) {
   if (item.match_status === 'automatico' && item.match_method === 'exact_memory') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-[#64ABDE]/40 bg-[#64ABDE]/15 px-2 py-0.5 text-xs text-[#1D3140]">
+      <span className="inline-flex items-center gap-1 rounded-full border border-accent-500/40 bg-accent-500/15 px-2 py-0.5 text-xs text-neutral-900">
         <Database className="h-3 w-3" /> Memória
       </span>
     );
@@ -158,7 +158,7 @@ function SupplierItemPickerDialog({
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm placeholder:text-gray-400 focus:border-[#64ABDE] focus:outline-none"
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm placeholder:text-gray-400 focus:border-accent-500 focus:outline-none"
               placeholder="Buscar item do fornecedor…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -317,7 +317,7 @@ function SupplierCell({
           <button
             type="button"
             onClick={() => setPickerOpen(true)}
-            className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-white px-3 py-3 text-xs text-gray-400 transition-colors hover:border-[#64ABDE] hover:text-[#64ABDE]"
+            className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-white px-3 py-3 text-xs text-gray-400 transition-colors hover:border-accent-500 hover:text-accent-600"
           >
             <Plus className="h-3.5 w-3.5" />
             Escolher item do fornecedor
@@ -602,10 +602,10 @@ export default function ConciliationCurationView({
           </span>
         </div>
       )}
-      <div className="shrink-0 rounded-2xl border border-[#64ABDE]/40 bg-white p-6 shadow-md">
+      <div className="shrink-0 rounded-2xl border border-accent-500/40 bg-white p-6 shadow-md">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold text-[#1D3140]">Conciliação de materiais</h1>
+            <h1 className="text-xl font-semibold text-neutral-900">Conciliação de materiais</h1>
             <p className="mt-1 text-sm text-slate-500">
               Concilie fornecedor por fornecedor. Aprove sugestões da IA ou escolha manualmente.
             </p>
@@ -622,7 +622,7 @@ export default function ConciliationCurationView({
                 <select
                   value={activeSupplier}
                   onChange={(e) => setActiveSupplier(e.target.value)}
-                  className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-[#1D3140] focus:border-[#64ABDE] focus:outline-none"
+                  className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-900 focus:border-accent-500 focus:outline-none"
                 >
                   {supplierColumnOrder.map((name, idx) => (
                     <option key={name} value={name}>
@@ -645,7 +645,7 @@ export default function ConciliationCurationView({
             )}
             <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
               <span className="text-gray-600">
-                <span className="font-medium text-[#1D3140]">{activeSupplierStats.approved}</span> validados
+                <span className="font-medium text-neutral-900">{activeSupplierStats.approved}</span> validados
               </span>
               {activeSupplierStats.iaSuggested > 0 && (
                 <span className="text-amber-600">
@@ -654,7 +654,7 @@ export default function ConciliationCurationView({
               )}
               <span className="text-gray-400">|</span>
               <span className="text-gray-400">
-                Geral: <span className="font-medium text-[#1D3140]">{totalApproved}</span> validados
+                Geral: <span className="font-medium text-neutral-900">{totalApproved}</span> validados
                 {totalIaSuggested > 0 && (
                   <span className="ml-1 text-amber-600">{totalIaSuggested} pendentes</span>
                 )}
@@ -704,7 +704,7 @@ export default function ConciliationCurationView({
         <div className="relative mt-4">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm placeholder:text-gray-400 focus:border-[#64ABDE] focus:outline-none"
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm placeholder:text-gray-400 focus:border-accent-500 focus:outline-none"
             placeholder="Buscar material ou item…"
             value={searchFilter}
             onChange={(e) => setSearchFilter(e.target.value)}
@@ -712,27 +712,27 @@ export default function ConciliationCurationView({
         </div>
         <p className="mt-2 text-sm text-slate-600">
           Exibindo{' '}
-          <span className="font-semibold text-[#1D3140]">
+          <span className="font-semibold text-neutral-900">
             {searchFilter ? filteredMaterials.length : budgetConsolidatedCount || materials.length}
           </span>
           {searchFilter && materials.length !== filteredMaterials.length ? (
             <>
               {' '}
-              de <span className="font-semibold text-[#1D3140]">{materials.length}</span>
+              de <span className="font-semibold text-neutral-900">{materials.length}</span>
             </>
           ) : null}{' '}
           material(is) do orçamento consolidado
           {excludedCount > 0 && (
             <span className="text-slate-500">
               {' '}
-              · <span className="font-semibold text-[#1D3140]">{excludedCount}</span> excluído(s) da
+              · <span className="font-semibold text-neutral-900">{excludedCount}</span> excluído(s) da
               sessão
             </span>
           )}
           {unlinked.length > 0 && (
             <span className="text-slate-500">
               {' '}
-              · <span className="font-semibold text-[#1D3140]">{unlinked.length}</span> item(ns) do
+              · <span className="font-semibold text-neutral-900">{unlinked.length}</span> item(ns) do
               PDF sem vínculo
             </span>
           )}
@@ -761,7 +761,7 @@ export default function ConciliationCurationView({
                 <th className="sticky left-0 top-0 z-30 bg-white px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 shadow-[1px_0_0_0_#e5e7eb,0_1px_0_0_#e5e7eb]">
                   Fonte da verdade
                 </th>
-                <th className="sticky top-0 z-20 bg-white px-4 py-3 text-left align-bottom text-xs font-semibold uppercase tracking-wide text-[#1D3140] shadow-[0_1px_0_0_#e5e7eb]">
+                <th className="sticky top-0 z-20 bg-white px-4 py-3 text-left align-bottom text-xs font-semibold uppercase tracking-wide text-neutral-900 shadow-[0_1px_0_0_#e5e7eb]">
                   <span className="break-words font-semibold normal-case tracking-normal">
                     {activeSupplier}
                   </span>
@@ -779,7 +779,7 @@ export default function ConciliationCurationView({
                     className={`transition-colors hover:bg-gray-50/50 ${mat.is_session_excluded ? 'opacity-60' : ''}`}
                   >
                     <td className="sticky left-0 z-10 border-r border-gray-200 bg-white px-4 py-3 align-top shadow-[1px_0_0_0_#e5e7eb]">
-                      <p className="break-words text-sm font-semibold leading-snug text-[#1D3140]">
+                      <p className="break-words text-sm font-semibold leading-snug text-neutral-900">
                         {mat.material_name}
                       </p>
                       <p className="mt-0.5 text-xs text-gray-400">

@@ -26,7 +26,7 @@ export default async function NotificacoesPage() {
     <main className="p-6 lg:p-8">
       <div className="mx-auto max-w-3xl">
         <header className="mb-6">
-          <h1 className="text-xl font-bold text-[#1D3140]">Notificações</h1>
+          <h1 className="text-xl font-bold text-neutral-900">Notificações</h1>
           <p className="mt-1 text-xs text-gray-500">
             {unreadCount > 0
               ? `${unreadCount} não ${unreadCount === 1 ? 'lida' : 'lidas'}`

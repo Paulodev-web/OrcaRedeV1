@@ -40,7 +40,7 @@ export function ProjectOverviewSummary({
   return (
     <section className={containerClass}>
       <header className="flex flex-wrap items-center gap-2">
-        <h2 className="text-sm font-semibold text-[#1D3140]">Projeto importado</h2>
+        <h2 className="text-sm font-semibold text-neutral-900">Projeto importado</h2>
         <span className="text-[11px] text-gray-500">Importado em {importedAt}</span>
       </header>
       <p className="mt-1 text-xs text-gray-500">
@@ -121,7 +121,7 @@ function SummaryCard({
       ? 'text-emerald-700'
       : tone === 'muted'
         ? 'text-gray-400'
-        : 'text-[#1D3140]';
+        : 'text-neutral-900';
   return (
     <li
       className={
@@ -151,7 +151,7 @@ function MetersRow({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex items-center justify-between rounded-md border border-gray-200 bg-gray-50 px-3 py-1.5">
       <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">{label}</span>
-      <span className="font-semibold text-[#1D3140]">{value} m</span>
+      <span className="font-semibold text-neutral-900">{value} m</span>
     </div>
   );
 }

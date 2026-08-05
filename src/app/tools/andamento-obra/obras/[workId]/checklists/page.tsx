@@ -30,7 +30,7 @@ export default async function WorkChecklistsPage({ params }: Props) {
   return (
     <div className="mx-auto max-w-4xl px-6 py-6 lg:px-8">
       <div className="mb-5 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-[#1D3140]">Checklists</h2>
+        <h2 className="text-lg font-semibold text-neutral-900">Checklists</h2>
         {isEngineer && (
           <AssignChecklistDialog workId={workId} templates={templates} />
         )}

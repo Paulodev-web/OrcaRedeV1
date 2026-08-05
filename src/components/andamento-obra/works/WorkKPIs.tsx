@@ -96,7 +96,7 @@ export function WorkKPIs({
                   </span>
                 )}
               </div>
-              <p className={`mt-1 text-xl font-bold ${isCritical ? 'text-red-700' : 'text-[#1D3140]'}`}>{kpi.value}</p>
+              <p className={`mt-1 text-xl font-bold ${isCritical ? 'text-red-700' : 'text-neutral-900'}`}>{kpi.value}</p>
               <p className="mt-0.5 text-[11px] text-gray-400">{kpi.hint}</p>
             </div>
           );
@@ -105,7 +105,7 @@ export function WorkKPIs({
       <div className="flex justify-end">
         <Link
           href={`/tools/andamento-obra/obras/${work.id}/progresso`}
-          className="inline-flex items-center gap-1 text-xs font-medium text-[#64ABDE] hover:underline"
+          className="inline-flex items-center gap-1 text-xs font-medium text-accent-600 hover:underline"
         >
           Status detalhado
           <ArrowUpRight className="h-3 w-3" />

@@ -195,8 +195,8 @@ const loadWorkTrackings = async (
 
 export function EngineerPortal() {
   const ON_COLORS = {
-    navy: '#1D3140',
-    blue: '#64ABDE',
+    navy: '#262623',
+    blue: '#5f8dd1',
   };
   const { setActiveModule, budgets, fetchBudgets, fetchBudgetDetails } = useApp();
   const alertDialog = useAlertDialog();
@@ -603,7 +603,7 @@ export function EngineerPortal() {
       case 'Concluído':
         return 'text-green-700 bg-green-50 border-green-200';
       case 'Em Andamento':
-        return 'text-[#1D3140] bg-[#64ABDE]/20 border-[#64ABDE]/50';
+        return 'text-neutral-900 bg-accent-500/20 border-accent-500/50';
       case 'Pausado':
         return 'text-amber-700 bg-amber-50 border-amber-200';
       case 'Planejado':
@@ -1185,11 +1185,11 @@ export function EngineerPortal() {
     <>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-[#1D3140]">Criar Nova Obra</h1>
+          <h1 className="text-2xl font-bold text-neutral-900">Criar Nova Obra</h1>
           <p className="text-gray-600 mt-1">Selecione um orçamento para iniciar o acompanhamento.</p>
         </div>
         <button 
-          className="text-slate-600 hover:text-[#1D3140] inline-flex items-center gap-2" 
+          className="text-slate-600 hover:text-neutral-900 inline-flex items-center gap-2" 
           onClick={() => setCurrentView('dashboard')}
         >
           <ArrowLeft className="w-4 h-4" /> Voltar
@@ -1202,7 +1202,7 @@ export function EngineerPortal() {
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
           placeholder="Buscar orçamentos por nome, cliente ou cidade..."
-          className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#64ABDE] focus:border-transparent"
+          className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-accent-500 focus:border-transparent"
         />
       </div>
 
@@ -1236,7 +1236,7 @@ export function EngineerPortal() {
                       type="date"
                       value={formData.startDate}
                       onChange={(e) => setFormData({...formData, startDate: e.target.value})}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#64ABDE]"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent-500"
                     />
                   </div>
                   
@@ -1248,7 +1248,7 @@ export function EngineerPortal() {
                       type="date"
                       value={formData.estimatedCompletion}
                       onChange={(e) => setFormData({...formData, estimatedCompletion: e.target.value})}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#64ABDE]"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent-500"
                     />
                   </div>
 
@@ -1261,7 +1261,7 @@ export function EngineerPortal() {
                       value={formData.plannedMtMeters || ''}
                       onChange={(e) => setFormData({...formData, plannedMtMeters: e.target.value ? Number(e.target.value) : 0})}
                       placeholder="Ex: 2000"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#64ABDE]"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent-500"
                     />
                   </div>
                   <div>
@@ -1273,7 +1273,7 @@ export function EngineerPortal() {
                       value={formData.plannedBtMeters || ''}
                       onChange={(e) => setFormData({...formData, plannedBtMeters: e.target.value ? Number(e.target.value) : 0})}
                       placeholder="Ex: 1500"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#64ABDE]"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent-500"
                     />
                   </div>
                   <div>
@@ -1285,7 +1285,7 @@ export function EngineerPortal() {
                       value={formData.plannedPoles || ''}
                       onChange={(e) => setFormData({...formData, plannedPoles: e.target.value ? Math.floor(Number(e.target.value)) : 0})}
                       placeholder="Ex: 50"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#64ABDE]"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent-500"
                     />
                   </div>
                   <div>
@@ -1297,7 +1297,7 @@ export function EngineerPortal() {
                       value={formData.plannedEquipment || ''}
                       onChange={(e) => setFormData({...formData, plannedEquipment: e.target.value ? Math.floor(Number(e.target.value)) : 0})}
                       placeholder="Ex: 20"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#64ABDE]"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent-500"
                     />
                   </div>
                   <div>
@@ -1309,7 +1309,7 @@ export function EngineerPortal() {
                       value={formData.plannedPublicLighting || ''}
                       onChange={(e) => setFormData({...formData, plannedPublicLighting: e.target.value ? Math.floor(Number(e.target.value)) : 0})}
                       placeholder="Ex: 30"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#64ABDE]"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent-500"
                     />
                   </div>
                 </div>
@@ -1344,7 +1344,7 @@ export function EngineerPortal() {
 
   const renderDashboard = () => (
     <>
-      <div className="rounded-3xl p-10 text-white mb-10 relative overflow-hidden shadow-2xl" style={{ background: `linear-gradient(140deg, ${ON_COLORS.navy} 0%, #223f52 45%, ${ON_COLORS.blue} 100%)` }}>
+      <div className="rounded-3xl p-10 text-white mb-10 relative overflow-hidden shadow-2xl" style={{ background: `linear-gradient(140deg, ${ON_COLORS.navy} 0%, #353530 45%, ${ON_COLORS.blue} 100%)` }}>
         <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/4 blur-2xl" />
         <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
         <div className="relative z-10">
@@ -1369,7 +1369,7 @@ export function EngineerPortal() {
               <p className="text-2xl font-bold text-slate-900">{workTrackings.length}</p>
             </div>
             <div className="w-11 h-11 rounded-xl flex items-center justify-center border border-slate-200 bg-slate-50">
-              <Target className="w-5 h-5 text-[#1D3140]" />
+              <Target className="w-5 h-5 text-neutral-900" />
             </div>
           </div>
         </div>
@@ -1378,10 +1378,10 @@ export function EngineerPortal() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600 mb-1">Em Andamento</p>
-              <p className="text-2xl font-bold text-[#1D3140]">{workTrackings.filter((t) => t.status === 'Em Andamento').length}</p>
+              <p className="text-2xl font-bold text-neutral-900">{workTrackings.filter((t) => t.status === 'Em Andamento').length}</p>
             </div>
             <div className="w-11 h-11 rounded-xl flex items-center justify-center border border-slate-200 bg-slate-50">
-              <Play className="w-5 h-5 text-[#1D3140]" />
+              <Play className="w-5 h-5 text-neutral-900" />
             </div>
           </div>
         </div>
@@ -1402,7 +1402,7 @@ export function EngineerPortal() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600 mb-1">Progresso Médio</p>
-              <p className="text-2xl font-bold text-[#1D3140]">
+              <p className="text-2xl font-bold text-neutral-900">
                 {workTrackings.length > 0 
                   ? Math.round(workTrackings.reduce((acc, cur) => acc + calculateWeightedProgress(cur), 0) / workTrackings.length)
                   : 0
@@ -1410,7 +1410,7 @@ export function EngineerPortal() {
               </p>
             </div>
             <div className="w-11 h-11 rounded-xl flex items-center justify-center border border-slate-200 bg-slate-50">
-              <TrendingUp className="w-5 h-5 text-[#1D3140]" />
+              <TrendingUp className="w-5 h-5 text-neutral-900" />
             </div>
           </div>
         </div>
@@ -1437,7 +1437,7 @@ export function EngineerPortal() {
         <div className="divide-y divide-gray-200">
           {isLoadingInitial ? (
             <div className="p-12 text-center text-gray-600">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#1D3140] mx-auto mb-5"></div>
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-neutral-900 mx-auto mb-5"></div>
               <h4 className="text-lg font-medium text-gray-900 mb-2">Carregando obras...</h4>
               <p className="text-gray-500">Preparando sua dashboard do Portal do Engenheiro.</p>
             </div>
@@ -1541,7 +1541,7 @@ export function EngineerPortal() {
                       aria-expanded={openTrackingMenuId === tracking.id}
                       aria-label="Abrir ações da obra"
                       onClick={() => setOpenTrackingMenuId((prev) => (prev === tracking.id ? null : tracking.id))}
-                      className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-600 hover:text-[#1D3140] hover:bg-slate-100 transition-colors"
+                      className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-600 hover:text-neutral-900 hover:bg-slate-100 transition-colors"
                     >
                       <MoreHorizontal className="w-4 h-4" />
                     </button>
@@ -1628,7 +1628,7 @@ export function EngineerPortal() {
       <div className="space-y-6">
         <div className="flex items-center justify-between bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
           <div>
-            <h1 className="text-2xl font-bold text-[#1D3140]">{getTrackingDisplayName(activeTracking)}</h1>
+            <h1 className="text-2xl font-bold text-neutral-900">{getTrackingDisplayName(activeTracking)}</h1>
             <p className="text-gray-600 mt-1">
               Cliente: {activeTracking.budget_data.client_name} • {activeTracking.budget_data.city}
             </p>
@@ -1663,7 +1663,7 @@ export function EngineerPortal() {
               Excluir obra
             </button>
             <button 
-              className="text-slate-600 hover:text-[#1D3140] inline-flex items-center gap-2" 
+              className="text-slate-600 hover:text-neutral-900 inline-flex items-center gap-2" 
               onClick={() => setCurrentView('dashboard')}
             >
               <ArrowLeft className="w-4 h-4" /> Voltar
@@ -1679,8 +1679,8 @@ export function EngineerPortal() {
                 onClick={() => setActiveTab('obra')}
                 className={`px-6 py-4 text-sm font-semibold transition-colors flex items-center gap-2 ${
                   activeTab === 'obra'
-                    ? 'text-[#1D3140] border-b-2 border-[#64ABDE] bg-[#64ABDE]/15'
-                    : 'text-gray-600 hover:text-[#1D3140] hover:bg-slate-50'
+                    ? 'text-neutral-900 border-b-2 border-accent-500 bg-accent-500/15'
+                    : 'text-gray-600 hover:text-neutral-900 hover:bg-slate-50'
                 }`}
               >
                 <Building className="w-4 h-4" />
@@ -1690,8 +1690,8 @@ export function EngineerPortal() {
                 onClick={() => setActiveTab('imagens')}
                 className={`px-6 py-4 text-sm font-semibold transition-colors flex items-center gap-2 ${
                   activeTab === 'imagens'
-                    ? 'text-[#1D3140] border-b-2 border-[#64ABDE] bg-[#64ABDE]/15'
-                    : 'text-gray-600 hover:text-[#1D3140] hover:bg-slate-50'
+                    ? 'text-neutral-900 border-b-2 border-accent-500 bg-accent-500/15'
+                    : 'text-gray-600 hover:text-neutral-900 hover:bg-slate-50'
                 }`}
               >
                 <Image className="w-4 h-4" />
@@ -1701,8 +1701,8 @@ export function EngineerPortal() {
                 onClick={() => setActiveTab('timeline')}
                 className={`px-6 py-4 text-sm font-semibold transition-colors flex items-center gap-2 ${
                   activeTab === 'timeline'
-                    ? 'text-[#1D3140] border-b-2 border-[#64ABDE] bg-[#64ABDE]/15'
-                    : 'text-gray-600 hover:text-[#1D3140] hover:bg-slate-50'
+                    ? 'text-neutral-900 border-b-2 border-accent-500 bg-accent-500/15'
+                    : 'text-gray-600 hover:text-neutral-900 hover:bg-slate-50'
                 }`}
               >
                 <Clock className="w-4 h-4" />
@@ -1723,7 +1723,7 @@ export function EngineerPortal() {
                 <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Rede MT</p>
-                    <span className="text-xs font-semibold text-[#1D3140]">{mtProgress}%</span>
+                    <span className="text-xs font-semibold text-neutral-900">{mtProgress}%</span>
                   </div>
                   <p className="text-xs text-slate-500 mb-2">Instalado vs meta total (m)</p>
                   <div className="grid grid-cols-2 gap-2">
@@ -1743,7 +1743,7 @@ export function EngineerPortal() {
                         updateTracking(activeTracking.id, (t) => ({ ...t, mt_extension_km: v / 1000, updated_at: new Date().toISOString() }));
                       }}
                       title="Instalado (m)"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#64ABDE]/40"
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
                     />
                     <input
                       type="number"
@@ -1761,7 +1761,7 @@ export function EngineerPortal() {
                       }}
                       title="Meta total (m)"
                       placeholder="Meta"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#64ABDE]/40"
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
                     />
                   </div>
                   <div className="mt-3">
@@ -1774,7 +1774,7 @@ export function EngineerPortal() {
                 <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Rede BT</p>
-                    <span className="text-xs font-semibold text-[#1D3140]">{btProgress}%</span>
+                    <span className="text-xs font-semibold text-neutral-900">{btProgress}%</span>
                   </div>
                   <p className="text-xs text-slate-500 mb-2">Instalado vs meta total (m)</p>
                   <div className="grid grid-cols-2 gap-2">
@@ -1794,7 +1794,7 @@ export function EngineerPortal() {
                         updateTracking(activeTracking.id, (t) => ({ ...t, bt_extension_km: v / 1000, updated_at: new Date().toISOString() }));
                       }}
                       title="Instalado (m)"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#64ABDE]/40"
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
                     />
                     <input
                       type="number"
@@ -1812,7 +1812,7 @@ export function EngineerPortal() {
                       }}
                       title="Meta total (m)"
                       placeholder="Meta"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#64ABDE]/40"
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
                     />
                   </div>
                   <div className="mt-3">
@@ -1825,7 +1825,7 @@ export function EngineerPortal() {
                 <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Postes</p>
-                    <span className="text-xs font-semibold text-[#1D3140]">{polesProgress}%</span>
+                    <span className="text-xs font-semibold text-neutral-900">{polesProgress}%</span>
                   </div>
                   <p className="text-xs text-slate-500 mb-2">Instalado (sincronizado com o mapa) vs meta total</p>
                   <div className="grid grid-cols-2 gap-2">
@@ -1852,7 +1852,7 @@ export function EngineerPortal() {
                       }}
                       title="Meta total"
                       placeholder="Meta"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#64ABDE]/40"
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
                     />
                   </div>
                   <div className="mt-3">
@@ -1865,7 +1865,7 @@ export function EngineerPortal() {
                 <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Equipamento</p>
-                    <span className="text-xs font-semibold text-[#1D3140]">{equipmentProgress}%</span>
+                    <span className="text-xs font-semibold text-neutral-900">{equipmentProgress}%</span>
                   </div>
                   <p className="text-xs text-slate-500 mb-2">Instalado vs meta total</p>
                   <div className="grid grid-cols-2 gap-2">
@@ -1885,7 +1885,7 @@ export function EngineerPortal() {
                         updateTracking(activeTracking.id, (t) => ({ ...t, equipment_installed: v, updated_at: new Date().toISOString() }));
                       }}
                       title="Instalado"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#64ABDE]/40"
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
                     />
                     <input
                       type="number"
@@ -1903,7 +1903,7 @@ export function EngineerPortal() {
                       }}
                       title="Meta total"
                       placeholder="Meta"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#64ABDE]/40"
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
                     />
                   </div>
                   <div className="mt-3">
@@ -1916,7 +1916,7 @@ export function EngineerPortal() {
                 <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Ilum. Publica</p>
-                    <span className="text-xs font-semibold text-[#1D3140]">{lightingProgress}%</span>
+                    <span className="text-xs font-semibold text-neutral-900">{lightingProgress}%</span>
                   </div>
                   <p className="text-xs text-slate-500 mb-2">Instalado vs meta total</p>
                   <div className="grid grid-cols-2 gap-2">
@@ -1936,7 +1936,7 @@ export function EngineerPortal() {
                         updateTracking(activeTracking.id, (t) => ({ ...t, public_lighting_installed: v, updated_at: new Date().toISOString() }));
                       }}
                       title="Instalado"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#64ABDE]/40"
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
                     />
                     <input
                       type="number"
@@ -1954,7 +1954,7 @@ export function EngineerPortal() {
                       }}
                       title="Meta total"
                       placeholder="Meta"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#64ABDE]/40"
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
                     />
                   </div>
                   <div className="mt-3">
@@ -2651,7 +2651,7 @@ export function EngineerPortal() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
-              <button onClick={() => setActiveModule(null)} className="flex items-center space-x-2 text-slate-600 hover:text-[#1D3140]">
+              <button onClick={() => setActiveModule(null)} className="flex items-center space-x-2 text-slate-600 hover:text-neutral-900">
                 <ArrowLeft className="w-5 h-5" />
                 <span className="text-sm font-medium">Voltar ao Admin</span>
               </button>
@@ -2663,7 +2663,7 @@ export function EngineerPortal() {
                   className="h-9 w-auto max-h-9 object-contain"
                 />
                 <div>
-                  <span className="text-base font-bold text-[#1D3140] block">Portal do Engenheiro</span>
+                  <span className="text-base font-bold text-neutral-900 block">Portal do Engenheiro</span>
                   <span className="text-xs text-slate-500 block">Gestão de Obras</span>
                 </div>
               </div>

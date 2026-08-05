@@ -45,7 +45,7 @@ export default async function ProgressoPage({ params }: ProgressoPageProps) {
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-xl font-bold text-[#1D3140]">Progresso da obra</h1>
+        <h1 className="text-xl font-bold text-neutral-900">Progresso da obra</h1>
         <p className="text-xs text-gray-500">
           Métricas planejado vs realizado, marcos da obra e evolução temporal.
         </p>

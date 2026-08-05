@@ -22,7 +22,7 @@ export default async function AdminPage() {
     <main className="p-6 lg:p-8">
       <div className="mx-auto max-w-3xl">
         <header className="mb-6">
-          <h1 className="text-xl font-bold text-[#1D3140]">Administração</h1>
+          <h1 className="text-xl font-bold text-neutral-900">Administração</h1>
           <p className="mt-1 text-xs text-gray-500">
             Ferramentas de manutenção do módulo Andamento de Obra.
           </p>

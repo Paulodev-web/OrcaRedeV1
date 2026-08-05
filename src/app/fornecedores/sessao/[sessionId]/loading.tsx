@@ -1,7 +1,7 @@
 export default function QuotationSessionLoading() {
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <div className="animate-pulse rounded-2xl border border-[#64ABDE]/30 bg-white p-6 shadow-sm">
+      <div className="animate-pulse rounded-2xl border border-accent-500/30 bg-white p-6 shadow-sm">
         <div className="h-3 w-48 rounded bg-slate-200" />
         <div className="mt-6 flex gap-3">
           <div className="h-11 w-11 shrink-0 rounded-xl bg-slate-200" />

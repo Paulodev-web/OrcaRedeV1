@@ -41,7 +41,7 @@ export function AlertCard({ alert, workId, role }: Props) {
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-[#1D3140]">{alert.title}</span>
+            <span className="font-medium text-neutral-900">{alert.title}</span>
             <AlertSeverityBadge severity={alert.severity} />
             <AlertStatusBadge status={alert.status} />
           </div>

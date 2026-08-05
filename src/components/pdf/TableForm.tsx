@@ -192,19 +192,19 @@ export function TableForm() {
   };
 
   const inputClass =
-    'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]';
+    'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500';
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 p-6">
       <div>
-        <h1 className="text-2xl font-semibold text-[#1D3140]">Gerador de PDF</h1>
+        <h1 className="text-2xl font-semibold text-neutral-900">Gerador de PDF</h1>
         <p className="mt-1 text-sm text-gray-600">
           Monte tabelas e gere um PDF com o template da empresa.
         </p>
       </div>
 
       <section className="space-y-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-medium text-[#1D3140]">Fornecedor (opcional)</h2>
+        <h2 className="text-lg font-medium text-neutral-900">Fornecedor (opcional)</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block sm:col-span-2">
             <span className="mb-1 block text-xs font-medium text-gray-600">Nome</span>
@@ -275,7 +275,7 @@ export function TableForm() {
           className="space-y-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-medium text-[#1D3140]">Tabela {tableIndex + 1}</h2>
+            <h2 className="text-lg font-medium text-neutral-900">Tabela {tableIndex + 1}</h2>
             {tables.length > 1 && (
               <button
                 type="button"
@@ -303,7 +303,7 @@ export function TableForm() {
               <button
                 type="button"
                 onClick={() => addColumn(tableIndex)}
-                className="inline-flex items-center gap-1 text-sm text-[#1D3140] hover:underline"
+                className="inline-flex items-center gap-1 text-sm text-neutral-900 hover:underline"
               >
                 <Plus className="h-4 w-4" />
                 Coluna
@@ -351,25 +351,25 @@ export function TableForm() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[480px] border-collapse text-sm">
               <thead>
-                <tr className="bg-[#1D3140] text-left text-white">
+                <tr className="bg-neutral-900 text-left text-white">
                   {table.columns.map((col, i) => (
-                    <th key={i} className="border border-[#2d4558] px-2 py-2 font-medium">
+                    <th key={i} className="border border-neutral-800 px-2 py-2 font-medium">
                       {col.header || `Col ${i + 1}`}
                     </th>
                   ))}
-                  <th className="w-10 border border-[#2d4558]" />
+                  <th className="w-10 border border-neutral-800" />
                 </tr>
               </thead>
               <tbody>
                 {table.rows.map((row, rowIndex) => (
                   <tr
                     key={rowIndex}
-                    className={rowIndex % 2 === 0 ? 'bg-[#f5f7fc]' : 'bg-white'}
+                    className={rowIndex % 2 === 0 ? 'bg-accent-50' : 'bg-white'}
                   >
                     {row.map((cell, colIndex) => (
                       <td key={colIndex} className="border border-gray-200 p-1">
                         <input
-                          className="w-full min-w-[80px] rounded border-0 bg-transparent px-2 py-1 text-sm focus:ring-1 focus:ring-[#64ABDE]"
+                          className="w-full min-w-[80px] rounded border-0 bg-transparent px-2 py-1 text-sm focus:ring-1 focus:ring-accent-500"
                           value={cell}
                           onChange={(e) =>
                             updateCell(tableIndex, rowIndex, colIndex, e.target.value)
@@ -397,7 +397,7 @@ export function TableForm() {
           <button
             type="button"
             onClick={() => addRow(tableIndex)}
-            className="inline-flex items-center gap-1 text-sm text-[#1D3140] hover:underline"
+            className="inline-flex items-center gap-1 text-sm text-neutral-900 hover:underline"
           >
             <Plus className="h-4 w-4" />
             Linha
@@ -409,7 +409,7 @@ export function TableForm() {
         <button
           type="button"
           onClick={addTable}
-          className="inline-flex items-center gap-2 rounded-lg border border-[#64ABDE] bg-white px-4 py-2 text-sm font-medium text-[#1D3140] hover:bg-[#64ABDE]/10"
+          className="inline-flex items-center gap-2 rounded-lg border border-accent-500 bg-white px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-accent-500/10"
         >
           <Plus className="h-4 w-4" />
           Nova tabela
@@ -418,7 +418,7 @@ export function TableForm() {
           type="button"
           onClick={() => void handleGenerate()}
           disabled={isGenerating}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#1D3140] px-5 py-2 text-sm font-medium text-white hover:bg-[#1D3140]/90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-lg bg-neutral-900 px-5 py-2 text-sm font-medium text-white hover:bg-neutral-900/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isGenerating ? (
             <Loader2 className="h-4 w-4 animate-spin" />

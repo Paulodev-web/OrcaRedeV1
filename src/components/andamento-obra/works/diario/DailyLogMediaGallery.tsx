@@ -52,7 +52,7 @@ export function DailyLogMediaGallery({ media, signedUrls }: DailyLogMediaGallery
                 onClick={() => setLightboxIndex(idx)}
                 className={cn(
                   'group relative aspect-square overflow-hidden rounded-lg border border-gray-200 bg-gray-100 transition',
-                  'hover:ring-2 hover:ring-[#64ABDE]',
+                  'hover:ring-2 hover:ring-accent-500',
                 )}
                 aria-label="Abrir imagem em tela cheia"
               >

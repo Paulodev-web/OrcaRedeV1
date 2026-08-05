@@ -111,10 +111,10 @@ export default function SessionNotesBox({ sessionId }: SessionNotesBoxProps) {
   }
 
   return (
-    <div className="flex w-full shrink-0 flex-col rounded-xl border border-[#64ABDE]/30 bg-[#F7FBFE] lg:w-[min(100%,20rem)]">
-      <div className="flex items-center gap-1.5 border-b border-[#64ABDE]/20 px-3 py-2">
-        <MessageSquare className="h-3.5 w-3.5 text-[#1D3140]" />
-        <span className="text-xs font-semibold text-[#1D3140]">Recados</span>
+    <div className="flex w-full shrink-0 flex-col rounded-xl border border-accent-500/30 bg-accent-50 lg:w-[min(100%,20rem)]">
+      <div className="flex items-center gap-1.5 border-b border-accent-500/20 px-3 py-2">
+        <MessageSquare className="h-3.5 w-3.5 text-neutral-900" />
+        <span className="text-xs font-semibold text-neutral-900">Recados</span>
         <span className="text-[10px] text-slate-400">(provisório)</span>
       </div>
 
@@ -135,8 +135,8 @@ export default function SessionNotesBox({ sessionId }: SessionNotesBoxProps) {
                 <span
                   className={
                     note.author === 'maninho'
-                      ? 'text-[11px] font-semibold text-[#1D3140]'
-                      : 'text-[11px] font-semibold text-[#2B6B9A]'
+                      ? 'text-[11px] font-semibold text-neutral-900'
+                      : 'text-[11px] font-semibold text-accent-700'
                   }
                 >
                   {AUTHOR_LABEL[note.author]}
@@ -153,7 +153,7 @@ export default function SessionNotesBox({ sessionId }: SessionNotesBoxProps) {
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="border-t border-[#64ABDE]/20 px-2 py-2">
+      <form onSubmit={handleSubmit} className="border-t border-accent-500/20 px-2 py-2">
         <div className="mb-1.5 flex gap-1">
           {(['maninho', 'luan'] as const).map((option) => {
             const active = author === option;
@@ -164,8 +164,8 @@ export default function SessionNotesBox({ sessionId }: SessionNotesBoxProps) {
                 onClick={() => handleAuthorChange(option)}
                 className={
                   active
-                    ? 'rounded-full bg-[#1D3140] px-2.5 py-0.5 text-[11px] font-semibold text-white'
-                    : 'rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-500 hover:border-[#64ABDE]/40'
+                    ? 'rounded-full bg-neutral-900 px-2.5 py-0.5 text-[11px] font-semibold text-white'
+                    : 'rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-500 hover:border-accent-500/40'
                 }
               >
                 {AUTHOR_LABEL[option]}
@@ -186,13 +186,13 @@ export default function SessionNotesBox({ sessionId }: SessionNotesBoxProps) {
             rows={2}
             maxLength={2000}
             placeholder={`Escreva como ${AUTHOR_LABEL[author]}…`}
-            className="min-h-[2.5rem] flex-1 resize-none rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-[11px] text-slate-700 outline-none placeholder:text-slate-400 focus:border-[#64ABDE]/60"
+            className="min-h-[2.5rem] flex-1 resize-none rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-[11px] text-slate-700 outline-none placeholder:text-slate-400 focus:border-accent-500/60"
             disabled={isPending}
           />
           <button
             type="submit"
             disabled={isPending || !body.trim()}
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#1D3140] text-white transition-opacity disabled:opacity-40"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-900 text-white transition-opacity disabled:opacity-40"
             aria-label="Enviar recado"
           >
             <Send className="h-3.5 w-3.5" />

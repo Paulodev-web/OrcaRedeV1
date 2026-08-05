@@ -97,7 +97,7 @@ export function ManagersTable({ managers, onChange }: ManagersTableProps) {
                 const busy = pending && pendingId === manager.id;
                 return (
                   <tr key={manager.id} className="hover:bg-gray-50/60">
-                    <td className="px-4 py-3 font-medium text-[#1D3140]">{manager.fullName}</td>
+                    <td className="px-4 py-3 font-medium text-neutral-900">{manager.fullName}</td>
                     <td className="px-4 py-3 text-gray-600">{manager.email ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-600">{manager.phone ?? '—'}</td>
                     <td className="px-4 py-3">
@@ -118,7 +118,7 @@ export function ManagersTable({ managers, onChange }: ManagersTableProps) {
                           type="button"
                           aria-label={`Editar ${manager.fullName}`}
                           onClick={() => setDialogState({ mode: 'edit', manager })}
-                          className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-[#1D3140]"
+                          className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-neutral-900"
                         >
                           <Pencil className="h-4 w-4" />
                         </button>
@@ -131,7 +131,7 @@ export function ManagersTable({ managers, onChange }: ManagersTableProps) {
                               : `Reativar ${manager.fullName}`
                           }
                           onClick={() => handleToggleActive(manager)}
-                          className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-[#1D3140] disabled:opacity-50"
+                          className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-neutral-900 disabled:opacity-50"
                         >
                           {manager.isActive ? (
                             <Power className="h-4 w-4" />

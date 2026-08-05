@@ -233,7 +233,7 @@ function ToolbarToggle({
         'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors',
         'disabled:cursor-not-allowed disabled:opacity-50',
         active
-          ? 'border-[#1D3140] bg-[#1D3140] text-white hover:bg-[#16242F]'
+          ? 'border-neutral-900 bg-neutral-900 text-white hover:bg-neutral-950'
           : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100',
       ].join(' ')}
     >

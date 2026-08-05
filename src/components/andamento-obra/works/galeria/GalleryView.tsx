@@ -68,7 +68,7 @@ export function GalleryView({ items, truncated }: GalleryViewProps) {
     <div className="space-y-4">
       <header className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
-          <h1 className="text-xl font-bold text-[#1D3140]">Galeria</h1>
+          <h1 className="text-xl font-bold text-neutral-900">Galeria</h1>
           <p className="text-xs text-gray-500">
             Mídias unificadas de chat, diário, marcos e instalações.
             Ordenadas pela data de envio.

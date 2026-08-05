@@ -57,15 +57,15 @@ export function WorkTabsNav({
               className={cn(
                 'inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
                 active
-                  ? 'bg-[#64ABDE]/15 text-[#1D3140]'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-[#1D3140]',
+                  ? 'bg-accent-500/15 text-neutral-900'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-neutral-900',
               )}
             >
               <span>{tab.label}</span>
               {badgeCount > 0 && (
                 <span
                   aria-label={`${badgeCount} pendente${badgeCount === 1 ? '' : 's'}`}
-                  className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#64ABDE] px-1 text-[10px] font-bold text-white"
+                  className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-600 px-1 text-[10px] font-bold text-white"
                 >
                   {badgeCount > 9 ? '9+' : badgeCount}
                 </span>

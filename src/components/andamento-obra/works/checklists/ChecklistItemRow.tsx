@@ -18,7 +18,7 @@ export function ChecklistItemRow({ item }: Props) {
         )}
       </div>
       <div className="flex-1">
-        <p className={`text-sm ${item.isCompleted ? 'text-gray-500 line-through' : 'text-[#1D3140]'}`}>
+        <p className={`text-sm ${item.isCompleted ? 'text-gray-500 line-through' : 'text-neutral-900'}`}>
           {item.label}
         </p>
         {item.description && (

@@ -13,12 +13,12 @@ export function PostsProgressCard({ postsPlanned, postsInstalled }: PostsProgres
         <MapPin className="h-3.5 w-3.5" />
         Postes instalados
       </header>
-      <p className="mt-2 text-2xl font-bold text-[#1D3140]">
+      <p className="mt-2 text-2xl font-bold text-neutral-900">
         {postsInstalled} <span className="text-sm font-normal text-gray-400">/ {postsPlanned}</span>
       </p>
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-100">
         <div
-          className="h-full bg-[#64ABDE] transition-all"
+          className="h-full bg-accent-600 transition-all"
           style={{ width: `${pct.toFixed(1)}%` }}
         />
       </div>

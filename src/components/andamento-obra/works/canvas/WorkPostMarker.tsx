@@ -46,9 +46,9 @@ export const WorkPostMarker = memo(function WorkPostMarker({
       className={[
         'absolute flex items-center justify-center rounded-full',
         'border-2 transition-all duration-150 ease-out',
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1D3140] focus-visible:ring-offset-2',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2',
         selected
-          ? 'border-[#1D3140] bg-gray-500 opacity-100 shadow-[0_0_0_4px_rgba(29,49,64,0.18)] scale-110'
+          ? 'border-neutral-900 bg-gray-500 opacity-100 shadow-[0_0_0_4px_rgba(29,49,64,0.18)] scale-110'
           : 'border-gray-500 bg-gray-400 opacity-70 hover:border-gray-700 hover:bg-gray-500 hover:opacity-100 hover:scale-105',
       ].join(' ')}
       style={{

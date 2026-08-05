@@ -166,7 +166,7 @@ export function IdealPdfExportControls({
         value={selectedSupplierSlug}
         onChange={(e) => onSelectedSupplierSlugChange(e.target.value)}
         disabled={!canExport || isLoadingList || suppliers.length === 0}
-        className="max-w-[200px] rounded-lg border border-[#64ABDE] bg-white px-3 py-2 text-sm text-[#1D3140] disabled:cursor-not-allowed disabled:opacity-50 sm:max-w-[240px]"
+        className="max-w-[200px] rounded-lg border border-accent-500 bg-white px-3 py-2 text-sm text-neutral-900 disabled:cursor-not-allowed disabled:opacity-50 sm:max-w-[240px]"
         aria-label="Filtrar Cenário Ideal por fornecedor"
       >
         <option value={ALL_SUPPLIERS_VALUE}>Todos</option>
@@ -194,7 +194,7 @@ export function IdealPdfExportControls({
           type="button"
           onClick={handleExportClick}
           disabled={disabled}
-          className="inline-flex items-center gap-2 rounded-lg border border-[#64ABDE] bg-white px-4 py-2 text-sm font-medium text-[#1D3140] transition-colors hover:bg-[#64ABDE]/10 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
+          className="inline-flex items-center gap-2 rounded-lg border border-accent-500 bg-white px-4 py-2 text-sm font-medium text-neutral-900 transition-colors hover:bg-accent-500/10 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
         >
           {isExporting ? (
             <Loader2 className="h-4 w-4 animate-spin" />

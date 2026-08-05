@@ -133,7 +133,7 @@ export function MilestoneDetailsDrawer({
         >
           <div className="flex items-start justify-between border-b border-gray-200 px-5 py-4">
             <div>
-              <Dialog.Title className="text-lg font-semibold text-[#1D3140]">
+              <Dialog.Title className="text-lg font-semibold text-neutral-900">
                 {milestone.name}
               </Dialog.Title>
               <div className="mt-1">
@@ -282,7 +282,7 @@ function EventItem({
   return (
     <li className="rounded-lg border border-gray-200 p-3">
       <div className="mb-1 flex items-center justify-between text-xs">
-        <span className="inline-flex items-center gap-1 font-medium text-[#1D3140]">
+        <span className="inline-flex items-center gap-1 font-medium text-neutral-900">
           <Icon className="h-3.5 w-3.5" /> {EVENT_TYPE_LABEL[event.eventType]} ·{' '}
           {event.actorRole === 'engineer' ? 'engenheiro' : 'gerente'}
         </span>
@@ -399,7 +399,7 @@ function DrawerActions({
               type="button"
               onClick={onReport}
               disabled={isPending}
-              className="rounded-md bg-[#64ABDE] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#5599c4] disabled:opacity-50"
+              className="rounded-md bg-accent-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-500 disabled:opacity-50"
             >
               Reportar conclusão
             </button>

@@ -68,7 +68,7 @@ function JobStatusIcon({ status }: { status: ExtractionJobRow['status'] }) {
     case 'pending':
       return <Clock className="h-4 w-4 text-amber-500" />;
     case 'processing':
-      return <Loader2 className="h-4 w-4 animate-spin text-[#64ABDE]" />;
+      return <Loader2 className="h-4 w-4 animate-spin text-accent-600" />;
     case 'completed':
       return <CheckCircle2 className="h-4 w-4 text-emerald-600" />;
     case 'error':
@@ -503,14 +503,14 @@ export default function SessionExtractionRealtime({
       {/* Active processing queue */}
       {activeJobs.length > 0 && (
         <section>
-          <h2 className="mb-3 text-base font-semibold text-[#1D3140]">
+          <h2 className="mb-3 text-base font-semibold text-neutral-900">
             Processando ({activeJobs.length})
           </h2>
           <ul className="space-y-2">
             {processingJobs.map((j) => (
               <li
                 key={j.id}
-                className="flex flex-wrap items-center gap-3 rounded-lg border border-[#64ABDE]/40 bg-[#64ABDE]/10 px-4 py-3 text-sm"
+                className="flex flex-wrap items-center gap-3 rounded-lg border border-accent-500/40 bg-accent-500/10 px-4 py-3 text-sm"
               >
                 <JobStatusIcon status={j.status} />
                 <span className="flex-1 min-w-0 font-medium text-gray-800 truncate">
@@ -527,7 +527,7 @@ export default function SessionExtractionRealtime({
             {pendingJobs.map((j) => (
               <li
                 key={j.id}
-                className="flex flex-wrap items-center gap-3 rounded-lg border border-[#64ABDE]/40 bg-[#64ABDE]/10 px-4 py-3 text-sm"
+                className="flex flex-wrap items-center gap-3 rounded-lg border border-accent-500/40 bg-accent-500/10 px-4 py-3 text-sm"
               >
                 <JobStatusIcon status={j.status} />
                 <span className="flex-1 min-w-0 font-medium text-gray-800 truncate">
@@ -543,7 +543,7 @@ export default function SessionExtractionRealtime({
       {/* Errored jobs — shown for reference, no action buttons */}
       {erroredJobs.length > 0 && (
         <section>
-          <h2 className="mb-3 text-base font-semibold text-[#1D3140]">
+          <h2 className="mb-3 text-base font-semibold text-neutral-900">
             Falhas no processamento ({erroredJobs.length})
           </h2>
           <ul className="space-y-2">
@@ -568,7 +568,7 @@ export default function SessionExtractionRealtime({
 
       {/* Processed quotes — primary interaction cards */}
       <section>
-        <h2 className="mb-3 text-base font-semibold text-[#1D3140]">
+        <h2 className="mb-3 text-base font-semibold text-neutral-900">
           PDFs processados ({quotes.length})
         </h2>
         {quotes.length === 0 ? (
@@ -586,7 +586,7 @@ export default function SessionExtractionRealtime({
                   className={`group rounded-lg border p-4 transition-all hover:shadow-md ${
                     validated
                       ? 'border-green-200 bg-green-50/30'
-                      : 'border-gray-200 bg-white hover:border-[#64ABDE]/50'
+                      : 'border-gray-200 bg-white hover:border-accent-500/50'
                   }`}
                 >
                   <div className="flex items-start gap-3">
@@ -599,13 +599,13 @@ export default function SessionExtractionRealtime({
                         className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
                           validated
                             ? 'bg-green-100 text-green-600'
-                            : 'bg-gray-100 text-gray-500 group-hover:bg-[#64ABDE]/15 group-hover:text-[#64ABDE]'
+                            : 'bg-gray-100 text-gray-500 group-hover:bg-accent-500/15 group-hover:text-accent-600'
                         }`}
                       >
                         <FileText className="h-5 w-5" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-[#1D3140]">
+                        <p className="truncate text-sm font-semibold text-neutral-900">
                           {q.supplier_name}
                         </p>
                         <p className="mt-0.5 text-xs text-gray-500">
@@ -622,7 +622,7 @@ export default function SessionExtractionRealtime({
                         type="button"
                         title="Revisar extração"
                         onClick={() => openCuration(q)}
-                        className="inline-flex items-center justify-center rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-[#64ABDE]/10 hover:text-[#64ABDE]"
+                        className="inline-flex items-center justify-center rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-accent-500/10 hover:text-accent-600"
                       >
                         <Eye className="h-4 w-4" />
                       </button>

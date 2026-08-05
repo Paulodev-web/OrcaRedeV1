@@ -84,7 +84,7 @@ export function BudgetPickerStep({ onBack, onSelect }: BudgetPickerStepProps) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por nome, cliente ou cidade"
-            className="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+            className="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
           />
         </div>
 
@@ -169,13 +169,13 @@ function BudgetRow({ budget, selected, onClick }: BudgetRowProps) {
         onClick={onClick}
         className={`w-full rounded-lg border px-3 py-2.5 text-left transition-colors ${
           selected
-            ? 'border-[#64ABDE] bg-[#64ABDE]/5'
-            : 'border-gray-200 bg-white hover:border-[#64ABDE]/40 hover:bg-gray-50'
+            ? 'border-accent-500 bg-accent-500/5'
+            : 'border-gray-200 bg-white hover:border-accent-500/40 hover:bg-gray-50'
         }`}
       >
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-[#1D3140]">{budget.projectName}</p>
+            <p className="truncate text-sm font-semibold text-neutral-900">{budget.projectName}</p>
             <p className="mt-0.5 truncate text-xs text-gray-500">
               {budget.clientName ?? 'Sem cliente'}
               {budget.city && ` · ${budget.city}`}

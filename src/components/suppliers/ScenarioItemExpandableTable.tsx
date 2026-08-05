@@ -187,14 +187,14 @@ export default function ScenarioItemExpandableTable({
                       isPurchased
                         ? 'bg-green-50 hover:bg-green-100'
                         : isExpanded
-                          ? 'bg-[#64ABDE]/10'
+                          ? 'bg-accent-500/10'
                           : isEvenRow
                             ? 'bg-white hover:bg-gray-50'
                             : 'bg-gray-50/50 hover:bg-gray-100'
                     } ${isNoPurchase ? 'opacity-55' : ''}`}
                   >
                     <td className="px-4 py-3">
-                      <p className="text-sm font-medium text-[#1D3140]">{item.material_name}</p>
+                      <p className="text-sm font-medium text-neutral-900">{item.material_name}</p>
                       <p className="text-xs text-gray-400">
                         <span className="font-mono">{item.material_code}</span>
                       </p>
@@ -219,7 +219,7 @@ export default function ScenarioItemExpandableTable({
                         <button
                           type="button"
                           onClick={() => onManualQuoteRequest(item)}
-                          className="text-xs font-medium text-[#64ABDE] hover:text-[#1D3140] hover:underline"
+                          className="text-xs font-medium text-accent-600 hover:text-neutral-900 hover:underline"
                         >
                           Cotação manual
                         </button>
@@ -230,7 +230,7 @@ export default function ScenarioItemExpandableTable({
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <p className="text-sm font-bold text-[#1D3140]">
+                      <p className="text-sm font-bold text-neutral-900">
                         {summary.unitPrice > 0 ? formatCurrency(summary.unitPrice) : '—'}
                       </p>
                       {summary.unitPrice > 0 && item.material_unit && (
@@ -238,7 +238,7 @@ export default function ScenarioItemExpandableTable({
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <p className="text-sm font-semibold text-[#64ABDE]">
+                      <p className="text-sm font-semibold text-accent-600">
                         {summary.lineTotal > 0 ? formatCurrency(summary.lineTotal) : '—'}
                       </p>
                     </td>
@@ -271,13 +271,13 @@ export default function ScenarioItemExpandableTable({
                     </td>
                   </tr>
                   {isExpanded && (
-                    <tr className="bg-[#64ABDE]/5">
+                    <tr className="bg-accent-500/5">
                       <td colSpan={showOcColumn ? 7 : 6} className="px-4 py-3">
                         {hasNoOffers && onManualQuoteRequest ? (
                           <button
                             type="button"
                             onClick={() => onManualQuoteRequest(item)}
-                            className="text-sm font-medium text-[#64ABDE] hover:text-[#1D3140] hover:underline"
+                            className="text-sm font-medium text-accent-600 hover:text-neutral-900 hover:underline"
                           >
                             + Adicionar cotação manual
                           </button>
@@ -298,11 +298,11 @@ export default function ScenarioItemExpandableTable({
                                   key={offer.quote_item_id}
                                   className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm ${
                                     isHighlighted
-                                      ? 'border-[#64ABDE] bg-[#64ABDE]/10'
+                                      ? 'border-accent-500 bg-accent-500/10'
                                       : 'border-gray-200 bg-white'
                                   }`}
                                 >
-                                  <span className="font-medium text-[#1D3140]">
+                                  <span className="font-medium text-neutral-900">
                                     {offer.supplier_name}
                                   </span>
                                   <div className="flex items-center gap-4">
@@ -315,7 +315,7 @@ export default function ScenarioItemExpandableTable({
                                       )}
                                     </span>
                                     {item.net_qty > 0 && (
-                                      <span className="font-semibold text-[#64ABDE]">
+                                      <span className="font-semibold text-accent-600">
                                         {formatCurrency(lineTotal)}
                                       </span>
                                     )}
@@ -327,8 +327,8 @@ export default function ScenarioItemExpandableTable({
                                         }
                                         className={`text-xs font-medium px-2 py-1 rounded ${
                                           isHighlighted
-                                            ? 'bg-[#64ABDE] text-white'
-                                            : 'text-[#64ABDE] hover:bg-[#64ABDE]/10'
+                                            ? 'bg-accent-600 text-white'
+                                            : 'text-accent-600 hover:bg-accent-500/10'
                                         }`}
                                       >
                                         {isHighlighted ? 'Selecionado' : 'Selecionar'}
@@ -352,7 +352,7 @@ export default function ScenarioItemExpandableTable({
       <div className="flex justify-end pt-2 border-t border-gray-100">
         <p className="text-sm text-gray-600">
           {totalLabel}{' '}
-          <span className="font-bold text-[#1D3140]">{formatCurrency(totalValue)}</span>
+          <span className="font-bold text-neutral-900">{formatCurrency(totalValue)}</span>
         </p>
       </div>
     </div>

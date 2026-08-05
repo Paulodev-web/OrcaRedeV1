@@ -38,7 +38,7 @@ export function ReturnChecklistDialog({ checklistId, onClose }: Props) {
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
       <div className="relative w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-        <h3 className="mb-4 text-lg font-semibold text-[#1D3140]">Devolver checklist</h3>
+        <h3 className="mb-4 text-lg font-semibold text-neutral-900">Devolver checklist</h3>
 
         <div className="space-y-3">
           <div>

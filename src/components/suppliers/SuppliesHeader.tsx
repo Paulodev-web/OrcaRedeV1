@@ -27,9 +27,9 @@ function stepClass(active: boolean, disabled = false) {
     return 'inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-300';
   }
   if (active) {
-    return 'inline-flex items-center gap-1.5 rounded-full border border-[#64ABDE]/40 bg-[#64ABDE]/15 px-3 py-1.5 text-xs font-semibold text-[#1D3140]';
+    return 'inline-flex items-center gap-1.5 rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1.5 text-xs font-semibold text-neutral-900';
   }
-  return 'inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:border-[#64ABDE]/40 hover:text-[#1D3140]';
+  return 'inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:border-accent-500/40 hover:text-neutral-900';
 }
 
 export default function SuppliesHeader({
@@ -47,14 +47,14 @@ export default function SuppliesHeader({
   const showCenariosLink = Boolean(sessionId && hasBudget);
 
   return (
-    <div className="sticky top-0 z-20 rounded-2xl border border-[#64ABDE]/30 bg-white/95 p-5 shadow-sm backdrop-blur-sm sm:p-6">
+    <div className="sticky top-0 z-20 rounded-2xl border border-accent-500/30 bg-white/95 p-5 shadow-sm backdrop-blur-sm sm:p-6">
       <div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-400">
-        <Link href="/" className="inline-flex items-center gap-1 transition-colors hover:text-[#64ABDE]">
+        <Link href="/" className="inline-flex items-center gap-1 transition-colors hover:text-accent-600">
           <LayoutGrid className="h-3.5 w-3.5" />
           Portal
         </Link>
         <ChevronRight className="h-3 w-3" />
-        <Link href="/fornecedores" className="transition-colors hover:text-[#64ABDE]">
+        <Link href="/fornecedores" className="transition-colors hover:text-accent-600">
           Suprimentos
         </Link>
         {sessionTitle && (
@@ -68,11 +68,11 @@ export default function SuppliesHeader({
       <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#64ABDE]/40 bg-[#64ABDE]/15">
-              <Building2 className="h-5 w-5 text-[#1D3140]" />
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-accent-500/40 bg-accent-500/15">
+              <Building2 className="h-5 w-5 text-neutral-900" />
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="text-xl font-bold text-[#1D3140] sm:text-2xl">{title}</h1>
+              <h1 className="text-xl font-bold text-neutral-900 sm:text-2xl">{title}</h1>
               <p className="mt-1 text-sm text-slate-500">{description}</p>
             </div>
           </div>

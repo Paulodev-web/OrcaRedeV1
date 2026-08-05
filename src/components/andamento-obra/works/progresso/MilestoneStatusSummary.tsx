@@ -34,7 +34,7 @@ export function MilestoneStatusSummary({ counts }: MilestoneStatusSummaryProps) 
           <ListChecks className="h-3.5 w-3.5" />
           Resumo de marcos
         </h3>
-        <span className="text-xs font-medium text-[#1D3140]">
+        <span className="text-xs font-medium text-neutral-900">
           {approved} / {total} ({pct}%)
         </span>
       </header>
@@ -47,7 +47,7 @@ export function MilestoneStatusSummary({ counts }: MilestoneStatusSummaryProps) 
           >
             <span className={`h-2 w-2 rounded-full ${STATUS_DOT[s]}`} aria-hidden />
             <span className="flex-1 text-gray-700">{MILESTONE_STATUS_LABEL[s]}</span>
-            <span className="font-semibold text-[#1D3140]">{counts[s] ?? 0}</span>
+            <span className="font-semibold text-neutral-900">{counts[s] ?? 0}</span>
           </li>
         ))}
       </ul>

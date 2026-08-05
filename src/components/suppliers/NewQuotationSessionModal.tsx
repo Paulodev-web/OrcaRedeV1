@@ -103,7 +103,7 @@ export default function NewQuotationSessionModal({
         >
           <X className="h-5 w-5" />
         </button>
-        <h2 id="new-session-title" className="pr-8 text-lg font-semibold text-[#1D3140]">
+        <h2 id="new-session-title" className="pr-8 text-lg font-semibold text-neutral-900">
           {mode === 'create' ? 'Nova sessão de cotação' : 'Editar sessão de cotação'}
         </h2>
         <p className="mt-1 text-sm text-gray-500">
@@ -151,7 +151,7 @@ export default function NewQuotationSessionModal({
                       onKeyUp={(e) => e.stopPropagation()}
                       autoComplete="off"
                       placeholder="Buscar orçamento por nome..."
-                      className="w-full rounded-md border border-gray-200 bg-white py-1.5 pl-8 pr-2 text-sm focus:border-[#64ABDE] focus:outline-none focus:ring-1 focus:ring-[#64ABDE]"
+                      className="w-full rounded-md border border-gray-200 bg-white py-1.5 pl-8 pr-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
                       aria-label="Buscar orçamento por nome"
                     />
                   </div>

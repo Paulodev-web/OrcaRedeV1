@@ -51,7 +51,7 @@ export function StatusDropdown({ workId, current }: StatusDropdownProps) {
         <button
           type="button"
           disabled={pending}
-          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-[#1D3140] hover:bg-gray-50 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-900 hover:bg-gray-50 disabled:opacity-60"
         >
           <span className={`h-2 w-2 rounded-full ${STATUS_DOT[current]}`} aria-hidden />
           {STATUS_LABELS[current]}
@@ -71,13 +71,13 @@ export function StatusDropdown({ workId, current }: StatusDropdownProps) {
                 key={status}
                 type="button"
                 onClick={() => handleSelect(status)}
-                className="flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-sm text-[#1D3140] hover:bg-gray-50"
+                className="flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-sm text-neutral-900 hover:bg-gray-50"
               >
                 <span className="flex items-center gap-2">
                   <span className={`h-2 w-2 rounded-full ${STATUS_DOT[status]}`} aria-hidden />
                   {STATUS_LABELS[status]}
                 </span>
-                {active && <Check className="h-3.5 w-3.5 text-[#64ABDE]" />}
+                {active && <Check className="h-3.5 w-3.5 text-accent-600" />}
               </button>
             );
           })}
