@@ -43,7 +43,7 @@ export function WorkTeamSection({ team, availableCrew, workId, isEngineer }: Pro
           {team.map((m) => (
             <div
               key={m.id}
-              className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-3 shadow-sm"
+              className="flex items-center justify-between rounded-lg border border-gray-200 bg-surface p-3 shadow-sm"
             >
               <div>
                 <p className="text-sm font-medium text-neutral-900">

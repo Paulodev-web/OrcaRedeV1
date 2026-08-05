@@ -267,7 +267,7 @@ export function ChatComposer({
   }
 
   return (
-    <div className="border-t border-gray-200 bg-white">
+    <div className="border-t border-gray-200 bg-surface">
       {staged.length > 0 && (
         <div className="flex flex-wrap gap-2 border-b border-gray-100 px-3 py-2 sm:px-4">
           {staged.map((s) => (
@@ -321,7 +321,7 @@ export function ChatComposer({
           className={cn(
             'min-h-[40px] flex-1 resize-none rounded-2xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm leading-snug',
             'outline-none transition-colors placeholder:text-gray-400',
-            'focus:border-accent-500/60 focus:bg-white focus:ring-2 focus:ring-accent-500/20',
+            'focus:border-accent-500/60 focus:bg-surface focus:ring-2 focus:ring-accent-500/20',
             'disabled:cursor-wait disabled:opacity-70',
           )}
         />

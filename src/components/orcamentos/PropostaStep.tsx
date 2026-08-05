@@ -59,7 +59,7 @@ export function PropostaStep({ budgetId, proposals, hasPricing }: PropostaStepPr
       </div>
 
       {proposals.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-surface px-6 py-12 text-center">
           <FileText className="h-8 w-8 text-slate-300" />
           <p className="max-w-md text-sm text-slate-600">
             A proposta reúne o escopo, a curva ABC dos materiais, os valores da precificação e as
@@ -74,7 +74,7 @@ export function PropostaStep({ budgetId, proposals, hasPricing }: PropostaStepPr
           </Link>
         </div>
       ) : (
-        <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-surface">
           {proposals.map((proposal) => (
             <li key={proposal.id}>
               <Link

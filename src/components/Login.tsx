@@ -96,7 +96,7 @@ export function Login() {
 
             {/* Figura do usuário */}
             <div className="absolute -bottom-12 right-0 w-16 h-16 bg-surface rounded-full flex items-center justify-center border border-neutral-200 shadow-md">
-              <User className="w-8 h-8 text-accent-600" />
+              <User className="w-8 h-8 text-link" />
             </div>
           </div>
 
@@ -105,7 +105,7 @@ export function Login() {
               ON Engenharia
             </h1>
             <p className="text-xl text-neutral-700 mb-2">Sistema de Orçamentos</p>
-            <p className="text-neutral-500 max-w-md">
+            <p className="text-neutral-600 max-w-md">
               Gerencie seus projetos elétricos com eficiência e segurança
             </p>
           </div>

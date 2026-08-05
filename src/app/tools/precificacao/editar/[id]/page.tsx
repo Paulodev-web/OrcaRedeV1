@@ -42,14 +42,14 @@ export default async function EditarPrecificacaoPage({ params }: EditarPrecifica
     return (
       <main className="min-h-screen bg-gray-50 p-6 lg:p-8">
         <div className="mx-auto max-w-7xl">
-          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-xl border border-gray-200 bg-surface p-6 shadow-sm">
             <h1 className="text-xl font-semibold text-neutral-900">Precificação não encontrada</h1>
             <p className="mt-2 text-sm text-gray-600">
               O card pode ter sido excluído ou você não tem permissão para acessá-lo.
             </p>
             <Link
               href="/tools/precificacao"
-              className="mt-4 inline-flex text-sm font-medium text-accent-600 hover:brightness-95"
+              className="mt-4 inline-flex text-sm font-medium text-link hover:brightness-95"
             >
               Voltar ao dashboard
             </Link>
@@ -62,10 +62,10 @@ export default async function EditarPrecificacaoPage({ params }: EditarPrecifica
   return (
     <main className="min-h-screen bg-gray-50 p-6 lg:p-8">
       <div className="mx-auto max-w-7xl">
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="rounded-xl border border-gray-200 bg-surface p-6 shadow-sm">
           <h1 className="text-xl font-semibold text-neutral-900">Editar Precificação</h1>
           <p className="mt-2 text-sm text-gray-600">{authError}</p>
-          <Link href="/" className="mt-4 inline-flex text-sm font-medium text-accent-600 hover:brightness-95">
+          <Link href="/" className="mt-4 inline-flex text-sm font-medium text-link hover:brightness-95">
             Ir para o portal
           </Link>
         </div>

@@ -77,7 +77,7 @@ export function AcompanhamentoCenter({
         return (
           <section
             key={group.key}
-            className="rounded-xl border border-gray-200 bg-white shadow-sm"
+            className="rounded-xl border border-gray-200 bg-surface shadow-sm"
           >
             <button
               type="button"

@@ -140,7 +140,7 @@ export function NovaPropostaForm({
           </Notice>
         ) : (
           <div className="space-y-5">
-            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <section className="rounded-xl border border-slate-200 bg-surface p-5 shadow-sm">
               <label className="block">
                 <FieldLabel hint="a proposta herda cliente, cidade e materiais dele">
                   Orçamento de origem
@@ -169,7 +169,7 @@ export function NovaPropostaForm({
               ) : null}
             </section>
 
-            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <section className="rounded-xl border border-slate-200 bg-surface p-5 shadow-sm">
               <FieldLabel hint="uma proposta pode apresentar mais de uma opção ao cliente">
                 Cenários de precificação
               </FieldLabel>
@@ -230,7 +230,7 @@ export function NovaPropostaForm({
               )}
             </section>
 
-            <section className="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
+            <section className="grid gap-4 rounded-xl border border-slate-200 bg-surface p-5 shadow-sm sm:grid-cols-2">
               <label className="block">
                 <FieldLabel hint="copia texto institucional e matriz">Template</FieldLabel>
                 <select

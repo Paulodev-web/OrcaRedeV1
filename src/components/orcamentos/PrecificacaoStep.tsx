@@ -48,7 +48,7 @@ export function PrecificacaoStep({ budgetId, initialSaved }: PrecificacaoStepPro
           </Link>
         </div>
       ) : (
-        <p className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+        <p className="rounded-xl border border-slate-200 bg-surface px-4 py-3 text-sm text-slate-600">
           Defina o valor do serviço e os custos para liberar a etapa de proposta. Os materiais
           vêm do consolidado deste orçamento.
         </p>

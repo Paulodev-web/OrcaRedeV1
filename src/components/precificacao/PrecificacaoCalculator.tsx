@@ -272,14 +272,14 @@ export function PrecificacaoCalculator({
   };
 
   if (loadingAuth) {
-    return <div className="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-500">Verificando sessão...</div>;
+    return <div className="rounded-xl border border-gray-200 bg-surface p-6 text-sm text-gray-500">Verificando sessão...</div>;
   }
 
   if (!user) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div className="rounded-xl border border-gray-200 bg-surface p-6 shadow-sm">
         <p className="text-sm text-gray-700">Faça login no portal principal para acessar o módulo de precificação.</p>
-        <Link href="/" className="mt-3 inline-flex text-sm font-medium text-accent-600 hover:brightness-95">
+        <Link href="/" className="mt-3 inline-flex text-sm font-medium text-link hover:brightness-95">
           Ir para o portal
         </Link>
       </div>
@@ -293,11 +293,11 @@ export function PrecificacaoCalculator({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs text-gray-400">
-              <Link href="/" className="hover:text-accent-600">
+              <Link href="/" className="hover:text-link">
                 Portal
               </Link>
               <span className="mx-1">/</span>
-              <Link href="/tools/precificacao" className="hover:text-accent-600">
+              <Link href="/tools/precificacao" className="hover:text-link">
                 Módulo de Precificação
               </Link>
               <span className="mx-1">/</span>
@@ -315,7 +315,7 @@ export function PrecificacaoCalculator({
           </div>
           <Link
             href="/tools/precificacao"
-            className="inline-flex h-10 items-center justify-center rounded-lg border border-accent-500/30 bg-white px-4 text-sm font-medium text-neutral-900 shadow-sm transition hover:border-accent-500 hover:text-accent-600"
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-accent-500/30 bg-surface px-4 text-sm font-medium text-neutral-900 shadow-sm transition hover:border-accent-500 hover:text-link"
           >
             Voltar ao dashboard
           </Link>

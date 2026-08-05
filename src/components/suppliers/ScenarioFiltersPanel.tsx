@@ -77,14 +77,14 @@ export default function ScenarioFiltersPanel({
   }, [onFilterChange]);
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+    <div className="rounded-xl border border-gray-200 bg-surface shadow-sm">
       <button
         type="button"
         onClick={() => onExpandedChange(!isExpanded)}
         className="flex w-full items-center justify-between px-5 py-4 text-left hover:bg-gray-50/50 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <Filter className="h-5 w-5 text-accent-600" />
+          <Filter className="h-5 w-5 text-link" />
           <span className="text-sm font-semibold text-neutral-900">Filtros e visualização</span>
           {activeFilterCount > 0 && (
             <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 text-xs font-medium text-white bg-accent-600 rounded-full">
@@ -135,7 +135,7 @@ export default function ScenarioFiltersPanel({
                 <button
                   type="button"
                   onClick={selectAllQuotes}
-                  className="text-xs text-accent-600 hover:underline"
+                  className="text-xs text-link hover:underline"
                 >
                   Todos
                 </button>
@@ -143,7 +143,7 @@ export default function ScenarioFiltersPanel({
                 <button
                   type="button"
                   onClick={clearAllQuotes}
-                  className="text-xs text-accent-600 hover:underline"
+                  className="text-xs text-link hover:underline"
                 >
                   Nenhum
                 </button>
@@ -251,7 +251,7 @@ export default function ScenarioFiltersPanel({
                 type="checkbox"
                 checked={filterState.showOnlyUncovered}
                 onChange={(e) => updateFilter('showOnlyUncovered', e.target.checked)}
-                className="rounded border-gray-300 text-accent-600 focus:ring-accent-500/30"
+                className="rounded border-gray-300 text-link focus:ring-accent-500/30"
               />
               <span className="text-sm text-gray-700">Apenas sem cobertura</span>
             </label>
@@ -261,7 +261,7 @@ export default function ScenarioFiltersPanel({
                 type="checkbox"
                 checked={filterState.showOnlyDivergent}
                 onChange={(e) => updateFilter('showOnlyDivergent', e.target.checked)}
-                className="rounded border-gray-300 text-accent-600 focus:ring-accent-500/30"
+                className="rounded border-gray-300 text-link focus:ring-accent-500/30"
               />
               <span className="text-sm text-gray-700">Apenas divergentes (2+ preços)</span>
             </label>
@@ -271,7 +271,7 @@ export default function ScenarioFiltersPanel({
                 type="checkbox"
                 checked={filterState.showOnlyDifferences}
                 onChange={(e) => updateFilter('showOnlyDifferences', e.target.checked)}
-                className="rounded border-gray-300 text-accent-600 focus:ring-accent-500/30"
+                className="rounded border-gray-300 text-link focus:ring-accent-500/30"
               />
               <span className="text-sm text-gray-700">Onde B difere de A</span>
             </label>
@@ -283,7 +283,7 @@ export default function ScenarioFiltersPanel({
               <button
                 type="button"
                 onClick={clearFilters}
-                className="text-sm text-accent-600 hover:underline"
+                className="text-sm text-link hover:underline"
               >
                 Limpar todos os filtros
               </button>

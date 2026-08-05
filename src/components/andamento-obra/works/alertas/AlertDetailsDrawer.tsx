@@ -115,8 +115,8 @@ export function AlertDetailsDrawer({ alertId, workId, role, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-end">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="relative h-full w-full max-w-lg overflow-y-auto bg-white shadow-xl">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+      <div className="relative h-full w-full max-w-lg overflow-y-auto bg-surface shadow-xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-surface px-6 py-4">
           <h2 className="text-lg font-semibold text-neutral-900">Detalhes do Alerta</h2>
           <button
             type="button"
@@ -156,7 +156,7 @@ export function AlertDetailsDrawer({ alertId, workId, role, onClose }: Props) {
                   href={`https://maps.google.com/?q=${data.alert.gpsLat},${data.alert.gpsLng}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-accent-600 hover:underline"
+                  className="text-xs text-link hover:underline"
                 >
                   Abrir no mapa
                 </a>

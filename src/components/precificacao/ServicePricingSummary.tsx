@@ -56,7 +56,7 @@ export function ServicePricingSummary({
   return (
     <aside className="space-y-4 lg:sticky lg:top-6">
       {/* Bloco 1 — Materiais (informativo) */}
-      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="rounded-xl border border-gray-200 bg-surface p-4 shadow-sm">
         <div className="flex items-center gap-2">
           <Package className="h-4 w-4 text-gray-400" />
           <h2 className="text-sm font-semibold text-neutral-900">Materiais</h2>
@@ -79,7 +79,7 @@ export function ServicePricingSummary({
       </div>
 
       {/* Bloco 2 — Serviço */}
-      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="rounded-xl border border-gray-200 bg-surface p-4 shadow-sm">
         <h2 className="text-sm font-semibold text-neutral-900">Serviço</h2>
 
         <div className="mt-4 grid gap-3">
@@ -134,17 +134,17 @@ export function ServicePricingSummary({
         <h2 className="text-sm font-semibold text-neutral-900">Total ao Cliente</h2>
 
         <div className="mt-3 space-y-2 text-sm">
-          <div className="flex items-center justify-between gap-2 rounded-md bg-white/80 px-2 py-1.5">
+          <div className="flex items-center justify-between gap-2 rounded-md bg-surface/80 px-2 py-1.5">
             <span className="text-gray-600">Materiais</span>
             <span className="font-medium text-neutral-900">{currencyFormatter.format(result.valorMateriais)}</span>
           </div>
-          <div className="flex items-center justify-between gap-2 rounded-md bg-white/80 px-2 py-1.5">
+          <div className="flex items-center justify-between gap-2 rounded-md bg-surface/80 px-2 py-1.5">
             <span className="text-gray-600">Serviço</span>
             <span className="font-medium text-neutral-900">{currencyFormatter.format(result.valorServico)}</span>
           </div>
-          <div className="flex items-center justify-between gap-2 rounded-md border border-accent-500/40 bg-white px-3 py-2">
+          <div className="flex items-center justify-between gap-2 rounded-md border border-accent-500/40 bg-surface px-3 py-2">
             <span className="font-semibold text-neutral-900">TOTAL</span>
-            <span className="text-xl font-bold text-accent-600">
+            <span className="text-xl font-bold text-link">
               {currencyFormatter.format(result.precoTotalCliente)}
             </span>
           </div>
@@ -152,7 +152,7 @@ export function ServicePricingSummary({
       </div>
 
       {/* Detalhamento dos Custos */}
-      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="rounded-xl border border-gray-200 bg-surface p-4 shadow-sm">
         <h3 className="text-sm font-semibold text-neutral-900">Detalhamento dos Custos</h3>
         <p className="mt-1 text-xs text-gray-500">Cada custo com seu peso sobre o Valor do Serviço.</p>
 
@@ -183,7 +183,7 @@ export function ServicePricingSummary({
       </div>
 
       {/* Exportação */}
-      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="rounded-xl border border-gray-200 bg-surface p-4 shadow-sm">
         <h3 className="text-sm font-semibold text-neutral-900">Ações</h3>
         <div className="mt-3 grid gap-2">
           <button
@@ -204,7 +204,7 @@ export function ServicePricingSummary({
                   type="button"
                   disabled={!canSave || isSaving}
                   onClick={onSaveSnapshot}
-                  className="rounded-md border border-gray-200 bg-white px-3 py-2 text-left text-xs text-gray-700 transition hover:border-accent-500/50 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-md border border-gray-200 bg-surface px-3 py-2 text-left text-xs text-gray-700 transition hover:border-accent-500/50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <span className="block font-semibold text-neutral-900">
                     {savingMode === 'snapshot' ? 'Salvando snapshot...' : 'Snapshot'}
@@ -215,7 +215,7 @@ export function ServicePricingSummary({
                   type="button"
                   disabled={!canSave || isSaving}
                   onClick={onSaveLive}
-                  className="rounded-md border border-gray-200 bg-white px-3 py-2 text-left text-xs text-gray-700 transition hover:border-accent-500/50 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-md border border-gray-200 bg-surface px-3 py-2 text-left text-xs text-gray-700 transition hover:border-accent-500/50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <span className="block font-semibold text-neutral-900">
                     {savingMode === 'live' ? 'Salvando vínculo...' : 'Vinculado ao orçamento atual'}

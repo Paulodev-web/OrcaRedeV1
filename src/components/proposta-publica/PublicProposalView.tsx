@@ -113,7 +113,7 @@ function MediaGrid({
           )}
           <div className="grid gap-4 sm:grid-cols-2">
             {groupItems.map((item, index) => (
-              <figure key={`${item.url}-${index}`} className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <figure key={`${item.url}-${index}`} className="overflow-hidden rounded-xl border border-slate-200 bg-surface">
                 {/* eslint-disable-next-line @next/next/no-img-element -- URL externa do Storage, sem loader configurado */}
                 <img
                   src={item.url}
@@ -177,7 +177,7 @@ function PricingOptionCard({ option, multiple }: { option: ProposalPricingOption
       className={`rounded-2xl border p-5 ${
         option.isRecommended && multiple
           ? 'border-brand-blue bg-brand-blue/5 shadow-sm'
-          : 'border-slate-200 bg-white'
+          : 'border-slate-200 bg-surface'
       }`}
     >
       {multiple && (
@@ -618,7 +618,7 @@ export function PublicProposalView({ data, token }: PublicProposalViewProps) {
 
     contato: () => (
       <Section sectionKey="contato" title={titleFor('contato', 'Contato')}>
-        <div className="rounded-2xl border border-slate-200 bg-white p-6">
+        <div className="rounded-2xl border border-slate-200 bg-surface p-6">
           <p className="text-base font-semibold text-brand-navy">
             {data.company.tradeName || data.company.legalName}
           </p>
@@ -709,7 +709,7 @@ export function PublicProposalView({ data, token }: PublicProposalViewProps) {
         })}
       </main>
 
-      <footer className="border-t border-slate-200 bg-white px-6 py-8 sm:px-10">
+      <footer className="border-t border-slate-200 bg-surface px-6 py-8 sm:px-10">
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-4">
           <p className="text-xs text-slate-400">
             {data.company.legalName}

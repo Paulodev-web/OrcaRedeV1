@@ -73,12 +73,12 @@ export function ProposalsListClient({ proposals }: { proposals: ProposalListItem
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Buscar por cliente, número, obra…"
-            className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-700 outline-none transition-colors focus:border-brand-blue"
+            className="w-full rounded-lg border border-slate-200 bg-surface py-2 pl-9 pr-3 text-sm text-slate-700 outline-none transition-colors focus:border-brand-blue"
           />
         </div>
 
         {filtered.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center">
+          <div className="rounded-xl border border-dashed border-slate-300 bg-surface p-10 text-center">
             <FileText className="mx-auto h-8 w-8 text-slate-300" />
             <p className="mt-3 text-sm font-medium text-slate-600">
               {proposals.length === 0
@@ -96,7 +96,7 @@ export function ProposalsListClient({ proposals }: { proposals: ProposalListItem
             {filtered.map((proposal) => (
               <li
                 key={proposal.id}
-                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+                className="rounded-xl border border-slate-200 bg-surface p-4 shadow-sm transition-shadow hover:shadow-md"
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">

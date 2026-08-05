@@ -40,8 +40,8 @@ const sizeClasses = {
 
 const stateClasses: Record<StepState, string> = {
   active: "border-brand-blue/40 bg-brand-blue/15 font-semibold text-brand-navy",
-  idle: "border-slate-200 bg-white font-medium text-slate-600 hover:border-brand-blue/40 hover:text-brand-navy",
-  disabled: "cursor-not-allowed border-slate-200 bg-white font-medium text-slate-300",
+  idle: "border-slate-200 bg-surface font-medium text-slate-600 hover:border-brand-blue/40 hover:text-brand-navy",
+  disabled: "cursor-not-allowed border-slate-200 bg-surface font-medium text-slate-300",
 };
 
 /**

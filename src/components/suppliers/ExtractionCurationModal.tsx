@@ -349,7 +349,7 @@ export default function ExtractionCurationModal({
                             <button
                               type="button"
                               onClick={() => startEditing(item)}
-                              className="rounded p-1 text-gray-400 hover:bg-accent-500/10 hover:text-accent-600"
+                              className="rounded p-1 text-gray-400 hover:bg-accent-500/10 hover:text-link"
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </button>

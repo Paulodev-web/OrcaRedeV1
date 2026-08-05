@@ -68,7 +68,7 @@ function JobStatusIcon({ status }: { status: ExtractionJobRow['status'] }) {
     case 'pending':
       return <Clock className="h-4 w-4 text-amber-500" />;
     case 'processing':
-      return <Loader2 className="h-4 w-4 animate-spin text-accent-600" />;
+      return <Loader2 className="h-4 w-4 animate-spin text-link" />;
     case 'completed':
       return <CheckCircle2 className="h-4 w-4 text-emerald-600" />;
     case 'error':
@@ -481,7 +481,7 @@ export default function SessionExtractionRealtime({
             {transientProcessingErrors.map((e) => (
               <li
                 key={e.id}
-                className="flex flex-wrap items-start justify-between gap-2 rounded-lg border border-red-100 bg-white/80 px-3 py-2"
+                className="flex flex-wrap items-start justify-between gap-2 rounded-lg border border-red-100 bg-surface/80 px-3 py-2"
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-gray-900">{e.label}</p>
@@ -586,7 +586,7 @@ export default function SessionExtractionRealtime({
                   className={`group rounded-lg border p-4 transition-all hover:shadow-md ${
                     validated
                       ? 'border-green-200 bg-green-50/30'
-                      : 'border-gray-200 bg-white hover:border-accent-500/50'
+                      : 'border-gray-200 bg-surface hover:border-accent-500/50'
                   }`}
                 >
                   <div className="flex items-start gap-3">
@@ -599,7 +599,7 @@ export default function SessionExtractionRealtime({
                         className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
                           validated
                             ? 'bg-green-100 text-green-600'
-                            : 'bg-gray-100 text-gray-500 group-hover:bg-accent-500/15 group-hover:text-accent-600'
+                            : 'bg-gray-100 text-gray-500 group-hover:bg-accent-500/15 group-hover:text-link'
                         }`}
                       >
                         <FileText className="h-5 w-5" />
@@ -622,7 +622,7 @@ export default function SessionExtractionRealtime({
                         type="button"
                         title="Revisar extração"
                         onClick={() => openCuration(q)}
-                        className="inline-flex items-center justify-center rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-accent-500/10 hover:text-accent-600"
+                        className="inline-flex items-center justify-center rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-accent-500/10 hover:text-link"
                       >
                         <Eye className="h-4 w-4" />
                       </button>

@@ -28,7 +28,7 @@ export function MilestoneStatusSummary({ counts }: MilestoneStatusSummaryProps) 
   const pct = total > 0 ? Math.round((approved / total) * 100) : 0;
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-gray-200 bg-surface p-4 shadow-sm">
       <header className="flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
           <ListChecks className="h-3.5 w-3.5" />

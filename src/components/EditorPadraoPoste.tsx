@@ -305,12 +305,12 @@ export function EditorPadraoPoste({
   return (
     <div className={`grid grid-cols-1 lg:grid-cols-2 gap-6 ${heightClassName}`}>
       {/* Painel Esquerdo - Seletor de itens disponíveis */}
-      <div className="bg-white rounded-lg shadow p-6 flex flex-col overflow-hidden">
+      <div className="bg-surface rounded-lg shadow p-6 flex flex-col overflow-hidden">
         <div className="flex space-x-1 bg-gray-100 rounded-lg p-1 mb-4 flex-shrink-0">
           <button
             onClick={() => setPickerTab('grupos')}
             className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              pickerTab === 'grupos' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              pickerTab === 'grupos' ? 'bg-surface text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
             }`}
           >
             <Layers className="h-4 w-4" />
@@ -319,7 +319,7 @@ export function EditorPadraoPoste({
           <button
             onClick={() => setPickerTab('materiais')}
             className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              pickerTab === 'materiais' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              pickerTab === 'materiais' ? 'bg-surface text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
             }`}
           >
             <Package className="h-4 w-4" />
@@ -461,7 +461,7 @@ export function EditorPadraoPoste({
       </div>
 
       {/* Painel Direito - Composição do padrão */}
-      <div className="bg-white rounded-lg shadow p-6 flex flex-col overflow-hidden">
+      <div className="bg-surface rounded-lg shadow p-6 flex flex-col overflow-hidden">
         <h3 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2 flex-shrink-0">
           <Layers className="h-5 w-5 text-blue-600" />
           {isEditing ? `Editar Padrão: ${currentPoleStandard!.nome}` : 'Novo Padrão de Poste'}
@@ -585,7 +585,7 @@ export function EditorPadraoPoste({
                         <div className="font-medium text-sm text-gray-900 truncate flex items-center gap-1.5">
                           {grupo?.nome || 'Grupo não encontrado'}
                           {grupo && (
-                            <span className="text-[10px] font-normal text-gray-400 bg-white px-1.5 py-0.5 rounded flex-shrink-0">
+                            <span className="text-[10px] font-normal text-gray-400 bg-surface px-1.5 py-0.5 rounded flex-shrink-0">
                               {getCompanySigla(grupo.concessionariaId)}
                             </span>
                           )}

@@ -1208,7 +1208,7 @@ export function EngineerPortal() {
 
       <div className="grid gap-5">
         {filteredBudgets.map((budget) => (
-          <div key={budget.id} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <div key={budget.id} className="bg-surface rounded-2xl border border-slate-200 p-6 shadow-sm">
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">{budget.nome}</h3>
@@ -1362,7 +1362,7 @@ export function EngineerPortal() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+        <div className="bg-surface rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600 mb-1">Obras Ativas</p>
@@ -1374,7 +1374,7 @@ export function EngineerPortal() {
           </div>
         </div>
         
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+        <div className="bg-surface rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600 mb-1">Em Andamento</p>
@@ -1386,7 +1386,7 @@ export function EngineerPortal() {
           </div>
         </div>
         
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+        <div className="bg-surface rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600 mb-1">Concluídas</p>
@@ -1398,7 +1398,7 @@ export function EngineerPortal() {
           </div>
         </div>
         
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+        <div className="bg-surface rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600 mb-1">Progresso Médio</p>
@@ -1416,7 +1416,7 @@ export function EngineerPortal() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-lg">
+      <div className="bg-surface rounded-2xl border border-gray-100 overflow-hidden shadow-lg">
         <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white">
           <div>
             <h3 className="text-xl font-bold text-gray-900 mb-1">Obras em Acompanhamento</h3>
@@ -1541,14 +1541,14 @@ export function EngineerPortal() {
                       aria-expanded={openTrackingMenuId === tracking.id}
                       aria-label="Abrir ações da obra"
                       onClick={() => setOpenTrackingMenuId((prev) => (prev === tracking.id ? null : tracking.id))}
-                      className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-600 hover:text-neutral-900 hover:bg-slate-100 transition-colors"
+                      className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 bg-surface text-slate-600 hover:text-neutral-900 hover:bg-slate-100 transition-colors"
                     >
                       <MoreHorizontal className="w-4 h-4" />
                     </button>
                     {openTrackingMenuId === tracking.id && (
                       <div
                         role="menu"
-                        className="absolute top-11 right-0 z-20 min-w-[180px] rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
+                        className="absolute top-11 right-0 z-20 min-w-[180px] rounded-xl border border-slate-200 bg-surface p-1.5 shadow-lg"
                       >
                         <button
                           type="button"
@@ -1626,7 +1626,7 @@ export function EngineerPortal() {
 
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+        <div className="flex items-center justify-between bg-surface border border-slate-200 rounded-2xl p-5 shadow-sm">
           <div>
             <h1 className="text-2xl font-bold text-neutral-900">{getTrackingDisplayName(activeTracking)}</h1>
             <p className="text-gray-600 mt-1">
@@ -1672,7 +1672,7 @@ export function EngineerPortal() {
         </div>
 
         {/* Abas de Navegação */}
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-lg xl:-mx-4 2xl:-mx-8">
+        <div className="bg-surface rounded-xl border border-gray-100 overflow-hidden shadow-lg xl:-mx-4 2xl:-mx-8">
           <div className="border-b border-gray-100">
             <nav className="flex">
               <button
@@ -1720,7 +1720,7 @@ export function EngineerPortal() {
             {activeTracking && (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-4">
                 {/* REDE MT */}
-                <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                <div className="bg-surface border border-slate-200 rounded-xl p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Rede MT</p>
                     <span className="text-xs font-semibold text-neutral-900">{mtProgress}%</span>
@@ -1743,7 +1743,7 @@ export function EngineerPortal() {
                         updateTracking(activeTracking.id, (t) => ({ ...t, mt_extension_km: v / 1000, updated_at: new Date().toISOString() }));
                       }}
                       title="Instalado (m)"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                      className="w-full rounded-md border border-slate-300 bg-surface px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
                     />
                     <input
                       type="number"
@@ -1761,7 +1761,7 @@ export function EngineerPortal() {
                       }}
                       title="Meta total (m)"
                       placeholder="Meta"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                      className="w-full rounded-md border border-slate-300 bg-surface px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
                     />
                   </div>
                   <div className="mt-3">
@@ -1771,7 +1771,7 @@ export function EngineerPortal() {
                   </div>
                 </div>
                 {/* REDE BT */}
-                <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                <div className="bg-surface border border-slate-200 rounded-xl p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Rede BT</p>
                     <span className="text-xs font-semibold text-neutral-900">{btProgress}%</span>
@@ -1794,7 +1794,7 @@ export function EngineerPortal() {
                         updateTracking(activeTracking.id, (t) => ({ ...t, bt_extension_km: v / 1000, updated_at: new Date().toISOString() }));
                       }}
                       title="Instalado (m)"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                      className="w-full rounded-md border border-slate-300 bg-surface px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
                     />
                     <input
                       type="number"
@@ -1812,7 +1812,7 @@ export function EngineerPortal() {
                       }}
                       title="Meta total (m)"
                       placeholder="Meta"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                      className="w-full rounded-md border border-slate-300 bg-surface px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
                     />
                   </div>
                   <div className="mt-3">
@@ -1822,7 +1822,7 @@ export function EngineerPortal() {
                   </div>
                 </div>
                 {/* POSTES */}
-                <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                <div className="bg-surface border border-slate-200 rounded-xl p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Postes</p>
                     <span className="text-xs font-semibold text-neutral-900">{polesProgress}%</span>
@@ -1852,7 +1852,7 @@ export function EngineerPortal() {
                       }}
                       title="Meta total"
                       placeholder="Meta"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                      className="w-full rounded-md border border-slate-300 bg-surface px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
                     />
                   </div>
                   <div className="mt-3">
@@ -1862,7 +1862,7 @@ export function EngineerPortal() {
                   </div>
                 </div>
                 {/* EQUIPAMENTO */}
-                <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                <div className="bg-surface border border-slate-200 rounded-xl p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Equipamento</p>
                     <span className="text-xs font-semibold text-neutral-900">{equipmentProgress}%</span>
@@ -1885,7 +1885,7 @@ export function EngineerPortal() {
                         updateTracking(activeTracking.id, (t) => ({ ...t, equipment_installed: v, updated_at: new Date().toISOString() }));
                       }}
                       title="Instalado"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                      className="w-full rounded-md border border-slate-300 bg-surface px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
                     />
                     <input
                       type="number"
@@ -1903,7 +1903,7 @@ export function EngineerPortal() {
                       }}
                       title="Meta total"
                       placeholder="Meta"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                      className="w-full rounded-md border border-slate-300 bg-surface px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
                     />
                   </div>
                   <div className="mt-3">
@@ -1913,7 +1913,7 @@ export function EngineerPortal() {
                   </div>
                 </div>
                 {/* ILUM. PÚBLICA */}
-                <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                <div className="bg-surface border border-slate-200 rounded-xl p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Ilum. Publica</p>
                     <span className="text-xs font-semibold text-neutral-900">{lightingProgress}%</span>
@@ -1936,7 +1936,7 @@ export function EngineerPortal() {
                         updateTracking(activeTracking.id, (t) => ({ ...t, public_lighting_installed: v, updated_at: new Date().toISOString() }));
                       }}
                       title="Instalado"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                      className="w-full rounded-md border border-slate-300 bg-surface px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
                     />
                     <input
                       type="number"
@@ -1954,7 +1954,7 @@ export function EngineerPortal() {
                       }}
                       title="Meta total"
                       placeholder="Meta"
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                      className="w-full rounded-md border border-slate-300 bg-surface px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
                     />
                   </div>
                   <div className="mt-3">
@@ -1978,7 +1978,7 @@ export function EngineerPortal() {
                 className={`px-3 py-2 rounded-md text-sm font-medium border flex items-center gap-2 ${
                   interactionMode === 'connect-network' && networkConnectionType === 'blue'
                     ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-blue-700 border-blue-300 hover:bg-blue-50'
+                    : 'bg-surface text-blue-700 border-blue-300 hover:bg-blue-50'
                 }`}
               >
                 <Link2 className="h-4 w-4" />
@@ -1994,7 +1994,7 @@ export function EngineerPortal() {
                 className={`px-3 py-2 rounded-md text-sm font-medium border flex items-center gap-2 ${
                   interactionMode === 'connect-network' && networkConnectionType === 'green'
                     ? 'bg-emerald-600 text-white border-emerald-600'
-                    : 'bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50'
+                    : 'bg-surface text-emerald-700 border-emerald-300 hover:bg-emerald-50'
                 }`}
               >
                 <Link2 className="h-4 w-4" />
@@ -2007,7 +2007,7 @@ export function EngineerPortal() {
                   setNetworkConnectionType(null);
                   setNetworkConnectionPending(null);
                 }}
-                className="px-3 py-2 rounded-md text-sm font-medium border bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                className="px-3 py-2 rounded-md text-sm font-medium border bg-surface text-gray-700 border-gray-300 hover:bg-gray-50"
               >
                 Parar Conexão
               </button>
@@ -2021,7 +2021,7 @@ export function EngineerPortal() {
             </div>
 
             {/* Canvas Visual Melhorado */}
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden h-[600px]">
+            <div className="bg-surface rounded-xl border border-gray-200 overflow-hidden h-[600px]">
 
               {/* Canvas */}
               <CanvasVisual
@@ -2112,7 +2112,7 @@ export function EngineerPortal() {
           </div>
 
           {/* Painel de Controles */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-8 shadow-lg">
+          <div className="bg-surface rounded-2xl border border-gray-100 p-8 shadow-lg">
 
             {/* Informações Detalhadas */}
             <div className="space-y-4">
@@ -2451,7 +2451,7 @@ export function EngineerPortal() {
                 </div>
 
                 {/* Timeline */}
-                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <div className="bg-surface rounded-lg border border-gray-200 overflow-hidden">
                   <div className="p-6">
                     <div className="space-y-6">
                       {timelineMilestones.map((milestone, index) => {
@@ -2647,7 +2647,7 @@ export function EngineerPortal() {
 
   return (
     <div className="min-h-screen bg-slate-100">
-      <header className="bg-white/95 border-b border-slate-200 shadow-sm sticky top-0 z-50 backdrop-blur-sm">
+      <header className="bg-surface/95 border-b border-slate-200 shadow-sm sticky top-0 z-50 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">

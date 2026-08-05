@@ -179,7 +179,7 @@ function SupplierItemPickerDialog({
                   type="button"
                   disabled={isSaving}
                   onClick={() => handlePick(item)}
-                  className="flex w-full items-start gap-3 rounded-lg border border-gray-100 bg-white p-3 text-left transition-colors hover:bg-gray-50 disabled:opacity-50"
+                  className="flex w-full items-start gap-3 rounded-lg border border-gray-100 bg-surface p-3 text-left transition-colors hover:bg-gray-50 disabled:opacity-50"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="break-words text-sm font-medium text-gray-800">{item.descricao}</p>
@@ -317,7 +317,7 @@ function SupplierCell({
           <button
             type="button"
             onClick={() => setPickerOpen(true)}
-            className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-white px-3 py-3 text-xs text-gray-400 transition-colors hover:border-accent-500 hover:text-accent-600"
+            className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-surface px-3 py-3 text-xs text-gray-400 transition-colors hover:border-accent-500 hover:text-link"
           >
             <Plus className="h-3.5 w-3.5" />
             Escolher item do fornecedor
@@ -602,7 +602,7 @@ export default function ConciliationCurationView({
           </span>
         </div>
       )}
-      <div className="shrink-0 rounded-2xl border border-accent-500/40 bg-white p-6 shadow-md">
+      <div className="shrink-0 rounded-2xl border border-accent-500/40 bg-surface p-6 shadow-md">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-xl font-semibold text-neutral-900">Conciliação de materiais</h1>
@@ -622,7 +622,7 @@ export default function ConciliationCurationView({
                 <select
                   value={activeSupplier}
                   onChange={(e) => setActiveSupplier(e.target.value)}
-                  className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-900 focus:border-accent-500 focus:outline-none"
+                  className="rounded-lg border border-gray-200 bg-surface px-3 py-1.5 text-sm font-medium text-neutral-900 focus:border-accent-500 focus:outline-none"
                 >
                   {supplierColumnOrder.map((name, idx) => (
                     <option key={name} value={name}>
@@ -744,13 +744,13 @@ export default function ConciliationCurationView({
       )}
 
       {!loadError && showEmpty && (
-        <p className="rounded-xl border border-dashed border-gray-200 bg-white py-12 text-center text-sm text-gray-500">
+        <p className="rounded-xl border border-dashed border-gray-200 bg-surface py-12 text-center text-sm text-gray-500">
           Nenhum material ou item disponível para conciliação.
         </p>
       )}
 
       {!loadError && (filteredMaterials.length > 0 || unlinked.length > 0) && activeSupplier && (
-        <div className={`min-h-0 min-w-0 flex-1 bg-white shadow-sm ${suppliesTableBorderedScrollClass}`}>
+        <div className={`min-h-0 min-w-0 flex-1 bg-surface shadow-sm ${suppliesTableBorderedScrollClass}`}>
           <table className="w-full table-fixed border-collapse text-sm">
             <colgroup>
               <col style={{ width: '40%' }} />
@@ -758,10 +758,10 @@ export default function ConciliationCurationView({
             </colgroup>
             <thead>
               <tr className="border-b-2 border-gray-200">
-                <th className="sticky left-0 top-0 z-30 bg-white px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 shadow-[1px_0_0_0_#e5e7eb,0_1px_0_0_#e5e7eb]">
+                <th className="sticky left-0 top-0 z-30 bg-surface px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 shadow-[1px_0_0_0_#e5e7eb,0_1px_0_0_#e5e7eb]">
                   Fonte da verdade
                 </th>
-                <th className="sticky top-0 z-20 bg-white px-4 py-3 text-left align-bottom text-xs font-semibold uppercase tracking-wide text-neutral-900 shadow-[0_1px_0_0_#e5e7eb]">
+                <th className="sticky top-0 z-20 bg-surface px-4 py-3 text-left align-bottom text-xs font-semibold uppercase tracking-wide text-neutral-900 shadow-[0_1px_0_0_#e5e7eb]">
                   <span className="break-words font-semibold normal-case tracking-normal">
                     {activeSupplier}
                   </span>
@@ -778,7 +778,7 @@ export default function ConciliationCurationView({
                     key={mat.material_id}
                     className={`transition-colors hover:bg-gray-50/50 ${mat.is_session_excluded ? 'opacity-60' : ''}`}
                   >
-                    <td className="sticky left-0 z-10 border-r border-gray-200 bg-white px-4 py-3 align-top shadow-[1px_0_0_0_#e5e7eb]">
+                    <td className="sticky left-0 z-10 border-r border-gray-200 bg-surface px-4 py-3 align-top shadow-[1px_0_0_0_#e5e7eb]">
                       <p className="break-words text-sm font-semibold leading-snug text-neutral-900">
                         {mat.material_name}
                       </p>

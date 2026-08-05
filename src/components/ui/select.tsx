@@ -19,7 +19,7 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex h-[42px] w-full items-center justify-between gap-2 rounded-lg border border-gray-200/80 bg-white/70 px-3 text-sm text-gray-900 shadow-sm backdrop-blur-sm",
+      "flex h-[42px] w-full items-center justify-between gap-2 rounded-lg border border-gray-200/80 bg-surface/70 px-3 text-sm text-gray-900 shadow-sm backdrop-blur-sm",
       "ring-offset-white placeholder:text-gray-400",
       "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/40 focus-visible:ring-offset-2",
       "disabled:cursor-not-allowed disabled:opacity-50",
@@ -82,7 +82,7 @@ const SelectContent = React.forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        "relative z-50 overflow-hidden rounded-xl border border-white/40 bg-white/80 text-gray-900 shadow-2xl backdrop-blur-md",
+        "relative z-50 overflow-hidden rounded-xl border border-border-subtle bg-surface/80 text-gray-900 shadow-2xl backdrop-blur-md",
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
         "data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
         position === "popper" &&
@@ -137,7 +137,7 @@ const SelectItem = React.forwardRef<
     <SelectPrimitive.ItemText className="flex-1">{children}</SelectPrimitive.ItemText>
     <span className="absolute right-2 flex h-4 w-4 items-center justify-center">
       <SelectPrimitive.ItemIndicator>
-        <Check className="h-4 w-4 text-accent-600" strokeWidth={2.25} />
+        <Check className="h-4 w-4 text-link" strokeWidth={2.25} />
       </SelectPrimitive.ItemIndicator>
     </span>
   </SelectPrimitive.Item>

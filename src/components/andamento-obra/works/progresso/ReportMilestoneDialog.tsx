@@ -270,7 +270,7 @@ export function ReportMilestoneDialog({
               type="button"
               onClick={() => handleClose(false)}
               disabled={isPending}
-              className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              className="rounded-md border border-gray-200 bg-surface px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
             >
               Cancelar
             </button>

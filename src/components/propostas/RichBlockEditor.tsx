@@ -107,7 +107,7 @@ export function RichBlockEditor({
               value={refineAction}
               onChange={(event) => setRefineAction(event.target.value as ProposalRefineAction)}
               disabled={disabled}
-              className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-600 outline-none focus:border-brand-blue"
+              className="rounded-lg border border-slate-200 bg-surface px-2 py-1.5 text-xs text-slate-600 outline-none focus:border-brand-blue"
             >
               {Object.entries(REFINE_ACTION_LABELS).map(([action, actionLabel]) => (
                 <option key={action} value={action}>

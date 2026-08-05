@@ -51,7 +51,7 @@ export function StatusDropdown({ workId, current }: StatusDropdownProps) {
         <button
           type="button"
           disabled={pending}
-          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-900 hover:bg-gray-50 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-surface px-3 py-1.5 text-sm font-medium text-neutral-900 hover:bg-gray-50 disabled:opacity-60"
         >
           <span className={`h-2 w-2 rounded-full ${STATUS_DOT[current]}`} aria-hidden />
           {STATUS_LABELS[current]}
@@ -62,7 +62,7 @@ export function StatusDropdown({ workId, current }: StatusDropdownProps) {
         <Popover.Content
           align="end"
           sideOffset={4}
-          className="z-50 w-52 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
+          className="z-50 w-52 rounded-lg border border-gray-200 bg-surface p-1 shadow-lg"
         >
           {ALL_STATUSES.map((status) => {
             const active = status === current;
@@ -77,7 +77,7 @@ export function StatusDropdown({ workId, current }: StatusDropdownProps) {
                   <span className={`h-2 w-2 rounded-full ${STATUS_DOT[status]}`} aria-hidden />
                   {STATUS_LABELS[status]}
                 </span>
-                {active && <Check className="h-3.5 w-3.5 text-accent-600" />}
+                {active && <Check className="h-3.5 w-3.5 text-link" />}
               </button>
             );
           })}

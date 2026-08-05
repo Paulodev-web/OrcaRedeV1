@@ -168,15 +168,50 @@ escuro escurece o trilho, sobrescrevendo os tokens acima.
 
 ### Tema escuro
 
-Preparado, **não ativado**. Os valores vivem em `[data-theme="dark"]` no
-`globals.css`, com **hex literais** — não `var()`. Isso é deliberado: aquele
-bloco é CSS cru que o Tailwind não inspeciona ao decidir quais variáveis emitir;
-se referenciasse `var(--color-neutral-800)` e nenhuma classe do app usasse esse
-degrau, o tree-shaking removeria a variável e o tema escuro quebraria em
-silêncio.
+**Ativo.** Seletor em Configurações → Preferências: sistema / claro / escuro,
+persistido em `localStorage` (`orcarede-theme`) e aplicado via `data-theme` no
+`<html>`.
 
-Ativar exige migrar as telas que ainda usam `bg-white`/`text-gray-900` fixos.
-É uma frente própria.
+**Como funciona sem `dark:` em lugar nenhum:** o bloco `[data-theme="dark"]`
+**inverte a rampa neutra** — `neutral-50` vira o tom mais escuro, `neutral-950`
+o mais claro. Como `gray`/`slate`/`zinc`/`stone` são aliases de `neutral`, os
+~3.100 usos dessas classes viram tema escuro sozinhos: `bg-gray-50` vira fundo
+escuro, `text-gray-900` vira texto claro.
+
+As semânticas invertem só os degraus de **tinta** (50/100/200 ↔ 950/900/800),
+porque todo estado usa a receita fundo `-50` + texto `-700` + borda `-200`. Os
+degraus 500/600 **não** invertem: são preenchimento sólido com texto branco por
+cima e precisam continuar escuros para manter AA.
+
+Regras que sustentam isso:
+
+- **Nunca `bg-white`** — use `bg-surface`. `bg-white` é literalmente `#fff` e
+  continuaria branco no escuro. É o único bloqueador que a inversão não resolve.
+- **`text-white` pode ficar** quando está sobre preenchimento colorido
+  (`bg-accent-600`, `bg-red-600`), que não inverte.
+- **Link é `text-link`, não `text-accent-600`.** São papéis distintos que só
+  coincidem no tema claro: preenchimento precisa ficar escuro no dark (texto
+  branco por cima, 4.88:1), link precisa ficar claro (texto sobre fundo escuro).
+  Com um token só, o link caía para 3.23:1.
+- **Anti-flash é obrigatório.** Um script síncrono no `<head>` (`themeScript`)
+  aplica o tema antes da primeira pintura. Sem ele a tela pisca de claro para
+  escuro na hidratação — pior que não ter tema escuro.
+
+O bloco escuro usa **hex literais**, não `var()`: é CSS cru que o Tailwind não
+inspeciona ao decidir quais variáveis emitir, então uma referência a um degrau
+não usado seria removida pelo tree-shaking e o tema quebraria em silêncio.
+
+### Contraste é verificado, não presumido
+
+O degrau `-500` foi fechado para `#767469` porque no valor "puro" da curva OKLCH
+dava **3.45:1** sobre branco — e é justamente o que o app usa como texto
+secundário em centenas de lugares. Trilhas de breadcrumb saíram de `-400`
+(2.1:1) para `-600`.
+
+Esses três casos foram encontrados por auditoria automatizada do que está
+**renderizado na tela** (percorre os nós de texto, resolve o fundo efetivo
+subindo a árvore, calcula o contraste WCAG), rodada nos dois temas. Vale repetir
+a auditoria ao mexer em qualquer degrau de rampa — inspeção visual não pega isso.
 
 ---
 

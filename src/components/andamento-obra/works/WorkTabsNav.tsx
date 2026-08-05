@@ -37,7 +37,7 @@ export function WorkTabsNav({
   const base = `/tools/andamento-obra/obras/${workId}`;
 
   return (
-    <nav aria-label="Abas da obra" className="border-b border-gray-200 bg-white">
+    <nav aria-label="Abas da obra" className="border-b border-gray-200 bg-surface">
       <div className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-6 py-2 lg:px-8">
         {tabs.map((tab) => {
           const href = `${base}/${tab.slug}`;

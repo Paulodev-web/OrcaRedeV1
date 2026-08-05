@@ -91,7 +91,7 @@ export default function NewQuotationSessionModal({
       aria-modal="true"
       aria-labelledby="new-session-title"
     >
-      <div className="relative w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
+      <div className="relative w-full max-w-md rounded-xl border border-gray-200 bg-surface p-6 shadow-xl">
         <button
           type="button"
           onClick={() => {
@@ -138,7 +138,7 @@ export default function NewQuotationSessionModal({
                 <SelectValue placeholder="Escopo" />
               </SelectTrigger>
               <SelectContent>
-                <div className="sticky top-0 z-10 border-b border-gray-200/80 bg-white/95 px-2 pb-2 pt-1 backdrop-blur-sm">
+                <div className="sticky top-0 z-10 border-b border-gray-200/80 bg-surface/95 px-2 pb-2 pt-1 backdrop-blur-sm">
                   <div className="relative">
                     <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
                     <input
@@ -151,7 +151,7 @@ export default function NewQuotationSessionModal({
                       onKeyUp={(e) => e.stopPropagation()}
                       autoComplete="off"
                       placeholder="Buscar orçamento por nome..."
-                      className="w-full rounded-md border border-gray-200 bg-white py-1.5 pl-8 pr-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
+                      className="w-full rounded-md border border-gray-200 bg-surface py-1.5 pl-8 pr-2 text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
                       aria-label="Buscar orçamento por nome"
                     />
                   </div>

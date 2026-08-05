@@ -24,7 +24,7 @@ export function BudgetImportSelect({
   const rootBudgets = budgets.filter((budget) => !budget.folderId);
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-gray-200 bg-surface p-4 shadow-sm">
       <h2 className="text-sm font-semibold text-neutral-900">Importação de Orçamento</h2>
       <p className="mt-1 text-xs text-gray-500">
         Selecione uma obra para carregar automaticamente os materiais e serviços estimados.

@@ -37,7 +37,7 @@ export function AlertCard({ alert, workId, role }: Props) {
       <button
         type="button"
         onClick={() => setShowDrawer(true)}
-        className={`w-full rounded-lg border border-gray-200 border-l-4 bg-white p-4 text-left shadow-sm transition-shadow hover:shadow-md ${severityColors[alert.severity] ?? 'border-l-gray-400'}`}
+        className={`w-full rounded-lg border border-gray-200 border-l-4 bg-surface p-4 text-left shadow-sm transition-shadow hover:shadow-md ${severityColors[alert.severity] ?? 'border-l-gray-400'}`}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

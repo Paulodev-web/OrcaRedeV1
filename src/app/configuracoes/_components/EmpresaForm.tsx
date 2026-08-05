@@ -87,7 +87,7 @@ export function EmpresaForm({ settings }: EmpresaFormProps) {
     <div className="space-y-6">
       {/* Logo — sobe direto, independente do formulário: o arquivo já vai para
           o storage no momento da escolha. */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-2xl border border-slate-200 bg-surface p-6 shadow-sm">
         <h2 className="text-base font-bold text-brand-navy">Logo</h2>
         <p className="mt-1 text-sm text-slate-500">
           Aparece no cabeçalho do PDF e na página pública da proposta.
@@ -150,7 +150,7 @@ export function EmpresaForm({ settings }: EmpresaFormProps) {
       </section>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-2xl border border-slate-200 bg-surface p-6 shadow-sm">
           <h2 className="text-base font-bold text-brand-navy">Dados institucionais</h2>
 
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -196,7 +196,7 @@ export function EmpresaForm({ settings }: EmpresaFormProps) {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-2xl border border-slate-200 bg-surface p-6 shadow-sm">
           <h2 className="text-base font-bold text-brand-navy">Contato</h2>
 
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">

@@ -26,7 +26,11 @@
   --color-neutral-200: #e9e8e3;
   --color-neutral-300: #d6d5ce;
   --color-neutral-400: #aaa9a2;
-  --color-neutral-500: #84837b;
+  /* Fechado além da curva OKLCH de propósito: no degrau "puro" (#84837b) este
+   * tom dava 3.45:1 sobre branco e reprovava em AA, e é justamente o que o app
+   * usa como texto secundário (`text-gray-500`/`text-slate-500`) em centenas de
+   * lugares. Em #767469 sobe para 4.70:1 sem deixar de ler como apagado. */
+  --color-neutral-500: #767469;
   --color-neutral-600: #67665f;
   --color-neutral-700: #504f48;
   --color-neutral-800: #353530;
@@ -345,6 +349,16 @@
   --color-border-subtle: var(--color-neutral-200);
   --color-border-strong: var(--color-neutral-300);
 
+  /* Cor de link/texto de destaque.
+   *
+   * Papel SEPARADO de `accent-600` de propósito, mesmo coincidindo no tema
+   * claro. Os dois têm exigências opostas no escuro: `bg-accent-600` é
+   * preenchimento de botão com `text-white` por cima e precisa continuar
+   * ESCURO para manter 4.88:1; link é texto sobre fundo escuro e precisa ficar
+   * CLARO. Um token só não atende os dois — com `accent-600` servindo de link,
+   * o texto caía para 3.23:1 no tema escuro. */
+  --color-link: var(--color-accent-600);
+
   /* Trilho da navegação global (AppSidebar).
    *
    * No tema CLARO o trilho é CLARO — um creme um degrau abaixo do fundo da
@@ -370,40 +384,190 @@
   --color-rail-active-fg: var(--color-accent-800);
 }
 
-/*
- * Tema escuro — PREPARADO, NÃO ATIVADO.
+/* ══════════════════════════════════════════════════════════════════════════
+ * TEMA ESCURO
  *
- * Ligar exige varrer as telas que ainda usam `bg-white`/`text-gray-900` no
- * lugar dos papéis acima; enquanto isso não acontece, nenhum seletor abaixo é
- * acionado. Para ativar: `<html data-theme="dark">` e migrar as telas.
+ * Ativado por `data-theme="dark"` no <html> (ver `ThemeProvider`).
  *
- * ⚠️ Os valores abaixo são hex LITERAIS de propósito, não `var(--color-*)`.
- * Este bloco é CSS cru — o Tailwind não o enxerga ao decidir quais variáveis
- * de tema emitir. Se ele referenciasse `var(--color-neutral-800)` e nenhuma
- * classe do app usasse esse degrau, a variável seria removida pelo
- * tree-shaking e o tema escuro quebraria em silêncio. Auto-contido não quebra.
- * Ao mexer nas rampas acima, replicar aqui.
- */
+ * A jogada central é INVERTER A RAMPA NEUTRA: `neutral-50` passa a ser o tom
+ * mais escuro e `neutral-950` o mais claro. Como `gray`/`slate`/`zinc`/`stone`
+ * são aliases de `neutral`, os ~3.100 usos dessas classes espalhados pelo app
+ * viram tema escuro sozinhos — `bg-gray-50` vira fundo escuro, `text-gray-900`
+ * vira texto claro, `border-gray-200` vira borda escura. Sem isso, seria
+ * preciso anotar `dark:` em milhares de lugares.
+ *
+ * A rampa do ACCENT não inverte: azul continua azul. Só desloco o ponto de uso
+ * (ver `--color-accent-*` reajustados abaixo), porque sobre fundo escuro o tom
+ * de ação precisa ser mais claro para manter contraste com texto branco.
+ *
+ * ⚠️ Hex LITERAIS de propósito, não `var(--color-*)`. Este bloco é CSS cru que
+ * o Tailwind não inspeciona ao decidir quais variáveis emitir; referenciar um
+ * degrau que nenhuma classe usa faria o tree-shaking removê-lo e o tema
+ * quebraria em silêncio. Ao mexer nas rampas acima, replicar aqui.
+ * ══════════════════════════════════════════════════════════════════════════ */
 @layer base {
   [data-theme="dark"] {
-    --color-surface: #262623;           /* neutral-900 */
-    --color-surface-sunken: #181816;    /* neutral-950 */
-    --color-surface-raised: #353530;    /* neutral-800 */
-    --color-surface-muted: #353530;     /* neutral-800 */
-    --color-foreground: #f5f4f1;        /* neutral-100 */
-    --color-foreground-muted: #d6d5ce;  /* neutral-300 */
-    --color-foreground-subtle: #aaa9a2; /* neutral-400 */
-    --color-border-subtle: #353530;     /* neutral-800 */
-    --color-border-strong: #504f48;     /* neutral-700 */
+    /* Rampa neutra invertida. O 50 é o mais escuro; o 950, o mais claro. */
+    --color-neutral-50: #1c1c1a;
+    --color-neutral-100: #232321;
+    --color-neutral-200: #2f2f2c;
+    --color-neutral-300: #3d3d38;
+    --color-neutral-400: #57564f;
+    --color-neutral-500: #86857d;
+    --color-neutral-600: #a8a79f;
+    --color-neutral-700: #c9c8c1;
+    --color-neutral-800: #e2e1db;
+    --color-neutral-900: #f0efeb;
+    --color-neutral-950: #faf9f6;
 
-    --color-rail: #181816;                   /* neutral-950 */
-    --color-rail-border: #353530;            /* neutral-800 */
-    --color-rail-foreground: #f5f4f1;        /* neutral-100 */
-    --color-rail-foreground-muted: #aaa9a2;  /* neutral-400 */
-    --color-rail-foreground-subtle: #67665f; /* neutral-600 */
-    --color-rail-hover: #353530;             /* neutral-800 */
-    --color-rail-active-bg: #2b4874;         /* accent-800 */
-    --color-rail-active-fg: #e3edfb;         /* accent-100 */
+    /* Superfícies: no escuro a hierarquia inverte — o cartão fica mais CLARO
+     * que o fundo, não mais branco. Sombra não cria elevação em fundo escuro. */
+    --color-surface: #232321;
+    --color-surface-sunken: #1c1c1a;
+    --color-surface-raised: #2f2f2c;
+    --color-surface-muted: #2f2f2c;
+    --color-foreground: #f0efeb;
+    --color-foreground-muted: #a8a79f;
+    --color-foreground-subtle: #86857d;
+    --color-border-subtle: #2f2f2c;
+    --color-border-strong: #3d3d38;
+    /* accent-300: sobre superfície escura dá ~8:1, contra os 3.2:1 que o
+     * accent-600 daria. Ver a nota do token no tema claro. */
+    --color-link: #a7c4f0;
+
+    /* Trilho: mais escuro que o conteúdo, mantendo a mesma relação do claro
+     * (trilho um degrau afastado do fundo da página). */
+    --color-rail: #1c1c1a;
+    --color-rail-border: #2f2f2c;
+    --color-rail-foreground: #f0efeb;
+    --color-rail-foreground-muted: #a8a79f;
+    --color-rail-foreground-subtle: #6b6a63;
+    --color-rail-hover: #2f2f2c;
+    --color-rail-active-bg: #2b4874;
+    --color-rail-active-fg: #c9dcf8;
+
+    /* ── Semânticas: inverter só os degraus de TINTA ───────────────────────
+     *
+     * Todo estado no app usa a mesma receita — fundo `-50`, texto `-700`,
+     * borda `-200`. Invertendo esses três degraus, `bg-red-50` vira um vinho
+     * escuro, `text-red-700` vira vermelho claro e a borda acompanha, sem
+     * anotar `dark:` em nenhum Badge ou alerta.
+     *
+     * Os degraus 500/600 NÃO invertem: são preenchimento sólido com texto
+     * branco por cima (botão destrutivo, pill de status) e precisam continuar
+     * escuros o bastante para manter AA. */
+    --color-red-50: #2e1512;
+    --color-red-100: #3d1c18;
+    --color-red-200: #5b2722;
+    --color-red-700: #f3aba3;
+    --color-red-800: #f7c4bf;
+
+    --color-rose-50: #2e1512;
+    --color-rose-100: #3d1c18;
+    --color-rose-200: #5b2722;
+    --color-rose-700: #f3aba3;
+    --color-rose-800: #f7c4bf;
+
+    --color-green-50: #122415;
+    --color-green-100: #17301c;
+    --color-green-200: #1f4228;
+    --color-green-700: #a2cdaa;
+    --color-green-800: #c0dec6;
+
+    --color-emerald-50: #122415;
+    --color-emerald-100: #17301c;
+    --color-emerald-200: #1f4228;
+    --color-emerald-700: #a2cdaa;
+    --color-emerald-800: #c0dec6;
+
+    --color-teal-50: #0f2323;
+    --color-teal-100: #143030;
+    --color-teal-200: #194040;
+    --color-teal-700: #9dcaca;
+    --color-teal-800: #bcdedd;
+
+    --color-cyan-50: #0f2323;
+    --color-cyan-100: #143030;
+    --color-cyan-200: #194040;
+    --color-cyan-700: #9dcaca;
+    --color-cyan-800: #bcdedd;
+
+    --color-amber-50: #2a1c0e;
+    --color-amber-100: #392612;
+    --color-amber-200: #4c3318;
+    --color-amber-700: #dcb998;
+    --color-amber-800: #e8d0ba;
+
+    --color-yellow-50: #2a1c0e;
+    --color-yellow-100: #392612;
+    --color-yellow-200: #4c3318;
+    --color-yellow-700: #dcb998;
+    --color-yellow-800: #e8d0ba;
+
+    --color-orange-50: #2f170e;
+    --color-orange-100: #401f13;
+    --color-orange-200: #582a19;
+    --color-orange-700: #eeaf99;
+    --color-orange-800: #f4cbbc;
+
+    --color-purple-50: #241a2d;
+    --color-purple-100: #2f223c;
+    --color-purple-200: #413054;
+    --color-purple-700: #cbb5e5;
+    --color-purple-800: #ddcdee;
+
+    --color-violet-50: #241a2d;
+    --color-violet-100: #2f223c;
+    --color-violet-200: #413054;
+    --color-violet-700: #cbb5e5;
+    --color-violet-800: #ddcdee;
+
+    --color-pink-50: #2c1420;
+    --color-pink-100: #3b1b2b;
+    --color-pink-200: #522941;
+    --color-pink-700: #e5adcc;
+    --color-pink-800: #efcbdf;
+
+    /* Accent: mesma lógica das semânticas — tintas invertem, sólido não.
+     *
+     * O 600 continua o do tema claro (#4472b4) DE PROPÓSITO: é o
+     * preenchimento do botão primário, que carrega `text-white` cravado em
+     * ~200 lugares. Clarear o 600 aqui derrubaria esse par de 4.88:1 para
+     * ~3.5:1, abaixo de AA. Botão azul sobre fundo escuro já se destaca por
+     * ser mais claro que a superfície; não precisa clarear mais. */
+    --color-accent-50: #16233a;
+    --color-accent-100: #1d2f4b;
+    --color-accent-200: #253b5c;
+    --color-accent-700: #a7c4f0;
+    --color-accent-800: #c9dcf8;
+
+    --color-blue-50: #16233a;
+    --color-blue-100: #1d2f4b;
+    --color-blue-200: #253b5c;
+    --color-blue-700: #a7c4f0;
+    --color-blue-800: #c9dcf8;
+
+    --color-sky-50: #16233a;
+    --color-sky-100: #1d2f4b;
+    --color-sky-200: #253b5c;
+    --color-sky-700: #a7c4f0;
+    --color-sky-800: #c9dcf8;
+
+    --color-indigo-50: #16233a;
+    --color-indigo-100: #1d2f4b;
+    --color-indigo-200: #253b5c;
+    --color-indigo-700: #a7c4f0;
+    --color-indigo-800: #c9dcf8;
+
+    /* Sombras precisam de preto de verdade no escuro — a sombra quente do
+     * tema claro simplesmente desaparece sobre superfície escura. */
+    --shadow-2xs: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.35);
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.35), 0 1px 3px 0 rgb(0 0 0 / 0.3);
+    --shadow-md: 0 2px 4px -1px rgb(0 0 0 / 0.35), 0 4px 10px -2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 4px 8px -2px rgb(0 0 0 / 0.4), 0 10px 22px -4px rgb(0 0 0 / 0.45);
+    --shadow-xl: 0 8px 16px -4px rgb(0 0 0 / 0.45), 0 20px 40px -8px rgb(0 0 0 / 0.5);
+    --shadow-2xl: 0 24px 56px -12px rgb(0 0 0 / 0.6);
   }
 }
 

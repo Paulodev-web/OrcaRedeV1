@@ -55,7 +55,7 @@ export default async function SessionCenariosPage({ params }: Props) {
       />
 
       {!scenarios || scenarios.scenarioB.items.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-200 bg-white p-12 text-center">
+        <div className="rounded-xl border border-dashed border-gray-200 bg-surface p-12 text-center">
           <p className="text-gray-400 text-sm">
             Nenhum material consolidado encontrado neste orçamento.
           </p>
@@ -65,7 +65,7 @@ export default async function SessionCenariosPage({ params }: Props) {
           </p>
           <Link
             href={`/fornecedores/sessao/${sessionId}`}
-            className="mt-4 inline-block text-sm font-medium text-accent-600 transition-colors hover:text-neutral-900 hover:underline"
+            className="mt-4 inline-block text-sm font-medium text-link transition-colors hover:text-neutral-900 hover:underline"
           >
             ← Voltar para a sessão
           </Link>

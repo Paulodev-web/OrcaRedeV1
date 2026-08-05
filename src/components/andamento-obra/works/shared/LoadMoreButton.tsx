@@ -23,7 +23,7 @@ export function LoadMoreButton({
         type="button"
         onClick={onLoadMore}
         disabled={loading}
-        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-neutral-900 shadow-sm transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-surface px-4 py-2 text-xs font-medium text-neutral-900 shadow-sm transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {loading ? (
           <>

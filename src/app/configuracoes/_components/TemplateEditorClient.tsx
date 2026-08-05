@@ -29,7 +29,7 @@ interface TemplateEditorClientProps {
 
 function Card({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5">
+    <section className="rounded-xl border border-slate-200 bg-surface p-5">
       <h2 className="text-sm font-semibold text-brand-navy">{title}</h2>
       {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
       <div className="mt-4 space-y-4">{children}</div>
@@ -386,7 +386,7 @@ export function TemplateEditorClient({
         </ul>
       </Card>
 
-      <div className="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
+      <div className="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-surface/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
           {template ? (
             <button

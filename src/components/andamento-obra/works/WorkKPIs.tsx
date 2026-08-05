@@ -85,7 +85,7 @@ export function WorkKPIs({
           return (
             <div
               key={kpi.label}
-              className={`rounded-xl border p-3 ${isCritical ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white'}`}
+              className={`rounded-xl border p-3 ${isCritical ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-surface'}`}
             >
               <div className={`flex items-center gap-2 text-xs font-medium ${isCritical ? 'text-red-600' : 'text-gray-500'}`}>
                 <Icon className="h-3.5 w-3.5" />
@@ -105,7 +105,7 @@ export function WorkKPIs({
       <div className="flex justify-end">
         <Link
           href={`/tools/andamento-obra/obras/${work.id}/progresso`}
-          className="inline-flex items-center gap-1 text-xs font-medium text-accent-600 hover:underline"
+          className="inline-flex items-center gap-1 text-xs font-medium text-link hover:underline"
         >
           Status detalhado
           <ArrowUpRight className="h-3 w-3" />

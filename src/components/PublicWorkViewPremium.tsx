@@ -48,7 +48,7 @@ function MetricDonut({ title, installed, planned, suffix = '' }: {
         </div>
       </div>
       <div className="min-w-0">
-        <p className="text-[11px] font-semibold text-accent-600 uppercase tracking-wider leading-tight">
+        <p className="text-[11px] font-semibold text-link uppercase tracking-wider leading-tight">
           {title}
         </p>
         <p className="text-lg font-bold text-white leading-tight mt-0.5">
@@ -393,7 +393,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
             ].map(({ title, installed, planned, suffix }) => {
               const percent = planned > 0 ? Math.min(Math.round((installed / planned) * 100), 100) : 0;
               return (
-                <div key={title} className="bg-white rounded-xl p-3 shadow-sm border border-slate-200">
+                <div key={title} className="bg-surface rounded-xl p-3 shadow-sm border border-slate-200">
                   <p className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1">{title}</p>
                   <div className="flex items-center gap-2">
                     <div className="relative w-8 h-8 flex-shrink-0">
@@ -417,7 +417,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
           </div>
 
           {/* Canvas */}
-          <div className="h-64 sm:h-80 rounded-2xl overflow-hidden bg-white shadow-sm border border-slate-200 relative flex-shrink-0">
+          <div className="h-64 sm:h-80 rounded-2xl overflow-hidden bg-surface shadow-sm border border-slate-200 relative flex-shrink-0">
             {workData.budget_data.plan_image_url ? (
               <CanvasVisual {...canvasProps} />
             ) : (
@@ -433,7 +433,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
           {/* Painéis de informação */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 flex-shrink-0">
             {/* Execution panel */}
-            <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-200">
+            <div className="bg-surface rounded-2xl p-3 shadow-sm border border-slate-200">
               <p className="text-sm font-semibold text-slate-900 mb-2.5">Painel de execucao</p>
               <div className="space-y-2">
                 <ProgressBar label="Postes" value={completedPosts} total={totalPosts} color={ON.blue} />
@@ -445,7 +445,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
             </div>
 
             {/* Timeline compacta */}
-            <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-200">
+            <div className="bg-surface rounded-2xl p-3 shadow-sm border border-slate-200">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-semibold text-slate-900">Timeline</p>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
@@ -487,7 +487,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
           {/* ── LEFT: sidebar de métricas ────────────────────────────────── */}
           <div className="h-full min-w-0 rounded-2xl flex flex-col overflow-hidden" style={{ backgroundColor: ON.navy }}>
             <div className="px-4 xl:px-6 pt-5 pb-3 flex-shrink-0">
-              <p className="text-[11px] font-bold text-accent-600 uppercase tracking-widest">Avanco fisico</p>
+              <p className="text-[11px] font-bold text-link uppercase tracking-widest">Avanco fisico</p>
             </div>
             <div className="flex-1 overflow-y-auto px-4 xl:px-6 pb-5 space-y-5 [scrollbar-width:thin]">
               <MetricDonut title="Postes" installed={completedPosts} planned={totalPosts} />
@@ -513,7 +513,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
           </div>
 
           {/* ── MIDDLE: canvas ───────────────────────────────────────────── */}
-          <div className="h-full min-w-0 rounded-2xl overflow-hidden bg-white shadow-sm border border-slate-200 relative">
+          <div className="h-full min-w-0 rounded-2xl overflow-hidden bg-surface shadow-sm border border-slate-200 relative">
             {workData.budget_data.plan_image_url ? (
               <CanvasVisual {...canvasProps} />
             ) : (
@@ -536,7 +536,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
                 { label: 'Postes', value: `${completedPosts}/${totalPosts}`, color: '#10b981' },
                 { label: 'Marcos', value: `${completedMs}/${timelineMilestones.length}`, color: '#f59e0b' },
               ].map(({ label, value, color }) => (
-                <div key={label} className="bg-white rounded-lg p-2 shadow-sm border border-slate-200 text-center min-w-0 overflow-hidden">
+                <div key={label} className="bg-surface rounded-lg p-2 shadow-sm border border-slate-200 text-center min-w-0 overflow-hidden">
                   <p className="text-[10px] text-slate-400 uppercase tracking-wide leading-tight">{label}</p>
                   <p className="text-sm font-bold" style={{ color }}>{value}</p>
                 </div>
@@ -544,7 +544,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
             </div>
 
             {/* execution panel */}
-            <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-200 flex-shrink-0 min-w-0 overflow-hidden">
+            <div className="bg-surface rounded-2xl p-3 shadow-sm border border-slate-200 flex-shrink-0 min-w-0 overflow-hidden">
               <p className="text-sm font-semibold text-slate-900 mb-2.5">Painel de execucao</p>
               <div className="space-y-2">
                 <ProgressBar label="Postes" value={completedPosts} total={totalPosts} color={ON.blue} />
@@ -558,7 +558,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
             {/* cronograma + mensagem lado a lado */}
             <div className="grid grid-cols-2 gap-2 flex-shrink-0 min-w-0">
               {/* schedule summary */}
-              <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-200 min-w-0 overflow-hidden">
+              <div className="bg-surface rounded-2xl p-3 shadow-sm border border-slate-200 min-w-0 overflow-hidden">
                 <p className="text-sm font-semibold text-slate-900 mb-2">Cronograma</p>
                 <div className="space-y-1.5">
                   {[
@@ -590,7 +590,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
             </div>
 
             {/* timeline - ocupa o resto do espaço */}
-            <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-200 flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
+            <div className="bg-surface rounded-2xl p-3 shadow-sm border border-slate-200 flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
               <div className="flex items-center justify-between mb-2 flex-shrink-0">
                 <p className="text-sm font-semibold text-slate-900">Timeline</p>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">

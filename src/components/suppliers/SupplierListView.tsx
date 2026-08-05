@@ -77,7 +77,7 @@ export default function SupplierListView({ initialSuppliers }: Props) {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-accent-500/30 bg-white shadow-sm">
+    <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-accent-500/30 bg-surface shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 px-6 py-4">
         <div className="flex items-center gap-3">
           <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-600">

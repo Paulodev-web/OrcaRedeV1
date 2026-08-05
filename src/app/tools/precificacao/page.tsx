@@ -26,10 +26,10 @@ export default async function PrecificacaoPage() {
     return (
       <main className="min-h-screen bg-gray-50 p-6 lg:p-8">
         <div className="mx-auto max-w-7xl">
-          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-xl border border-gray-200 bg-surface p-6 shadow-sm">
             <h1 className="text-xl font-semibold text-neutral-900">Dashboard de Precificação</h1>
             <p className="mt-2 text-sm text-gray-600">{authError}</p>
-            <Link href="/" className="mt-4 inline-flex text-sm font-medium text-accent-600 hover:brightness-95">
+            <Link href="/" className="mt-4 inline-flex text-sm font-medium text-link hover:brightness-95">
               Ir para o portal
             </Link>
           </div>

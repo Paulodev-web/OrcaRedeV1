@@ -231,7 +231,7 @@ export function ChatRoom({
       : undefined;
 
   return (
-    <div className="flex h-[calc(100vh-220px)] min-h-[420px] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+    <div className="flex h-[calc(100vh-220px)] min-h-[420px] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-surface shadow-sm">
       <ChatHeader managerName={managerName} workName={workName} workStatus={workStatus} />
 
       <RealtimeStatusBanner status={realtimeStatus} />
@@ -267,7 +267,7 @@ function ChatHeader({
   workStatus: WorkStatus;
 }) {
   return (
-    <div className="flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-3">
+    <div className="flex items-center gap-3 border-b border-gray-200 bg-surface px-4 py-3">
       <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-accent-500/15 text-neutral-900">
         <User className="h-4 w-4" />
       </div>

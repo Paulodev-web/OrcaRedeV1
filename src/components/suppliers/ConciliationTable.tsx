@@ -141,7 +141,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
   return (
     <div className="flex flex-col gap-4">
       {/* Progress bar */}
-      <div className="bg-white rounded-lg shadow p-5">
+      <div className="bg-surface rounded-lg shadow p-5">
         <div className="flex items-center justify-between mb-2">
           <div>
             <span className="text-sm font-semibold text-gray-800">
@@ -168,7 +168,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
       </div>
 
       {/* Tabela */}
-      <div className={`bg-white shadow ${suppliesTableBorderedScrollClass}`}>
+      <div className={`bg-surface shadow ${suppliesTableBorderedScrollClass}`}>
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -187,7 +187,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
               <th className="px-4 py-3 w-10" />
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-100">
+          <tbody className="bg-surface divide-y divide-gray-100">
             {items.map((item) => {
               const statusCfg = getStatusConfig(item);
               const isExpanded = expandedId === item.id;
@@ -252,7 +252,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
                         <button
                           type="button"
                           onClick={() => setExpandedId(isExpanded ? null : item.id)}
-                          className="text-sm text-accent-600 transition-colors hover:text-neutral-900 hover:underline"
+                          className="text-sm text-link transition-colors hover:text-neutral-900 hover:underline"
                         >
                           + Vincular material
                         </button>
@@ -290,7 +290,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
 
                   {isExpanded && (
                     <tr>
-                      <td colSpan={5} className="px-4 pb-4 pt-0 bg-white">
+                      <td colSpan={5} className="px-4 pb-4 pt-0 bg-surface">
                         <ManualMatchPanel
                           item={item}
                           budgetMaterials={budgetMaterials}
@@ -308,7 +308,7 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
       </div>
 
       {/* Footer */}
-      <div className="bg-white rounded-lg shadow p-5 flex items-center justify-between">
+      <div className="bg-surface rounded-lg shadow p-5 flex items-center justify-between">
         <div className="text-sm text-gray-500">
           {allMatched ? (
             <span className="text-green-700 font-medium flex items-center gap-1.5">

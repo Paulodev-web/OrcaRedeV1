@@ -539,7 +539,7 @@ export function EditPostModal({ isOpen, onClose, post }: EditPostModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-full max-w-5xl max-h-[90vh] flex flex-col">
+      <div className="bg-surface rounded-lg w-full max-w-5xl max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b">
           <div>
@@ -563,7 +563,7 @@ export function EditPostModal({ isOpen, onClose, post }: EditPostModalProps) {
               onClick={() => setActiveTab('info')}
               className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 activeTab === 'info'
-                  ? 'bg-white text-blue-600 shadow-sm'
+                  ? 'bg-surface text-blue-600 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -574,7 +574,7 @@ export function EditPostModal({ isOpen, onClose, post }: EditPostModalProps) {
               onClick={() => setActiveTab('groups')}
               className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 activeTab === 'groups'
-                  ? 'bg-white text-blue-600 shadow-sm'
+                  ? 'bg-surface text-blue-600 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -588,7 +588,7 @@ export function EditPostModal({ isOpen, onClose, post }: EditPostModalProps) {
               onClick={() => setActiveTab('materials')}
               className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 activeTab === 'materials'
-                  ? 'bg-white text-blue-600 shadow-sm'
+                  ? 'bg-surface text-blue-600 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >

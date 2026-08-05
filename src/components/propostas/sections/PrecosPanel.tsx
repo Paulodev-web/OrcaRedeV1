@@ -119,7 +119,7 @@ export function PrecosPanel({
                 event.target.value = '';
               }}
               disabled={pending}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 outline-none focus:border-brand-blue"
+              className="rounded-lg border border-slate-200 bg-surface px-3 py-2 text-sm text-slate-600 outline-none focus:border-brand-blue"
             >
               <option value="">+ Adicionar cenário…</option>
               {availableScenarios.map((scenario) => (

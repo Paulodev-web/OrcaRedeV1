@@ -265,7 +265,7 @@ export function DailyLogList({
 
 function EmptyState() {
   return (
-    <div className="rounded-xl border border-dashed border-gray-200 bg-white p-8 text-center">
+    <div className="rounded-xl border border-dashed border-gray-200 bg-surface p-8 text-center">
       <ClipboardList className="mx-auto h-8 w-8 text-gray-400" />
       <p className="mt-2 text-sm font-medium text-neutral-900">
         Nenhum diário publicado ainda.

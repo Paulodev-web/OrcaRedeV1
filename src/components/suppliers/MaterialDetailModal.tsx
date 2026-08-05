@@ -89,7 +89,7 @@ export default function MaterialDetailModal({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5 text-accent-600" />
+            <Package className="h-5 w-5 text-link" />
             {item.material_name}
           </DialogTitle>
           <DialogDescription>
@@ -129,7 +129,7 @@ export default function MaterialDetailModal({
           {!isFullyStocked && sortedOffers.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                <TrendingDown className="h-4 w-4 text-accent-600" />
+                <TrendingDown className="h-4 w-4 text-link" />
                 Comparação de Preços
               </h3>
               <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -154,7 +154,7 @@ export default function MaterialDetailModal({
                       return (
                         <tr
                           key={offer.quote_id}
-                          className={isWinner ? 'bg-green-50' : idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}
+                          className={isWinner ? 'bg-green-50' : idx % 2 === 0 ? 'bg-surface' : 'bg-gray-50/50'}
                         >
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">

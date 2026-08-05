@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { ConfigShell } from "./_components/ConfigShell";
+import { ThemeToggleRow } from "@/components/theme/ThemeToggle";
 import {
   CONFIG_GROUP_LABELS,
   CONFIG_GROUP_ORDER,
@@ -21,6 +22,18 @@ export default function ConfiguracoesPage() {
       description="Catálogos do orçamento, identidade da empresa e cadastros do sistema."
     >
       <div className="mx-auto w-full max-w-7xl space-y-10 px-4 py-8 sm:px-6 lg:px-8">
+        {/* Preferência local do navegador, não configuração da empresa — por
+            isso fica em uma linha própria antes dos grupos de catálogo, e não
+            como um cartão entre eles. */}
+        <section>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+            Preferências
+          </h2>
+          <div className="mt-4">
+            <ThemeToggleRow />
+          </div>
+        </section>
+
         {CONFIG_GROUP_ORDER.map((group) => {
           const sections = CONFIG_SECTIONS.filter((section) => section.group === group);
           if (sections.length === 0) return null;
@@ -81,7 +94,7 @@ function SectionCard({ section }: { section: ConfigSection }) {
   );
 
   const baseClass =
-    "group flex h-full flex-col rounded-2xl border bg-white p-5 text-left shadow-sm transition-all";
+    "group flex h-full flex-col rounded-2xl border bg-surface p-5 text-left shadow-sm transition-all";
 
   if (isSoon) {
     return (

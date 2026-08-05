@@ -153,7 +153,7 @@ export function BudgetWorkspaceChrome({
           children
         ) : (
           <div className="flex items-center justify-center py-20">
-            <div className="flex flex-col items-center gap-4 rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
+            <div className="flex flex-col items-center gap-4 rounded-lg border border-slate-200 bg-surface p-8 shadow-sm">
               <Loader2 className="h-8 w-8 animate-spin text-brand-blue" />
               <p className="text-sm text-slate-600">Abrindo “{budget.nome}”…</p>
             </div>

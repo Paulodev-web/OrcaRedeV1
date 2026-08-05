@@ -275,7 +275,7 @@ export function PainelContexto({ orcamento, selectedPoste, selectedPostDetail, o
               </div>
             )}
             {searchTerm && gruposFiltrados.length > 0 && !addingGroup && (
-              <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-md mt-1 max-h-40 overflow-y-auto z-10 shadow-lg">
+              <div className="absolute top-full left-0 right-0 bg-surface border border-gray-300 rounded-md mt-1 max-h-40 overflow-y-auto z-10 shadow-lg">
                 {gruposFiltrados.map((grupo) => (
                   <button
                     key={grupo.id}

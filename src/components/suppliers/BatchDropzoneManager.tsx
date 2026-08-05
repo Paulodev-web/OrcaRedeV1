@@ -204,7 +204,7 @@ export default function BatchDropzoneManager({
 
   return (
     <>
-      <div className="rounded-2xl border border-accent-500/40 bg-white p-6 shadow-md">
+      <div className="rounded-2xl border border-accent-500/40 bg-surface p-6 shadow-md">
         <h2 className="mb-2 text-base font-semibold text-neutral-900">Importar PDFs em lote</h2>
         <p className="mb-4 text-sm text-slate-500">
           Até {MAX_PDFS_PER_QUOTATION} PDFs por cotação
@@ -255,7 +255,7 @@ export default function BatchDropzoneManager({
             }}
           />
           {uploading ? (
-            <Loader2 className="h-10 w-10 animate-spin text-accent-600" />
+            <Loader2 className="h-10 w-10 animate-spin text-link" />
           ) : (
             <Upload className="h-10 w-10 text-gray-400" />
           )}

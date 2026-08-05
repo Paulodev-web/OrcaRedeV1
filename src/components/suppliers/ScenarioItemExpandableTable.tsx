@@ -167,7 +167,7 @@ export default function ScenarioItemExpandableTable({
               <th className="px-4 py-3 w-8 bg-gray-50" />
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-100">
+          <tbody className="bg-surface divide-y divide-gray-100">
             {items.map((item, idx) => {
               const isExpanded = expandedId === item.material_id;
               const hasMultiple = item.all_offers.length > 1;
@@ -189,7 +189,7 @@ export default function ScenarioItemExpandableTable({
                         : isExpanded
                           ? 'bg-accent-500/10'
                           : isEvenRow
-                            ? 'bg-white hover:bg-gray-50'
+                            ? 'bg-surface hover:bg-gray-50'
                             : 'bg-gray-50/50 hover:bg-gray-100'
                     } ${isNoPurchase ? 'opacity-55' : ''}`}
                   >
@@ -219,7 +219,7 @@ export default function ScenarioItemExpandableTable({
                         <button
                           type="button"
                           onClick={() => onManualQuoteRequest(item)}
-                          className="text-xs font-medium text-accent-600 hover:text-neutral-900 hover:underline"
+                          className="text-xs font-medium text-link hover:text-neutral-900 hover:underline"
                         >
                           Cotação manual
                         </button>
@@ -238,7 +238,7 @@ export default function ScenarioItemExpandableTable({
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <p className="text-sm font-semibold text-accent-600">
+                      <p className="text-sm font-semibold text-link">
                         {summary.lineTotal > 0 ? formatCurrency(summary.lineTotal) : '—'}
                       </p>
                     </td>
@@ -277,7 +277,7 @@ export default function ScenarioItemExpandableTable({
                           <button
                             type="button"
                             onClick={() => onManualQuoteRequest(item)}
-                            className="text-sm font-medium text-accent-600 hover:text-neutral-900 hover:underline"
+                            className="text-sm font-medium text-link hover:text-neutral-900 hover:underline"
                           >
                             + Adicionar cotação manual
                           </button>
@@ -299,7 +299,7 @@ export default function ScenarioItemExpandableTable({
                                   className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm ${
                                     isHighlighted
                                       ? 'border-accent-500 bg-accent-500/10'
-                                      : 'border-gray-200 bg-white'
+                                      : 'border-gray-200 bg-surface'
                                   }`}
                                 >
                                   <span className="font-medium text-neutral-900">
@@ -315,7 +315,7 @@ export default function ScenarioItemExpandableTable({
                                       )}
                                     </span>
                                     {item.net_qty > 0 && (
-                                      <span className="font-semibold text-accent-600">
+                                      <span className="font-semibold text-link">
                                         {formatCurrency(lineTotal)}
                                       </span>
                                     )}
@@ -328,7 +328,7 @@ export default function ScenarioItemExpandableTable({
                                         className={`text-xs font-medium px-2 py-1 rounded ${
                                           isHighlighted
                                             ? 'bg-accent-600 text-white'
-                                            : 'text-accent-600 hover:bg-accent-500/10'
+                                            : 'text-link hover:bg-accent-500/10'
                                         }`}
                                       >
                                         {isHighlighted ? 'Selecionado' : 'Selecionar'}

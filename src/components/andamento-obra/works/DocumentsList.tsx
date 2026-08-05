@@ -20,7 +20,7 @@ interface DocumentsListProps {
 export function DocumentsList({ documents, emptyHint }: DocumentsListProps) {
   if (documents.length === 0) {
     return (
-      <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white px-6 py-12 text-center">
+      <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-surface px-6 py-12 text-center">
         <p className="text-sm text-gray-500">{emptyHint}</p>
       </div>
     );
@@ -31,7 +31,7 @@ export function DocumentsList({ documents, emptyHint }: DocumentsListProps) {
       {documents.map((doc) => (
         <li
           key={doc.id}
-          className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 shadow-sm"
+          className="flex items-center gap-3 rounded-xl border border-gray-200 bg-surface p-3 shadow-sm"
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
             <FileText className="h-4 w-4" />

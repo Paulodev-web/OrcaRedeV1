@@ -28,18 +28,18 @@ export function WorkHeader({
   const [editOpen, setEditOpen] = useState(false);
 
   return (
-    <header className="border-b border-gray-200 bg-white">
+    <header className="border-b border-gray-200 bg-surface">
       <div className="mx-auto max-w-7xl px-6 py-4 lg:px-8">
         <p className="flex flex-wrap items-center gap-1 text-xs text-gray-400">
           <Link
             href="/"
-            className="inline-flex items-center gap-1 transition-colors hover:text-accent-600"
+            className="inline-flex items-center gap-1 transition-colors hover:text-link"
           >
             <Grid3X3 className="h-3.5 w-3.5 shrink-0" />
             Portal
           </Link>
           <ChevronRight className="h-3 w-3 shrink-0 text-gray-300" aria-hidden />
-          <Link href="/tools/andamento-obra" className="transition-colors hover:text-accent-600">
+          <Link href="/tools/andamento-obra" className="transition-colors hover:text-link">
             Obras
           </Link>
           <ChevronRight className="h-3 w-3 shrink-0 text-gray-300" aria-hidden />
@@ -63,7 +63,7 @@ export function WorkHeader({
               {work.budgetId && (
                 <Link
                   href={`/?budgetId=${work.budgetId}`}
-                  className="text-accent-600 hover:underline"
+                  className="text-link hover:underline"
                   title="Abrir o orçamento original no OrçaRede"
                 >
                   Ver orçamento original
@@ -76,7 +76,7 @@ export function WorkHeader({
             <button
               type="button"
               onClick={() => setEditOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-900 hover:bg-gray-50"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-surface px-3 py-1.5 text-sm font-medium text-neutral-900 hover:bg-gray-50"
             >
               <Pencil className="h-3.5 w-3.5" />
               Editar obra

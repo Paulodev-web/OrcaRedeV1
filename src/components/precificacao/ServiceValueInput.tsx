@@ -40,7 +40,7 @@ export function ServiceValueInput({
   const semBaseParaPercent = !hasMateriais && inputMode === 'percentual';
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-gray-200 bg-surface p-4 shadow-sm">
       <h2 className="text-sm font-semibold text-neutral-900">Valor do Serviço</h2>
       <p className="mt-1 text-xs text-gray-500">
         Defina o percentual sobre o total dos materiais para calcular o valor do serviço, ou digite o valor
@@ -69,7 +69,7 @@ export function ServiceValueInput({
             placeholder="Ex: 40"
             className={`h-10 w-full rounded-lg border px-3 text-sm outline-none transition focus:ring-2 ${
               inputMode === 'percentual'
-                ? 'border-accent-500 bg-white text-neutral-900 focus:border-accent-500/80 focus:ring-accent-500/20'
+                ? 'border-accent-500 bg-surface text-neutral-900 focus:border-accent-500/80 focus:ring-accent-500/20'
                 : 'border-gray-200 bg-gray-50 text-gray-700 focus:border-gray-300 focus:ring-gray-200'
             }`}
           />
@@ -88,7 +88,7 @@ export function ServiceValueInput({
             onValueChange={onValorServicoChange}
             className={`h-10 w-full rounded-lg border px-3 text-sm outline-none transition focus:ring-2 ${
               inputMode === 'valor'
-                ? 'border-accent-500 bg-white text-neutral-900 focus:border-accent-500/80 focus:ring-accent-500/20'
+                ? 'border-accent-500 bg-surface text-neutral-900 focus:border-accent-500/80 focus:ring-accent-500/20'
                 : 'border-gray-200 bg-gray-50 text-gray-700 focus:border-gray-300 focus:ring-gray-200'
             }`}
           />

@@ -279,7 +279,7 @@ export function ManagerFormDialog({
                   type="checkbox"
                   checked={isActive}
                   onChange={(e) => setIsActive(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-accent-600 focus:ring-accent-500"
+                  className="h-4 w-4 rounded border-gray-300 text-link focus:ring-accent-500"
                 />
                 Conta ativa
               </label>

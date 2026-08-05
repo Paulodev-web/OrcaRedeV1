@@ -189,7 +189,7 @@ function PriceUnitCell({
         <button
           type="button"
           onClick={startEdit}
-          className="absolute right-0.5 top-0.5 rounded p-0.5 text-gray-400 opacity-0 transition-opacity hover:bg-white hover:text-blue-600 group-hover:opacity-100"
+          className="absolute right-0.5 top-0.5 rounded p-0.5 text-gray-400 opacity-0 transition-opacity hover:bg-surface hover:text-blue-600 group-hover:opacity-100"
           title="Editar preço negociado"
           aria-label="Editar preço negociado"
         >
@@ -380,7 +380,7 @@ export default function ScenarioComparisonTable({
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
+              <tbody className="bg-surface divide-y divide-gray-100">
                 {purchasable.map((item) => (
                   <tr key={item.material_id} className="hover:bg-accent-500/5">
                     <td className="px-4 py-2.5">
@@ -395,7 +395,7 @@ export default function ScenarioComparisonTable({
                         <button
                           type="button"
                           onClick={() => onManualQuoteRequest(item)}
-                          className="text-xs font-medium text-accent-600 hover:text-neutral-900 hover:underline"
+                          className="text-xs font-medium text-link hover:text-neutral-900 hover:underline"
                         >
                           Cotação manual
                         </button>
@@ -497,13 +497,13 @@ export default function ScenarioComparisonTable({
                 {onRemoveMaterial && <th className="px-2 py-1.5 bg-gray-100" />}
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-100">
+            <tbody className="bg-surface divide-y divide-gray-100">
               {rows.map((row, idx) => {
                 const { item, minPrice, winnerQuoteId, winnerLabel, hasNoCoverage } = row;
                 const isFullyStocked = item.net_qty === 0 && !item.is_session_excluded;
                 const isSessionExcluded = !!item.is_session_excluded;
                 const isEvenRow = idx % 2 === 0;
-                const rowBg = isEvenRow ? 'bg-white' : 'bg-gray-50/50';
+                const rowBg = isEvenRow ? 'bg-surface' : 'bg-gray-50/50';
                 const offerMap = new Map(item.all_offers.map((o) => [o.quote_id, o]));
                 const idealQuoteId = idealSelections?.get(item.material_id);
                 const validatedQuoteId = validatedSelections?.get(item.material_id);
@@ -591,7 +591,7 @@ export default function ScenarioComparisonTable({
                           <button
                             type="button"
                             onClick={() => onManualQuoteRequest(item)}
-                            className="text-xs font-medium text-accent-600 hover:text-neutral-900 hover:underline"
+                            className="text-xs font-medium text-link hover:text-neutral-900 hover:underline"
                           >
                             Cotação manual
                           </button>

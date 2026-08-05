@@ -38,7 +38,7 @@ export default async function SessionConciliacaoPage({ params }: Props) {
           description="Valide os vínculos entre itens dos fornecedores e a fonte da verdade."
         />
 
-        <section className="rounded-2xl border border-amber-200 bg-white p-6 shadow-sm">
+        <section className="rounded-2xl border border-amber-200 bg-surface p-6 shadow-sm">
           <h1 className="text-xl font-semibold text-neutral-900">Conciliação ainda indisponível</h1>
           <p className="mt-2 text-sm text-slate-600">
             {hasActiveJobs

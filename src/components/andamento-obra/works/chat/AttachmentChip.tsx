@@ -46,7 +46,7 @@ export function AttachmentChip({ attachment, onRemove, onRetry }: AttachmentChip
   return (
     <div
       className={cn(
-        'group relative flex items-center gap-2 rounded-lg border bg-white px-2.5 py-1.5 text-xs shadow-sm transition-colors',
+        'group relative flex items-center gap-2 rounded-lg border bg-surface px-2.5 py-1.5 text-xs shadow-sm transition-colors',
         isError ? 'border-red-300 bg-red-50' : 'border-gray-200',
       )}
     >

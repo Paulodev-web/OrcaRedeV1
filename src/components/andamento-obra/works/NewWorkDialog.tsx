@@ -120,7 +120,7 @@ function ModeStep({
         <button
           type="button"
           onClick={onPickCreate}
-          className="group flex flex-col items-start gap-2 rounded-xl border border-gray-200 bg-white p-4 text-left transition-all hover:border-accent-500/60 hover:shadow-md"
+          className="group flex flex-col items-start gap-2 rounded-xl border border-gray-200 bg-surface p-4 text-left transition-all hover:border-accent-500/60 hover:shadow-md"
         >
           <span className="rounded-lg bg-accent-500/10 p-2 text-neutral-900 group-hover:bg-accent-500/20">
             <FilePlus2 className="h-5 w-5" />
@@ -135,7 +135,7 @@ function ModeStep({
         <button
           type="button"
           onClick={onPickImport}
-          className="group flex flex-col items-start gap-2 rounded-xl border border-gray-200 bg-white p-4 text-left transition-all hover:border-accent-500/60 hover:shadow-md"
+          className="group flex flex-col items-start gap-2 rounded-xl border border-gray-200 bg-surface p-4 text-left transition-all hover:border-accent-500/60 hover:shadow-md"
         >
           <span className="rounded-lg bg-accent-500/10 p-2 text-neutral-900 group-hover:bg-accent-500/20">
             <FileSearch className="h-5 w-5" />

@@ -61,7 +61,9 @@ export function ModuleHeader({
         {crumbs.length > 0 ? (
           <nav
             aria-label="Trilha de navegação"
-            className="flex flex-wrap items-center gap-1.5 text-xs text-neutral-400"
+            /* `neutral-600`, não `-400`: a trilha é texto de 12px e precisa de
+               4.5:1. Em neutral-400 ficava em 2.1:1 — praticamente ilegível. */
+            className="flex flex-wrap items-center gap-1.5 text-xs text-neutral-600"
           >
             {crumbs.map((crumb, index) => {
               const CrumbIcon = crumb.icon;
@@ -79,7 +81,7 @@ export function ModuleHeader({
                   {crumb.href && !isLast ? (
                     <Link
                       href={crumb.href}
-                      className="inline-flex items-center gap-1 rounded-sm transition-colors hover:text-accent-600"
+                      className="inline-flex items-center gap-1 rounded-sm transition-colors hover:text-link"
                     >
                       {body}
                     </Link>
@@ -101,7 +103,7 @@ export function ModuleHeader({
           <div className="flex min-w-0 items-start gap-3">
             {Icon ? (
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-accent-200 bg-accent-50">
-                <Icon className="h-5 w-5 text-accent-600" />
+                <Icon className="h-5 w-5 text-link" />
               </span>
             ) : null}
             <div className="min-w-0">
@@ -110,7 +112,7 @@ export function ModuleHeader({
               <h1 className="truncate text-xl font-semibold tracking-tight text-neutral-900 sm:text-2xl">
                 {title}
               </h1>
-              {description ? <p className="mt-1 text-sm text-neutral-500">{description}</p> : null}
+              {description ? <p className="mt-1 text-sm text-neutral-600">{description}</p> : null}
             </div>
           </div>
 

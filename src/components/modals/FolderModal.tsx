@@ -69,7 +69,7 @@ export function FolderModal({ isOpen, onClose, onSave, initialName = '', initial
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full border border-gray-200">
+      <div className="bg-surface rounded-xl shadow-xl max-w-lg w-full border border-gray-200">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-gray-200">
           <div className="flex items-center space-x-3">
@@ -194,7 +194,7 @@ export function FolderModal({ isOpen, onClose, onSave, initialName = '', initial
           <div className="pt-3 border-t border-gray-200">
             <p className="text-sm font-medium text-gray-700 mb-2">Pré-visualização</p>
             <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <div className="p-2 bg-white rounded-lg">
+              <div className="p-2 bg-surface rounded-lg">
                 <Folder
                   className="h-6 w-6"
                   style={{ color }}

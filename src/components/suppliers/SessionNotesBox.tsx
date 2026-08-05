@@ -130,7 +130,7 @@ export default function SessionNotesBox({ sessionId }: SessionNotesBoxProps) {
           </p>
         ) : (
           notes.map((note) => (
-            <div key={note.id} className="rounded-lg bg-white px-2 py-1.5 shadow-sm">
+            <div key={note.id} className="rounded-lg bg-surface px-2 py-1.5 shadow-sm">
               <div className="flex items-baseline justify-between gap-2">
                 <span
                   className={
@@ -165,7 +165,7 @@ export default function SessionNotesBox({ sessionId }: SessionNotesBoxProps) {
                 className={
                   active
                     ? 'rounded-full bg-accent-600 px-2.5 py-0.5 text-[11px] font-semibold text-white'
-                    : 'rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-500 hover:border-accent-500/40'
+                    : 'rounded-full border border-gray-200 bg-surface px-2.5 py-0.5 text-[11px] font-medium text-slate-500 hover:border-accent-500/40'
                 }
               >
                 {AUTHOR_LABEL[option]}
@@ -186,7 +186,7 @@ export default function SessionNotesBox({ sessionId }: SessionNotesBoxProps) {
             rows={2}
             maxLength={2000}
             placeholder={`Escreva como ${AUTHOR_LABEL[author]}…`}
-            className="min-h-[2.5rem] flex-1 resize-none rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-[11px] text-slate-700 outline-none placeholder:text-slate-400 focus:border-accent-500/60"
+            className="min-h-[2.5rem] flex-1 resize-none rounded-lg border border-gray-200 bg-surface px-2 py-1.5 text-[11px] text-slate-700 outline-none placeholder:text-slate-400 focus:border-accent-500/60"
             disabled={isPending}
           />
           <button

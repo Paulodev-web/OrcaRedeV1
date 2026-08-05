@@ -203,7 +203,7 @@ export function TableForm() {
         </p>
       </div>
 
-      <section className="space-y-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <section className="space-y-4 rounded-xl border border-gray-200 bg-surface p-5 shadow-sm">
         <h2 className="text-lg font-medium text-neutral-900">Fornecedor (opcional)</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block sm:col-span-2">
@@ -272,7 +272,7 @@ export function TableForm() {
       {tables.map((table, tableIndex) => (
         <section
           key={tableIndex}
-          className="space-y-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+          className="space-y-4 rounded-xl border border-gray-200 bg-surface p-5 shadow-sm"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-medium text-neutral-900">Tabela {tableIndex + 1}</h2>
@@ -364,7 +364,7 @@ export function TableForm() {
                 {table.rows.map((row, rowIndex) => (
                   <tr
                     key={rowIndex}
-                    className={rowIndex % 2 === 0 ? 'bg-accent-50' : 'bg-white'}
+                    className={rowIndex % 2 === 0 ? 'bg-accent-50' : 'bg-surface'}
                   >
                     {row.map((cell, colIndex) => (
                       <td key={colIndex} className="border border-gray-200 p-1">
@@ -409,7 +409,7 @@ export function TableForm() {
         <button
           type="button"
           onClick={addTable}
-          className="inline-flex items-center gap-2 rounded-lg border border-accent-500 bg-white px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-accent-500/10"
+          className="inline-flex items-center gap-2 rounded-lg border border-accent-500 bg-surface px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-accent-500/10"
         >
           <Plus className="h-4 w-4" />
           Nova tabela

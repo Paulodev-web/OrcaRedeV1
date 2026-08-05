@@ -173,7 +173,7 @@ export function AdminPortal() {
         </div>
 
         {/* Rodapé */}
-        <div className="mt-8 flex flex-col items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row">
+        <div className="mt-8 flex flex-col items-center justify-between gap-4 rounded-xl border border-slate-200 bg-surface p-4 shadow-sm sm:flex-row">
           <div className="flex items-center gap-3">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-brand-blue/40 bg-brand-blue/15 text-sm font-semibold text-brand-navy">
               {userInitial}
@@ -220,7 +220,7 @@ function ModuleCard({ module: mod, onOpenLegacy }: ModuleCardProps) {
       <div className="flex flex-1 flex-col p-6">
         <div className="mb-4 flex items-start justify-between">
           <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-accent-200 bg-accent-50">
-            <Icon className="h-6 w-6 text-accent-600" />
+            <Icon className="h-6 w-6 text-link" />
           </span>
           <span className="flex items-center gap-2">
             <ActivityDot count={0} label={`novidades em ${mod.label}`} />

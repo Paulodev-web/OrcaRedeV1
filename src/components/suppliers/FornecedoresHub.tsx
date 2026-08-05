@@ -71,7 +71,7 @@ function SessionCardKebab({
       {open && (
         <ul
           role="menu"
-          className="absolute right-0 top-full z-50 mt-1 min-w-[11rem] rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+          className="absolute right-0 top-full z-50 mt-1 min-w-[11rem] rounded-lg border border-gray-200 bg-surface py-1 shadow-lg"
           onClick={(e) => e.stopPropagation()}
         >
           <li role="none">
@@ -226,7 +226,7 @@ export default function FornecedoresHub({
       />
 
       {initialSessions.length === 0 && !sessionsError ? (
-        <div className="rounded-xl border border-dashed border-gray-200 bg-white p-12 text-center text-gray-500">
+        <div className="rounded-xl border border-dashed border-gray-200 bg-surface p-12 text-center text-gray-500">
           <p>Nenhuma sessão ainda.</p>
           <p className="mt-2 text-sm">Crie uma sessão para importar PDFs em lote com processamento em segundo plano.</p>
         </div>
@@ -234,7 +234,7 @@ export default function FornecedoresHub({
         <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {initialSessions.map((s) => (
             <li key={s.id}>
-              <div className="relative flex h-full flex-col rounded-2xl border border-accent-500/40 bg-white shadow-md transition-shadow hover:shadow-lg">
+              <div className="relative flex h-full flex-col rounded-2xl border border-accent-500/40 bg-surface shadow-md transition-shadow hover:shadow-lg">
                 <Link
                   prefetch
                   href={`/fornecedores/sessao/${s.id}`}

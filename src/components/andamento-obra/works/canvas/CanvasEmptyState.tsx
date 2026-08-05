@@ -24,7 +24,7 @@ interface CanvasEmptyStateProps {
 export function CanvasEmptyState({ variant }: CanvasEmptyStateProps) {
   if (variant === 'no-snapshot-from-zero') {
     return (
-      <section className="flex min-h-[60vh] items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-white p-8">
+      <section className="flex min-h-[60vh] items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-surface p-8">
         <div className="max-w-md text-center">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-500">
             <Layers3 className="h-5 w-5" aria-hidden="true" />
@@ -55,7 +55,7 @@ export function CanvasEmptyState({ variant }: CanvasEmptyStateProps) {
   }
 
   return (
-    <section className="flex min-h-[60vh] items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-white p-8">
+    <section className="flex min-h-[60vh] items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-surface p-8">
       <div className="max-w-md text-center">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-amber-600">
           <FileX2 className="h-5 w-5" aria-hidden="true" />

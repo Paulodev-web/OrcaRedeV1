@@ -128,7 +128,7 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-xs text-gray-400">
-            <Link href="/" className="hover:text-accent-600">
+            <Link href="/" className="hover:text-link">
               Portal
             </Link>
             <span className="mx-1">/</span>
@@ -152,17 +152,17 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
       </div>
 
       <section className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-gray-200 bg-surface p-4 shadow-sm">
           <p className="text-xs uppercase tracking-wide text-gray-500">Cards salvos</p>
           <p className="mt-1 text-2xl font-bold text-neutral-900">{items.length}</p>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-gray-200 bg-surface p-4 shadow-sm">
           <p className="text-xs uppercase tracking-wide text-gray-500">Total ao cliente</p>
           <p className="mt-1 text-2xl font-bold text-neutral-900">
             {currencyFormatter.format(totals.totalCliente)}
           </p>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-gray-200 bg-surface p-4 shadow-sm">
           <p className="text-xs uppercase tracking-wide text-gray-500">Lucro líquido</p>
           <p className="mt-1 text-2xl font-bold text-emerald-700">
             {currencyFormatter.format(totals.lucroLiquido)}
@@ -170,20 +170,20 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
         </div>
       </section>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="rounded-xl border border-gray-200 bg-surface p-4 shadow-sm">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Buscar por orçamento, cliente ou cidade..."
-            className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-accent-500 focus:ring-2 focus:ring-accent-500/15"
+            className="h-10 w-full rounded-lg border border-gray-200 bg-surface pl-9 pr-3 text-sm outline-none transition focus:border-accent-500 focus:ring-2 focus:ring-accent-500/15"
           />
         </div>
       </div>
 
       {filteredItems.length === 0 ? (
-        <div className="rounded-xl border-2 border-dashed border-gray-200 bg-white p-10 text-center">
+        <div className="rounded-xl border-2 border-dashed border-gray-200 bg-surface p-10 text-center">
           <Calculator className="mx-auto h-10 w-10 text-gray-300" />
           <h2 className="mt-3 text-lg font-semibold text-neutral-900">Nenhuma precificação salva</h2>
           <p className="mt-1 text-sm text-gray-500">
@@ -215,7 +215,7 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
                     router.push(`/tools/precificacao/editar/${item.id}`);
                   }
                 }}
-                className="cursor-pointer rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-accent-500/40 hover:shadow-md"
+                className="cursor-pointer rounded-xl border border-gray-200 bg-surface p-4 shadow-sm transition hover:border-accent-500/40 hover:shadow-md"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -248,7 +248,7 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
                   </div>
                   <div className="flex items-center justify-between rounded-lg border border-accent-500/30 bg-accent-500/5 px-3 py-2">
                     <span className="font-semibold text-neutral-900">Total ao cliente</span>
-                    <span className="text-lg font-bold text-accent-600">
+                    <span className="text-lg font-bold text-link">
                       {currencyFormatter.format(item.result.precoTotalCliente)}
                     </span>
                   </div>
@@ -257,7 +257,7 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
                 <p className="mt-3 text-xs text-gray-500">
                   Atualizado em {formatDate(item.updatedAt)}
                   <span className="mx-1">·</span>
-                  <span className="text-accent-600">Clique para editar</span>
+                  <span className="text-link">Clique para editar</span>
                 </p>
 
                 <div className="mt-4 flex gap-2" onClick={(event) => event.stopPropagation()}>
@@ -280,7 +280,7 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
                       handleExport(item);
                     }}
                     disabled={exporting}
-                    className="inline-flex h-9 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:text-neutral-900 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex h-9 w-10 items-center justify-center rounded-lg border border-gray-200 bg-surface text-gray-500 transition hover:text-neutral-900 disabled:cursor-not-allowed disabled:opacity-60"
                     title="Baixar Excel"
                   >
                     <Download className="h-4 w-4" />
@@ -292,7 +292,7 @@ export function PricingDashboardClient({ initialItems }: PricingDashboardClientP
                       handleDelete(item);
                     }}
                     disabled={deleting}
-                    className="inline-flex h-9 w-10 items-center justify-center rounded-lg border border-red-100 bg-white text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex h-9 w-10 items-center justify-center rounded-lg border border-red-100 bg-surface text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
                     title="Excluir card"
                   >
                     {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}

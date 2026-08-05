@@ -267,7 +267,7 @@ export function ProposalEditor(props: ProposalEditorProps) {
         ) : null}
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,300px)_minmax(0,1fr)]">
-          <aside className="rounded-xl border border-slate-200 bg-white p-2 shadow-sm lg:sticky lg:top-4 lg:h-fit">
+          <aside className="rounded-xl border border-slate-200 bg-surface p-2 shadow-sm lg:sticky lg:top-4 lg:h-fit">
             <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
               Seções da proposta
             </p>

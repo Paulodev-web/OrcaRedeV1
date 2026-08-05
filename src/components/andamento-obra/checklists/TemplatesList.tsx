@@ -35,7 +35,7 @@ export function TemplatesList({ templates }: Props) {
         <p className="text-sm text-gray-500">Nenhum modelo criado ainda.</p>
         <Link
           href="/tools/andamento-obra/checklists/novo"
-          className="mt-3 inline-block text-sm font-medium text-accent-600 hover:underline"
+          className="mt-3 inline-block text-sm font-medium text-link hover:underline"
         >
           Criar primeiro modelo
         </Link>
@@ -48,7 +48,7 @@ export function TemplatesList({ templates }: Props) {
       {templates.map((t) => (
         <div
           key={t.id}
-          className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+          className="flex items-center justify-between rounded-lg border border-gray-200 bg-surface p-4 shadow-sm"
         >
           <Link
             href={`/tools/andamento-obra/checklists/${t.id}`}

@@ -52,11 +52,11 @@ export function NotificationsCenter({ initialItems }: NotificationsCenterProps) 
   return (
     <aside
       aria-label="Central de Notificações"
-      className="rounded-xl border border-gray-200 bg-white shadow-sm"
+      className="rounded-xl border border-gray-200 bg-surface shadow-sm"
     >
       <header className="flex items-center justify-between gap-2 border-b border-gray-100 px-4 py-3">
         <div className="flex items-center gap-2">
-          <Bell className="h-4 w-4 text-accent-600" />
+          <Bell className="h-4 w-4 text-link" />
           <h2 className="text-sm font-semibold text-neutral-900">Notificações</h2>
           {unreadCount > 0 && (
             <span className="rounded-full bg-accent-600 px-2 py-0.5 text-[10px] font-medium text-white">

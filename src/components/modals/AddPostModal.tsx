@@ -40,7 +40,7 @@ class ModalErrorBoundary extends React.Component<
     if (this.state.hasError) {
       return (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md">
+          <div className="bg-surface rounded-lg p-6 max-w-md">
             <h3 className="text-lg font-semibold text-red-600 mb-2">Erro no Modal</h3>
             <p className="text-gray-600 mb-4">Ocorreu um erro inesperado. Tente novamente.</p>
             <button
@@ -571,7 +571,7 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
     <div className="fixed inset-0 z-50 pointer-events-none">
       <div className="absolute inset-0 bg-black/40 pointer-events-auto" />
       <div
-        className="absolute bg-white rounded-lg shadow-2xl flex flex-col overflow-hidden pointer-events-auto"
+        className="absolute bg-surface rounded-lg shadow-2xl flex flex-col overflow-hidden pointer-events-auto"
         style={{ left: layout.x, top: layout.y, width: layout.width, height: layout.height }}
       >
         {/* Handles de resize nas 8 direções */}
@@ -619,7 +619,7 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
               onClick={() => setActiveTab('post')}
               className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 activeTab === 'post'
-                  ? 'bg-white text-blue-600 shadow-sm'
+                  ? 'bg-surface text-blue-600 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -630,7 +630,7 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
               onClick={() => setActiveTab('standard')}
               className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 activeTab === 'standard'
-                  ? 'bg-white text-blue-600 shadow-sm'
+                  ? 'bg-surface text-blue-600 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -646,7 +646,7 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
               onClick={() => setActiveTab('duplicate')}
               className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 activeTab === 'duplicate'
-                  ? 'bg-white text-blue-600 shadow-sm'
+                  ? 'bg-surface text-blue-600 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -657,7 +657,7 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
               onClick={() => setActiveTab('groups')}
               className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 activeTab === 'groups'
-                  ? 'bg-white text-blue-600 shadow-sm'
+                  ? 'bg-surface text-blue-600 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -673,7 +673,7 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
               onClick={() => setActiveTab('materials')}
               className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 activeTab === 'materials'
-                  ? 'bg-white text-blue-600 shadow-sm'
+                  ? 'bg-surface text-blue-600 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >

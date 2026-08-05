@@ -91,7 +91,7 @@ export function NotificationsFullList({ initialItems, initialHasMore }: Props) {
         <button
           type="button"
           onClick={handleMarkAll}
-          className="text-xs font-medium text-accent-600 hover:underline"
+          className="text-xs font-medium text-link hover:underline"
         >
           Marcar todas como lidas
         </button>
@@ -104,7 +104,7 @@ export function NotificationsFullList({ initialItems, initialHasMore }: Props) {
           </p>
         </div>
       ) : (
-        <ul className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <ul className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-surface">
           {visible.map((n) => (
             <li key={n.id}>
               <button

@@ -686,7 +686,7 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
                 }}
               ></div>
 
-              <div className="absolute right-0 top-10 w-60 bg-white rounded-xl shadow-xl ring-1 ring-black/5 border border-gray-100 z-30 overflow-hidden py-1.5 animate-in fade-in-0 zoom-in-95 duration-100">
+              <div className="absolute right-0 top-10 w-60 bg-surface rounded-xl shadow-xl ring-1 ring-black/5 border border-gray-100 z-30 overflow-hidden py-1.5 animate-in fade-in-0 zoom-in-95 duration-100">
                 {budget.status !== 'Finalizado' && (
                   <button
                     onClick={(e) => {
@@ -890,7 +890,7 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
                   }}
                 ></div>
 
-                <div className="absolute right-0 top-10 w-60 bg-white rounded-xl shadow-xl ring-1 ring-black/5 border border-gray-100 z-30 overflow-hidden py-1.5 animate-in fade-in-0 zoom-in-95 duration-100">
+                <div className="absolute right-0 top-10 w-60 bg-surface rounded-xl shadow-xl ring-1 ring-black/5 border border-gray-100 z-30 overflow-hidden py-1.5 animate-in fade-in-0 zoom-in-95 duration-100">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1099,7 +1099,7 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
       </div>
 
       {/* Barra de Busca e Filtros */}
-      <div className="bg-white border border-gray-200 rounded-xl p-4">
+      <div className="bg-surface border border-gray-200 rounded-xl p-4">
         <div className="flex flex-col md:flex-row gap-3">
           {/* Barra de Busca */}
           <div className="flex-1 relative">
@@ -1129,13 +1129,13 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
             className={`flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 ${
               hasActiveFilters
                 ? 'bg-gray-900 text-white hover:bg-gray-800'
-                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                : 'bg-surface text-gray-700 border border-gray-300 hover:bg-gray-50'
             }`}
           >
             <Filter className="h-4 w-4" />
             <span>Filtros</span>
             {hasActiveFilters && (
-              <span className="bg-white text-gray-900 text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+              <span className="bg-surface text-gray-900 text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
                 {(statusFilter !== 'all' ? 1 : 0) + (concessionariaFilter !== 'all' ? 1 : 0) + (templatesOnly ? 1 : 0)}
               </span>
             )}
@@ -1197,7 +1197,7 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
                   className={`w-full flex items-center justify-center space-x-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
                     templatesOnly
                       ? 'bg-purple-50 border-purple-300 text-purple-700'
-                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                      : 'bg-surface border-gray-300 text-gray-700 hover:bg-gray-50'
                   }`}
                 >
                   <Star className="h-4 w-4" fill={templatesOnly ? 'currentColor' : 'none'} />
@@ -1265,7 +1265,7 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
 
       {/* Breadcrumbs e Navegação - COM DROP ZONES */}
       {(currentFolderId || folderPath.length > 0) && (
-        <div className="bg-white border border-gray-200 rounded-xl p-3">
+        <div className="bg-surface border border-gray-200 rounded-xl p-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-1 flex-1 min-w-0">
               {/* Botão Voltar */}
@@ -1423,7 +1423,7 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
       {loadingBudgets || loadingFolders ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 animate-pulse">
+            <div key={i} className="bg-surface border border-gray-200 rounded-xl p-4 animate-pulse">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1 space-y-2">
                   <div className="h-4 bg-gray-200 rounded w-3/4" />
@@ -1517,7 +1517,7 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
               onDragOver={(e) => handleDragOver(e, currentFolderId)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, currentFolderId)}
-              className={`relative text-center py-14 bg-white rounded-xl transition-all duration-200 ${
+              className={`relative text-center py-14 bg-surface rounded-xl transition-all duration-200 ${
                 dropTargetFolder === currentFolderId && isDraggingOver && isValidDropTarget(currentFolderId)
                   ? 'border-2 border-blue-500 bg-blue-50 shadow-lg transform scale-[1.02]'
                   : 'border-2 border-dashed border-gray-200'
@@ -1572,7 +1572,7 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
 
           {/* Mensagem quando não há resultados com filtros */}
           {budgets.length > 0 && filteredBudgets.length === 0 && (
-            <div className="text-center py-14 bg-white rounded-xl border-2 border-dashed border-gray-200">
+            <div className="text-center py-14 bg-surface rounded-xl border-2 border-dashed border-gray-200">
               <div className="h-16 w-16 rounded-2xl mx-auto mb-4 flex items-center justify-center bg-gray-100">
                 <Search className="h-8 w-8 text-gray-400" />
               </div>

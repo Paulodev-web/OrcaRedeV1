@@ -7,7 +7,7 @@ interface WorkTabPlaceholderProps {
 
 export function WorkTabPlaceholder({ title, description }: WorkTabPlaceholderProps) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-white px-6 py-16 text-center">
+    <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-surface px-6 py-16 text-center">
       <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-amber-600">
         <Construction className="h-6 w-6" />
       </div>

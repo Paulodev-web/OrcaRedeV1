@@ -241,7 +241,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       {/* Header: logos à esquerda, nome do orçamento no centro */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
+      <div className="bg-surface border-b border-gray-200 shadow-sm">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             {/* Esquerda: logo fixa do sistema + logo do engenheiro */}
@@ -292,7 +292,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
       </div>
 
       {/* Navegação por Abas */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-surface border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6">
           <nav className="flex overflow-x-auto scrollbar-hide"
                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
@@ -351,7 +351,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
           <div className="space-y-6 sm:space-y-8">
             {/* Cards de Estatísticas */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-              <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg">
+              <div className="bg-surface rounded-xl p-4 sm:p-6 shadow-lg">
                 <div className="flex items-center justify-between">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-600 mb-1">Progresso Geral</p>
@@ -361,7 +361,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg">
+              <div className="bg-surface rounded-xl p-4 sm:p-6 shadow-lg">
                 <div className="flex items-center justify-between">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-600 mb-1">Postes</p>
@@ -371,7 +371,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg">
+              <div className="bg-surface rounded-xl p-4 sm:p-6 shadow-lg">
                 <div className="flex items-center justify-between">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-600 mb-1">Rede MT</p>
@@ -383,7 +383,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg">
+              <div className="bg-surface rounded-xl p-4 sm:p-6 shadow-lg">
                 <div className="flex items-center justify-between">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-600 mb-1">Rede BT</p>
@@ -400,7 +400,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
             {/* Componentes da Obra */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
               {/* Componentes Detalhados */}
-              <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg">
+              <div className="bg-surface rounded-xl p-4 sm:p-6 shadow-lg">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Componentes da Obra</h3>
                 <div className="space-y-4">
                   {/* Postes */}
@@ -526,7 +526,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
                 </div>
               </div>
               {/* Status dos Postes */}
-              <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg">
+              <div className="bg-surface rounded-xl p-4 sm:p-6 shadow-lg">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Status dos Postes</h3>
                 <div className="space-y-4">
                   <div>
@@ -566,7 +566,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
         )}
 
         {activeTab === 'timeline' && (
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="bg-surface rounded-xl shadow-lg overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">Timeline da Obra</h3>
               <p className="text-gray-600">Acompanhe os marcos e progresso da obra</p>
@@ -627,7 +627,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
 
         {activeTab === 'images' && (
           <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+            <div className="bg-surface rounded-xl shadow-lg p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Galeria da Obra</h3>
@@ -681,7 +681,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
         )}
 
         {activeTab === 'map' && (
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="bg-surface rounded-xl shadow-lg overflow-hidden">
             <div className="p-4 sm:p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <div>

@@ -51,7 +51,7 @@ export function ChatMessage({
           'flex max-w-[85%] flex-col gap-1.5 rounded-2xl px-3 py-2 shadow-sm sm:max-w-[70%]',
           isMine
             ? 'rounded-br-sm bg-accent-600 text-white'
-            : 'rounded-bl-sm border border-gray-200 bg-white text-neutral-900',
+            : 'rounded-bl-sm border border-gray-200 bg-surface text-neutral-900',
         )}
       >
         {message.attachments.length > 0 && (

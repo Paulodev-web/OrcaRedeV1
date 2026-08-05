@@ -8,7 +8,7 @@ interface PostsProgressCardProps {
 export function PostsProgressCard({ postsPlanned, postsInstalled }: PostsProgressCardProps) {
   const pct = postsPlanned > 0 ? Math.min(100, (postsInstalled / postsPlanned) * 100) : 0;
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-gray-200 bg-surface p-4 shadow-sm">
       <header className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
         <MapPin className="h-3.5 w-3.5" />
         Postes instalados

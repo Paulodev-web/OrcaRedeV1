@@ -9,8 +9,8 @@ interface EmptyWorksStateProps {
 
 export function EmptyWorksState({ onNewWork }: EmptyWorksStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-white px-6 py-16 text-center">
-      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-accent-500/10 text-accent-600">
+    <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-surface px-6 py-16 text-center">
+      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-accent-500/10 text-link">
         <HardHat className="h-8 w-8" />
       </div>
       <h2 className="text-lg font-semibold text-neutral-900">

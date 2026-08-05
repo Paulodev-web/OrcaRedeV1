@@ -85,7 +85,7 @@ export default function ManualMatchPanel({
       aria-label={`Vincular material ao item ${item.descricao.slice(0, 80)}`}
     >
       <p className="text-xs font-semibold uppercase tracking-wide text-neutral-900">
-        Vincular: <span className="font-normal normal-case text-accent-600">{item.descricao}</span>
+        Vincular: <span className="font-normal normal-case text-link">{item.descricao}</span>
       </p>
 
       <div className="relative">
@@ -95,11 +95,11 @@ export default function ManualMatchPanel({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar material do orçamento..."
-          className="w-full rounded-md border border-gray-300 bg-white py-2 pl-8 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent-500"
+          className="w-full rounded-md border border-gray-300 bg-surface py-2 pl-8 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent-500"
         />
       </div>
 
-      <div className={`${listMaxH} overflow-y-auto border border-gray-200 rounded-md bg-white divide-y divide-gray-100`}>
+      <div className={`${listMaxH} overflow-y-auto border border-gray-200 rounded-md bg-surface divide-y divide-gray-100`}>
         {filtered.length === 0 ? (
           <p className="p-3 text-sm text-gray-400 text-center">Nenhum material encontrado.</p>
         ) : (

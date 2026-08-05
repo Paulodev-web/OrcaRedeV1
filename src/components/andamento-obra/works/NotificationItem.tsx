@@ -69,7 +69,7 @@ export function NotificationItem({ notification, onRead }: NotificationItemProps
     >
       <div
         className={`mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ${
-          notification.isRead ? 'bg-gray-100 text-gray-500' : 'bg-accent-500/15 text-accent-600'
+          notification.isRead ? 'bg-gray-100 text-gray-500' : 'bg-accent-500/15 text-link'
         }`}
       >
         <Icon className="h-3.5 w-3.5" />

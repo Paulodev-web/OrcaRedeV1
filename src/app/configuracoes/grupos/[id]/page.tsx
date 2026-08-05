@@ -27,7 +27,7 @@ export default async function EditarGrupoPage({
         breadcrumb={[{ label: SECTION.label, href: "/configuracoes/grupos" }, { label: "Editar" }]}
       >
         <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-surface p-6 shadow-sm">
             <p className="text-sm text-slate-600">
               Este grupo de itens não existe mais ou não está acessível na sua conta.
             </p>

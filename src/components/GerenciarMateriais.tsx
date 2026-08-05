@@ -450,7 +450,7 @@ export function GerenciarMateriais({ hideHeading = false }: GerenciarMateriaisPr
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow flex-1 flex flex-col overflow-hidden">
+      <div className="bg-surface rounded-lg shadow flex-1 flex flex-col overflow-hidden">
         <div className="p-4 border-b flex-shrink-0">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -580,7 +580,7 @@ export function GerenciarMateriais({ hideHeading = false }: GerenciarMateriaisPr
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-surface divide-y divide-gray-200">
                   {paginatedMateriais.map((material) => (
                     <tr key={material.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -801,7 +801,7 @@ function MaterialModal({ material, onClose, onSave, loading = false }: MaterialM
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+      <div className="bg-surface rounded-lg p-6 w-full max-w-md">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           {material ? 'Editar Material' : 'Novo Material'}
         </h3>

@@ -504,7 +504,7 @@ export function AreaTrabalho({ embedded = false, view, onViewChange }: AreaTraba
   if (!currentOrcamento) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-center bg-white rounded-lg border border-gray-200 p-8 shadow-sm">
+        <div className="text-center bg-surface rounded-lg border border-gray-200 p-8 shadow-sm">
           <h2 className="text-xl font-semibold text-gray-700">Orçamento não encontrado</h2>
           <p className="text-gray-500 mt-2">Selecione um orçamento no Dashboard</p>
         </div>
@@ -516,7 +516,7 @@ export function AreaTrabalho({ embedded = false, view, onViewChange }: AreaTraba
   if (loadingBudgetDetails) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="flex flex-col items-center space-y-4 bg-white rounded-lg border border-gray-200 p-8 shadow-sm">
+        <div className="flex flex-col items-center space-y-4 bg-surface rounded-lg border border-gray-200 p-8 shadow-sm">
           <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
           <div className="text-center">
             <h2 className="text-xl font-semibold text-gray-700">Carregando orçamento</h2>
@@ -729,7 +729,7 @@ export function AreaTrabalho({ embedded = false, view, onViewChange }: AreaTraba
       <div className="flex flex-col gap-6">
         {/* Cabeçalho da Consolidação — no modo rota quem navega são as abas de etapa */}
         {!embedded && (
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4">
+          <div className="bg-surface border border-gray-200 rounded-lg shadow-sm p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <button
@@ -761,7 +761,7 @@ export function AreaTrabalho({ embedded = false, view, onViewChange }: AreaTraba
       {/* Cabeçalho da Visualização Principal — no modo rota, o `ModuleHeader` da
           esteira já traz nome, cliente, cidade e as abas de etapa */}
       {!embedded && (
-        <div className="bg-white border-b border-gray-200 p-4 mb-4">
+        <div className="bg-surface border-b border-gray-200 p-4 mb-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">{currentOrcamento.nome}</h2>
@@ -788,7 +788,7 @@ export function AreaTrabalho({ embedded = false, view, onViewChange }: AreaTraba
       >
         {/* Coluna Esquerda - Lista de Postes */}
         <div
-          className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-auto h-full"
+          className="bg-surface border border-gray-200 rounded-lg shadow-sm overflow-auto h-full"
           style={{ width: `${splitPercent}%`, minWidth: 0 }}
         >
           <PostListAccordion
@@ -824,7 +824,7 @@ export function AreaTrabalho({ embedded = false, view, onViewChange }: AreaTraba
 
         {/* Coluna Direita - Canvas/Mapa */}
         <div
-          className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden h-full"
+          className="bg-surface border border-gray-200 rounded-lg shadow-sm overflow-hidden h-full"
           style={{ width: `${100 - splitPercent}%`, minWidth: 0 }}
         >
           <CanvasVisual
@@ -1378,7 +1378,7 @@ function PostListAccordion({
                           </div>
                         )}
                         {debouncedSearchTerm && gruposFiltrados.length > 0 && !addingGroup && (
-                          <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-md mt-1 max-h-40 overflow-y-auto z-10 shadow-lg">
+                          <div className="absolute top-full left-0 right-0 bg-surface border border-gray-300 rounded-md mt-1 max-h-40 overflow-y-auto z-10 shadow-lg">
                             {gruposFiltrados.map((grupo: GrupoItem) => (
                               <button
                                 key={grupo.id}
@@ -1500,7 +1500,7 @@ function PostListAccordion({
                             </div>
                           )}
                           {debouncedMaterialSearchTerm && materiaisFiltrados.length > 0 && !addingLooseMaterial && (
-                            <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-md mt-1 max-h-40 overflow-y-auto z-20 shadow-lg">
+                            <div className="absolute top-full left-0 right-0 bg-surface border border-gray-300 rounded-md mt-1 max-h-40 overflow-y-auto z-20 shadow-lg">
                               {materiaisFiltrados.slice(0, 10).map((material) => (
                                 <button
                                   key={material.id}

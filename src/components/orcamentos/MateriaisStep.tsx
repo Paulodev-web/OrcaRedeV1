@@ -37,7 +37,7 @@ export function MateriaisStep() {
           </div>
           <Link
             href={`/orcamentos/${params?.budgetId}/projeto`}
-            className="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-medium text-amber-900 transition-colors hover:bg-amber-100"
+            className="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-surface px-3 py-2 text-sm font-medium text-amber-900 transition-colors hover:bg-amber-100"
           >
             Ir para o projeto
             <ArrowRight className="h-4 w-4" />

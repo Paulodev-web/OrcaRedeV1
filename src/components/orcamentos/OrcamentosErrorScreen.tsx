@@ -21,7 +21,7 @@ export function OrcamentosErrorScreen({
   return (
     <main className="min-h-screen bg-brand-surface p-6 lg:p-8">
       <div className="mx-auto max-w-3xl">
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-surface p-6 shadow-sm">
           <h1 className="text-xl font-semibold text-brand-navy">{title}</h1>
           <p className="mt-2 text-sm text-slate-600">{message}</p>
           <Link

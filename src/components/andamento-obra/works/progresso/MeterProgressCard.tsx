@@ -13,7 +13,7 @@ const CATEGORIES: { key: keyof MetersByCategory['planned']; label: string }[] = 
 
 export function MeterProgressCard({ meters }: MeterProgressCardProps) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-gray-200 bg-surface p-4 shadow-sm">
       <header className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
         <Cable className="h-3.5 w-3.5" />
         Metragem instalada vs planejada

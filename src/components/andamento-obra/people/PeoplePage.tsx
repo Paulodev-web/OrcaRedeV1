@@ -23,7 +23,7 @@ export function PeoplePage({ initialManagers, initialCrew }: PeoplePageProps) {
         <p className="flex flex-wrap items-center gap-1 text-xs text-gray-400">
           <Link
             href="/"
-            className="inline-flex items-center gap-1 transition-colors hover:text-accent-600"
+            className="inline-flex items-center gap-1 transition-colors hover:text-link"
           >
             <Grid3X3 className="h-3.5 w-3.5 shrink-0" />
             Portal
@@ -31,7 +31,7 @@ export function PeoplePage({ initialManagers, initialCrew }: PeoplePageProps) {
           <ChevronRight className="h-3 w-3 shrink-0 text-gray-300" aria-hidden />
           <Link
             href="/tools/andamento-obra"
-            className="transition-colors hover:text-accent-600"
+            className="transition-colors hover:text-link"
           >
             Andamento de obra
           </Link>

@@ -124,7 +124,7 @@ export function MilestoneDetailsDrawer({
         <Dialog.Overlay className="fixed inset-0 z-40 bg-black/40" />
         <Dialog.Content
           className={cn(
-            'fixed right-0 top-0 z-50 flex h-full w-full max-w-lg flex-col overflow-hidden bg-white shadow-2xl',
+            'fixed right-0 top-0 z-50 flex h-full w-full max-w-lg flex-col overflow-hidden bg-surface shadow-2xl',
             'border-l border-gray-200',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right',
@@ -377,7 +377,7 @@ function DrawerActions({
               type="button"
               onClick={onReject}
               disabled={isPending}
-              className="rounded-md border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+              className="rounded-md border border-red-200 bg-surface px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
             >
               Reprovar
             </button>
@@ -390,7 +390,7 @@ function DrawerActions({
                 type="button"
                 onClick={onMarkInProgress}
                 disabled={isPending}
-                className="rounded-md border border-sky-200 bg-white px-3 py-1.5 text-xs font-semibold text-sky-700 hover:bg-sky-50 disabled:opacity-50"
+                className="rounded-md border border-sky-200 bg-surface px-3 py-1.5 text-xs font-semibold text-sky-700 hover:bg-sky-50 disabled:opacity-50"
               >
                 {isPending ? 'Atualizando...' : 'Marcar em andamento'}
               </button>

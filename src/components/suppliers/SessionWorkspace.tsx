@@ -89,7 +89,7 @@ export default function SessionWorkspace({
 
       {/* Conciliation CTA */}
       {hasQuotes && (
-        <section className="rounded-2xl border border-accent-500/40 bg-white p-6 shadow-md">
+        <section className="rounded-2xl border border-accent-500/40 bg-surface p-6 shadow-md">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold text-neutral-900">Conciliação de materiais</h2>
@@ -141,7 +141,7 @@ export default function SessionWorkspace({
             </div>
           </div>
           {/* Status individual por cotação + botão "Processar Conciliação" */}
-          <div className="mt-4 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
+          <div className="mt-4 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-surface">
             {conciliationQuotes.map((q) => {
               const isThisProcessing =
                 (processingQuoteId === q.id && isPending) || q.status === 'conciliando';

@@ -30,7 +30,7 @@ export default async function NovaPropostaPage({
   } catch {
     return (
       <main className="min-h-screen bg-brand-surface p-6 lg:p-8">
-        <div className="mx-auto max-w-3xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mx-auto max-w-3xl rounded-xl border border-slate-200 bg-surface p-6 shadow-sm">
           <h1 className="text-xl font-semibold text-brand-navy">Nova proposta</h1>
           <p className="mt-2 text-sm text-slate-600">Sessão expirada. Entre novamente para continuar.</p>
           <Link href="/" className="mt-4 inline-flex text-sm font-medium text-brand-blue">

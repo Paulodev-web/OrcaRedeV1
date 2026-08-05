@@ -62,7 +62,7 @@ export function WorkNotificationsBell() {
         <Popover.Content
           align="end"
           sideOffset={8}
-          className="z-50 w-[320px] rounded-xl border border-gray-200 bg-white shadow-lg"
+          className="z-50 w-[320px] rounded-xl border border-gray-200 bg-surface shadow-lg"
         >
           <header className="flex items-center justify-between gap-2 border-b border-gray-100 px-4 py-3">
             <p className="text-sm font-semibold text-neutral-900">Notificações</p>
@@ -70,7 +70,7 @@ export function WorkNotificationsBell() {
               type="button"
               onClick={handleMarkAll}
               disabled={unreadCount === 0}
-              className="text-xs font-medium text-accent-600 hover:underline disabled:cursor-not-allowed disabled:opacity-40"
+              className="text-xs font-medium text-link hover:underline disabled:cursor-not-allowed disabled:opacity-40"
             >
               Marcar todas
             </button>
@@ -122,7 +122,7 @@ export function WorkNotificationsBell() {
             <Link
               href="/tools/andamento-obra/notificacoes"
               onClick={() => setOpen(false)}
-              className="text-xs font-medium text-accent-600 hover:underline"
+              className="text-xs font-medium text-link hover:underline"
             >
               Ver tudo
             </Link>

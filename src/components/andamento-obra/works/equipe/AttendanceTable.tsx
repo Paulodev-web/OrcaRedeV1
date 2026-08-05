@@ -46,7 +46,7 @@ export function AttendanceTable({ attendance, team, workId }: Props) {
                   {row.dailyLogId ? (
                     <Link
                       href={`/tools/andamento-obra/obras/${workId}/diario`}
-                      className="text-xs text-accent-600 hover:underline"
+                      className="text-xs text-link hover:underline"
                     >
                       Ver diário
                     </Link>

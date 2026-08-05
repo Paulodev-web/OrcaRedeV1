@@ -41,7 +41,7 @@ export function PublicProposalActions({
     (compact ? 'px-3 py-2' : 'px-4 py-2.5');
 
   const pdfTone = compact
-    ? 'border border-slate-300 bg-white text-brand-navy hover:bg-slate-50'
+    ? 'border border-slate-300 bg-surface text-brand-navy hover:bg-slate-50'
     : 'border border-white/30 bg-white/10 text-white hover:bg-white/20';
 
   return (

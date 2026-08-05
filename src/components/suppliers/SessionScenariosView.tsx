@@ -99,7 +99,7 @@ function parseContentDispositionFilename(header: string | null): string | null {
 const tabBtnClass = (active: boolean) =>
   `flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
     active
-      ? 'border-accent-500 text-accent-600'
+      ? 'border-accent-500 text-link'
       : 'border-transparent text-slate-500 hover:text-neutral-900'
   }`;
 
@@ -124,7 +124,7 @@ function StockEditor({
   const [showStock, setShowStock] = useState(false);
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+    <div className="rounded-xl border border-gray-200 bg-surface shadow-sm">
       <button
         type="button"
         onClick={() => setShowStock((v) => !v)}
@@ -147,7 +147,7 @@ function StockEditor({
           </p>
           <div className={suppliesTableScrollYCompactClass}>
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-white">
+              <thead className="sticky top-0 bg-surface">
                 <tr className="border-b border-gray-100">
                   <th className="pb-2 text-left text-xs font-medium text-gray-500">Material</th>
                   <th className="pb-2 text-right text-xs font-medium text-gray-500 w-24">Necessidade</th>
@@ -303,7 +303,7 @@ function TabelonaView({
               )}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-100">
+          <tbody className="bg-surface divide-y divide-gray-100">
             {items.map((item, idx) => {
               // Build offer map based on grouping mode
               const offerMap = groupBySupplier
@@ -318,9 +318,9 @@ function TabelonaView({
               return (
                 <tr
                   key={item.material_id}
-                  className={`hover:bg-accent-500/5 transition-colors ${isFullyStocked ? 'opacity-50' : ''} ${isEvenRow ? 'bg-white' : 'bg-gray-50/50'}`}
+                  className={`hover:bg-accent-500/5 transition-colors ${isFullyStocked ? 'opacity-50' : ''} ${isEvenRow ? 'bg-surface' : 'bg-gray-50/50'}`}
                 >
-                  <td className={`sticky left-0 z-10 px-4 py-3 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] ${isEvenRow ? 'bg-white' : 'bg-gray-50/50'}`}>
+                  <td className={`sticky left-0 z-10 px-4 py-3 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] ${isEvenRow ? 'bg-surface' : 'bg-gray-50/50'}`}>
                     <p className="max-w-[240px] truncate font-medium text-neutral-900">{item.material_name}</p>
                     <p className="text-xs text-gray-400 font-mono">{item.material_code}</p>
                   </td>
@@ -353,7 +353,7 @@ function TabelonaView({
                     )}
                   </td>
                   {onRemoveMaterial && (
-                    <td className={`px-2 py-3 text-center ${isEvenRow ? 'bg-white' : 'bg-gray-50/50'}`}>
+                    <td className={`px-2 py-3 text-center ${isEvenRow ? 'bg-surface' : 'bg-gray-50/50'}`}>
                       <button
                         type="button"
                         title="Remover do Suprimentos"
@@ -607,7 +607,7 @@ function ScenarioIdealView({
             type="button"
             onClick={onValidateAll}
             disabled={isValidatingAll || ideal.unvalidatedCount === 0}
-            className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-surface px-3 py-1.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isValidatingAll ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -640,7 +640,7 @@ function ScenarioIdealView({
                 type="button"
                 onClick={handleExportClick}
                 disabled={!canExport || isExporting}
-                className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
+                className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-surface px-3 py-1.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface"
               >
                 {isExporting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -671,7 +671,7 @@ function ScenarioIdealView({
               value={updateSupplierSlug}
               onChange={(e) => setUpdateSupplierSlug(e.target.value)}
               disabled={supplierUpdateOptions.length === 0 || isUpdatingSupplierMaterials}
-              className="max-w-[200px] rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-neutral-900 disabled:cursor-not-allowed disabled:opacity-50 sm:max-w-[240px]"
+              className="max-w-[200px] rounded-lg border border-gray-200 bg-surface px-3 py-2 text-sm text-neutral-900 disabled:cursor-not-allowed disabled:opacity-50 sm:max-w-[240px]"
               aria-label="Escolher fornecedor para atualizar materiais"
             >
               <option value="all">Escolher fornecedor…</option>
@@ -693,7 +693,7 @@ function ScenarioIdealView({
                 type="button"
                 onClick={handleUpdateSupplierClick}
                 disabled={updateSupplierSlug === 'all' || isUpdatingSupplierMaterials}
-                className="inline-flex items-center gap-2 rounded-md border border-neutral-900 bg-white px-3 py-1.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-900/5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
+                className="inline-flex items-center gap-2 rounded-md border border-neutral-900 bg-surface px-3 py-1.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-900/5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface"
               >
                 {isUpdatingSupplierMaterials ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -708,7 +708,7 @@ function ScenarioIdealView({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
+        <div className="rounded-lg border border-gray-200 bg-surface p-4">
           <p className="text-xs font-semibold uppercase text-gray-500">Orçado</p>
           <p className="text-2xl font-bold text-neutral-900 mt-1">
             {formatCurrency(scenarios.budget_original_total)}
@@ -1352,8 +1352,8 @@ export default function SessionScenariosView({
         />
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-accent-500/40 bg-white shadow-md">
-        <div className="flex shrink-0 border-b border-gray-200 bg-white/80">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-accent-500/40 bg-surface shadow-md">
+        <div className="flex shrink-0 border-b border-gray-200 bg-surface/80">
           <button type="button" onClick={() => setActiveTab('tabelona')} className={tabBtnClass(activeTab === 'tabelona')}>
             <Table2 className="h-4 w-4" /> Tabela de Avaliação
             <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">

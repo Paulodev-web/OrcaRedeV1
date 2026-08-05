@@ -166,7 +166,7 @@ export function GerenciarTiposPostes({ hideHeading = false }: GerenciarTiposPost
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow flex-1 flex flex-col overflow-hidden">
+      <div className="bg-surface rounded-lg shadow flex-1 flex flex-col overflow-hidden">
         {loadingPostTypes ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="flex flex-col items-center space-y-3">
@@ -197,7 +197,7 @@ export function GerenciarTiposPostes({ hideHeading = false }: GerenciarTiposPost
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-surface divide-y divide-gray-200">
                   {postTypes.map((postType) => (
                     <tr key={postType.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -345,7 +345,7 @@ function PostTypeModal({ postType, postTypes, onClose, onSave, loading = false }
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <div className="bg-surface rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-gray-900">
             {postType ? 'Editar Tipo de Poste' : 'Novo Tipo de Poste'}

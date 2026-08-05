@@ -61,7 +61,7 @@ export function AllocateCrewDialog({ workId, availableCrew }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} />
-      <div className="relative w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+      <div className="relative w-full max-w-sm rounded-xl bg-surface p-6 shadow-xl">
         <h3 className="mb-4 text-lg font-semibold text-neutral-900">Adicionar à equipe</h3>
 
         <div className="space-y-3">

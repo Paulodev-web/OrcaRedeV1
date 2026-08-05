@@ -165,7 +165,7 @@ export function GerenciarPadroesPoste({
             </div>
           </div>
         )}
-        <div className="bg-white rounded-lg shadow">
+        <div className="bg-surface rounded-lg shadow">
           <div className="p-12 text-center">
             <Loader2 className="h-8 w-8 animate-spin text-blue-500 mx-auto mb-4" />
             <p className="text-gray-500">Carregando concessionárias...</p>
@@ -203,7 +203,7 @@ export function GerenciarPadroesPoste({
         </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow flex-1 flex flex-col overflow-hidden">
+      <div className="bg-surface rounded-lg shadow flex-1 flex flex-col overflow-hidden">
         <div className="p-4 border-b flex-shrink-0">
           <div className="space-y-4">
             <div className="flex items-center space-x-4">

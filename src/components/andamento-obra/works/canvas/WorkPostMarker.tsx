@@ -62,7 +62,7 @@ export const WorkPostMarker = memo(function WorkPostMarker({
       <span
         className={[
           'rounded-full',
-          selected ? 'bg-white' : 'bg-white/85',
+          selected ? 'bg-surface' : 'bg-surface/85',
         ].join(' ')}
         style={{ width: '10px', height: '10px' }}
         aria-hidden="true"

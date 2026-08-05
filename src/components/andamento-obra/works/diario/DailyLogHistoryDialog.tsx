@@ -108,7 +108,7 @@ function RevisionItem({
 }) {
   const created = new Date(revision.createdAt);
   return (
-    <li className="rounded-lg border border-gray-200 bg-white p-3">
+    <li className="rounded-lg border border-gray-200 bg-surface p-3">
       <div className="mb-2 flex items-center justify-between">
         <p className="text-sm font-semibold text-neutral-900">
           Versão #{revision.revisionNumber}

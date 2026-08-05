@@ -43,7 +43,7 @@ export function TemplatesListClient({ templates }: { templates: ProposalTemplate
       </div>
 
       {templates.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-surface px-6 py-14 text-center">
           <FileText className="h-8 w-8 text-slate-300" />
           <p className="max-w-md text-sm text-slate-600">
             Nenhum template ainda. Sem ele, a proposta nasce com as 19 seções vazias e a IA escreve
@@ -57,7 +57,7 @@ export function TemplatesListClient({ templates }: { templates: ProposalTemplate
           </Link>
         </div>
       ) : (
-        <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-surface">
           {templates.map((template) => (
             <li key={template.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
               <Link href={`/configuracoes/templates-proposta/${template.id}`} className="min-w-0 flex-1">

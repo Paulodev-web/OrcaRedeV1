@@ -30,8 +30,8 @@ export function ProjectOverviewSummary({
   const importedAt = formatDate(snapshot.importedAt);
 
   const containerClass = compact
-    ? 'rounded-2xl border border-gray-200 bg-white p-4'
-    : 'rounded-2xl border border-gray-200 bg-white p-5';
+    ? 'rounded-2xl border border-gray-200 bg-surface p-4'
+    : 'rounded-2xl border border-gray-200 bg-surface p-5';
 
   const kpiGridClass = compact
     ? 'mt-3 grid grid-cols-2 gap-2'
@@ -126,8 +126,8 @@ function SummaryCard({
     <li
       className={
         compact
-          ? 'rounded-lg border border-gray-200 bg-white p-2.5'
-          : 'rounded-xl border border-gray-200 bg-white p-3'
+          ? 'rounded-lg border border-gray-200 bg-surface p-2.5'
+          : 'rounded-xl border border-gray-200 bg-surface p-3'
       }
     >
       <div className="flex items-center gap-2 text-xs font-medium text-gray-500">

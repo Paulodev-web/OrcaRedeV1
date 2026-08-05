@@ -44,7 +44,7 @@ export function GalleryItemView({ item, onOpenImage }: GalleryItemProps) {
   return (
     <article
       className={cn(
-        'group flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-md',
+        'group flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-surface transition-shadow hover:shadow-md',
       )}
     >
       <div className="relative aspect-square w-full overflow-hidden bg-gray-100">
@@ -112,7 +112,7 @@ export function GalleryItemView({ item, onOpenImage }: GalleryItemProps) {
           </span>
           <Link
             href={item.linkPath}
-            className="inline-flex items-center gap-0.5 text-[10px] font-medium text-accent-600 hover:underline"
+            className="inline-flex items-center gap-0.5 text-[10px] font-medium text-link hover:underline"
             title="Ver no contexto"
           >
             Ver no contexto

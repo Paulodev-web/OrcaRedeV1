@@ -75,7 +75,7 @@ export function CanvasToolbar({
       role="toolbar"
       aria-label="Controles do canvas"
     >
-      <div className="flex items-center overflow-hidden rounded-md border border-gray-300 bg-white">
+      <div className="flex items-center overflow-hidden rounded-md border border-gray-300 bg-surface">
         <ToolbarIconButton
           aria-label="Diminuir zoom"
           title="Diminuir zoom"
@@ -127,7 +127,7 @@ export function CanvasToolbar({
       />
 
       {showPageNav && (
-        <div className="flex items-center overflow-hidden rounded-md border border-gray-300 bg-white">
+        <div className="flex items-center overflow-hidden rounded-md border border-gray-300 bg-surface">
           <ToolbarIconButton
             aria-label="Página anterior"
             title="Página anterior"
@@ -234,7 +234,7 @@ function ToolbarToggle({
         'disabled:cursor-not-allowed disabled:opacity-50',
         active
           ? 'border-accent-600 bg-accent-600 text-white hover:bg-accent-700'
-          : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100',
+          : 'border-gray-300 bg-surface text-gray-700 hover:bg-gray-100',
       ].join(' ')}
     >
       {icon}

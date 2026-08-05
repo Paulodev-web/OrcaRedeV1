@@ -41,7 +41,7 @@ export function GalleryFilters({
   monthOptions,
 }: GalleryFiltersProps) {
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-white p-3">
+    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-surface p-3">
       <Select
         label="Origem"
         value={value.source}
@@ -101,7 +101,7 @@ function Select({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-neutral-900 focus:border-neutral-900 focus:outline-none"
+        className="rounded-md border border-gray-200 bg-surface px-2 py-1 text-xs text-neutral-900 focus:border-neutral-900 focus:outline-none"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>

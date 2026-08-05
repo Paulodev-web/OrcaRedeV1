@@ -113,7 +113,7 @@ export function MilestonesList({
   return (
     <section className="space-y-3">
       <div className="flex items-center gap-2">
-        <ListChecks className="h-4 w-4 text-accent-600" />
+        <ListChecks className="h-4 w-4 text-link" />
         <h2 className="text-sm font-semibold text-neutral-900">Marcos da obra</h2>
       </div>
 
@@ -131,7 +131,7 @@ export function MilestonesList({
               type="button"
               onClick={() => setOpenId(m.id)}
               className={cn(
-                'flex w-full items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-left text-sm shadow-sm transition',
+                'flex w-full items-center justify-between rounded-lg border border-gray-200 bg-surface px-3 py-2.5 text-left text-sm shadow-sm transition',
                 'hover:border-accent-500/50 hover:shadow',
               )}
             >

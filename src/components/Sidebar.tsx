@@ -155,7 +155,7 @@ export function Sidebar({ className = '' }: SidebarProps) {
       {/* Botão mobile para abrir sidebar */}
       <button
         onClick={toggleMobileSidebar}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-md bg-white shadow-lg text-gray-600 hover:text-gray-900 border border-gray-200 transition-all duration-200"
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-md bg-surface shadow-lg text-gray-600 hover:text-gray-900 border border-gray-200 transition-all duration-200"
       >
         {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </button>
@@ -174,7 +174,7 @@ export function Sidebar({ className = '' }: SidebarProps) {
         ${isCollapsed ? 'w-16' : 'w-64'}
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0
-        fixed lg:static left-0 top-0 h-screen lg:h-full bg-white shadow-xl border-r border-gray-200 z-40 
+        fixed lg:static left-0 top-0 h-screen lg:h-full bg-surface shadow-xl border-r border-gray-200 z-40 
         transition-all duration-300 ease-in-out
         flex flex-col
       `}>

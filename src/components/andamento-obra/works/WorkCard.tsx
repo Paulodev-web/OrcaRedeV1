@@ -32,7 +32,7 @@ export function WorkCard({
   return (
     <Link
       href={`/tools/andamento-obra/obras/${work.id}`}
-      className="relative block rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:border-accent-500/50 hover:shadow-md"
+      className="relative block rounded-xl border border-gray-200 bg-surface p-4 shadow-sm transition-all hover:border-accent-500/50 hover:shadow-md"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">

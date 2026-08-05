@@ -82,7 +82,7 @@ function ScenarioACard({ scenarios }: { scenarios: ScenariosResult }) {
             <th className="px-4 py-3 w-24" />
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-100">
+        <tbody className="bg-surface divide-y divide-gray-100">
           {scenarioA.map((supplier, idx) => {
             const isBest = idx === 0;
             const diff = supplier.total_normalizado - cheapest.total_normalizado;
@@ -130,7 +130,7 @@ function ScenarioACard({ scenarios }: { scenarios: ScenariosResult }) {
                 <td className="px-4 py-3">
                   <a
                     href={`/fornecedores/trabalho?tab=conciliar&quoteId=${encodeURIComponent(supplier.quote_id)}`}
-                    className="text-xs text-accent-600 transition-colors hover:text-neutral-900 hover:underline"
+                    className="text-xs text-link transition-colors hover:text-neutral-900 hover:underline"
                   >
                     Ver cotação
                   </a>
@@ -166,7 +166,7 @@ function ScenarioBCard({ scenarios }: { scenarios: ScenariosResult }) {
       {/* Resumo */}
       <div className="grid grid-cols-2 gap-4">
         <div className="rounded-lg border border-accent-500/40 bg-accent-500/10 p-4">
-          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-accent-600">
+          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-link">
             Total Cenário B
           </p>
           <p className="text-2xl font-bold text-neutral-900">
@@ -222,7 +222,7 @@ function ScenarioBCard({ scenarios }: { scenarios: ScenariosResult }) {
               <th className="px-4 py-3 w-8" />
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-100">
+          <tbody className="bg-surface divide-y divide-gray-100">
             {scenarioB.items.map((item: ScenarioItem) => {
               const isExpanded = expandedId === item.material_id;
               const hasMultipleOffers = item.all_offers.length > 1;
@@ -252,7 +252,7 @@ function ScenarioBCard({ scenarios }: { scenarios: ScenariosResult }) {
                       </p>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <p className="text-sm font-semibold text-accent-600">
+                      <p className="text-sm font-semibold text-link">
                         {formatCurrency(item.best_total)}
                       </p>
                     </td>
@@ -301,7 +301,7 @@ function ScenarioBCard({ scenarios }: { scenarios: ScenariosResult }) {
                                 </th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-accent-500/10 bg-white">
+                            <tbody className="divide-y divide-accent-500/10 bg-surface">
                               {item.all_offers
                                 .slice()
                                 .sort((a, b) => a.preco_normalizado - b.preco_normalizado)
@@ -456,7 +456,7 @@ export default function PurchaseScenariosPanel({
               </p>
               <a
                 href="/fornecedores/trabalho?tab=importar"
-                className="mt-3 inline-block text-sm font-medium text-accent-600 transition-colors hover:text-neutral-900 hover:underline"
+                className="mt-3 inline-block text-sm font-medium text-link transition-colors hover:text-neutral-900 hover:underline"
               >
                 Importar proposta →
               </a>
@@ -467,13 +467,13 @@ export default function PurchaseScenariosPanel({
             <>
               {/* Tabs */}
               <div className="rounded-lg border border-gray-100 bg-gray-50/60 overflow-hidden">
-                <div className="flex border-b border-gray-200 bg-white/80">
+                <div className="flex border-b border-gray-200 bg-surface/80">
                   <button
                     type="button"
                     onClick={() => setActiveTab('A')}
                     className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
                       activeTab === 'A'
-                        ? 'border-accent-500 text-accent-600'
+                        ? 'border-accent-500 text-link'
                         : 'border-transparent text-gray-500 hover:text-neutral-900'
                     }`}
                   >
@@ -485,7 +485,7 @@ export default function PurchaseScenariosPanel({
                     onClick={() => setActiveTab('B')}
                     className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
                       activeTab === 'B'
-                        ? 'border-accent-500 text-accent-600'
+                        ? 'border-accent-500 text-link'
                         : 'border-transparent text-gray-500 hover:text-neutral-900'
                     }`}
                   >

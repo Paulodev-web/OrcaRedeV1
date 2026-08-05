@@ -586,7 +586,7 @@ export function CanvasVisual({
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 {/* Controles de Zoom */}
-                <div className="flex items-center space-x-0.5 bg-white border border-gray-300 rounded-md">
+                <div className="flex items-center space-x-0.5 bg-surface border border-gray-300 rounded-md">
                   <button
                     onClick={() => transformRef.current?.zoomOut()}
                     disabled={loadingUpload || imageLoading || pdfLoading}
@@ -615,7 +615,7 @@ export function CanvasVisual({
 
                 {/* Controles de Conexão de Rede */}
                 {!hideToolbar && onAddConnection && (
-                  <div className="flex items-center space-x-0.5 bg-white border border-gray-300 rounded-md">
+                  <div className="flex items-center space-x-0.5 bg-surface border border-gray-300 rounded-md">
                     <button
                       onClick={() => toggleConnectionMode('blue')}
                       disabled={loadingUpload || imageLoading || pdfLoading}
@@ -651,7 +651,7 @@ export function CanvasVisual({
 
                 {/* Controles de PDF */}
                 {isPDF && numPages && numPages > 1 && (
-                  <div className="flex items-center space-x-0.5 bg-white border border-gray-300 rounded-md">
+                  <div className="flex items-center space-x-0.5 bg-surface border border-gray-300 rounded-md">
                     <button
                       onClick={() => changePage(-1)}
                       disabled={pageNumber <= 1 || loadingUpload}
@@ -678,7 +678,7 @@ export function CanvasVisual({
                   <button
                     onClick={() => setShowPdfLayer((prev) => !prev)}
                     disabled={loadingUpload || pdfLoading}
-                    className="px-2.5 py-1.5 bg-white border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1 text-xs text-gray-700"
+                    className="px-2.5 py-1.5 bg-surface border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1 text-xs text-gray-700"
                     title={showPdfLayer ? 'Ocultar PDF no canvas' : 'Mostrar PDF no canvas'}
                   >
                     {showPdfLayer ? (
@@ -841,7 +841,7 @@ export function CanvasVisual({
                     >
                       {/* Loading de upload */}
                       {loadingUpload && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-90 z-10">
+                        <div className="absolute inset-0 flex items-center justify-center bg-surface bg-opacity-90 z-10">
                           <div className="flex flex-col items-center space-y-2">
                             <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
                             <span className="text-sm text-gray-600">Fazendo upload da planta...</span>
@@ -851,7 +851,7 @@ export function CanvasVisual({
 
                       {/* PDF loading */}
                       {isPDF && pdfLoading && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-90 z-10">
+                        <div className="absolute inset-0 flex items-center justify-center bg-surface bg-opacity-90 z-10">
                           <div className="flex flex-col items-center space-y-2">
                             <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
                             <span className="text-sm text-gray-600">Carregando PDF...</span>
@@ -963,7 +963,7 @@ export function CanvasVisual({
                     >
                       {/* PDF loading */}
                       {pdfLoading && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-90 z-10">
+                        <div className="absolute inset-0 flex items-center justify-center bg-surface bg-opacity-90 z-10">
                           <div className="flex flex-col items-center space-y-2">
                             <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
                             <span className="text-sm text-gray-600">Carregando PDF...</span>
@@ -1000,7 +1000,7 @@ export function CanvasVisual({
                               onLoadSuccess={onDocumentLoadSuccess}
                               onLoadError={onDocumentLoadError}
                               loading={
-                                <div className="flex items-center justify-center p-8 text-blue-600 bg-white rounded">
+                                <div className="flex items-center justify-center p-8 text-blue-600 bg-surface rounded">
                                   <Loader2 className="h-8 w-8 animate-spin mr-3" />
                                   <span className="text-lg">Carregando PDF...</span>
                                 </div>
@@ -1013,7 +1013,7 @@ export function CanvasVisual({
                             }
                           >
                               {numPages && (
-                                <div className="bg-white" style={{ pointerEvents: 'none' }}>
+                                <div className="bg-surface" style={{ pointerEvents: 'none' }}>
                             <Page
                               pageNumber={pageNumber}
                               renderTextLayer={false}
@@ -1154,7 +1154,7 @@ export function CanvasVisual({
                     >
                       {/* Loading de imagem normal */}
                       {imageLoading && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-90 z-10">
+                        <div className="absolute inset-0 flex items-center justify-center bg-surface bg-opacity-90 z-10">
                           <div className="flex flex-col items-center space-y-2">
                             <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
                             <span className="text-sm text-gray-600">Carregando imagem...</span>

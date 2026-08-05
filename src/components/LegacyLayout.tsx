@@ -61,7 +61,7 @@ export function LegacyLayout({ children }: LegacyLayoutProps) {
         {/* Conteúdo Principal */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Header da página */}
-          <header className="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
+          <header className="bg-surface shadow-sm border-b border-gray-200 flex-shrink-0">
             {/* Portal breadcrumb bar */}
             <div className="px-4 sm:px-6 lg:px-8 pt-3 pb-0">
               <div className="lg:ml-16">

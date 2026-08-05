@@ -68,7 +68,7 @@ const tabTriggerClass =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2';
 
 const tabIconClass =
-  'h-4 w-4 shrink-0 text-gray-400 group-data-[state=active]:text-accent-600';
+  'h-4 w-4 shrink-0 text-gray-400 group-data-[state=active]:text-link';
 
 export default function FornecedoresSuprimentosShell({
   budgets,
@@ -137,7 +137,7 @@ export default function FornecedoresSuprimentosShell({
           </TabsTrigger>
         </TabsList>
 
-        <div className="rounded-b-xl border border-t-0 border-gray-200 bg-white px-6 py-6 shadow-sm lg:px-8 lg:py-8">
+        <div className="rounded-b-xl border border-t-0 border-gray-200 bg-surface px-6 py-6 shadow-sm lg:px-8 lg:py-8">
           <TabsContent value="importar" className="mt-0 focus-visible:ring-0">
             <SupplierPdfImporter budgets={budgets} embedded />
           </TabsContent>
@@ -151,7 +151,7 @@ export default function FornecedoresSuprimentosShell({
                   <button
                     type="button"
                     onClick={() => onTabChange('importar')}
-                    className="font-medium text-accent-600 transition-colors hover:text-neutral-900 hover:underline"
+                    className="font-medium text-link transition-colors hover:text-neutral-900 hover:underline"
                   >
                     Importar PDF
                   </button>{' '}
@@ -181,7 +181,7 @@ export default function FornecedoresSuprimentosShell({
                         className={`rounded-lg border transition-colors ${
                           isExpanded
                             ? 'border-accent-500/50 bg-accent-500/10'
-                            : 'border-gray-200 bg-white hover:border-gray-300'
+                            : 'border-gray-200 bg-surface hover:border-gray-300'
                         }`}
                       >
                         <button

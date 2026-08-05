@@ -147,7 +147,7 @@ function QuickLinks({ workId }: { workId: string }) {
   return (
     <nav
       aria-label="Atalhos para outras abas da obra"
-      className="rounded-2xl border border-gray-200 bg-white p-4"
+      className="rounded-2xl border border-gray-200 bg-surface p-4"
     >
       <h2 className="text-sm font-semibold text-neutral-900">Atalhos</h2>
       <ul className="mt-3 space-y-1.5">

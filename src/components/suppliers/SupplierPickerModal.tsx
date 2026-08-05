@@ -113,7 +113,7 @@ export default function SupplierPickerModal({
           <div className="max-h-56 overflow-y-auto rounded-lg border border-gray-200">
             {loading ? (
               <div className="flex justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-accent-600" />
+                <Loader2 className="h-6 w-6 animate-spin text-link" />
               </div>
             ) : filtered.length === 0 ? (
               <p className="px-4 py-6 text-center text-sm text-gray-500">

@@ -24,12 +24,12 @@ interface SuppliesHeaderProps {
 
 function stepClass(active: boolean, disabled = false) {
   if (disabled) {
-    return 'inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-300';
+    return 'inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-surface px-3 py-1.5 text-xs font-medium text-gray-300';
   }
   if (active) {
     return 'inline-flex items-center gap-1.5 rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1.5 text-xs font-semibold text-neutral-900';
   }
-  return 'inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:border-accent-500/40 hover:text-neutral-900';
+  return 'inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-surface px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:border-accent-500/40 hover:text-neutral-900';
 }
 
 export default function SuppliesHeader({
@@ -47,14 +47,15 @@ export default function SuppliesHeader({
   const showCenariosLink = Boolean(sessionId && hasBudget);
 
   return (
-    <div className="sticky top-0 z-20 rounded-2xl border border-accent-500/30 bg-white/95 p-5 shadow-sm backdrop-blur-sm sm:p-6">
-      <div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-400">
-        <Link href="/" className="inline-flex items-center gap-1 transition-colors hover:text-accent-600">
+    <div className="sticky top-0 z-20 rounded-2xl border border-accent-500/30 bg-surface/95 p-5 shadow-sm backdrop-blur-sm sm:p-6">
+      {/* `gray-600`: trilha de 12px precisa de 4.5:1; em gray-400 dava 2.1:1. */}
+      <div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-600">
+        <Link href="/" className="inline-flex items-center gap-1 transition-colors hover:text-link">
           <LayoutGrid className="h-3.5 w-3.5" />
           Portal
         </Link>
         <ChevronRight className="h-3 w-3" />
-        <Link href="/fornecedores" className="transition-colors hover:text-accent-600">
+        <Link href="/fornecedores" className="transition-colors hover:text-link">
           Suprimentos
         </Link>
         {sessionTitle && (
@@ -73,7 +74,7 @@ export default function SuppliesHeader({
             </div>
             <div className="min-w-0 flex-1">
               <h1 className="text-xl font-bold text-neutral-900 sm:text-2xl">{title}</h1>
-              <p className="mt-1 text-sm text-slate-500">{description}</p>
+              <p className="mt-1 text-sm text-slate-600">{description}</p>
             </div>
           </div>
 

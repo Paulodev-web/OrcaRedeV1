@@ -356,12 +356,12 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-surface divide-y divide-gray-200">
                 {materiaisConsolidados.map((material, index) => {
                   const isEditing = editingMaterialId === material.materialId;
                   
                   return (
-                    <tr key={material.materialId} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <tr key={material.materialId} className={index % 2 === 0 ? 'bg-surface' : 'bg-gray-50'}>
                       <td className="px-4 py-3">
                         <div>
                           <div className="text-sm font-medium text-gray-900">
@@ -479,7 +479,7 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
 
       {/* Rodapé com Total */}
       {materiaisConsolidados.length > 0 && (
-        <div className="border-t bg-white mt-4 p-4 rounded-lg flex-shrink-0">
+        <div className="border-t bg-surface mt-4 p-4 rounded-lg flex-shrink-0">
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">{materiaisConsolidados.length} materiais únicos</span>

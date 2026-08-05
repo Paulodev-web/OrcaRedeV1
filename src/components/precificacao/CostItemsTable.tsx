@@ -92,7 +92,7 @@ function CostItemFields({
           value={item.percentualBase}
           onChange={(event) => onUpdate({ percentualBase: event.target.value as PercentualBase })}
           aria-label="Base do percentual"
-          className="h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-800 outline-none transition focus:border-accent-500/80 focus:ring-2 focus:ring-accent-500/20"
+          className="h-10 rounded-lg border border-gray-200 bg-surface px-2 text-sm text-gray-800 outline-none transition focus:border-accent-500/80 focus:ring-2 focus:ring-accent-500/20"
         >
           <option value="total">Total ao cliente (materiais + serviço)</option>
           <option value="servico">Valor do serviço</option>
@@ -133,7 +133,7 @@ export function CostItemsTable({
   const totalCustos = costItems.reduce((acc, item) => acc + item.valor, 0);
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-gray-200 bg-surface p-4 shadow-sm">
       <div className="flex items-center justify-between gap-2">
         <div>
           <h2 className="text-sm font-semibold text-neutral-900">Custos do Serviço</h2>
@@ -181,7 +181,7 @@ export function CostItemsTable({
                     value={item.tipo}
                     onChange={(event) => onUpdateCostItem(item.id, { tipo: event.target.value as CostItemTipo })}
                     aria-label="Tipo de custo"
-                    className="h-10 w-full min-w-[150px] rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-800 outline-none transition focus:border-accent-500/80 focus:ring-2 focus:ring-accent-500/20"
+                    className="h-10 w-full min-w-[150px] rounded-lg border border-gray-200 bg-surface px-2 text-sm text-gray-800 outline-none transition focus:border-accent-500/80 focus:ring-2 focus:ring-accent-500/20"
                   >
                     {TIPO_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>

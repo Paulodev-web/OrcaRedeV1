@@ -68,7 +68,7 @@ export function DailyLogCard({
   }
 
   return (
-    <article className="rounded-xl border border-gray-200 bg-white shadow-sm">
+    <article className="rounded-xl border border-gray-200 bg-surface shadow-sm">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
@@ -170,7 +170,7 @@ export function DailyLogCard({
               <button
                 type="button"
                 onClick={() => setHistoryOpen(true)}
-                className="inline-flex items-center gap-1 text-accent-600 hover:underline"
+                className="inline-flex items-center gap-1 text-link hover:underline"
               >
                 <History className="h-3 w-3" /> Ver histórico de versões
               </button>
@@ -296,7 +296,7 @@ function CardFooter({
           type="button"
           onClick={onReject}
           disabled={isPending}
-          className="rounded-md border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+          className="rounded-md border border-red-200 bg-surface px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
         >
           Rejeitar
         </button>

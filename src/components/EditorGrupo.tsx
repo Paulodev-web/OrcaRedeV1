@@ -444,7 +444,7 @@ export function EditorGrupo({
   return (
     <div className={`grid grid-cols-1 lg:grid-cols-2 gap-6 ${heightClassName}`}>
       {/* Painel Esquerdo - Materiais Disponíveis */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-surface rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           Materiais Disponíveis
         </h3>
@@ -572,7 +572,7 @@ export function EditorGrupo({
       </div>
 
       {/* Painel Direito - Composição do Grupo */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-surface rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           {currentGroup ? `Editar Grupo: ${currentGroup.nome}` : 'Novo Grupo de Itens'}
         </h3>

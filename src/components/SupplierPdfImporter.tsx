@@ -75,7 +75,7 @@ export default function SupplierPdfImporter({ budgets, embedded = false }: Props
 
   const cardSurface = embedded
     ? 'rounded-lg border border-gray-100 bg-gray-50/60'
-    : 'rounded-lg border border-transparent bg-white shadow';
+    : 'rounded-lg border border-transparent bg-surface shadow';
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
@@ -197,7 +197,7 @@ export default function SupplierPdfImporter({ budgets, embedded = false }: Props
             <button
               type="button"
               onClick={handleReset}
-              className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-surface border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
             >
               <RotateCcw className="h-4 w-4" />
               <span>Novo Upload</span>
@@ -210,7 +210,7 @@ export default function SupplierPdfImporter({ budgets, embedded = false }: Props
           <button
             type="button"
             onClick={handleReset}
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-surface border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <RotateCcw className="h-4 w-4" />
             <span>Novo Upload</span>
@@ -311,9 +311,9 @@ export default function SupplierPdfImporter({ budgets, embedded = false }: Props
             >
               {selectedFile ? (
                 <div className="flex flex-col items-center gap-2">
-                  <FileText className="h-10 w-10 text-accent-600" />
+                  <FileText className="h-10 w-10 text-link" />
                   <p className="text-sm font-medium text-neutral-900">{selectedFile.name}</p>
-                  <p className="text-xs text-accent-600">
+                  <p className="text-xs text-link">
                     {(selectedFile.size / 1024).toFixed(1)} KB
                   </p>
                 </div>
@@ -446,7 +446,7 @@ export default function SupplierPdfImporter({ budgets, embedded = false }: Props
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-surface divide-y divide-gray-200">
                 {items.map((item, index) => (
                   <tr
                     key={index}

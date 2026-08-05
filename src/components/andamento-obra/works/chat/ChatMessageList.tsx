@@ -113,7 +113,7 @@ export const ChatMessageList = forwardRef<ChatMessageListHandle, ChatMessageList
                   onClick={onLoadOlder}
                   disabled={loadingOlder}
                   className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-600 shadow-sm transition-colors',
+                    'inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-surface px-3 py-1 text-xs font-medium text-gray-600 shadow-sm transition-colors',
                     loadingOlder
                       ? 'cursor-wait opacity-70'
                       : 'hover:border-accent-500/40 hover:text-neutral-900',
@@ -168,7 +168,7 @@ export const ChatMessageList = forwardRef<ChatMessageListHandle, ChatMessageList
               const el = scrollRef.current;
               if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
             }}
-            className="absolute bottom-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-md transition-colors hover:bg-gray-50 hover:text-neutral-900"
+            className="absolute bottom-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-surface text-gray-600 shadow-md transition-colors hover:bg-gray-50 hover:text-neutral-900"
             aria-label="Ir para o final"
           >
             <ArrowDown className="h-4 w-4" />
@@ -189,7 +189,7 @@ export const ChatMessageList = forwardRef<ChatMessageListHandle, ChatMessageList
 function EmptyState() {
   return (
     <div className="mx-auto mt-12 flex max-w-sm flex-col items-center px-4 text-center">
-      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-accent-500/10 text-accent-600">
+      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-accent-500/10 text-link">
         <MessageCircle className="h-5 w-5" />
       </div>
       <h3 className="text-sm font-semibold text-neutral-900">Nenhuma mensagem ainda</h3>

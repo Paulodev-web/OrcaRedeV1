@@ -78,7 +78,7 @@ export function ResponsaveisManager({ responsibles }: ResponsaveisManagerProps) 
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-2xl border border-slate-200 bg-surface p-6 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="text-base font-bold text-brand-navy">Responsáveis ativos</h2>
@@ -133,7 +133,7 @@ export function ResponsaveisManager({ responsibles }: ResponsaveisManagerProps) 
       </section>
 
       {inactives.length > 0 ? (
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-2xl border border-slate-200 bg-surface p-6 shadow-sm">
           <h2 className="text-base font-bold text-brand-navy">Inativos</h2>
           <p className="mt-1 text-sm text-slate-500">
             Não aparecem ao montar uma proposta nova, mas continuam resolvendo as propostas que já
@@ -225,10 +225,10 @@ function ResponsibleCard({
   return (
     <div
       className={`flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 p-4 ${
-        row.is_active ? "bg-white" : "bg-slate-50"
+        row.is_active ? "bg-surface" : "bg-slate-50"
       }`}
     >
-      <div className="flex h-14 w-32 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-dashed border-slate-300 bg-white">
+      <div className="flex h-14 w-32 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-dashed border-slate-300 bg-surface">
         {row.signature_url ? (
           // `next/image` exigiria registrar o host do Supabase em
           // next.config.ts, que é arquivo de outra frente.

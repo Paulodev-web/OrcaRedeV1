@@ -29,7 +29,7 @@ export function AdminPanel() {
   }
 
   return (
-    <section className="rounded-xl border border-gray-200 bg-white p-6">
+    <section className="rounded-xl border border-gray-200 bg-surface p-6">
       <h2 className="text-sm font-semibold text-neutral-900">
         Limpeza de uploads órfãos
       </h2>
@@ -43,7 +43,7 @@ export function AdminPanel() {
           type="button"
           onClick={() => runCleanup(true)}
           disabled={isPending}
-          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-neutral-900 shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-surface px-4 py-2 text-xs font-medium text-neutral-900 shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-60"
         >
           {isPending ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />

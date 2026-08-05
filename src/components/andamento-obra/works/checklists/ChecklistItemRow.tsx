@@ -12,7 +12,7 @@ export function ChecklistItemRow({ item }: Props) {
         {item.isCompleted ? (
           <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-green-500 text-xs text-white">✓</span>
         ) : (
-          <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-gray-300 bg-white text-xs text-gray-400">
+          <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-gray-300 bg-surface text-xs text-gray-400">
             {item.orderIndex + 1}
           </span>
         )}

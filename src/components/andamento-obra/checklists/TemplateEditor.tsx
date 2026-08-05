@@ -172,7 +172,7 @@ export function TemplateEditor({ template }: Props) {
             type="checkbox"
             checked={isDefault}
             onChange={(e) => setIsDefault(e.target.checked)}
-            className="h-4 w-4 rounded border-gray-300 text-accent-600 focus:ring-accent-500"
+            className="h-4 w-4 rounded border-gray-300 text-link focus:ring-accent-500"
           />
           Modelo padrão (aparece como sugestão ao atribuir)
         </label>
@@ -183,7 +183,7 @@ export function TemplateEditor({ template }: Props) {
             <button
               type="button"
               onClick={addItem}
-              className="text-xs font-medium text-accent-600 hover:underline"
+              className="text-xs font-medium text-link hover:underline"
             >
               + Adicionar item
             </button>
@@ -197,7 +197,7 @@ export function TemplateEditor({ template }: Props) {
                 onDragStart={() => handleDragStart(idx)}
                 onDragOver={(e) => handleDragOver(e, idx)}
                 onDragEnd={handleDragEnd}
-                className="flex items-start gap-2 rounded-md border border-gray-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md"
+                className="flex items-start gap-2 rounded-md border border-gray-200 bg-surface p-3 shadow-sm transition-shadow hover:shadow-md"
               >
                 <span className="mt-2.5 cursor-grab text-gray-400" aria-hidden>☰</span>
                 <div className="flex-1 space-y-2">

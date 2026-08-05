@@ -50,7 +50,7 @@ export function Configuracoes() {
             <div
               key={index}
               onClick={card.action}
-              className="bg-white rounded-lg shadow-sm border p-6 cursor-pointer hover:shadow-md transition-shadow h-fit"
+              className="bg-surface rounded-lg shadow-sm border p-6 cursor-pointer hover:shadow-md transition-shadow h-fit"
             >
               <div className={`${card.color} w-12 h-12 rounded-lg flex items-center justify-center mb-4`}>
                 <card.icon className="h-6 w-6 text-white" />

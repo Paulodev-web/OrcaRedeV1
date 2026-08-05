@@ -200,7 +200,7 @@ export function BlocosPanel({
                 onClick={() => setConsiderations((current) => current.filter((_, i) => i !== index))}
                 disabled={locked}
                 title="Remover bloco"
-                className="absolute right-3 top-3 z-10 rounded-lg border border-slate-200 bg-white p-1.5 text-slate-400 transition-colors hover:border-red-300 hover:text-red-500"
+                className="absolute right-3 top-3 z-10 rounded-lg border border-slate-200 bg-surface p-1.5 text-slate-400 transition-colors hover:border-red-300 hover:text-red-500"
               >
                 <Trash2 className="h-4 w-4" />
               </button>

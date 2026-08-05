@@ -6,7 +6,7 @@ import { useWorkSegments } from './WorkSegmentsProvider';
 const UNSEGMENTED_VALUE = '';
 
 const selectClass =
-  'rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60';
+  'rounded-md border border-gray-300 bg-surface px-2 py-1 text-xs text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60';
 
 /**
  * Marcação de segmento do poste — nível intermediário da cascata (§7.3).

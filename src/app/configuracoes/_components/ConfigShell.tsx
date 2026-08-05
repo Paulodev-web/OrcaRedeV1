@@ -146,7 +146,7 @@ export function ConfigShell({
   if (!session) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-brand-surface px-4">
-        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-surface p-8 text-center shadow-sm">
           <h1 className="text-xl font-bold text-brand-navy">Sessão expirada</h1>
           <p className="mt-2 text-sm text-slate-500">
             Entre novamente para acessar as configurações do sistema.

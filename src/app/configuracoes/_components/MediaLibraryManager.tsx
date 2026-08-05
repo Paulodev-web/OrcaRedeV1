@@ -174,7 +174,7 @@ export function MediaLibraryManager({ items, allTags }: MediaLibraryManagerProps
       )}
 
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-surface px-6 py-14 text-center">
           <Images className="h-8 w-8 text-slate-300" />
           <p className="max-w-md text-sm text-slate-600">
             {items.length === 0
@@ -189,7 +189,7 @@ export function MediaLibraryManager({ items, allTags }: MediaLibraryManagerProps
               key={item.id}
               type="button"
               onClick={() => setEditing(item)}
-              className="group overflow-hidden rounded-xl border border-slate-200 bg-white text-left transition hover:border-brand-blue hover:shadow-sm"
+              className="group overflow-hidden rounded-xl border border-slate-200 bg-surface text-left transition hover:border-brand-blue hover:shadow-sm"
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- URL externa do Storage, sem loader configurado */}
               <img src={item.url} alt={item.title ?? ""} className="h-40 w-full object-cover" loading="lazy" />
@@ -250,7 +250,7 @@ function MediaDetail({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-xl">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-surface shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
           <h2 className="text-sm font-semibold text-brand-navy">Detalhes da imagem</h2>
           <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600">
