@@ -49,19 +49,19 @@ export function PropostasShell({
         type="button"
         onClick={() => void signOut()}
         title="Sair"
-        className="flex w-full items-center justify-center rounded-xl p-2.5 text-white/60 transition-colors hover:bg-red-500/20 hover:text-white"
+        className="flex w-full items-center justify-center rounded-xl p-2.5 text-rail-foreground-muted transition-colors hover:bg-red-50 hover:text-red-700"
       >
         <LogOut className="h-5 w-5" />
         <span className="sr-only">Sair</span>
       </button>
     ) : (
-      <div className="flex items-center justify-between gap-2 rounded-xl bg-white/5 px-3 py-2">
-        <span className="min-w-0 truncate text-xs text-white/70">{user?.email ?? 'Sessão'}</span>
+      <div className="flex items-center justify-between gap-2 rounded-xl bg-rail-hover px-3 py-2">
+        <span className="min-w-0 truncate text-xs text-rail-foreground-muted">{user?.email ?? 'Sessão'}</span>
         <button
           type="button"
           onClick={() => void signOut()}
           title="Sair"
-          className="shrink-0 rounded-lg p-1.5 text-white/60 transition-colors hover:bg-red-500/20 hover:text-white"
+          className="shrink-0 rounded-lg p-1.5 text-rail-foreground-muted transition-colors hover:bg-red-50 hover:text-red-700"
         >
           <LogOut className="h-4 w-4" />
           <span className="sr-only">Sair</span>

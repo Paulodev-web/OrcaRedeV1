@@ -164,7 +164,7 @@ export default function SessionNotesBox({ sessionId }: SessionNotesBoxProps) {
                 onClick={() => handleAuthorChange(option)}
                 className={
                   active
-                    ? 'rounded-full bg-neutral-900 px-2.5 py-0.5 text-[11px] font-semibold text-white'
+                    ? 'rounded-full bg-accent-600 px-2.5 py-0.5 text-[11px] font-semibold text-white'
                     : 'rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-500 hover:border-accent-500/40'
                 }
               >
@@ -192,7 +192,7 @@ export default function SessionNotesBox({ sessionId }: SessionNotesBoxProps) {
           <button
             type="submit"
             disabled={isPending || !body.trim()}
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-900 text-white transition-opacity disabled:opacity-40"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-600 text-white transition-colors hover:bg-accent-700 disabled:opacity-40"
             aria-label="Enviar recado"
           >
             <Send className="h-3.5 w-3.5" />

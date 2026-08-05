@@ -219,7 +219,7 @@ export function CronogramaPanel({ context, origin }: PanelProps) {
                           disabled={locked}
                           className={`h-8 w-8 rounded-lg border text-sm font-semibold transition-colors ${
                             row.marks[column.key]
-                              ? 'border-brand-navy bg-brand-navy text-white'
+                              ? 'border-accent-600 bg-accent-600 text-white'
                               : 'border-slate-200 text-slate-300 hover:border-brand-blue'
                           }`}
                         >

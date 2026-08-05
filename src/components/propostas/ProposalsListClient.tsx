@@ -59,7 +59,7 @@ export function ProposalsListClient({ proposals }: { proposals: ProposalListItem
       actions={
         <Link
           href="/propostas/nova"
-          className="inline-flex items-center gap-2 rounded-lg bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-navy-soft"
+          className="inline-flex items-center gap-2 rounded-lg bg-accent-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-700"
         >
           <Plus className="h-4 w-4" />
           Nova proposta

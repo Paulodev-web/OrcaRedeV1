@@ -249,7 +249,7 @@ export function TemplateEditor({ template }: Props) {
             type="button"
             onClick={handleSubmit}
             disabled={pending}
-            className="rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-neutral-800 disabled:opacity-50"
+            className="rounded-lg bg-accent-600 px-5 py-2.5 text-sm font-medium text-white shadow-xs transition-colors hover:bg-accent-700 disabled:opacity-50"
           >
             {pending ? 'Salvando...' : isNew ? 'Criar modelo' : 'Salvar alterações'}
           </button>

@@ -73,7 +73,7 @@ export function NotificationsFullList({ initialItems, initialHasMore }: Props) {
             type="button"
             onClick={() => setFilterUnread(false)}
             className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-              !filterUnread ? 'bg-neutral-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+              !filterUnread ? 'bg-accent-600 text-white' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
             Todas
@@ -82,7 +82,7 @@ export function NotificationsFullList({ initialItems, initialHasMore }: Props) {
             type="button"
             onClick={() => setFilterUnread(true)}
             className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-              filterUnread ? 'bg-neutral-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+              filterUnread ? 'bg-accent-600 text-white' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
             Não lidas

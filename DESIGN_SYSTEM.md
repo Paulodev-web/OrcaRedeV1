@@ -61,7 +61,7 @@ Substitui `gray`, `slate`, `zinc`, `stone`, `neutral` do Tailwind.
 | 600 | `#67665f` | texto secundário (5.5:1) |
 | 700 | `#504f48` | texto de corpo (7.9:1) |
 | 800 | `#353530` | superfície elevada no escuro |
-| 900 | `#262623` | **títulos + trilho da sidebar** (14.5:1) |
+| 900 | `#262623` | **títulos** (14.5:1) |
 | 950 | `#181816` | grafite mais fechado |
 
 ### Accent — slate blue (hue 258)
@@ -135,10 +135,36 @@ precisa sobrescrever.
 | `foreground` | neutral-900 | texto principal |
 | `foreground-muted` | neutral-600 | texto secundário |
 | `border-subtle` | neutral-200 | borda padrão |
-| `rail` | neutral-900 | trilho da navegação |
 
 Prefira `bg-surface` a `bg-white`: quando o tema escuro entrar, `bg-white`
 continuará branco e furará o tema.
+
+### O trilho da navegação é CLARO no tema claro
+
+Sidebar preta sobre conteúdo claro é resquício de "chrome escuro" — no tema
+claro o app é claro inteiro, trilho incluído. A separação vem de **contraste de
+superfície + borda**, não de inversão de luminosidade:
+
+```
+fundo da página   neutral-50   #fafaf8   ← mais claro
+trilho            neutral-100  #f5f4f1   ← um degrau abaixo
+cartões           surface      #ffffff   ← mais claro que os dois, flutua
+```
+
+| Token | Claro | Papel |
+|---|---|---|
+| `rail` | neutral-100 | fundo do trilho |
+| `rail-border` | neutral-200 | borda direita e divisórias |
+| `rail-foreground` | neutral-800 | item em hover, logo (11.2:1) |
+| `rail-foreground-muted` | neutral-600 | item em repouso, rótulo de seção (5.2:1) |
+| `rail-foreground-subtle` | neutral-500 | item desabilitado (3.5:1) |
+| `rail-hover` | neutral-200 | fundo do item sob o ponteiro |
+| `rail-active-bg` / `-fg` | accent-100 / accent-800 | item ativo (7.8:1) |
+
+**Nunca use `text-white` ou `bg-white/10` dentro da sidebar.** Branco fixo só
+funciona sobre fundo escuro — era exatamente isso que prendia o trilho ao visual
+escuro e impedia o tema de clareá-lo sem quebrar a legibilidade. Só o tema
+escuro escurece o trilho, sobrescrevendo os tokens acima.
 
 ### Tema escuro
 
@@ -167,6 +193,11 @@ deveria ser `secondary`.
 <Button variant="ghost" size="icon">…</Button> // sem peso até o hover
 <Button variant="destructive">Excluir</Button> // vermelho só no hover
 ```
+
+Ação primária é **`accent-600`**, nunca preenchimento grafite. `bg-brand-navy` e
+`bg-neutral-900` como fundo de botão são o padrão ANTIGO — deixavam duas
+linguagens de primário convivendo e faziam o tema claro parecer escuro. Estado
+selecionado (aba, pill, filtro) segue a mesma regra.
 
 ### Sem gradiente na UI
 

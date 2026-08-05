@@ -65,26 +65,26 @@ export function useAppSidebarChrome(): AppSidebarChrome {
           type="button"
           onClick={handleLogout}
           title="Sair"
-          className="flex w-full items-center justify-center rounded-xl p-2.5 text-white/60 transition-colors hover:bg-red-500/20 hover:text-white"
+          className="flex w-full items-center justify-center rounded-xl p-2.5 text-rail-foreground-muted transition-colors hover:bg-red-50 hover:text-red-700"
         >
           <LogOut className="h-5 w-5" />
           <span className="sr-only">Sair</span>
         </button>
       ) : (
         <div className="space-y-1">
-          <div className="flex items-center gap-2.5 rounded-xl bg-white/5 px-3 py-2.5">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-blue/20 text-sm font-semibold text-brand-blue-soft">
+          <div className="flex items-center gap-2.5 rounded-xl bg-rail-hover px-3 py-2.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-100 text-sm font-semibold text-accent-700">
               {userInitial}
             </span>
             <span className="min-w-0">
-              <span className="block truncate text-sm font-medium text-white">{user?.email}</span>
-              <span className="block text-xs text-white/40">Administrador</span>
+              <span className="block truncate text-sm font-medium text-rail-foreground">{user?.email}</span>
+              <span className="block text-xs text-rail-foreground-muted">Administrador</span>
             </span>
           </div>
           <button
             type="button"
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/60 transition-colors hover:bg-red-500/20 hover:text-white"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-rail-foreground-muted transition-colors hover:bg-red-50 hover:text-red-700"
           >
             <LogOut className="h-4 w-4 shrink-0" />
             Sair

@@ -118,7 +118,7 @@ export function MediaLibraryManager({ items, allTags }: MediaLibraryManagerProps
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="inline-flex items-center gap-2 rounded-lg bg-brand-navy px-4 py-2.5 text-sm font-medium text-white transition hover:brightness-110 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-lg bg-accent-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-700 disabled:opacity-60"
         >
           {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
           {uploading ? "Enviando…" : "Enviar imagens"}
@@ -150,7 +150,7 @@ export function MediaLibraryManager({ items, allTags }: MediaLibraryManagerProps
             onClick={() => setActiveTag(null)}
             className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
               activeTag === null
-                ? "border-brand-navy bg-brand-navy text-white"
+                ? "border-accent-600 bg-accent-600 text-white"
                 : "border-slate-300 text-slate-600 hover:bg-slate-100"
             }`}
           >
@@ -163,7 +163,7 @@ export function MediaLibraryManager({ items, allTags }: MediaLibraryManagerProps
               onClick={() => setActiveTag(tag === activeTag ? null : tag)}
               className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
                 activeTag === tag
-                  ? "border-brand-navy bg-brand-navy text-white"
+                  ? "border-accent-600 bg-accent-600 text-white"
                   : "border-slate-300 text-slate-600 hover:bg-slate-100"
               }`}
             >
@@ -307,7 +307,7 @@ function MediaDetail({
             type="button"
             onClick={() => onSave(title, caption, tags)}
             disabled={pending}
-            className="inline-flex items-center gap-2 rounded-lg bg-brand-navy px-4 py-2 text-sm font-medium text-white transition hover:brightness-110 disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-lg bg-accent-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-700 disabled:opacity-60"
           >
             {pending && <Loader2 className="h-4 w-4 animate-spin" />}
             Salvar

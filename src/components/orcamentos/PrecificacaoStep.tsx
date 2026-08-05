@@ -41,7 +41,7 @@ export function PrecificacaoStep({ budgetId, initialSaved }: PrecificacaoStepPro
           </div>
           <Link
             href={`/orcamentos/${budgetId}/proposta`}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-navy px-3 py-1.5 text-sm font-medium text-white transition hover:brightness-110"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-accent-700"
           >
             Ir para a proposta
             <ArrowRight className="h-4 w-4" />

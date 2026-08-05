@@ -87,7 +87,7 @@ export const buttonClass =
   'inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:border-brand-blue hover:text-brand-navy disabled:cursor-not-allowed disabled:opacity-50';
 
 export const primaryButtonClass =
-  'inline-flex items-center justify-center gap-2 rounded-lg bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-navy-soft disabled:cursor-not-allowed disabled:opacity-50';
+  'inline-flex items-center justify-center gap-2 rounded-lg bg-accent-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-700 disabled:cursor-not-allowed disabled:opacity-50';
 
 /** Cartão de seção do editor: título, origem do conteúdo e corpo. */
 export function EditorCard({

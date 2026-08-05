@@ -35,41 +35,44 @@ export function Login() {
   return (
     <div className="min-h-screen flex">
       {/* Lado esquerdo - Visual/Ilustração */}
-      {/* Painel de marca: grafite quente com o azul só nos halos. Um slab azul
-          chapado nesta escala vira a cor dominante do produto — o accent tem
-          que continuar sendo acento, inclusive na primeira tela. */}
-      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-neutral-800 via-neutral-900 to-neutral-950 overflow-hidden">
+      {/* Painel de marca claro, na mesma temperatura do resto do sistema: creme
+          com halos de accent. Antes era um slab escuro — a primeira tela dava a
+          impressão de tema escuro antes mesmo do login. */}
+      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-neutral-100 via-neutral-50 to-accent-50 overflow-hidden border-r border-neutral-200">
         {/* Elementos decorativos de fundo */}
         <div className="absolute inset-0">
-          <div className="absolute top-20 left-20 w-32 h-32 bg-blue-400 rounded-full opacity-20 blur-xl"></div>
-          <div className="absolute bottom-20 right-20 w-48 h-48 bg-blue-300 rounded-full opacity-15 blur-2xl"></div>
-          <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-white rounded-full opacity-5 blur-3xl"></div>
+          <div className="absolute top-20 left-20 w-32 h-32 bg-accent-300 rounded-full opacity-30 blur-2xl"></div>
+          <div className="absolute bottom-20 right-20 w-48 h-48 bg-accent-200 rounded-full opacity-40 blur-3xl"></div>
+          <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-amber-200 rounded-full opacity-20 blur-3xl"></div>
         </div>
 
-        {/* Conteúdo principal */}
-        <div className="relative z-10 flex flex-col justify-center items-center text-white p-12 w-full">
+        {/* Conteúdo principal.
+            As "telas" da ilustração eram vidro branco translúcido, que só existe
+            sobre fundo escuro — sobre o creme viraram manchas. Agora são cartões
+            de verdade: superfície branca, borda e sombra, iguais aos do app. */}
+        <div className="relative z-10 flex flex-col justify-center items-center p-12 w-full">
           <img
             src={ON_ENGENHARIA_LOGO_SRC}
             alt="ON Engenharia"
-            className="h-24 sm:h-28 w-auto object-contain drop-shadow-lg mb-10"
+            className="h-24 sm:h-28 w-auto object-contain mb-10"
           />
           {/* Ilustração/Visual principal */}
           <div className="mb-12 relative">
             {/* Tela principal */}
-            <div className="w-64 h-40 bg-white bg-opacity-20 rounded-lg backdrop-blur-sm border border-white border-opacity-30 shadow-2xl transform rotate-3 mb-8">
+            <div className="w-64 h-40 bg-surface rounded-xl border border-neutral-200 shadow-lg transform rotate-3 mb-8">
               <div className="p-4 h-full flex flex-col justify-between">
                 <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 bg-red-400 rounded-full"></div>
-                  <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                  <div className="w-3 h-3 bg-amber-400 rounded-full"></div>
                   <div className="w-3 h-3 bg-green-400 rounded-full"></div>
                 </div>
                 <div className="space-y-2">
-                  <div className="w-full h-2 bg-white bg-opacity-40 rounded"></div>
-                  <div className="w-3/4 h-2 bg-white bg-opacity-30 rounded"></div>
-                  <div className="w-1/2 h-2 bg-white bg-opacity-20 rounded"></div>
+                  <div className="w-full h-2 bg-neutral-200 rounded"></div>
+                  <div className="w-3/4 h-2 bg-neutral-200 rounded"></div>
+                  <div className="w-1/2 h-2 bg-neutral-100 rounded"></div>
                 </div>
                 <div className="flex justify-center">
-                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                  <div className="w-8 h-8 bg-accent-600 rounded-full flex items-center justify-center">
                     <Lock className="w-4 h-4 text-white" />
                   </div>
                 </div>
@@ -77,30 +80,32 @@ export function Login() {
             </div>
 
             {/* Tela secundária */}
-            <div className="absolute -bottom-4 -left-8 w-48 h-32 bg-white bg-opacity-15 rounded-lg backdrop-blur-sm border border-white border-opacity-20 shadow-xl transform -rotate-6">
+            <div className="absolute -bottom-4 -left-8 w-48 h-32 bg-surface rounded-xl border border-neutral-200 shadow-md transform -rotate-6">
               <div className="p-3 h-full flex flex-col justify-between">
                 <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-white bg-opacity-50 rounded-full"></div>
-                  <div className="w-2 h-2 bg-white bg-opacity-30 rounded-full"></div>
-                  <div className="w-2 h-2 bg-white bg-opacity-30 rounded-full"></div>
+                  <div className="w-2 h-2 bg-neutral-300 rounded-full"></div>
+                  <div className="w-2 h-2 bg-neutral-200 rounded-full"></div>
+                  <div className="w-2 h-2 bg-neutral-200 rounded-full"></div>
                 </div>
                 <div className="space-y-1">
-                  <div className="w-full h-1 bg-white bg-opacity-30 rounded"></div>
-                  <div className="w-2/3 h-1 bg-white bg-opacity-20 rounded"></div>
+                  <div className="w-full h-1 bg-neutral-200 rounded"></div>
+                  <div className="w-2/3 h-1 bg-neutral-100 rounded"></div>
                 </div>
               </div>
             </div>
 
             {/* Figura do usuário */}
-            <div className="absolute -bottom-12 right-0 w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm border border-white border-opacity-30">
-              <User className="w-8 h-8 text-white" />
+            <div className="absolute -bottom-12 right-0 w-16 h-16 bg-surface rounded-full flex items-center justify-center border border-neutral-200 shadow-md">
+              <User className="w-8 h-8 text-accent-600" />
             </div>
           </div>
 
           <div className="text-center">
-            <h1 className="text-4xl font-bold mb-4">ON Engenharia</h1>
-            <p className="text-xl text-blue-100 mb-2">Sistema de Orçamentos</p>
-            <p className="text-blue-200 max-w-md">
+            <h1 className="text-4xl font-semibold tracking-tight text-neutral-900 mb-4">
+              ON Engenharia
+            </h1>
+            <p className="text-xl text-neutral-700 mb-2">Sistema de Orçamentos</p>
+            <p className="text-neutral-500 max-w-md">
               Gerencie seus projetos elétricos com eficiência e segurança
             </p>
           </div>

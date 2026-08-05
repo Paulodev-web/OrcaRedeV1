@@ -167,17 +167,24 @@ function SidebarPanel({
   const resolvedFooter = typeof footer === "function" ? footer({ collapsed }) : footer;
 
   return (
-    <div className={cn("flex h-full flex-col text-white", onBrandRailClass)}>
+    /*
+     * Cores vêm dos tokens `rail-*` (globals.css), nunca de `text-white` +
+     * `bg-white/10` cravados. Era isso que prendia o trilho ao visual escuro:
+     * branco fixo só funciona sobre fundo escuro, então o tema não tinha como
+     * clarear a barra sem quebrar a legibilidade. Com os tokens, o mesmo
+     * componente serve o tema claro (trilho creme) e o escuro.
+     */
+    <div className={cn("flex h-full flex-col text-rail-foreground", onBrandRailClass)}>
       <div
         className={cn(
-          "flex shrink-0 items-center border-b border-white/10 px-4 py-4",
+          "flex shrink-0 items-center border-b border-rail-border px-4 py-4",
           collapsed ? "flex-col gap-3 px-2" : "gap-3",
         )}
       >
         <Link
           href="/"
           onClick={onNavigate}
-          className="flex min-w-0 items-center gap-3 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue"
+          className="flex min-w-0 items-center gap-3 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500"
         >
           <Image
             src={ON_ENGENHARIA_LOGO_SRC}
@@ -189,10 +196,10 @@ function SidebarPanel({
           />
           {!collapsed ? (
             <span className="min-w-0">
-              <span className="block truncate text-sm font-bold leading-tight text-white">
+              <span className="block truncate text-sm font-semibold leading-tight text-rail-foreground">
                 ON Engenharia
               </span>
-              <span className="block truncate text-xs leading-tight text-white/50">
+              <span className="block truncate text-xs leading-tight text-rail-foreground-muted">
                 Sistema integrado
               </span>
             </span>
@@ -207,7 +214,7 @@ function SidebarPanel({
             aria-label={collapsed ? "Expandir navegação" : "Recolher navegação"}
             aria-expanded={!collapsed}
             className={cn(
-              "rounded-lg p-1.5 text-white/50 transition-colors hover:bg-white/10 hover:text-white",
+              "rounded-lg p-1.5 text-rail-foreground-muted transition-colors hover:bg-rail-hover hover:text-rail-foreground",
               !collapsed && "ml-auto",
             )}
           >
@@ -223,7 +230,7 @@ function SidebarPanel({
             type="button"
             onClick={onClose}
             aria-label="Fechar navegação"
-            className="ml-auto rounded-lg p-1.5 text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+            className="ml-auto rounded-lg p-1.5 text-rail-foreground-muted transition-colors hover:bg-rail-hover hover:text-rail-foreground"
           >
             <X className="h-5 w-5" />
           </button>
@@ -237,12 +244,12 @@ function SidebarPanel({
         {sections.map((section) => (
           <div key={section.id} className="space-y-1">
             {section.label && !collapsed ? (
-              <h2 className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/40">
+              <h2 className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-rail-foreground-muted">
                 {section.label}
               </h2>
             ) : null}
             {section.label && collapsed ? (
-              <div className="mx-auto mb-2 h-px w-8 bg-white/10" role="presentation" />
+              <div className="mx-auto mb-2 h-px w-8 bg-rail-border" role="presentation" />
             ) : null}
             {section.items.map((item) => (
               <SidebarItem
@@ -258,7 +265,7 @@ function SidebarPanel({
       </nav>
 
       {resolvedFooter ? (
-        <div className={cn("shrink-0 border-t border-white/10 py-3", collapsed ? "px-2" : "px-3")}>
+        <div className={cn("shrink-0 border-t border-rail-border py-3", collapsed ? "px-2" : "px-3")}>
           {resolvedFooter}
         </div>
       ) : null}
@@ -280,23 +287,23 @@ function SidebarItem({ item, collapsed, active, onNavigate }: SidebarItemProps) 
   const itemClass = cn(
     "group/nav relative flex w-full items-center rounded-lg text-sm transition-colors duration-150",
     collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5",
-    "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent-400",
+    "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent-500",
     disabled
-      ? "cursor-not-allowed text-white/25"
+      ? "cursor-not-allowed text-rail-foreground-subtle"
       : active
         // Item ativo: tinta do accent + barra à esquerda. A barra carrega o
         // estado sozinha se o usuário não distinguir a diferença de fundo.
-        ? "bg-accent-500/15 text-white"
-        : "text-white/65 hover:bg-white/[0.07] hover:text-white",
+        ? "bg-rail-active-bg font-medium text-rail-active-fg"
+        : "text-rail-foreground-muted hover:bg-rail-hover hover:text-rail-foreground",
   );
 
   const iconClass = cn(
     "h-5 w-5 shrink-0 transition-colors duration-150",
     disabled
-      ? "text-white/20"
+      ? "text-rail-foreground-subtle"
       : active
-        ? "text-accent-300"
-        : "text-white/55 group-hover/nav:text-white/90",
+        ? "text-rail-active-fg"
+        : "text-rail-foreground-muted group-hover/nav:text-rail-foreground",
   );
 
   const title = collapsed ? [item.label, item.hint].filter(Boolean).join(" — ") : item.hint;
@@ -306,7 +313,7 @@ function SidebarItem({ item, collapsed, active, onNavigate }: SidebarItemProps) 
       {active && !disabled ? (
         <span
           aria-hidden
-          className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-accent-400"
+          className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-accent-600"
         />
       ) : null}
       <Icon className={iconClass} />
@@ -316,7 +323,9 @@ function SidebarItem({ item, collapsed, active, onNavigate }: SidebarItemProps) 
         <span className="min-w-0 flex-1 text-left">
           <span className="block truncate font-medium">{item.label}</span>
           {item.description ? (
-            <span className="block truncate text-xs text-white/40">{item.description}</span>
+            <span className="block truncate text-xs text-rail-foreground-muted">
+              {item.description}
+            </span>
           ) : null}
         </span>
       )}

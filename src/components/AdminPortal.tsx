@@ -12,7 +12,6 @@ import { ActivityDot } from '@/components/layout/ActivityDot';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ModuleHeader } from '@/components/layout/ModuleHeader';
 import { buildAppSidebarSections, getPortalModules, type AppModule } from '@/components/layout/modules';
-import { onBrandGradientClass, onBrandHeroGradientClass } from '@/lib/branding';
 
 /**
  * Contagem de atividade não vista por módulo.
@@ -73,26 +72,26 @@ export function AdminPortal() {
         type="button"
         onClick={handleLogout}
         title="Sair"
-        className="flex w-full items-center justify-center rounded-xl p-2.5 text-white/60 transition-colors hover:bg-red-500/20 hover:text-white"
+        className="flex w-full items-center justify-center rounded-xl p-2.5 text-rail-foreground-muted transition-colors hover:bg-red-50 hover:text-red-700"
       >
         <LogOut className="h-5 w-5" />
         <span className="sr-only">Sair</span>
       </button>
     ) : (
       <div className="space-y-1">
-        <div className="flex items-center gap-2.5 rounded-xl bg-white/5 px-3 py-2.5">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-blue/20 text-sm font-semibold text-brand-blue-soft">
+        <div className="flex items-center gap-2.5 rounded-xl bg-rail-hover px-3 py-2.5">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-100 text-sm font-semibold text-accent-700">
             {userInitial}
           </span>
           <span className="min-w-0">
-            <span className="block truncate text-sm font-medium text-white">{user?.email}</span>
-            <span className="block text-xs text-white/40">Administrador</span>
+            <span className="block truncate text-sm font-medium text-rail-foreground">{user?.email}</span>
+            <span className="block text-xs text-rail-foreground-muted">Administrador</span>
           </span>
         </div>
         <button
           type="button"
           onClick={handleLogout}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/60 transition-colors hover:bg-red-500/20 hover:text-white"
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-rail-foreground-muted transition-colors hover:bg-red-50 hover:text-red-700"
         >
           <LogOut className="h-4 w-4 shrink-0" />
           Sair
@@ -125,31 +124,34 @@ export function AdminPortal() {
     >
       <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Saudação */}
-        <section
-          className={`relative mb-8 overflow-hidden rounded-2xl p-8 text-white shadow-xl ${onBrandHeroGradientClass}`}
-        >
+        {/* Faixa de boas-vindas clara: era um bloco escuro com texto branco, o
+            que fazia a primeira tela do sistema parecer tema escuro. Superfície
+            de accent bem diluída — presença sem virar a cor dominante. */}
+        <section className="relative mb-8 overflow-hidden rounded-2xl border border-accent-200 bg-accent-50 p-8">
           <div
             aria-hidden
-            className="absolute right-0 top-0 h-64 w-64 -translate-y-1/2 translate-x-1/4 rounded-full bg-white opacity-5"
+            className="absolute right-0 top-0 h-64 w-64 -translate-y-1/2 translate-x-1/4 rounded-full bg-accent-200 opacity-40 blur-2xl"
           />
           <div
             aria-hidden
-            className="absolute bottom-0 left-0 h-48 w-48 -translate-x-1/4 translate-y-1/2 rounded-full bg-white opacity-5"
+            className="absolute bottom-0 left-0 h-48 w-48 -translate-x-1/4 translate-y-1/2 rounded-full bg-accent-200 opacity-30 blur-2xl"
           />
 
           <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <h2 className="text-3xl font-bold">{greeting}, seja bem-vindo!</h2>
-              <p className="mt-2 max-w-lg text-base text-white/90">
+              <h2 className="text-3xl font-semibold tracking-tight text-neutral-900">
+                {greeting}, seja bem-vindo!
+              </h2>
+              <p className="mt-2 max-w-lg text-base text-neutral-600">
                 Todos os módulos ficam acessíveis pela navegação lateral, sem passar por aqui de novo.
               </p>
-              <p className="mt-4 flex items-center gap-1.5 text-sm text-white/80">
+              <p className="mt-4 flex items-center gap-1.5 text-sm text-neutral-500">
                 <Clock className="h-4 w-4" />
                 <span className="capitalize">{today}</span>
               </p>
             </div>
 
-            <div className="flex items-center gap-2 self-start rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-sm font-medium backdrop-blur-sm lg:self-auto">
+            <div className="flex items-center gap-2 self-start rounded-full border border-accent-200 bg-surface px-3.5 py-1.5 text-sm font-medium text-accent-700 shadow-2xs lg:self-auto">
               <Sparkles className="h-4 w-4" />
               <span>{portalModules.length} módulos ativos</span>
             </div>
@@ -204,36 +206,38 @@ function ModuleCard({ module: mod, onOpenLegacy }: ModuleCardProps) {
   // `h-full` + coluna flex mantêm o CTA alinhado entre cartões de descrição
   // com alturas diferentes.
   const cardClass =
-    'group relative flex h-full flex-col overflow-hidden rounded-2xl border border-brand-blue/40 bg-white text-left shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue';
+    'group relative flex h-full flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-surface text-left shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500';
 
   const cardBody = (
     <>
+      {/* Filete superior só no hover: no repouso o cartão é calmo, e o realce
+          reforça qual deles está sob o ponteiro. */}
       <span
         aria-hidden
-        className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-brand-navy to-brand-blue"
+        className="absolute inset-x-0 top-0 h-0.5 bg-accent-500 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
       />
 
       <div className="flex flex-1 flex-col p-6">
         <div className="mb-4 flex items-start justify-between">
-          <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-brand-blue/40 bg-brand-blue/15">
-            <Icon className="h-6 w-6 text-brand-navy" />
+          <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-accent-200 bg-accent-50">
+            <Icon className="h-6 w-6 text-accent-600" />
           </span>
           <span className="flex items-center gap-2">
             <ActivityDot count={0} label={`novidades em ${mod.label}`} />
             {mod.tag ? (
-              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+              <span className="inline-flex items-center rounded-full border border-neutral-200 bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-600">
                 {mod.tag}
               </span>
             ) : null}
           </span>
         </div>
 
-        <h3 className="mb-2 text-base font-bold text-brand-navy">{mod.label}</h3>
-        <p className="mb-4 text-sm leading-relaxed text-slate-500">{mod.description}</p>
+        <h3 className="mb-2 text-base font-semibold text-neutral-900">{mod.label}</h3>
+        <p className="mb-4 text-sm leading-relaxed text-neutral-500">{mod.description}</p>
 
-        <span
-          className={`mt-auto flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm text-white group-hover:shadow-md ${onBrandGradientClass}`}
-        >
+        {/* Era o gradiente de hero usado como preenchimento de botão — herdado
+            do alias depreciado `onBrandGradientClass`. Agora é a cor de ação. */}
+        <span className="mt-auto flex w-full items-center justify-center gap-2 rounded-lg bg-accent-600 px-4 py-2.5 text-sm font-medium text-white transition-colors group-hover:bg-accent-700">
           <span>Acessar módulo</span>
           <ArrowRight className="h-4 w-4" />
         </span>

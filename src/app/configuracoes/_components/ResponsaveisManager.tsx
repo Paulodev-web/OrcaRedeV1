@@ -90,7 +90,7 @@ export function ResponsaveisManager({ responsibles }: ResponsaveisManagerProps) 
             <button
               type="button"
               onClick={() => setCreating(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-navy px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-navy/90"
+              className="inline-flex items-center gap-2 rounded-xl bg-accent-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-700"
             >
               <Plus className="h-4 w-4" />
               Novo responsável
@@ -378,7 +378,7 @@ function ResponsibleForm({
         <button
           type="submit"
           disabled={isPending}
-          className="inline-flex items-center gap-2 rounded-xl bg-brand-navy px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-navy/90 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl bg-accent-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-700 disabled:opacity-60"
         >
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
           {submitLabel}

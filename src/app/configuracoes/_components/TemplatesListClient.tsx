@@ -35,7 +35,7 @@ export function TemplatesListClient({ templates }: { templates: ProposalTemplate
         </p>
         <Link
           href="/configuracoes/templates-proposta/novo"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-navy px-4 py-2.5 text-sm font-medium text-white transition hover:brightness-110"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-accent-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-700"
         >
           <Plus className="h-4 w-4" />
           Novo template

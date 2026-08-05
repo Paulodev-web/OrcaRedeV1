@@ -106,8 +106,14 @@ export const ON_BRAND_VAR = {
  * superfícies de marketing (hero do portal).
  * ──────────────────────────────────────────────────────────────────────────── */
 
-/** Trilho da navegação global (sidebar): grafite quente chapado. */
-export const onBrandRailClass = "bg-brand-navy";
+/**
+ * Trilho da navegação global (sidebar).
+ *
+ * Aponta para o papel `rail`, não para uma cor fixa: no tema claro o trilho é
+ * um creme um degrau abaixo do fundo da página; só no escuro ele escurece.
+ * Ver os tokens `--color-rail-*` em globals.css.
+ */
+export const onBrandRailClass = "bg-rail border-r border-rail-border";
 
 /** Superfície de realce sobre fundo claro (pills ativas, ícones em destaque). */
 export const onBrandAccentSurfaceClass =

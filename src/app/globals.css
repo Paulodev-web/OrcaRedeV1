@@ -344,8 +344,30 @@
   --color-foreground-subtle: var(--color-neutral-500);
   --color-border-subtle: var(--color-neutral-200);
   --color-border-strong: var(--color-neutral-300);
-  --color-rail: var(--color-neutral-900);
-  --color-rail-deep: var(--color-neutral-950);
+
+  /* Trilho da navegação global (AppSidebar).
+   *
+   * No tema CLARO o trilho é CLARO — um creme um degrau abaixo do fundo da
+   * página, não um bloco escuro. Barra lateral preta sobre conteúdo claro é
+   * um resquício de "chrome escuro"; separa o trilho por contraste de
+   * superfície e borda, não por inversão de luminosidade.
+   * Só o tema escuro escurece o trilho. */
+  --color-rail: var(--color-neutral-100);
+  --color-rail-border: var(--color-neutral-200);
+  /* Texto/ícone do item em repouso. */
+  --color-rail-foreground: var(--color-neutral-800);
+  /* Rótulo de seção, ícone inativo, descrição. */
+  --color-rail-foreground-muted: var(--color-neutral-600);
+  /* Item desabilitado. Componente inativo é isento de contraste na WCAG
+   * 1.4.3, mas neutral-400 sobre o trilho dava 2.1:1 e o rótulo sumia —
+   * "desabilitado" precisa continuar legível para o usuário saber o que está
+   * indisponível. O 500 dá 3.5:1 e segue claramente mais apagado que o 600
+   * dos itens ativos. */
+  --color-rail-foreground-subtle: var(--color-neutral-500);
+  --color-rail-hover: var(--color-neutral-200);
+  /* Item ativo: tinta do accent (7.8:1 entre fg e bg). */
+  --color-rail-active-bg: var(--color-accent-100);
+  --color-rail-active-fg: var(--color-accent-800);
 }
 
 /*
@@ -373,8 +395,15 @@
     --color-foreground-subtle: #aaa9a2; /* neutral-400 */
     --color-border-subtle: #353530;     /* neutral-800 */
     --color-border-strong: #504f48;     /* neutral-700 */
-    --color-rail: #181816;              /* neutral-950 */
-    --color-rail-deep: #000000;
+
+    --color-rail: #181816;                   /* neutral-950 */
+    --color-rail-border: #353530;            /* neutral-800 */
+    --color-rail-foreground: #f5f4f1;        /* neutral-100 */
+    --color-rail-foreground-muted: #aaa9a2;  /* neutral-400 */
+    --color-rail-foreground-subtle: #67665f; /* neutral-600 */
+    --color-rail-hover: #353530;             /* neutral-800 */
+    --color-rail-active-bg: #2b4874;         /* accent-800 */
+    --color-rail-active-fg: #e3edfb;         /* accent-100 */
   }
 }
 

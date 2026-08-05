@@ -40,7 +40,7 @@ export function CanvasEmptyState({ variant }: CanvasEmptyStateProps) {
           <div className="mt-5 flex flex-col items-center gap-2">
             <Link
               href="/tools/andamento-obra"
-              className="inline-flex items-center justify-center rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-950"
+              className="inline-flex items-center justify-center rounded-md bg-accent-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-700"
             >
               Importar do OrçaRede
             </Link>

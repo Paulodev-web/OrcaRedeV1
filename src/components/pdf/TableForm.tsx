@@ -351,7 +351,7 @@ export function TableForm() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[480px] border-collapse text-sm">
               <thead>
-                <tr className="bg-neutral-900 text-left text-white">
+                <tr className="border-b border-neutral-200 bg-neutral-100 text-left text-neutral-700">
                   {table.columns.map((col, i) => (
                     <th key={i} className="border border-neutral-800 px-2 py-2 font-medium">
                       {col.header || `Col ${i + 1}`}
@@ -418,7 +418,7 @@ export function TableForm() {
           type="button"
           onClick={() => void handleGenerate()}
           disabled={isGenerating}
-          className="inline-flex items-center gap-2 rounded-lg bg-neutral-900 px-5 py-2 text-sm font-medium text-white hover:bg-neutral-900/90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-lg bg-accent-600 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isGenerating ? (
             <Loader2 className="h-4 w-4 animate-spin" />

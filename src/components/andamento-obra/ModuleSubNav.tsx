@@ -59,7 +59,7 @@ export function ModuleSubNav() {
               className={cn(
                 'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
                 active
-                  ? 'bg-neutral-900 text-white'
+                  ? 'bg-accent-600 text-white'
                   : 'text-gray-600 hover:bg-gray-100 hover:text-neutral-900',
               )}
             >
