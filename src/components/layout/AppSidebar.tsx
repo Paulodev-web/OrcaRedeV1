@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
-import { ChevronsLeft, ChevronsRight, X } from "lucide-react";
+import { PanelLeft, X } from "lucide-react";
 import {
   ON_ENGENHARIA_LOGO_SIZE,
   ON_ENGENHARIA_LOGO_SRC,
@@ -211,11 +211,10 @@ function SidebarPanel({
               !collapsed && "ml-auto",
             )}
           >
-            {collapsed ? (
-              <ChevronsRight className="h-4 w-4" />
-            ) : (
-              <ChevronsLeft className="h-4 w-4" />
-            )}
+            {/* Um único ícone de painel, sem virar seta — é a leitura "isto é
+                um painel que liga/desliga", não "isto aponta para um lado".
+                Mesmo desenho nos dois estados; só o rótulo muda. */}
+            <PanelLeft className="h-4 w-4" />
           </button>
         ) : null}
 
