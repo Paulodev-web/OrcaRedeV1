@@ -198,7 +198,9 @@ export function EngineerPortal() {
     navy: '#262623',
     blue: '#5f8dd1',
   };
-  const { setActiveModule, budgets, fetchBudgets, fetchBudgetDetails } = useApp();
+  // `setActiveModule` saiu junto com o header próprio: voltar ao Portal agora é
+  // ação do `EngineerPortalChrome`.
+  const { budgets, fetchBudgets, fetchBudgetDetails } = useApp();
   const alertDialog = useAlertDialog();
   const [currentView, setCurrentView] = useState<ViewMode>('dashboard');
   const [workTrackings, setWorkTrackings] = useState<WorkTracking[]>([]);
@@ -2646,32 +2648,12 @@ export function EngineerPortal() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <header className="bg-surface/95 border-b border-slate-200 shadow-sm sticky top-0 z-50 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <button onClick={() => setActiveModule(null)} className="flex items-center space-x-2 text-slate-600 hover:text-neutral-900">
-                <ArrowLeft className="w-5 h-5" />
-                <span className="text-sm font-medium">Voltar ao Admin</span>
-              </button>
-              <div className="h-6 border-l border-slate-300" />
-              <div className="flex items-center space-x-3">
-                <img
-                  src={ON_ENGENHARIA_LOGO_SRC}
-                  alt="ON Engenharia"
-                  className="h-9 w-auto max-h-9 object-contain"
-                />
-                <div>
-                  <span className="text-base font-bold text-neutral-900 block">Portal do Engenheiro</span>
-                  <span className="text-xs text-slate-500 block">Gestão de Obras</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
+    /*
+     * Sem wrapper `min-h-screen` nem header próprio: quem fornece o chrome
+     * agora é o `EngineerPortalChrome` (sidebar global + `ModuleHeader`), e
+     * manter os daqui duplicaria logo, título e a barra fixa.
+     */
+    <>
       <div className={`${currentView === 'tracking-detail' ? 'max-w-[1600px]' : 'max-w-7xl'} mx-auto px-4 sm:px-6 lg:px-8 py-8`}>
         {currentView === 'dashboard' && renderDashboard()}
         {currentView === 'select-budget' && renderSelectBudget()}
@@ -2697,6 +2679,6 @@ export function EngineerPortal() {
       )}
 
       <AlertDialog {...alertDialog.dialogProps} />
-    </div>
+    </>
   );
 }

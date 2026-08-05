@@ -16,7 +16,7 @@ import { GerenciarTiposPostes } from '@/components/GerenciarTiposPostes';
 import { GerenciarPadroesPoste } from '@/components/GerenciarPadroesPoste';
 import { EditorGrupo } from '@/components/EditorGrupo';
 import { EditorPadraoPoste } from '@/components/EditorPadraoPoste';
-import { EngineerPortal } from '@/components/EngineerPortal';
+import { EngineerPortalChrome } from '@/components/EngineerPortalChrome';
 import { Login } from '@/components/Login';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ON_ENGENHARIA_LOGO_SRC } from '@/lib/branding';
@@ -42,7 +42,7 @@ function AuthenticatedApp() {
   if (activeModule === 'portal-engenheiro') {
     return (
       <ErrorBoundary>
-        <EngineerPortal />
+        <EngineerPortalChrome />
       </ErrorBoundary>
     );
   }
