@@ -25,7 +25,7 @@ export async function getMediaLibrary(): Promise<{
 }> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const [mediaResult, tagsResult] = await Promise.all([
       supabase
@@ -33,10 +33,9 @@ export async function getMediaLibrary(): Promise<{
         .select(
           "id, url, title, caption, source, created_at, media_library_tags ( media_tags ( name ) )",
         )
-        .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(300),
-      supabase.from("media_tags").select("name").eq("user_id", userId).order("name"),
+      supabase.from("media_tags").select("name").order("name"),
     ]);
 
     if (mediaResult.error) {

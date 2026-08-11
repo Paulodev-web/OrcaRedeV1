@@ -25,16 +25,19 @@ function normalizeName(name: string): string {
   return name.trim();
 }
 
+/**
+ * Pré-checagem do nome duplicado, espelhando `uq_suppliers_org_name_active`:
+ * o nome é único entre os fornecedores ATIVOS da organização. Existe só para
+ * devolver mensagem em português antes do 23505 cru do banco.
+ */
 async function assertUniqueActiveName(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  userId: string,
   name: string,
   excludeId?: string
 ): Promise<string | null> {
   let query = supabase
     .from('suppliers')
     .select('id')
-    .eq('user_id', userId)
     .eq('is_active', true)
     .ilike('name', name);
 
@@ -175,7 +178,7 @@ export async function createSupplierAction(
     const parsed = toDbPayload(input);
     if (!parsed.ok) return { success: false, error: parsed.error };
 
-    const dup = await assertUniqueActiveName(supabase, userId, parsed.data.name);
+    const dup = await assertUniqueActiveName(supabase, parsed.data.name);
     if (dup) return { success: false, error: dup };
 
     const { data, error } = await supabase
@@ -213,7 +216,7 @@ export async function updateSupplierAction(
     const parsed = toDbPayload(input);
     if (!parsed.ok) return { success: false, error: parsed.error };
 
-    const dup = await assertUniqueActiveName(supabase, userId, parsed.data.name, id);
+    const dup = await assertUniqueActiveName(supabase, parsed.data.name, id);
     if (dup) return { success: false, error: dup };
 
     const { data, error } = await supabase
@@ -329,7 +332,7 @@ export async function reactivateSupplierAction(id: string): Promise<ActionResult
       return { success: false, error: 'Fornecedor não encontrado.' };
     }
 
-    const dup = await assertUniqueActiveName(supabase, userId, existing.name, id);
+    const dup = await assertUniqueActiveName(supabase, existing.name, id);
     if (dup) return { success: false, error: dup };
 
     const { data, error } = await supabase

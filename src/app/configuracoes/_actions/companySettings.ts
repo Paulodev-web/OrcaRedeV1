@@ -27,8 +27,13 @@ function nullify(value: string | null | undefined): string | null {
 }
 
 /**
- * Um registro por usuário: a escrita natural é o upsert em `user_id`, que a
- * constraint `company_settings_user_key` garante.
+ * Um registro por ORGANIZAÇÃO: a escrita natural é o upsert em `org_id`, que a
+ * constraint `company_settings_org_key` garante. `user_id` continua na linha
+ * como autoria de quem preencheu por último.
+ *
+ * Era um registro por usuário até 20260811120000 — o que dava a uma mesma
+ * empresa duas fichas de "dados da empresa" sem critério de desempate assim que
+ * o segundo colega abrisse esta tela.
  */
 export async function saveCompanySettingsAction(
   input: CompanySettingsInput,
@@ -51,7 +56,7 @@ export async function saveCompanySettingsAction(
         instagram: nullify(input.instagram),
         whatsapp_number: nullify(input.whatsapp_number),
       },
-      { onConflict: "user_id" },
+      { onConflict: "org_id" },
     );
 
     if (error) return { success: false, error: error.message };
@@ -97,12 +102,11 @@ export async function uploadCompanyLogoAction(formData: FormData): Promise<Actio
     const { data: existing } = await supabase
       .from("company_settings")
       .select("logo_storage_path")
-      .eq("user_id", userId)
       .maybeSingle();
 
     const { error: updateError } = await supabase.from("company_settings").upsert(
       { user_id: userId, logo_url: publicUrl, logo_storage_path: path },
-      { onConflict: "user_id" },
+      { onConflict: "org_id" },
     );
 
     if (updateError) {
@@ -128,18 +132,20 @@ export async function uploadCompanyLogoAction(formData: FormData): Promise<Actio
 export async function removeCompanyLogoAction(): Promise<ActionResult> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { data: existing } = await supabase
       .from("company_settings")
       .select("logo_storage_path")
-      .eq("user_id", userId)
       .maybeSingle();
 
+    // Sem `.eq()`: a linha é uma só por organização (`company_settings_org_key`)
+    // e o RLS já restringe à org ativa. Filtrar por `user_id` aqui faria o colega
+    // não conseguir trocar o logo cadastrado por outro.
     const { error } = await supabase
       .from("company_settings")
       .update({ logo_url: null, logo_storage_path: null })
-      .eq("user_id", userId);
+      .not("id", "is", null);
 
     if (error) return { success: false, error: error.message };
 

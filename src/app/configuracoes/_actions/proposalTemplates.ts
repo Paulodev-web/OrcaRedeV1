@@ -86,7 +86,7 @@ export async function saveProposalTemplateAction(
     };
 
     const query = input.id
-      ? supabase.from("proposal_templates").update(row).eq("id", input.id).eq("user_id", userId)
+      ? supabase.from("proposal_templates").update(row).eq("id", input.id)
       : supabase.from("proposal_templates").insert(row);
 
     const { data, error } = await query.select("id").single();
@@ -96,12 +96,11 @@ export async function saveProposalTemplateAction(
 
     const templateId = String(data.id);
 
-    // Só um template padrão por usuário: marcar este desmarca os demais.
+    // Só um template padrão por organização: marcar este desmarca os demais.
     if (input.isDefault) {
       await supabase
         .from("proposal_templates")
         .update({ is_default: false })
-        .eq("user_id", userId)
         .neq("id", templateId);
     }
 
@@ -139,20 +138,18 @@ export async function saveProposalTemplateAction(
 export async function setDefaultProposalTemplateAction(id: string): Promise<ActionResult> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { error } = await supabase
       .from("proposal_templates")
       .update({ is_default: true })
-      .eq("id", id)
-      .eq("user_id", userId);
+      .eq("id", id);
 
     if (error) return { success: false, error: error.message };
 
     await supabase
       .from("proposal_templates")
       .update({ is_default: false })
-      .eq("user_id", userId)
       .neq("id", id);
 
     revalidate(id);
@@ -166,13 +163,12 @@ export async function setDefaultProposalTemplateAction(id: string): Promise<Acti
 export async function deleteProposalTemplateAction(id: string): Promise<ActionResult> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { error } = await supabase
       .from("proposal_templates")
       .delete()
-      .eq("id", id)
-      .eq("user_id", userId);
+      .eq("id", id);
 
     if (error) return { success: false, error: error.message };
 

@@ -567,7 +567,7 @@ export async function saveManualMatchAction(
           last_seen_at: new Date().toISOString(),
           times_used: 1,
         },
-        { onConflict: 'user_id,supplier_name,supplier_material_name' }
+        { onConflict: 'org_id,supplier_name,supplier_material_name' }
       );
 
     if (mappingError) {
@@ -682,7 +682,7 @@ export async function acceptAiSuggestionAction(
           last_seen_at: new Date().toISOString(),
           times_used: 1,
         },
-        { onConflict: 'user_id,supplier_name,supplier_material_name' }
+        { onConflict: 'org_id,supplier_name,supplier_material_name' }
       );
 
     if (mappingError) {
@@ -1057,8 +1057,7 @@ export async function calculateScenariosAction(
       const { data: stockRows } = await supabase
         .from('session_material_stock_inputs')
         .select('material_id, stock_qty')
-        .eq('session_id', sessionId)
-        .eq('user_id', userId);
+        .eq('session_id', sessionId);
       for (const r of stockRows ?? []) {
         stockMap.set(r.material_id, Number(r.stock_qty));
       }
@@ -1659,8 +1658,7 @@ export async function getSessionStockInputsAction(
     const { data, error } = await supabase
       .from('session_material_stock_inputs')
       .select('material_id, stock_qty')
-      .eq('session_id', sessionId)
-      .eq('user_id', userId);
+      .eq('session_id', sessionId);
 
     if (error) {
       return { success: false, error: error.message };
@@ -1698,7 +1696,7 @@ export async function saveSessionStockInputsAction(
 
     const { error } = await supabase
       .from('session_material_stock_inputs')
-      .upsert(rows, { onConflict: 'session_id,material_id,user_id' });
+      .upsert(rows, { onConflict: 'session_id,material_id' });
 
     if (error) {
       return { success: false, error: error.message };
@@ -1820,8 +1818,7 @@ export async function getIdealSelectionsAction(
     const { data, error } = await supabase
       .from('scenario_ideal_selections')
       .select('material_id, quote_id')
-      .eq('session_id', sessionId)
-      .eq('user_id', userId);
+      .eq('session_id', sessionId);
 
     if (error) {
       return { success: false, error: error.message };
@@ -1870,7 +1867,7 @@ export async function saveIdealSelectionAction(
         quote_id: quoteId,
         user_id: userId,
       },
-      { onConflict: 'session_id,material_id,user_id' }
+      { onConflict: 'session_id,material_id' }
     );
 
     if (error) {
@@ -1926,7 +1923,7 @@ export async function bulkSaveIdealSelectionsAction(
     }));
 
     const { error } = await supabase.from('scenario_ideal_selections').upsert(payload, {
-      onConflict: 'session_id,material_id,user_id',
+      onConflict: 'session_id,material_id',
     });
 
     if (error) {
@@ -1960,8 +1957,7 @@ export async function getPurchaseOrdersAction(
     const { data, error } = await supabase
       .from('scenario_purchase_orders')
       .select('material_id, oc_number')
-      .eq('session_id', sessionId)
-      .eq('user_id', userId);
+      .eq('session_id', sessionId);
 
     if (error) {
       return { success: false, error: error.message };
@@ -1996,8 +1992,7 @@ export async function savePurchaseOrderAction(
         .from('scenario_purchase_orders')
         .delete()
         .eq('session_id', sessionId)
-        .eq('material_id', materialId)
-        .eq('user_id', userId);
+        .eq('material_id', materialId);
 
       if (error) {
         return { success: false, error: error.message };
@@ -2014,7 +2009,7 @@ export async function savePurchaseOrderAction(
         oc_number: trimmed,
         user_id: userId,
       },
-      { onConflict: 'session_id,material_id,user_id' }
+      { onConflict: 'session_id,material_id' }
     );
 
     if (error) {
@@ -2260,8 +2255,7 @@ export async function removeIdealSelectionAction(
       .from('scenario_ideal_selections')
       .delete()
       .eq('session_id', sessionId)
-      .eq('material_id', materialId)
-      .eq('user_id', userId);
+      .eq('material_id', materialId);
 
     if (error) {
       return { success: false, error: error.message };

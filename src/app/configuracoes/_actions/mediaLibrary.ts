@@ -86,13 +86,12 @@ export async function updateMediaAction(input: {
 }): Promise<ActionResult> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { error } = await supabase
       .from("media_library")
       .update({ title: nullify(input.title), caption: nullify(input.caption) })
-      .eq("id", input.id)
-      .eq("user_id", userId);
+      .eq("id", input.id);
 
     if (error) return { success: false, error: error.message };
 
@@ -107,20 +106,18 @@ export async function updateMediaAction(input: {
 export async function deleteMediaAction(id: string): Promise<ActionResult> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { data: existing } = await supabase
       .from("media_library")
       .select("storage_path")
       .eq("id", id)
-      .eq("user_id", userId)
       .maybeSingle();
 
     const { error } = await supabase
       .from("media_library")
       .delete()
-      .eq("id", id)
-      .eq("user_id", userId);
+      .eq("id", id);
 
     if (error) return { success: false, error: error.message };
 
@@ -167,8 +164,7 @@ export async function setMediaTagsAction(input: {
     const { error: clearError } = await supabase
       .from("media_library_tags")
       .delete()
-      .eq("media_id", input.mediaId)
-      .eq("user_id", userId);
+      .eq("media_id", input.mediaId);
 
     if (clearError) return { success: false, error: clearError.message };
     if (names.length === 0) {
@@ -179,7 +175,6 @@ export async function setMediaTagsAction(input: {
     const { data: existing } = await supabase
       .from("media_tags")
       .select("id, name")
-      .eq("user_id", userId)
       .in("name", names);
 
     const byName = new Map(

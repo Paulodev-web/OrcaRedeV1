@@ -22,7 +22,6 @@ export async function addTechnicalResponsibleAction(
     const { data: last } = await supabase
       .from("technical_responsibles")
       .select("order_index")
-      .eq("user_id", userId)
       .order("order_index", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -59,13 +58,12 @@ export async function updateTechnicalResponsibleAction(
 ): Promise<ActionResult> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { error } = await supabase
       .from("technical_responsibles")
       .update({ full_name: input.full_name.trim(), crea: input.crea.trim() })
-      .eq("id", id)
-      .eq("user_id", userId);
+      .eq("id", id);
 
     if (error) {
       if (error.code === "23505") {
@@ -97,13 +95,12 @@ export async function setTechnicalResponsibleActiveAction(
 ): Promise<ActionResult> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { error } = await supabase
       .from("technical_responsibles")
       .update({ is_active: isActive })
-      .eq("id", id)
-      .eq("user_id", userId);
+      .eq("id", id);
 
     if (error) return { success: false, error: error.message };
 
@@ -149,14 +146,12 @@ export async function uploadResponsibleSignatureAction(formData: FormData): Prom
       .from("technical_responsibles")
       .select("signature_storage_path")
       .eq("id", id)
-      .eq("user_id", userId)
       .maybeSingle();
 
     const { error: updateError } = await supabase
       .from("technical_responsibles")
       .update({ signature_url: publicUrl, signature_storage_path: path })
-      .eq("id", id)
-      .eq("user_id", userId);
+      .eq("id", id);
 
     if (updateError) {
       await supabase.storage.from(COMPANY_ASSETS_BUCKET).remove([path]);
@@ -179,20 +174,18 @@ export async function uploadResponsibleSignatureAction(formData: FormData): Prom
 export async function removeResponsibleSignatureAction(id: string): Promise<ActionResult> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { data: existing } = await supabase
       .from("technical_responsibles")
       .select("signature_storage_path")
       .eq("id", id)
-      .eq("user_id", userId)
       .maybeSingle();
 
     const { error } = await supabase
       .from("technical_responsibles")
       .update({ signature_url: null, signature_storage_path: null })
-      .eq("id", id)
-      .eq("user_id", userId);
+      .eq("id", id);
 
     if (error) return { success: false, error: error.message };
 

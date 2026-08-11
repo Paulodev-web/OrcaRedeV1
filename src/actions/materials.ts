@@ -184,7 +184,7 @@ export async function excludeMaterialFromSessionAction(
         material_id: materialId,
         user_id: userId,
       },
-      { onConflict: 'session_id,material_id,user_id' }
+      { onConflict: 'session_id,material_id' }
     );
 
     if (insertError) {
@@ -196,14 +196,12 @@ export async function excludeMaterialFromSessionAction(
         .from('scenario_ideal_selections')
         .delete()
         .eq('session_id', sessionId)
-        .eq('material_id', materialId)
-        .eq('user_id', userId),
+        .eq('material_id', materialId),
       supabase
         .from('session_material_stock_inputs')
         .delete()
         .eq('session_id', sessionId)
-        .eq('material_id', materialId)
-        .eq('user_id', userId),
+        .eq('material_id', materialId),
     ]);
 
     revalidatePath('/fornecedores');

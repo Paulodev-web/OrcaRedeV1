@@ -50,7 +50,6 @@ export default async function NovaPropostaPage({
     supabase
       .from('saved_pricing_budgets')
       .select('id, budget_id, scenario_name, is_primary, valor_materiais, valor_servico, updated_at')
-      .eq('user_id', userId)
       .order('is_primary', { ascending: false })
       .order('updated_at', { ascending: false }),
     supabase

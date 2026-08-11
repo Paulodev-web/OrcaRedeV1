@@ -20,13 +20,12 @@ export async function getInactiveSuppliesMaterialIds(
 export async function getSessionExcludedMaterialIds(
   supabase: SupabaseClient,
   sessionId: string,
-  userId: string
+  _userId: string
 ): Promise<Set<string>> {
   const { data, error } = await supabase
     .from('session_material_exclusions')
     .select('material_id')
-    .eq('session_id', sessionId)
-    .eq('user_id', userId);
+    .eq('session_id', sessionId);
 
   if (error) {
     console.error('Erro ao buscar exclusões da sessão:', error);

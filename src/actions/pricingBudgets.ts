@@ -93,13 +93,12 @@ export async function savePricingBudgetAction(
 export async function deletePricingBudgetAction(id: string): Promise<ActionResult> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { error } = await supabase
       .from('saved_pricing_budgets')
       .delete()
-      .eq('id', id)
-      .eq('user_id', userId);
+      .eq('id', id);
 
     if (error) {
       return { success: false, error: error.message };

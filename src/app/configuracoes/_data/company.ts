@@ -43,15 +43,14 @@ const COMPANY_COLUMNS =
 const RESPONSIBLE_COLUMNS =
   "id, full_name, crea, signature_url, signature_storage_path, is_active, order_index";
 
-/** `null` enquanto o usuário nunca salvou — a tela abre com o formulário vazio. */
+/** `null` enquanto ninguém da organização salvou — a tela abre com o formulário vazio. */
 export async function getCompanySettings(): Promise<CompanySettingsRow | null> {
   const supabase = await createSupabaseServerClient();
-  const userId = await requireAuthUserId(supabase);
+  await requireAuthUserId(supabase);
 
   const { data, error } = await supabase
     .from("company_settings")
     .select(COMPANY_COLUMNS)
-    .eq("user_id", userId)
     .maybeSingle();
 
   if (error) {
@@ -65,12 +64,11 @@ export async function getCompanySettings(): Promise<CompanySettingsRow | null> {
 /** Inclui inativos: a tela precisa mostrar e permitir reativar. */
 export async function listTechnicalResponsibles(): Promise<TechnicalResponsibleRow[]> {
   const supabase = await createSupabaseServerClient();
-  const userId = await requireAuthUserId(supabase);
+  await requireAuthUserId(supabase);
 
   const { data, error } = await supabase
     .from("technical_responsibles")
     .select(RESPONSIBLE_COLUMNS)
-    .eq("user_id", userId)
     .order("is_active", { ascending: false })
     .order("order_index", { ascending: true })
     .order("full_name", { ascending: true });

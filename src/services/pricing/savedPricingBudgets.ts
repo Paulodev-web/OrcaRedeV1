@@ -27,11 +27,15 @@ export const DEFAULT_PRICING_SCENARIO = 'Principal';
 
 /**
  * Alvo do ON CONFLICT do upsert, espelhando
- * `saved_pricing_budgets_user_budget_scenario_key`. Fica junto do builder da linha
- * porque as duas coisas têm de mudar juntas: a UNIQUE antiga era (user_id, budget_id)
- * e o upsert quebrou com 42P10 quando a migration a substituiu.
+ * `saved_pricing_budgets_budget_scenario_key`. Fica junto do builder da linha
+ * porque as duas coisas têm de mudar juntas: já quebrou com 42P10 antes, quando
+ * uma migration trocou a UNIQUE sem que este alvo acompanhasse.
+ *
+ * `user_id` saiu da chave em 20260811120000: a precificação é da organização, e
+ * o segundo colega a salvar o mesmo cenário deve SOBRESCREVER a linha, não
+ * ganhar uma cópia paralela invisível para o outro.
  */
-export const SAVED_PRICING_CONFLICT_TARGET = 'user_id,budget_id,scenario_name';
+export const SAVED_PRICING_CONFLICT_TARGET = 'budget_id,scenario_name';
 
 export interface SavedPricingBudgetRow {
   id: string;
@@ -332,7 +336,6 @@ export async function listSavedPricingBudgets(
   const { data, error } = await supabase
     .from('saved_pricing_budgets')
     .select('*')
-    .eq('user_id', userId)
     .order('updated_at', { ascending: false });
 
   if (error) {
@@ -358,7 +361,6 @@ export async function getSavedPricingBudgetForBudget(
   const { data, error } = await supabase
     .from('saved_pricing_budgets')
     .select('*')
-    .eq('user_id', userId)
     .eq('budget_id', budgetId)
     .order('is_primary', { ascending: false })
     .order('updated_at', { ascending: false })
@@ -385,7 +387,6 @@ export async function getSavedPricingBudgetById(
     .from('saved_pricing_budgets')
     .select('*')
     .eq('id', savedPricingId)
-    .eq('user_id', userId)
     .maybeSingle();
 
   if (error) {

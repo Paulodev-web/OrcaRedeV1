@@ -50,13 +50,12 @@ function mapScenario(raw: Record<string, unknown>): PricingScenarioSummary {
 
 export async function listPricingScenariosForBudget(
   supabase: SupabaseClient,
-  userId: string,
+  _userId: string,
   budgetId: string,
 ): Promise<PricingScenarioSummary[]> {
   const { data, error } = await supabase
     .from('saved_pricing_budgets')
     .select(COLUMNS)
-    .eq('user_id', userId)
     .eq('budget_id', budgetId)
     .order('is_primary', { ascending: false })
     .order('updated_at', { ascending: false });
@@ -67,7 +66,7 @@ export async function listPricingScenariosForBudget(
 
 export async function getPricingScenarios(
   supabase: SupabaseClient,
-  userId: string,
+  _userId: string,
   ids: string[],
 ): Promise<PricingScenarioSummary[]> {
   if (ids.length === 0) return [];
@@ -75,7 +74,6 @@ export async function getPricingScenarios(
   const { data, error } = await supabase
     .from('saved_pricing_budgets')
     .select(COLUMNS)
-    .eq('user_id', userId)
     .in('id', ids);
 
   if (error) throw new Error(error.message);
