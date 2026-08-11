@@ -45,7 +45,6 @@ export default async function NovaPropostaPage({
     supabase
       .from('budgets')
       .select('id, project_name, client_name, city, status, updated_at, is_template')
-      .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(300),
     supabase
@@ -57,7 +56,6 @@ export default async function NovaPropostaPage({
     supabase
       .from('technical_responsibles')
       .select('id, full_name, crea')
-      .eq('user_id', userId)
       .eq('is_active', true)
       .order('order_index', { ascending: true }),
     listProposalTemplates(supabase, userId),

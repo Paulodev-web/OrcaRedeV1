@@ -19,7 +19,7 @@ interface PostsCountRow {
 }
 
 /**
- * Lista orçamentos finalizados do engineer logado, prontos para serem importados
+ * Lista orçamentos finalizados da organização, prontos para serem importados
  * como obras de Andamento. Retorno tipado, ordenado por finalização desc.
  *
  * - Status "finalizado" usa a mesma normalização que o Dashboard (`isBudgetFinalizedForImport`):
@@ -37,7 +37,6 @@ export async function getImportableBudgets(
   const { data: budgets, error } = await supabase
     .from('budgets')
     .select('id, project_name, client_name, city, status, plan_image_url, updated_at')
-    .eq('user_id', engineerId)
     .order('updated_at', { ascending: false });
 
   if (error) {

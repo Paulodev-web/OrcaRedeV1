@@ -38,12 +38,11 @@ export const EMPTY_SEGMENT_ASSIGNMENTS: BudgetSegmentAssignments = {
 /** Catálogo do usuário, na ordem em que aparece nas tabelas da proposta. */
 export async function listWorkSegments(
   supabase: SupabaseClient,
-  userId: string
+  _userId: string
 ): Promise<WorkSegment[]> {
   const { data, error } = await supabase
     .from('work_segments')
     .select('id, name, order_index, is_default')
-    .eq('user_id', userId)
     .order('order_index', { ascending: true })
     .order('name', { ascending: true });
 

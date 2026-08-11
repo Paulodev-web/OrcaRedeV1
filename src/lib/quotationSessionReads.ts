@@ -11,13 +11,12 @@ export async function getQuotationSessionByIdRead(
 ): Promise<ActionResult<QuotationSessionRow>> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { data, error } = await supabase
       .from('quotation_sessions')
       .select('id, title, budget_id, status, created_at, updated_at')
       .eq('id', sessionId)
-      .eq('user_id', userId)
       .single();
 
     if (error || !data) {
@@ -42,7 +41,7 @@ export async function listExtractionJobsBySessionRead(
 ): Promise<ActionResult<{ jobs: ExtractionJobRow[] }>> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { data, error } = await supabase
       .from('extraction_jobs')
@@ -50,7 +49,6 @@ export async function listExtractionJobsBySessionRead(
         'id, session_id, file_path, supplier_name, status, error_message, estimated_time, quote_id, pipeline_phase, started_at, finished_at, created_at, updated_at'
       )
       .eq('session_id', sessionId)
-      .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) {

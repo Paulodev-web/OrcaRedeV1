@@ -68,8 +68,7 @@ export async function updateMaterialAction(id: string, material: MaterialInput):
         price_source_session_id: null,
         price_source_updated_at: null,
       })
-      .eq('id', id)
-      .eq('user_id', userId);
+      .eq('id', id);
 
     if (error) {
       if (error.code === '23505') {
@@ -105,7 +104,6 @@ export async function syncMaterialPriceAction(
       .from('budgets')
       .select('id')
       .eq('id', budgetId)
-      .eq('user_id', userId)
       .maybeSingle();
 
     if (budgetError) {
@@ -113,7 +111,7 @@ export async function syncMaterialPriceAction(
     }
 
     if (!budget) {
-      return { success: false, error: 'Orçamento não encontrado para este usuário.' };
+      return { success: false, error: 'Orçamento não encontrado.' };
     }
 
     const data = await syncMaterialPriceEverywhere(supabase, userId, budgetId, materialId, newPrice);
@@ -158,7 +156,6 @@ export async function excludeMaterialFromSessionAction(
       .from('quotation_sessions')
       .select('id')
       .eq('id', sessionId)
-      .eq('user_id', userId)
       .maybeSingle();
 
     if (sessionError) {
@@ -172,7 +169,6 @@ export async function excludeMaterialFromSessionAction(
       .from('materials')
       .select('id')
       .eq('id', materialId)
-      .eq('user_id', userId)
       .maybeSingle();
 
     if (materialError) {

@@ -158,7 +158,6 @@ export async function listSupplierPdfHistory(
       supplier_quotes ( ${quoteSelect} )
     `
     )
-    .eq('user_id', userId)
     .eq('supplier_id', supplierId)
     .order('created_at', { ascending: false });
 
@@ -174,7 +173,6 @@ export async function listSupplierPdfHistory(
   const { data: orphanQuotes, error: quotesError } = await supabase
     .from('supplier_quotes')
     .select(quoteSelect)
-    .eq('user_id', userId)
     .eq('supplier_id', supplierId)
     .order('created_at', { ascending: false });
 

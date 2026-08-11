@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     console.log('[process-pdfs] POST recebido', { jobId });
 
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { data: job, error: jobError } = await supabase
       .from('extraction_jobs')
@@ -61,7 +61,6 @@ export async function POST(request: Request) {
       `
       )
       .eq('id', jobId)
-      .eq('user_id', userId)
       .single();
 
     if (jobError || !job) {

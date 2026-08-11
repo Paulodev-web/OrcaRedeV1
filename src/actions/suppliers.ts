@@ -103,12 +103,11 @@ function toDbPayload(input: SupplierInput): DbPayloadResult {
 export async function listSuppliersAction(): Promise<ActionResult<Supplier[]>> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { data, error } = await supabase
       .from('suppliers')
       .select('*')
-      .eq('user_id', userId)
       .eq('is_active', true)
       .order('name', { ascending: true });
 
@@ -125,12 +124,11 @@ export async function listSuppliersAction(): Promise<ActionResult<Supplier[]>> {
 export async function listAllSuppliersAction(): Promise<ActionResult<Supplier[]>> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { data, error } = await supabase
       .from('suppliers')
       .select('*')
-      .eq('user_id', userId)
       .order('is_active', { ascending: false })
       .order('name', { ascending: true });
 
@@ -147,13 +145,12 @@ export async function listAllSuppliersAction(): Promise<ActionResult<Supplier[]>
 export async function getSupplierAction(id: string): Promise<ActionResult<Supplier>> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { data, error } = await supabase
       .from('suppliers')
       .select('*')
       .eq('id', id)
-      .eq('user_id', userId)
       .single();
 
     if (error || !data) {
@@ -223,7 +220,6 @@ export async function updateSupplierAction(
       .from('suppliers')
       .update(parsed.data)
       .eq('id', id)
-      .eq('user_id', userId)
       .select('*')
       .single();
 
@@ -248,13 +244,12 @@ export async function updateSupplierAction(
 export async function deactivateSupplierAction(id: string): Promise<ActionResult> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { error } = await supabase
       .from('suppliers')
       .update({ is_active: false })
-      .eq('id', id)
-      .eq('user_id', userId);
+      .eq('id', id);
 
     if (error) return { success: false, error: error.message };
 
@@ -279,7 +274,6 @@ export async function listSupplierPdfHistoryAction(
       .from('suppliers')
       .select('id')
       .eq('id', supplierId)
-      .eq('user_id', userId)
       .maybeSingle();
 
     if (supplierError) {
@@ -329,7 +323,6 @@ export async function reactivateSupplierAction(id: string): Promise<ActionResult
       .from('suppliers')
       .select('name')
       .eq('id', id)
-      .eq('user_id', userId)
       .single();
 
     if (fetchErr || !existing) {
@@ -343,7 +336,6 @@ export async function reactivateSupplierAction(id: string): Promise<ActionResult
       .from('suppliers')
       .update({ is_active: true })
       .eq('id', id)
-      .eq('user_id', userId)
       .select('*')
       .single();
 

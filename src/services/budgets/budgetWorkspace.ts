@@ -38,14 +38,13 @@ function normalizeStatus(status: string | null): Orcamento['status'] {
  */
 export async function getBudgetForWorkspace(
   supabase: SupabaseClient,
-  userId: string,
+  _userId: string,
   budgetId: string
 ): Promise<Orcamento | null> {
   const { data, error } = await supabase
     .from('budgets')
     .select(BUDGET_COLUMNS)
     .eq('id', budgetId)
-    .eq('user_id', userId)
     .maybeSingle();
 
   if (error) {

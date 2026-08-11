@@ -36,7 +36,6 @@ export async function savePricingBudgetAction(
       .from('budgets')
       .select('id, project_name, client_name, city, user_id')
       .eq('id', input.budgetId)
-      .eq('user_id', userId)
       .maybeSingle();
 
     if (budgetError) {
@@ -44,7 +43,7 @@ export async function savePricingBudgetAction(
     }
 
     if (!budget) {
-      return { success: false, error: 'Orçamento não encontrado para este usuário.' };
+      return { success: false, error: 'Orçamento não encontrado.' };
     }
 
     const budgetRow = budget as {

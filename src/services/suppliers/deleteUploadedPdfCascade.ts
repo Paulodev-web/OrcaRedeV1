@@ -32,7 +32,6 @@ async function loadJob(
     .from('extraction_jobs')
     .select('id, session_id, user_id, file_path, status, quote_id')
     .eq('id', jobId)
-    .eq('user_id', userId)
     .eq('session_id', sessionId)
     .maybeSingle();
 
@@ -51,7 +50,6 @@ async function loadJobByQuoteId(
     .from('extraction_jobs')
     .select('id, session_id, user_id, file_path, status, quote_id')
     .eq('quote_id', quoteId)
-    .eq('user_id', userId)
     .eq('session_id', sessionId)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -71,7 +69,6 @@ async function loadQuotePdfPath(
     .from('supplier_quotes')
     .select('id, pdf_path')
     .eq('id', quoteId)
-    .eq('user_id', userId)
     .eq('session_id', sessionId)
     .maybeSingle();
 
@@ -118,7 +115,6 @@ export async function deleteUploadedPdfCascade(
     .from('quotation_sessions')
     .select('id, status')
     .eq('id', sessionId)
-    .eq('user_id', userId)
     .maybeSingle();
 
   if (sessionError) return { error: sessionError.message };
@@ -165,7 +161,6 @@ export async function deleteUploadedPdfCascade(
     const { error: quotesError } = await supabase
       .from('supplier_quotes')
       .delete()
-      .eq('user_id', userId)
       .eq('session_id', sessionId)
       .eq('id', resolvedQuoteId);
     if (quotesError) return { error: quotesError.message };
@@ -174,7 +169,6 @@ export async function deleteUploadedPdfCascade(
     const { error: quotesError } = await supabase
       .from('supplier_quotes')
       .delete()
-      .eq('user_id', userId)
       .eq('session_id', sessionId)
       .eq('pdf_path', filePath);
     if (quotesError) return { error: quotesError.message };
@@ -189,7 +183,6 @@ export async function deleteUploadedPdfCascade(
       .from('extraction_jobs')
       .select('id')
       .eq('session_id', sessionId)
-      .eq('user_id', userId)
       .eq('file_path', filePath);
 
     if (siblingError) return { error: siblingError.message };
@@ -203,7 +196,6 @@ export async function deleteUploadedPdfCascade(
       .from('extraction_jobs')
       .delete()
       .in('id', [...jobIdsToDelete])
-      .eq('user_id', userId)
       .eq('session_id', sessionId);
 
     if (jobsError) return { error: jobsError.message };

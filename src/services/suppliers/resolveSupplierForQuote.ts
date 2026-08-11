@@ -18,7 +18,6 @@ export async function resolveSupplierForQuote(
     .from('suppliers')
     .select('id, name, is_active')
     .eq('id', supplierId)
-    .eq('user_id', userId)
     .single();
 
   if (error || !data) {

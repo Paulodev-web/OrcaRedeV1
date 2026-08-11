@@ -365,8 +365,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         'budgets',
         'id, project_name, company_id, client_name, city, status, updated_at, plan_image_url, folder_id, is_template, template_source_id',
         'created_at',
-        false,
-        { user_id: user.id }
+        false
       );
 
 
@@ -1923,7 +1922,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const { data, error } = await supabase
         .from('budget_folders')
         .select('*')
-        .eq('user_id', user.id)
         .order('created_at', { ascending: true });
 
       if (error) {

@@ -32,13 +32,12 @@ async function authorizeContinueRequest(
 
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { data: job, error } = await supabase
       .from('extraction_jobs')
       .select('id')
       .eq('id', jobId)
-      .eq('user_id', userId)
       .maybeSingle();
 
     if (error || !job) {

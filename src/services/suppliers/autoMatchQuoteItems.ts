@@ -21,7 +21,6 @@ export async function autoMatchQuoteItems(
     .from('supplier_quotes')
     .select('id, supplier_name, budget_id, session_id')
     .eq('id', quoteId)
-    .eq('user_id', userId)
     .single();
 
   if (quoteError || !quote) {
@@ -41,7 +40,6 @@ export async function autoMatchQuoteItems(
   const { data: mappings, error: mappingsError } = await supabase
     .from('supplier_material_mappings')
     .select('id, supplier_material_name, internal_material_id, conversion_factor, times_used')
-    .eq('user_id', userId)
     .eq('supplier_name', quote.supplier_name);
 
   if (mappingsError || !mappings || mappings.length === 0) {

@@ -58,7 +58,6 @@ export async function saveManualSessionQuoteItem(
     .from('quotation_sessions')
     .select('id, budget_id')
     .eq('id', sessionId)
-    .eq('user_id', userId)
     .single();
 
   if (sessionError || !session) {
@@ -75,7 +74,6 @@ export async function saveManualSessionQuoteItem(
     .from('supplier_quotes')
     .select('id')
     .eq('session_id', sessionId)
-    .eq('user_id', userId)
     .eq('supplier_id', resolved.id)
     .eq('pdf_path', MANUAL_QUOTE_PDF_PATH)
     .maybeSingle();

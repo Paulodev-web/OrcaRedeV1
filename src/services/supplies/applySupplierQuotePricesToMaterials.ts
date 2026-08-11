@@ -44,7 +44,6 @@ type MaterialUpdate = {
  */
 export async function applySupplierQuotePricesToMaterials({
   supabase,
-  userId,
   sessionId,
   budgetId,
   scenarios,
@@ -84,7 +83,6 @@ export async function applySupplierQuotePricesToMaterials({
     .from('supplier_quotes')
     .select('id, supplier_id, supplier_name, suppliers ( name )')
     .eq('session_id', sessionId)
-    .eq('user_id', userId)
     .in('id', quoteIds);
 
   if (quoteError) {
@@ -115,7 +113,6 @@ export async function applySupplierQuotePricesToMaterials({
         price_source_updated_at: updatedAt,
       })
       .eq('id', item.materialId)
-      .eq('user_id', userId)
       .select('id')
       .maybeSingle();
 

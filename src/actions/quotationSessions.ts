@@ -73,7 +73,7 @@ export async function updateQuotationSessionAction(
     }
 
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { data, error } = await supabase
       .from('quotation_sessions')
@@ -82,7 +82,6 @@ export async function updateQuotationSessionAction(
         budget_id: input.budgetId,
       })
       .eq('id', sessionId)
-      .eq('user_id', userId)
       .select('id')
       .single();
 
@@ -104,13 +103,12 @@ export async function deleteQuotationSessionAction(
 ): Promise<ActionResult<void>> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { data: quotes, error: quotesError } = await supabase
       .from('supplier_quotes')
       .select('id')
-      .eq('session_id', sessionId)
-      .eq('user_id', userId);
+      .eq('session_id', sessionId);
 
     if (quotesError) {
       return { success: false, error: quotesError.message };
@@ -131,8 +129,7 @@ export async function deleteQuotationSessionAction(
       const { error: quotesDeleteError } = await supabase
         .from('supplier_quotes')
         .delete()
-        .in('id', quoteIds)
-        .eq('user_id', userId);
+        .in('id', quoteIds);
 
       if (quotesDeleteError) {
         return { success: false, error: quotesDeleteError.message };
@@ -143,7 +140,6 @@ export async function deleteQuotationSessionAction(
       .from('quotation_sessions')
       .delete()
       .eq('id', sessionId)
-      .eq('user_id', userId)
       .select('id')
       .single();
 
@@ -165,12 +161,11 @@ export async function listQuotationSessionsWithStatsAction(): Promise<
 > {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { data: rows, error } = await supabase
       .from('quotation_sessions')
       .select('id, title, budget_id, status, created_at, updated_at')
-      .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -187,12 +182,10 @@ export async function listQuotationSessionsWithStatsAction(): Promise<
       supabase
         .from('supplier_quotes')
         .select('id, session_id')
-        .eq('user_id', userId)
         .in('session_id', sessionIds),
       supabase
         .from('extraction_jobs')
         .select('id, session_id, status')
-        .eq('user_id', userId)
         .in('session_id', sessionIds),
     ]);
 
@@ -250,13 +243,12 @@ export async function completeQuotationSessionAction(
 ): Promise<ActionResult<void>> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { error } = await supabase
       .from('quotation_sessions')
       .update({ status: 'completed' })
-      .eq('id', sessionId)
-      .eq('user_id', userId);
+      .eq('id', sessionId);
 
     if (error) {
       return { success: false, error: error.message };
@@ -299,13 +291,12 @@ export async function retryExtractionJobsAction(
 ): Promise<ActionResult<{ jobIds: string[] }>> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { data: erroredJobs, error: listError } = await supabase
       .from('extraction_jobs')
       .select('id')
       .eq('session_id', sessionId)
-      .eq('user_id', userId)
       .eq('status', 'error');
 
     if (listError) {
@@ -331,8 +322,7 @@ export async function retryExtractionJobsAction(
         match_total_batches: null,
         pipeline_context: null,
       })
-      .in('id', jobIds)
-      .eq('user_id', userId);
+      .in('id', jobIds);
 
     if (updateError) {
       return { success: false, error: updateError.message };
@@ -356,7 +346,7 @@ export async function markExtractionJobsErrorAction(
     if (!jobIds.length) return { success: true, data: undefined };
 
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { error } = await supabase
       .from('extraction_jobs')
@@ -366,7 +356,6 @@ export async function markExtractionJobsErrorAction(
         finished_at: new Date().toISOString(),
       })
       .in('id', jobIds)
-      .eq('user_id', userId)
       .eq('status', 'processing');
 
     if (error) {
@@ -409,13 +398,12 @@ export async function listQuotesBySessionAction(
 ): Promise<ActionResult<{ quotes: { id: string; supplier_name: string; status: string; created_at: string }[] }>> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { data, error } = await supabase
       .from('supplier_quotes')
       .select('id, supplier_name, status, created_at')
       .eq('session_id', sessionId)
-      .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) {

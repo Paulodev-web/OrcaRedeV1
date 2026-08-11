@@ -32,13 +32,12 @@ export async function addMaterialSubgroupAction(name: string): Promise<ActionRes
 export async function updateMaterialSubgroupAction(id: string, name: string): Promise<ActionResult> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { error } = await supabase
       .from('material_subgroups')
       .update({ name: name.trim() })
-      .eq('id', id)
-      .eq('user_id', userId);
+      .eq('id', id);
 
     if (error) {
       if (error.code === '23505') {
@@ -58,13 +57,12 @@ export async function updateMaterialSubgroupAction(id: string, name: string): Pr
 export async function deleteMaterialSubgroupAction(id: string): Promise<ActionResult> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { error } = await supabase
       .from('material_subgroups')
       .delete()
-      .eq('id', id)
-      .eq('user_id', userId);
+      .eq('id', id);
 
     if (error) {
       return { success: false, error: error.message };

@@ -107,18 +107,17 @@ interface Accumulator {
 
 /**
  * Carrega o orçamento e devolve tudo que a proposta precisa dele.
- * `null` quando o orçamento não existe ou não é do usuário.
+ * `null` quando o orçamento não existe.
  */
 export async function loadBudgetSnapshot(
   supabase: SupabaseClient,
   budgetId: string,
-  userId: string,
+  _userId: string,
 ): Promise<BudgetSnapshot | null> {
   const { data: budgetRow, error: budgetError } = await supabase
     .from('budgets')
     .select('id, project_name, client_name, city, company_id, status, user_id')
     .eq('id', budgetId)
-    .eq('user_id', userId)
     .maybeSingle();
 
   if (budgetError || !budgetRow) return null;
@@ -159,7 +158,6 @@ export async function loadBudgetSnapshot(
     supabase
       .from('work_segments')
       .select('id, name, order_index')
-      .eq('user_id', userId)
       .order('order_index', { ascending: true }),
   ]);
 

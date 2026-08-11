@@ -54,7 +54,6 @@ async function resolveNumbering(
   const { data: siblings } = await supabase
     .from('proposals')
     .select('proposal_number, version')
-    .eq('user_id', userId)
     .eq('budget_id', budgetId)
     .order('version', { ascending: false })
     .limit(1);
@@ -69,7 +68,6 @@ async function resolveNumbering(
     const { data: sameNumber } = await supabase
       .from('proposals')
       .select('version')
-      .eq('user_id', userId)
       .eq('proposal_number', requestedNumber)
       .order('version', { ascending: false })
       .limit(1);
@@ -81,7 +79,6 @@ async function resolveNumbering(
   const { data: highestNumber } = await supabase
     .from('proposals')
     .select('proposal_number')
-    .eq('user_id', userId)
     .order('proposal_number', { ascending: false })
     .limit(1);
 
@@ -98,7 +95,7 @@ export async function createProposalFromBudget(
 
   const snapshot = await loadBudgetSnapshot(supabase, input.budgetId, userId);
   if (!snapshot) {
-    throw new Error('Orçamento não encontrado para este usuário.');
+    throw new Error('Orçamento não encontrado.');
   }
   if (snapshot.materials.length === 0) {
     warnings.push('O orçamento não tem material lançado: escopo, curva ABC e segmentos saem vazios.');
@@ -188,7 +185,7 @@ export async function createProposalFromBudget(
       unitsLabel: input.unitsLabel ?? null,
     });
   } catch (error) {
-    await supabase.from('proposals').delete().eq('id', proposalId).eq('user_id', userId);
+    await supabase.from('proposals').delete().eq('id', proposalId);
     throw error;
   }
 

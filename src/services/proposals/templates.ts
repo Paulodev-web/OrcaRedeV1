@@ -73,12 +73,11 @@ function parseSections(value: unknown): ProposalTemplateSection[] {
 
 export async function listProposalTemplates(
   supabase: SupabaseClient,
-  userId: string,
+  _userId: string,
 ): Promise<ProposalTemplateSummary[]> {
   const { data, error } = await supabase
     .from('proposal_templates')
     .select('id, name, description, is_default')
-    .eq('user_id', userId)
     .order('is_default', { ascending: false })
     .order('name', { ascending: true });
 
@@ -99,15 +98,14 @@ export async function listProposalTemplates(
  */
 export async function loadProposalTemplate(
   supabase: SupabaseClient,
-  userId: string,
+  _userId: string,
   templateId?: string | null,
 ): Promise<ProposalTemplateRecord | null> {
   let query = supabase
     .from('proposal_templates')
     .select(
       'id, name, is_default, scope_label, default_sections, institutional, billing_conditions, final_considerations, acceptance_closing_text',
-    )
-    .eq('user_id', userId);
+    );
 
   query = templateId ? query.eq('id', templateId) : query.eq('is_default', true);
 

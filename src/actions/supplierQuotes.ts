@@ -147,7 +147,6 @@ export async function createExtractionJobAction(input: {
       .from('quotation_sessions')
       .select('id, status')
       .eq('id', sessionId)
-      .eq('user_id', userId)
       .single();
 
     if (sessionError || !session) {
@@ -164,8 +163,7 @@ export async function createExtractionJobAction(input: {
     const { count: jobCount, error: countError } = await supabase
       .from('extraction_jobs')
       .select('id', { count: 'exact', head: true })
-      .eq('session_id', sessionId)
-      .eq('user_id', userId);
+      .eq('session_id', sessionId);
 
     if (countError) {
       return { success: false, error: countError.message };
@@ -221,7 +219,6 @@ export async function runAutoMatchAction(
       .from('supplier_quotes')
       .select('id')
       .eq('id', quoteId)
-      .eq('user_id', userId)
       .single();
 
     if (quoteError || !quote) {
@@ -256,9 +253,9 @@ export async function getQuoteWithItemsAction(
 ): Promise<ActionResult<{ quote: SupplierQuote; items: SupplierQuoteItemWithMaterial[] }>> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
-    // Primeiro verifica se a cotação existe (sem filtrar por user_id para diagnóstico)
+    // Primeiro verifica se a cotação existe
     const { data: quoteCheck, error: checkError } = await supabase
       .from('supplier_quotes')
       .select('id, user_id')
@@ -270,16 +267,6 @@ export async function getQuoteWithItemsAction(
       return { success: false, error: 'Cotação não encontrada no sistema.' };
     }
 
-    // Verifica ownership
-    if (quoteCheck.user_id !== userId) {
-      console.error('[getQuoteWithItemsAction] Ownership mismatch:', {
-        quoteId,
-        quoteUserId: quoteCheck.user_id,
-        requestingUserId: userId,
-      });
-      return { success: false, error: 'Você não tem permissão para acessar esta cotação.' };
-    }
-
     const primaryQuoteColumns =
       'id, budget_id, session_id, supplier_name, pdf_path, display_name, status, observacoes_gerais, quote_date, extraction_validated_at, user_id, created_at, updated_at';
     const legacyQuoteColumns =
@@ -289,7 +276,6 @@ export async function getQuoteWithItemsAction(
       .from('supplier_quotes')
       .select(primaryQuoteColumns)
       .eq('id', quoteId)
-      .eq('user_id', userId)
       .single();
 
     const quoteErrorMsg = quoteError?.message ?? '';
@@ -303,7 +289,6 @@ export async function getQuoteWithItemsAction(
         .from('supplier_quotes')
         .select(legacyQuoteColumns)
         .eq('id', quoteId)
-        .eq('user_id', userId)
         .single();
 
       quote = fallbackRes.data
@@ -476,7 +461,6 @@ export async function getCatalogMaterialsAction(
     const { data, error } = await supabase
       .from('materials')
       .select('id, code, name, unit')
-      .eq('user_id', userId)
       .eq('active_in_supplies', true)
       .order('name', { ascending: true });
 
@@ -543,9 +527,6 @@ export async function saveManualMatchAction(
       session_id: string | null;
       user_id: string;
     };
-    if (quote.user_id !== userId) {
-      return { success: false, error: 'Sem permissão para este item.' };
-    }
 
     const scope = await assertMaterialInBudgetScope(
       supabase,
@@ -604,7 +585,6 @@ export async function saveManualMatchAction(
         .from('supplier_quotes')
         .select('session_id')
         .eq('id', itemRow.quote_id)
-        .eq('user_id', userId)
         .single();
 
       if (quoteRow?.session_id) {
@@ -656,9 +636,6 @@ export async function acceptAiSuggestionAction(
       session_id: string | null;
       user_id: string;
     };
-    if (quote.user_id !== userId) {
-      return { success: false, error: 'Sem permissão para este item.' };
-    }
 
     const scope = await assertMaterialInBudgetScope(
       supabase,
@@ -723,7 +700,6 @@ export async function acceptAiSuggestionAction(
         .from('supplier_quotes')
         .select('session_id')
         .eq('id', itemRow.quote_id)
-        .eq('user_id', userId)
         .single();
 
       if (quoteRow?.session_id) {
@@ -754,7 +730,7 @@ export async function rejectAiSuggestionAction(
 ): Promise<ActionResult<void>> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { error: itemError } = await supabase
       .from('supplier_quote_items')
@@ -790,7 +766,6 @@ export async function rejectAiSuggestionAction(
         .from('supplier_quotes')
         .select('session_id')
         .eq('id', itemRow.quote_id)
-        .eq('user_id', userId)
         .single();
 
       if (quoteRow?.session_id) {
@@ -816,13 +791,12 @@ export async function markQuoteConciliatedAction(
 ): Promise<ActionResult<void>> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { error } = await supabase
       .from('supplier_quotes')
       .update({ status: 'conciliado' })
-      .eq('id', quoteId)
-      .eq('user_id', userId);
+      .eq('id', quoteId);
 
     if (error) {
       return { success: false, error: error.message };
@@ -832,7 +806,6 @@ export async function markQuoteConciliatedAction(
       .from('supplier_quotes')
       .select('session_id')
       .eq('id', quoteId)
-      .eq('user_id', userId)
       .single();
 
     if (quoteRow?.session_id) {
@@ -876,7 +849,7 @@ export async function listQuotesByBudgetAction(
 ): Promise<ActionResult<{ quotes: (SupplierQuote & { item_count: number; matched_count: number })[] }>> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const primaryQuoteColumns = `
       id,
@@ -913,7 +886,6 @@ export async function listQuotesByBudgetAction(
         .from('supplier_quotes')
         .select(columns)
         .eq('budget_id', budgetId)
-        .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
       if (sessionId) {
@@ -1338,9 +1310,8 @@ export async function validateExtractionAction(
 ): Promise<ActionResult<void>> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
-    // Verifica ownership antes de atualizar
     const { data: existing, error: existingError } = await supabase
       .from('supplier_quotes')
       .select('id, user_id, session_id, status')
@@ -1350,15 +1321,6 @@ export async function validateExtractionAction(
     if (existingError || !existing) {
       console.error('[validateExtractionAction] Cotação não encontrada:', quoteId, existingError?.message);
       return { success: false, error: 'Cotação não encontrada.' };
-    }
-
-    if (existing.user_id !== userId) {
-      console.error('[validateExtractionAction] Ownership mismatch:', {
-        quoteId,
-        quoteUserId: existing.user_id,
-        requestingUserId: userId,
-      });
-      return { success: false, error: 'Você não tem permissão para validar esta cotação.' };
     }
 
     const updates: Record<string, unknown> = {
@@ -1375,7 +1337,6 @@ export async function validateExtractionAction(
       .from('supplier_quotes')
       .update(updates)
       .eq('id', quoteId)
-      .eq('user_id', userId)
       .select('id')
       .single();
 
@@ -1389,8 +1350,7 @@ export async function validateExtractionAction(
       await supabase
         .from('supplier_quotes')
         .update({ status: 'conciliando' })
-        .eq('id', quoteId)
-        .eq('user_id', userId);
+        .eq('id', quoteId);
 
       after(async () => {
         await dispatchMatchToEdge(quoteId).catch((err) => {
@@ -1494,13 +1454,12 @@ export async function getConciliationPayloadBySessionAction(
 }>> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { data: sessionRow } = await supabase
       .from('quotation_sessions')
       .select('id, budget_id')
       .eq('id', sessionId)
-      .eq('user_id', userId)
       .single();
 
     if (!sessionRow) {
@@ -1511,7 +1470,6 @@ export async function getConciliationPayloadBySessionAction(
       .from('supplier_quotes')
       .select('id, supplier_id, supplier_name, status, suppliers ( name )')
       .eq('session_id', sessionId)
-      .eq('user_id', userId)
       .order('created_at', { ascending: true });
 
     type QuoteRow = {
@@ -1764,7 +1722,7 @@ export async function updateNegotiatedPriceAction(
 ): Promise<ActionResult<void>> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     if (precoNegociado !== null && precoNegociado <= 0) {
       return { success: false, error: 'O preço negociado deve ser maior que zero.' };
@@ -1788,10 +1746,6 @@ export async function updateNegotiatedPriceAction(
       user_id: string;
       session_id: string | null;
     };
-
-    if (quote.user_id !== userId) {
-      return { success: false, error: 'Sem permissão para alterar este item.' };
-    }
 
     if (quote.session_id !== sessionId) {
       return { success: false, error: 'Item não pertence a esta sessão.' };
@@ -1899,7 +1853,6 @@ export async function saveIdealSelectionAction(
       .from('supplier_quotes')
       .select('id, session_id, user_id')
       .eq('id', quoteId)
-      .eq('user_id', userId)
       .single();
 
     if (quoteError || !quote) {
@@ -1948,7 +1901,6 @@ export async function bulkSaveIdealSelectionsAction(
     const { data: quotes, error: quotesError } = await supabase
       .from('supplier_quotes')
       .select('id, session_id')
-      .eq('user_id', userId)
       .in('id', quoteIds);
 
     if (quotesError) {
@@ -2114,7 +2066,6 @@ export async function createQuoteAndDispatchExtractAction(
       .from('quotation_sessions')
       .select('id, status, budget_id')
       .eq('id', sessionId)
-      .eq('user_id', userId)
       .single();
 
     if (sessionError || !session) {
@@ -2129,8 +2080,7 @@ export async function createQuoteAndDispatchExtractAction(
     const { count: quoteCount } = await supabase
       .from('supplier_quotes')
       .select('id', { count: 'exact', head: true })
-      .eq('session_id', sessionId)
-      .eq('user_id', userId);
+      .eq('session_id', sessionId);
 
     if ((quoteCount ?? 0) >= MAX_PDFS_PER_QUOTATION) {
       return { success: false, error: `Esta cotação já atingiu o limite de ${MAX_PDFS_PER_QUOTATION} PDFs.` };
@@ -2183,7 +2133,7 @@ export async function createQuoteAndDispatchExtractAction(
 export async function processarConciliacaoAction(quoteId: string): Promise<ActionResult<void>> {
   try {
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const quoteIdTrimmed = quoteId?.trim();
     if (!quoteIdTrimmed) {
@@ -2195,7 +2145,6 @@ export async function processarConciliacaoAction(quoteId: string): Promise<Actio
       .from('supplier_quotes')
       .select('id, status, session_id')
       .eq('id', quoteIdTrimmed)
-      .eq('user_id', userId)
       .single();
 
     if (quoteError || !quote) {
@@ -2343,7 +2292,6 @@ export async function closeIdealScenarioAndUpdateMaterialsAction(
       .from('quotation_sessions')
       .select('id, budget_id')
       .eq('id', sessionId)
-      .eq('user_id', userId)
       .single();
 
     if (sessionError || !session) {
@@ -2419,7 +2367,6 @@ export async function updateMaterialsFromSupplierAction(
       .from('quotation_sessions')
       .select('id, budget_id')
       .eq('id', sessionId)
-      .eq('user_id', userId)
       .single();
 
     if (sessionError || !session) {

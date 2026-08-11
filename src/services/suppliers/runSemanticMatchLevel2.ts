@@ -65,7 +65,6 @@ async function loadSystemMaterials(
   const { data } = await supabase
     .from('materials')
     .select('id, code, name, unit')
-    .eq('user_id', userId)
     .eq('active_in_supplies', true);
 
   return ((data ?? []) as SystemMaterial[]).filter((m) => !excludedIds.has(m.id));

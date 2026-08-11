@@ -118,12 +118,11 @@ export async function createProposalAction(
 
 export async function deleteProposalAction(proposalId: string): Promise<ActionResult> {
   try {
-    const { supabase, userId } = await authorize();
+    const { supabase } = await authorize();
     const { error } = await supabase
       .from('proposals')
       .delete()
-      .eq('id', proposalId)
-      .eq('user_id', userId);
+      .eq('id', proposalId);
 
     if (error) return { success: false, error: error.message };
     revalidateProposal(proposalId);
@@ -155,7 +154,7 @@ export async function updateProposalHeaderAction(
   patch: ProposalHeaderPatch,
 ): Promise<ActionResult> {
   try {
-    const { supabase, userId, record } = await requireProposal(proposalId);
+    const { supabase, record } = await requireProposal(proposalId);
     assertEditable(record);
 
     const update: Record<string, unknown> = {};
@@ -179,8 +178,7 @@ export async function updateProposalHeaderAction(
     const { error } = await supabase
       .from('proposals')
       .update(update)
-      .eq('id', proposalId)
-      .eq('user_id', userId);
+      .eq('id', proposalId);
 
     if (error) return { success: false, error: error.message };
 
@@ -318,7 +316,7 @@ export async function updateProposalTextAction(
   patch: ProposalTextPatch,
 ): Promise<ActionResult> {
   try {
-    const { supabase, userId, record } = await requireProposal(proposalId);
+    const { supabase, record } = await requireProposal(proposalId);
     assertEditable(record);
 
     const update: Record<string, unknown> = {};
@@ -353,8 +351,7 @@ export async function updateProposalTextAction(
     const { error } = await supabase
       .from('proposals')
       .update(update)
-      .eq('id', proposalId)
-      .eq('user_id', userId);
+      .eq('id', proposalId);
 
     if (error) return { success: false, error: error.message };
     revalidateProposal(proposalId);
@@ -386,7 +383,7 @@ export async function saveAbcRowsAction(
   rows: AbcRowInput[],
 ): Promise<ActionResult> {
   try {
-    const { supabase, userId, record } = await requireProposal(proposalId);
+    const { supabase, record } = await requireProposal(proposalId);
     assertEditable(record);
 
     const normalized = normalizeAbcRows(
@@ -422,8 +419,7 @@ export async function saveAbcRowsAction(
     const { error: totalError } = await supabase
       .from('proposals')
       .update({ abc_grand_total: normalized.grandTotal })
-      .eq('id', proposalId)
-      .eq('user_id', userId);
+      .eq('id', proposalId);
     if (totalError) return { success: false, error: totalError.message };
 
     revalidateProposal(proposalId);
@@ -476,8 +472,7 @@ export async function refreshMaterialsAction(proposalId: string): Promise<Action
     const { error } = await supabase
       .from('proposals')
       .update({ materials_snapshot: snapshot.materials })
-      .eq('id', proposalId)
-      .eq('user_id', userId);
+      .eq('id', proposalId);
     if (error) return { success: false, error: error.message };
 
     const abc = buildAbcFromMaterials(snapshot.materials);
@@ -965,7 +960,7 @@ export async function saveScheduleAction(
   rows: ScheduleRowInput[],
 ): Promise<ActionResult> {
   try {
-    const { supabase, userId, record } = await requireProposal(proposalId);
+    const { supabase, record } = await requireProposal(proposalId);
     assertEditable(record);
 
     const cleanColumns = columns
@@ -977,8 +972,7 @@ export async function saveScheduleAction(
     const { error: columnsError } = await supabase
       .from('proposals')
       .update({ schedule_columns: cleanColumns })
-      .eq('id', proposalId)
-      .eq('user_id', userId);
+      .eq('id', proposalId);
     if (columnsError) return { success: false, error: columnsError.message };
 
     const { error: deleteError } = await supabase
@@ -1200,8 +1194,7 @@ export async function runProposalDraftStepAction(
     const { error } = await supabase
       .from('proposals')
       .update(update)
-      .eq('id', proposalId)
-      .eq('user_id', userId);
+      .eq('id', proposalId);
 
     if (error) return { success: false, error: error.message };
 
@@ -1329,7 +1322,7 @@ export async function publishProposalAction(
   proposalId: string,
 ): Promise<ActionResult<{ shareToken: string }>> {
   try {
-    const { supabase, userId, record } = await requireProposal(proposalId);
+    const { supabase, record } = await requireProposal(proposalId);
 
     const readiness = assessReadiness(record);
     if (readiness.issues.length > 0 || readiness.blockers.length > 0) {
@@ -1347,7 +1340,6 @@ export async function publishProposalAction(
       .from('proposals')
       .update({ status: 'published', revoked_at: null })
       .eq('id', proposalId)
-      .eq('user_id', userId)
       .select('share_token')
       .single();
 
@@ -1364,12 +1356,11 @@ export async function publishProposalAction(
 
 export async function unpublishProposalAction(proposalId: string): Promise<ActionResult> {
   try {
-    const { supabase, userId } = await authorize();
+    const { supabase } = await authorize();
     const { error } = await supabase
       .from('proposals')
       .update({ status: 'draft' })
-      .eq('id', proposalId)
-      .eq('user_id', userId);
+      .eq('id', proposalId);
 
     if (error) return { success: false, error: error.message };
     revalidateProposal(proposalId);
@@ -1386,12 +1377,11 @@ export async function unpublishProposalAction(proposalId: string): Promise<Actio
  */
 export async function revokeProposalLinkAction(proposalId: string): Promise<ActionResult> {
   try {
-    const { supabase, userId } = await authorize();
+    const { supabase } = await authorize();
     const { error } = await supabase
       .from('proposals')
       .update({ revoked_at: new Date().toISOString() })
-      .eq('id', proposalId)
-      .eq('user_id', userId);
+      .eq('id', proposalId);
 
     if (error) return { success: false, error: error.message };
     revalidateProposal(proposalId);

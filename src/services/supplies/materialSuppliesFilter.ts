@@ -7,7 +7,6 @@ export async function getInactiveSuppliesMaterialIds(
   const { data, error } = await supabase
     .from('materials')
     .select('id')
-    .eq('user_id', userId)
     .eq('active_in_supplies', false);
 
   if (error) {

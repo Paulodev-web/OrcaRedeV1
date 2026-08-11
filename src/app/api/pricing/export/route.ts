@@ -107,13 +107,12 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { data: budget, error: budgetError } = await supabase
       .from('budgets')
       .select('project_name, client_name, city')
       .eq('id', body.budgetId)
-      .eq('user_id', userId)
       .maybeSingle();
 
     if (budgetError) {
@@ -121,7 +120,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!budget) {
-      return NextResponse.json({ error: 'Orçamento não encontrado para este usuário.' }, { status: 404 });
+      return NextResponse.json({ error: 'Orçamento não encontrado.' }, { status: 404 });
     }
 
     const budgetRow = budget as {

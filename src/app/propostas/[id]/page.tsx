@@ -50,7 +50,6 @@ export default async function PropostaEditorPage({
     supabase
       .from('technical_responsibles')
       .select('id, full_name, crea')
-      .eq('user_id', userId)
       .eq('is_active', true)
       .order('order_index', { ascending: true }),
     listPricingScenariosForBudget(supabase, userId, record.proposal.budgetId),

@@ -155,7 +155,7 @@ export async function syncMaterialPriceInBudget(
  */
 export async function syncMaterialPriceInCatalog(
   supabase: SupabaseClient,
-  userId: string,
+  _userId: string,
   materialId: string,
   newPrice: number
 ): Promise<boolean> {
@@ -174,7 +174,6 @@ export async function syncMaterialPriceInCatalog(
       price_source_updated_at: null,
     })
     .eq('id', materialId)
-    .eq('user_id', userId)
     .select('id')
     .maybeSingle();
 

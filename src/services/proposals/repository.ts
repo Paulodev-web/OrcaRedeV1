@@ -396,14 +396,13 @@ function mapProposalRow(row: Record<string, unknown>): ProposalMainRow {
  *  salva cadastro pela metade, e a proposta só é bloqueada ao publicar. */
 export async function loadCompanySettings(
   supabase: SupabaseClient,
-  userId: string,
+  _userId: string,
 ): Promise<ProposalCompany> {
   const { data } = await supabase
     .from('company_settings')
     .select(
       'legal_name, trade_name, cnpj, address, phone_primary, phone_secondary, email, website, instagram, whatsapp_number, logo_url',
     )
-    .eq('user_id', userId)
     .maybeSingle();
 
   const row = (data ?? {}) as Record<string, unknown>;
@@ -446,19 +445,18 @@ async function loadResponsible(
 }
 
 /**
- * Carrega a proposta inteira. Devolve `null` quando ela não existe ou não é do
- * usuário — o RLS já garante isso, o `.eq('user_id')` é cinto e suspensório.
+ * Carrega a proposta inteira. Devolve `null` quando ela não existe ou não é da
+ * organização — o RLS já garante isso.
  */
 export async function loadProposalRecord(
   supabase: SupabaseClient,
-  userId: string,
+  _userId: string,
   proposalId: string,
 ): Promise<ProposalRecord | null> {
   const { data, error } = await supabase
     .from('proposals')
     .select(PROPOSAL_COLUMNS)
     .eq('id', proposalId)
-    .eq('user_id', userId)
     .maybeSingle();
 
   if (error || !data) return null;
@@ -708,7 +706,7 @@ async function loadProposalChildren(
 /** Lista de propostas do usuário, do mais recente para o mais antigo. */
 export async function listProposals(
   supabase: SupabaseClient,
-  userId: string,
+  _userId: string,
 ): Promise<ProposalListItem[]> {
   const { data, error } = await supabase
     .from('proposals')
@@ -718,7 +716,6 @@ export async function listProposals(
        budgets ( project_name ),
        proposal_pricing_options ( grand_total, is_recommended, order_index )`,
     )
-    .eq('user_id', userId)
     .order('updated_at', { ascending: false })
     .limit(200);
 

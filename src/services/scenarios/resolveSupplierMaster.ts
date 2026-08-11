@@ -22,7 +22,7 @@ function mapSupplierRow(row: Record<string, unknown>): Supplier {
 
 export async function resolveSupplierMasterForExport(
   supabase: SupabaseClient,
-  userId: string,
+  _userId: string,
   supplier: SupplierExportData
 ): Promise<Supplier | null> {
   if (supplier.quoteIds.length === 0) return null;
@@ -30,7 +30,6 @@ export async function resolveSupplierMasterForExport(
   const { data: quotes } = await supabase
     .from('supplier_quotes')
     .select('id, supplier_id')
-    .eq('user_id', userId)
     .in('id', supplier.quoteIds);
 
   const supplierId = quotes?.find((q) => q.supplier_id)?.supplier_id ?? null;
@@ -40,7 +39,6 @@ export async function resolveSupplierMasterForExport(
     .from('suppliers')
     .select('*')
     .eq('id', supplierId)
-    .eq('user_id', userId)
     .maybeSingle();
 
   return row ? mapSupplierRow(row as Record<string, unknown>) : null;
