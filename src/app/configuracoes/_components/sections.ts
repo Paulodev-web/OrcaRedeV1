@@ -135,12 +135,12 @@ export const CONFIG_SECTIONS: ConfigSection[] = [
     group: "identidade",
   },
   {
-    id: "usuarios",
-    label: "Usuários e permissões",
-    description: "Acesso por módulo para a equipe",
+    id: "organizacao",
+    label: "Organização e equipe",
+    description: "Organização ativa, setor de cada pessoa e acesso por módulo",
     icon: Users,
-    href: null,
-    status: "soon",
+    href: "/configuracoes/organizacao",
+    status: "active",
     group: "sistema",
   },
   {
