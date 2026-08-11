@@ -200,7 +200,7 @@ export function EngineerPortal() {
   };
   // `setActiveModule` saiu junto com o header próprio: voltar ao Portal agora é
   // ação do `EngineerPortalChrome`.
-  const { budgets, fetchBudgets, fetchBudgetDetails } = useApp();
+  const { budgets, fetchBudgets, fetchBudgetDetails, uploadPlanImage } = useApp();
   const alertDialog = useAlertDialog();
   const [currentView, setCurrentView] = useState<ViewMode>('dashboard');
   const [workTrackings, setWorkTrackings] = useState<WorkTracking[]>([]);
@@ -264,6 +264,7 @@ export function EngineerPortal() {
   const [pdfRenderVersion, setPdfRenderVersion] = useState<1 | 2>(2);
   const [isSavingChanges, setIsSavingChanges] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isUploadingPlan, setIsUploadingPlan] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isLoadingInitial, setIsLoadingInitial] = useState(true);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
@@ -812,6 +813,36 @@ export function EngineerPortal() {
       alertDialog.showError('Erro no upload', 'Não foi possível enviar a logo. Tente novamente.');
     } finally {
       setIsUploadingLogo(false);
+      e.target.value = '';
+    }
+  };
+
+  // Upload/substituição da planta (PDF ou imagem) do orçamento vinculado à obra.
+  // Sobe no orçamento de origem (não na obra) porque o efeito que sincroniza
+  // budget_data.plan_image_url sempre prioriza budget.imagemPlanta — subir só na
+  // obra seria sobrescrito de volta pela URL antiga no próximo re-render.
+  const handlePlanUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeTracking) return;
+    if (!activeTracking.budget_id) {
+      alertDialog.showError('Sem orçamento vinculado', 'Esta obra não está associada a um orçamento para receber a planta.');
+      e.target.value = '';
+      return;
+    }
+    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+      alertDialog.showError('Arquivo inválido', 'Selecione um PDF ou uma imagem (PNG, JPG, etc.).');
+      e.target.value = '';
+      return;
+    }
+    setIsUploadingPlan(true);
+    try {
+      await uploadPlanImage(activeTracking.budget_id, file);
+      alertDialog.showSuccess('Planta atualizada', 'A nova planta foi enviada e será exibida no mapa da obra.');
+    } catch (err) {
+      console.error('Erro ao fazer upload da planta:', err);
+      alertDialog.showError('Erro no upload', 'Não foi possível enviar a planta. Tente novamente.');
+    } finally {
+      setIsUploadingPlan(false);
       e.target.value = '';
     }
   };
@@ -2062,6 +2093,7 @@ export function EngineerPortal() {
                 postConnections={activeTracking.post_connections || []}
                 hidePostNames
                 postIconAlwaysGreen
+                loadingUpload={isUploadingPlan}
               />
 
 
@@ -2070,13 +2102,7 @@ export function EngineerPortal() {
                 type="file"
                 accept="image/*,application/pdf"
                 className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    console.log('Upload file:', file.name);
-                  }
-                  e.target.value = '';
-                }}
+                onChange={handlePlanUpload}
               />
               <p className="text-xs text-gray-500 mt-2 px-1">
                 Clique direito no mapa para adicionar poste; clique direito no ícone para excluir poste; clique direito na linha de rede para excluir trecho. Use Rede Azul/Verde e clique em dois postes para criar arcos.
