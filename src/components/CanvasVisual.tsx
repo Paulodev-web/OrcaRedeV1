@@ -834,8 +834,8 @@ export function CanvasVisual({
                       style={{
                         width: '6000px',
                         height: '6000px',
-                        backgroundColor: 'white',
-                        border: '1px solid #e5e7eb',
+                        backgroundColor: 'var(--color-surface)',
+                        border: '1px solid var(--color-border-subtle)',
                         position: 'relative'
                       }}
                     >
@@ -956,8 +956,8 @@ export function CanvasVisual({
                       style={{
                         width: '6000px',
                         height: '6000px',
-                        backgroundColor: 'white',
-                        border: '1px solid #e5e7eb',
+                        backgroundColor: 'var(--color-surface)',
+                        border: '1px solid var(--color-border-subtle)',
                         position: 'relative'
                       }}
                     >
@@ -988,10 +988,10 @@ export function CanvasVisual({
                         >
                           <div 
                             style={{
-                              backgroundColor: (budgetDetails?.render_version || 1) === 2 ? 'transparent' : '#f8f9fa',
+                              backgroundColor: (budgetDetails?.render_version || 1) === 2 ? 'transparent' : 'var(--color-surface-muted)',
                               padding: (budgetDetails?.render_version || 1) === 2 ? '0' : '20px',
                               borderRadius: (budgetDetails?.render_version || 1) === 2 ? '0' : '8px',
-                              border: (budgetDetails?.render_version || 1) === 2 ? 'none' : '2px solid #dee2e6',
+                              border: (budgetDetails?.render_version || 1) === 2 ? 'none' : '2px solid var(--color-border-subtle)',
                               pointerEvents: 'none'
                           }}
                         >

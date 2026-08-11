@@ -51,3 +51,6 @@ yarn-error.log*
 # scratch local
 /tmp/
 .claude/settings.local.json
+
+# repositório Git separado (apkOrcarde), aninhado por engano nesta pasta
+/ApkOrcaRede/
