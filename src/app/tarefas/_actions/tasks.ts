@@ -9,9 +9,11 @@ import {
   taskStageSector,
   type CreateTaskInput,
   type MoveTaskInput,
+  type TaskBoard,
   type TaskSector,
   type TaskStage,
 } from '@/types/tasks';
+import { getBoard } from '../_data/tasks';
 
 /**
  * O board é client-side e reconcilia por Realtime, então estas ações NÃO
@@ -27,6 +29,25 @@ function revalidateBoard(taskId?: string) {
 /** Espaço entre duas posições vizinhas abaixo do qual a coluna é reequilibrada. */
 const MIN_POSITION_GAP = 0.001;
 const POSITION_STEP = 1000;
+
+/**
+ * A esteira inteira, para o cliente reconciliar.
+ *
+ * Usada em dois momentos: logo depois de criar um card (resposta determinística,
+ * sem esperar o Realtime dar a volta) e como `pollingFn` de
+ * `useRealtimeChannel` quando o canal cai. Sem isso, um Realtime indisponível
+ * deixaria o board congelado até o próximo F5.
+ */
+export async function getBoardSnapshotAction(): Promise<ActionResult<TaskBoard>> {
+  const gate = await ensureOrgMember();
+  if (!gate.ok) return { success: false, error: gate.error };
+
+  try {
+    return { success: true, data: await getBoard(gate.supabase) };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Erro ao recarregar.' };
+  }
+}
 
 // -----------------------------------------------------------------------------
 // Criar

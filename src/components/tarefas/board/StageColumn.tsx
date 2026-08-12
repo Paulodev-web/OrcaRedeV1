@@ -38,7 +38,7 @@ const TONE_TEXT: Record<SectorTone, string> = {
 };
 
 export function StageColumn({ columnKey }: StageColumnProps) {
-  const { visibleIds, cards, columns, filters } = useBoard();
+  const { cards, columns, filters, matchCount, filtersActive } = useBoard();
 
   const stage = columnStage(columnKey);
   const sector = columnSector(columnKey);
@@ -51,8 +51,12 @@ export function StageColumn({ columnKey }: StageColumnProps) {
     accept: 'card',
   });
 
-  const ids = visibleIds(columnKey);
-  const totalInColumn = (columns[columnKey] ?? []).length;
+  // A lista renderizada é a lista REAL da coluna, sem filtro. Filtro esmaece
+  // (ver o racional em BoardProvider): esconder criava buracos na numeração que
+  // cada card entrega ao `useSortable`, e o `move()` do dnd-kit reordenava
+  // sobre índices inexistentes.
+  const ids = columns[columnKey] ?? [];
+  const matched = matchCount(columnKey);
   const tone = sector ? TASK_SECTOR_TONE[sector] : null;
 
   // Setor em foco não esconde os outros — apenas destaca. Enxergar a fila do
@@ -85,8 +89,11 @@ export function StageColumn({ columnKey }: StageColumnProps) {
             </p>
           )}
         </div>
-        <span className="shrink-0 rounded-full bg-neutral-200 px-2 py-0.5 text-[11px] font-medium text-neutral-600">
-          {ids.length === totalInColumn ? ids.length : `${ids.length}/${totalInColumn}`}
+        <span
+          className="shrink-0 rounded-full bg-neutral-200 px-2 py-0.5 text-[11px] font-medium text-neutral-600"
+          title={filtersActive ? `${matched} de ${ids.length} casam com o filtro` : undefined}
+        >
+          {filtersActive ? `${matched}/${ids.length}` : ids.length}
         </span>
       </header>
 

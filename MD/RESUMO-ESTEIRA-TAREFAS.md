@@ -199,4 +199,92 @@ funciona e é deep-linkável).
 3. O preâmbulo do `tarefas_core` derruba as tabelas `tasks`/`task_messages`/`task_members`/`task_transitions` **se existirem**. Em produção elas não existem — mas confira antes de rodar.
 4. Conferir que o bucket `tarefas` nasceu privado.
 
-*Escrito em 12/08/2026*
+---
+
+## 7. Segunda rodada — correções e OrçaRede
+
+### 7.1 O bug do drop (a esteira ficava "estranha" ao soltar)
+
+Três causas, todas reais:
+
+**a) O `dragend` lia o estado errado.** `onDragEnd` dispara no mesmo tique do
+último `onDragOver`, antes de o React recomeçar o render. Ler `columns` do
+closure ali devolvia o arranjo de **antes** do arrasto, e a posição gravada saía
+calculada sobre os vizinhos errados — por isso o card pulava de lugar segundos
+depois de soltar, quando o eco do Realtime chegava com a posição real.
+
+Correção: `cardsRef`/`columnsRef` viraram espelhos **síncronos**, escritos junto
+com o `setState` dentro dos manipuladores de evento. `applyColumns()` devolve o
+arranjo novo, e o `dragend` passa esse arranjo direto para `commitMove` em vez
+de ler do estado.
+
+**b) `move()` só rodava no `dragover`.** O arranjo final do `dragend` pode
+diferir do último `dragover`. Agora roda nos dois.
+
+**c) O filtro escondia cards e desalinhava os índices.** Cada card entrega um
+`index` ao `useSortable` que precisa bater com a posição real dentro de
+`columns[key]`. Como `visibleIds()` filtrava a lista renderizada, a numeração
+ganhava buracos e o `move()` reordenava sobre índices inexistentes. Agora o
+filtro **esmaece** (que era o comportamento documentado desde o início) e o
+contador da coluna mostra `casam/total`.
+
+Ainda nessa: o card declarava `accept: ['card', 'column']`, se anunciando como
+destino de uma coluna inteira e sujando a detecção de colisão. Passou a
+`accept: 'card'` — quem aceita card para o caso da coluna vazia é o droppable da
+própria coluna.
+
+**Bônus:** o efeito que ressincronizava o board com o servidor saiu e no lugar
+entrou o `pollingFallbackMs` do `useRealtimeChannel` (30 s) apontando para uma
+ação nova, `getBoardSnapshotAction`. Só roda quando o canal cai de verdade, e
+nunca com arrasto em voo.
+
+### 7.2 O card virou modal
+
+Rota interceptadora `@card/(.)[taskId]`: clicar num card abre um modal de
+`1120×860` (limitado a 94vw/88vh) **por cima** do board, que continua montado
+atrás — nada é desmontado e fechar é instantâneo. `/tarefas/[taskId]` continua
+servindo link direto, F5 e nova aba, com os mesmos componentes; há um botão de
+"abrir em página cheia" no cabeçalho do modal.
+
+Organização do modal: cabeçalho fixo (título editável + etapa + cliente +
+orçamento), corpo em duas colunas com **rolagem independente**, e a atividade
+ocupando a altura que sobra (`fill`) em vez do teto de 520 px da página.
+
+Arquivos: `src/app/tarefas/@card/(.)[taskId]/page.tsx`,
+`src/app/tarefas/@card/default.tsx`, `src/components/tarefas/detail/TaskModal.tsx`,
+e o slot `card` no `src/app/tarefas/layout.tsx`.
+
+### 7.3 dnd-kit no OrçaRede (pastas)
+
+O Dashboard usava drag-and-drop **nativo do HTML5**: `draggable`, `dataTransfer`,
+e um `setDragImage` que desenhava uma etiqueta fora da tela porque o fantasma
+padrão do navegador é feio. Não funcionava em toque, e exigia quatro estados em
+paralelo (item, alvo, "está por cima", validade) mais um `setTimeout` de 50 ms
+para contornar o flicker do `dragleave` ao passar por cima de um filho.
+
+Agora é o mesmo motor da Esteira.
+
+**Uma correção que veio junto, e era necessária:** `BudgetCard` e `FolderCard`
+estavam declarados **dentro** do corpo do `Dashboard`. Componente declarado
+dentro de outro ganha identidade nova a cada render do pai, e o React desmonta e
+remonta a subárvore inteira — com HTML5 isso só custava performance, mas com
+dnd-kit apagaria o registro do elemento arrastável no meio do gesto. Os dois
+foram extraídos para módulos próprios com props explícitas.
+
+| Arquivo | O que é |
+|---|---|
+| `src/components/orcamentos/BudgetCard.tsx` | Cartão de orçamento, arrastável |
+| `src/components/orcamentos/FolderCard.tsx` | Cartão de pasta: arrastável **e** alvo de drop (dois hooks, refs compostos) |
+| `src/components/orcamentos/dnd/dashboardDnd.ts` | Ids estruturados (`budget:<id>`, `zone:<nome>:<pasta>`) |
+| `src/components/orcamentos/dnd/FolderDropZone.tsx` | Zona de drop com render-prop |
+| `src/components/orcamentos/dnd/useDragToOpenGuard.ts` | Soltar depois de arrastar não conta como clique (guarda geométrica de 5 px, no lugar do `isClick` que dependia da ordem `dragstart`→`click` do HTML5) |
+
+Zonas de drop: cartão da pasta, cada item do breadcrumb, "subir um nível" e a
+área do nível atual. A validação (pasta dentro de si mesma, dentro de uma
+descendente, ou já no destino) roda tanto no realce visual quanto no `dragend`,
+porque toque e teclado podem soltar sem passar pelo hover.
+
+As cores fixas de `blue-*` dessas áreas foram trocadas pelos tokens `accent-*`
+do sistema de design.
+
+*Segunda rodada escrita em 12/08/2026*

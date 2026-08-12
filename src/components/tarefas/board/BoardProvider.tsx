@@ -4,7 +4,6 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -24,7 +23,7 @@ import {
   type TaskSector,
   type TaskStage,
 } from '@/types/tasks';
-import { moveTaskAction } from '@/app/tarefas/_actions/tasks';
+import { getBoardSnapshotAction, moveTaskAction } from '@/app/tarefas/_actions/tasks';
 
 /**
  * Chave de coluna. As 9 etapas usam o próprio nome; a faixa de avulsas usa um
@@ -65,17 +64,19 @@ interface BoardFilters {
 interface BoardContextValue {
   cards: Record<string, TaskCard>;
   columns: ColumnMap;
-  setColumns: (updater: (prev: ColumnMap) => ColumnMap) => void;
+  /** Atualiza a ordem e DEVOLVE o resultado, já legível no mesmo evento. */
+  applyColumns: (updater: (prev: ColumnMap) => ColumnMap) => ColumnMap;
   members: TaskBoardMember[];
   viewerId: string;
   viewerSector: TaskSector | null;
 
   filters: BoardFilters;
   setFilters: (patch: Partial<BoardFilters>) => void;
-  /** Ids visíveis numa coluna depois dos filtros, na ordem. */
-  visibleIds: (key: ColumnKey) => string[];
-  /** Um card passa pelos filtros? Usado para esmaecer em vez de sumir. */
+  /** Um card passa pelos filtros? Filtro esmaece, não esconde. */
   matchesFilters: (card: TaskCard) => boolean;
+  /** Quantos cards da coluna casam com o filtro atual. */
+  matchCount: (key: ColumnKey) => number;
+  filtersActive: boolean;
 
   /** Direção do último pouso de cada card — dispara o flash e some. */
   landing: Record<string, TaskMoveDirection>;
@@ -83,12 +84,21 @@ interface BoardContextValue {
   entering: Set<string>;
 
   beginDrag: () => void;
-  /** Persiste o que o arrasto já mostrou na tela. */
-  commitMove: (taskId: string, toColumn: ColumnKey, note?: string) => Promise<void>;
+  /**
+   * Persiste o que o arrasto já mostrou na tela. `arrangement` é o mapa de
+   * colunas JÁ reordenado — passado explicitamente porque o estado do React
+   * ainda não recomeçou o render quando o `dragend` dispara.
+   */
+  commitMove: (
+    taskId: string,
+    toColumn: ColumnKey,
+    arrangement: ColumnMap,
+    note?: string,
+  ) => Promise<void>;
   cancelDrag: () => void;
-  /** Aplica localmente uma mudança de campo já persistida (assumir, travar…). */
   patchCard: (taskId: string, patch: Partial<TaskCard>) => void;
-  removeCard: (taskId: string) => void;
+  /** Recarrega a esteira do servidor (criação de card, queda do Realtime). */
+  reloadBoard: () => Promise<void>;
 }
 
 const BoardContext = createContext<BoardContextValue | null>(null);
@@ -162,7 +172,7 @@ export function BoardProvider({
 }: BoardProviderProps) {
   const initial = useMemo(() => buildInitialState(initialBoard), [initialBoard]);
 
-  const [cards, setCards] = useState<Record<string, TaskCard>>(initial.cards);
+  const [cards, setCardsState] = useState<Record<string, TaskCard>>(initial.cards);
   const [columns, setColumnsState] = useState<ColumnMap>(initial.columns);
   const [landing, setLanding] = useState<Record<string, TaskMoveDirection>>({});
   const [entering, setEntering] = useState<Set<string>>(() => new Set());
@@ -175,32 +185,51 @@ export function BoardProvider({
     showTerminal: false,
   });
 
+  /**
+   * Espelhos SÍNCRONOS de `cards` e `columns`.
+   *
+   * O `dragend` do dnd-kit dispara no mesmo tique do último `dragover`, antes de
+   * o React recomeçar o render — ler `columns` do closure ali devolveria o
+   * arranjo de ANTES do arrasto, e a posição gravada sairia calculada sobre os
+   * vizinhos errados. Era isso que fazia o card pular de lugar segundos depois
+   * de soltar, quando o eco do Realtime chegava com a posição real.
+   *
+   * As escritas acontecem só dentro de manipuladores de evento e callbacks —
+   * nunca durante o render.
+   */
+  const cardsRef = useRef(initial.cards);
+  const columnsRef = useRef(initial.columns);
+
+  const applyCards = useCallback(
+    (updater: (prev: Record<string, TaskCard>) => Record<string, TaskCard>) => {
+      const next = updater(cardsRef.current);
+      cardsRef.current = next;
+      setCardsState(next);
+      return next;
+    },
+    [],
+  );
+
+  const applyColumns = useCallback((updater: (prev: ColumnMap) => ColumnMap) => {
+    const next = updater(columnsRef.current);
+    columnsRef.current = next;
+    setColumnsState(next);
+    return next;
+  }, []);
+
   // Snapshot tirado no início do arrasto — é para cá que a tela volta se o
-  // servidor recusar ou o usuário cancelar. Ref e não state: mudar isso não
-  // deve redesenhar nada.
+  // servidor recusar ou o usuário cancelar.
   const snapshotRef = useRef<{ cards: Record<string, TaskCard>; columns: ColumnMap } | null>(null);
 
   // Ids cuja mudança PARTIU desta aba. O eco do Realtime sobre eles é aplicado
   // sem animação — quem moveu o card já viu o movimento acontecer.
   const selfMutatedRef = useRef<Set<string>>(new Set());
 
-  // Espelho do estado dos cards, legível de dentro de um updater de setState
-  // (onde `cards` do render corrente já estaria velho). É o que permite inserir
-  // um card que chegou pelo Realtime na posição certa da coluna, e não no fim.
-  const cardsRef = useRef(cards);
-  useEffect(() => {
-    cardsRef.current = cards;
-  }, [cards]);
-
   const memberNames = useMemo(() => {
     const map = new Map<string, string>();
     for (const m of members) map.set(m.userId, m.name);
     return map;
   }, [members]);
-
-  const setColumns = useCallback((updater: (prev: ColumnMap) => ColumnMap) => {
-    setColumnsState(updater);
-  }, []);
 
   const setFilters = useCallback((patch: Partial<BoardFilters>) => {
     setFiltersState((prev) => ({ ...prev, ...patch }));
@@ -217,6 +246,28 @@ export function BoardProvider({
     }, 450);
   }, []);
 
+  /**
+   * Recarrega a esteira inteira do servidor.
+   *
+   * Serve de rede de segurança em dois casos: `pollingFn` de
+   * `useRealtimeChannel` (o canal caiu — sem isso o board congelaria até o
+   * próximo F5) e confirmação de criação de card, que não precisa esperar o
+   * Realtime dar a volta.
+   *
+   * Não roda com arrasto em voo: sobrescrever o estado no meio de um movimento
+   * otimista faria o card voltar sozinho para a coluna de origem.
+   */
+  const reloadBoard = useCallback(async () => {
+    if (snapshotRef.current) return;
+    const result = await getBoardSnapshotAction();
+    if (!result.success || !result.data) return;
+    const next = buildInitialState(result.data);
+    cardsRef.current = next.cards;
+    columnsRef.current = next.columns;
+    setCardsState(next.cards);
+    setColumnsState(next.columns);
+  }, []);
+
   // ---------------------------------------------------------------------------
   // Realtime — reconcilia o que os colegas fizeram
   // ---------------------------------------------------------------------------
@@ -225,7 +276,7 @@ export function BoardProvider({
     (row: TaskDbPayload) => {
       const isSelf = selfMutatedRef.current.has(row.id);
 
-      setCards((prev) => {
+      applyCards((prev) => {
         const existing = prev[row.id];
         const next: TaskCard = {
           id: row.id,
@@ -259,13 +310,12 @@ export function BoardProvider({
         ? (row.stage as TaskStage)
         : avulsaKey(row.sector as TaskSector);
 
-      setColumnsState((prev) => {
-        const next: ColumnMap = {};
+      applyColumns((prev) => {
+        const next: ColumnMap = { ...prev };
         let currentKey: string | null = null;
 
         for (const [key, ids] of Object.entries(prev)) {
           if (ids.includes(row.id)) currentKey = key;
-          next[key] = ids;
         }
 
         if (currentKey === targetKey) return prev;
@@ -303,23 +353,26 @@ export function BoardProvider({
 
       selfMutatedRef.current.delete(row.id);
     },
-    [budgetNames, memberNames],
+    [applyCards, applyColumns, budgetNames, memberNames],
   );
 
-  const handleRemoteDelete = useCallback((row: { id: string }) => {
-    setColumnsState((prev) => {
-      const next: ColumnMap = {};
-      for (const [key, ids] of Object.entries(prev)) {
-        next[key] = ids.filter((id) => id !== row.id);
-      }
-      return next;
-    });
-    setCards((prev) => {
-      const next = { ...prev };
-      delete next[row.id];
-      return next;
-    });
-  }, []);
+  const handleRemoteDelete = useCallback(
+    (row: { id: string }) => {
+      applyColumns((prev) => {
+        const next: ColumnMap = {};
+        for (const [key, ids] of Object.entries(prev)) {
+          next[key] = ids.filter((id) => id !== row.id);
+        }
+        return next;
+      });
+      applyCards((prev) => {
+        const next = { ...prev };
+        delete next[row.id];
+        return next;
+      });
+    },
+    [applyCards, applyColumns],
+  );
 
   const realtimeEvents = useMemo(
     () => [
@@ -344,37 +397,45 @@ export function BoardProvider({
     [orgId, applyRemoteRow, handleRemoteDelete],
   );
 
-  useRealtimeChannel({ channelName: `tarefas:${orgId}`, events: realtimeEvents });
+  useRealtimeChannel({
+    channelName: `tarefas:${orgId}`,
+    events: realtimeEvents,
+    pollingFallbackMs: 30_000,
+    pollingFn: reloadBoard,
+  });
 
   // ---------------------------------------------------------------------------
   // Arrasto
   // ---------------------------------------------------------------------------
 
   const beginDrag = useCallback(() => {
-    snapshotRef.current = { cards, columns };
-  }, [cards, columns]);
+    snapshotRef.current = { cards: cardsRef.current, columns: columnsRef.current };
+  }, []);
 
   const cancelDrag = useCallback(() => {
     const snapshot = snapshotRef.current;
     if (!snapshot) return;
-    setCards(snapshot.cards);
+    cardsRef.current = snapshot.cards;
+    columnsRef.current = snapshot.columns;
+    setCardsState(snapshot.cards);
     setColumnsState(snapshot.columns);
     snapshotRef.current = null;
   }, []);
 
   const commitMove = useCallback(
-    async (taskId: string, toColumn: ColumnKey, note?: string) => {
-      const card = cards[taskId];
+    async (taskId: string, toColumn: ColumnKey, arrangement: ColumnMap, note?: string) => {
+      const card = cardsRef.current[taskId];
       if (!card) return;
 
       const toStage = columnStage(toColumn);
       const toSector = columnSector(toColumn) ?? card.sector;
       const direction = taskMoveDirection(card.stage, toStage);
+      const changedColumn = card.stage !== toStage || card.sector !== toSector;
 
-      // Vizinhos DEPOIS do arrasto — o servidor tira a posição do ponto médio
-      // entre eles. Mandar a posição pronta perderia a corrida contra um colega
-      // arrastando na mesma coluna ao mesmo tempo.
-      const ids = columns[toColumn] ?? [];
+      // Vizinhos DEPOIS do arrasto, lidos do arranjo recebido. O servidor tira a
+      // posição do ponto médio entre eles — mandar a posição pronta perderia a
+      // corrida contra um colega arrastando na mesma coluna ao mesmo tempo.
+      const ids = arrangement[toColumn] ?? [];
       const index = ids.indexOf(taskId);
       const prevTaskId = index > 0 ? ids[index - 1] : null;
       const nextTaskId = index >= 0 && index < ids.length - 1 ? ids[index + 1] : null;
@@ -382,14 +443,12 @@ export function BoardProvider({
       selfMutatedRef.current.add(taskId);
 
       // Otimista: o card já mudou de etapa/setor na tela antes da resposta.
-      setCards((prev) => ({
+      applyCards((prev) => ({
         ...prev,
         [taskId]: { ...prev[taskId], stage: toStage, sector: toSector },
       }));
 
-      if (card.stage !== toStage || card.sector !== toSector) {
-        flashLanding(taskId, direction);
-      }
+      if (changedColumn) flashLanding(taskId, direction);
 
       const result = await moveTaskAction({
         taskId,
@@ -409,20 +468,26 @@ export function BoardProvider({
 
       snapshotRef.current = null;
     },
-    [cards, columns, flashLanding, cancelDrag],
+    [applyCards, flashLanding, cancelDrag],
   );
 
-  const patchCard = useCallback((taskId: string, patch: Partial<TaskCard>) => {
-    selfMutatedRef.current.add(taskId);
-    setCards((prev) => (prev[taskId] ? { ...prev, [taskId]: { ...prev[taskId], ...patch } } : prev));
-  }, []);
-
-  const removeCard = useCallback((taskId: string) => {
-    handleRemoteDelete({ id: taskId });
-  }, [handleRemoteDelete]);
+  const patchCard = useCallback(
+    (taskId: string, patch: Partial<TaskCard>) => {
+      selfMutatedRef.current.add(taskId);
+      applyCards((prev) => (prev[taskId] ? { ...prev, [taskId]: { ...prev[taskId], ...patch } } : prev));
+    },
+    [applyCards],
+  );
 
   // ---------------------------------------------------------------------------
-  // Filtros — esmaecem, não escondem. Ver a fila do vizinho é o ponto da esteira.
+  // Filtros — ESMAECEM, não escondem.
+  //
+  // Duas razões. A primeira é de produto: ver a fila do vizinho é o ponto da
+  // esteira, e esconder recria os quatro quadros isolados que ela substituiu.
+  // A segunda é mecânica: o `index` que cada card entrega ao `useSortable`
+  // precisa bater com o índice real dentro de `columns[key]`. Filtrar a lista
+  // renderizada criava buracos nessa numeração e o `move()` do dnd-kit
+  // reordenava sobre índices que não existiam.
   // ---------------------------------------------------------------------------
 
   const matchesFilters = useCallback(
@@ -438,8 +503,11 @@ export function BoardProvider({
     [filters.onlyMine, filters.search, viewerId],
   );
 
-  const visibleIds = useCallback(
-    (key: ColumnKey) => (columns[key] ?? []).filter((id) => cards[id] && matchesFilters(cards[id])),
+  const filtersActive = filters.onlyMine || filters.search.trim().length > 0;
+
+  const matchCount = useCallback(
+    (key: ColumnKey) =>
+      (columns[key] ?? []).filter((id) => cards[id] && matchesFilters(cards[id])).length,
     [columns, cards, matchesFilters],
   );
 
@@ -447,40 +515,42 @@ export function BoardProvider({
     () => ({
       cards,
       columns,
-      setColumns,
+      applyColumns,
       members,
       viewerId,
       viewerSector,
       filters,
       setFilters,
-      visibleIds,
       matchesFilters,
+      matchCount,
+      filtersActive,
       landing,
       entering,
       beginDrag,
       commitMove,
       cancelDrag,
       patchCard,
-      removeCard,
+      reloadBoard,
     }),
     [
       cards,
       columns,
-      setColumns,
+      applyColumns,
       members,
       viewerId,
       viewerSector,
       filters,
       setFilters,
-      visibleIds,
       matchesFilters,
+      matchCount,
+      filtersActive,
       landing,
       entering,
       beginDrag,
       commitMove,
       cancelDrag,
       patchCard,
-      removeCard,
+      reloadBoard,
     ],
   );
 

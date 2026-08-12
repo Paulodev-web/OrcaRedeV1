@@ -37,6 +37,8 @@ interface TaskActivityProps {
   initialMessages: TaskMessageRow[];
   members: TaskBoardMember[];
   onChanged: () => void;
+  /** No modal a atividade ocupa a altura disponível em vez de um teto fixo. */
+  fill?: boolean;
 }
 
 type FeedItem =
@@ -59,6 +61,7 @@ export function TaskActivity({
   initialMessages,
   members,
   onChanged,
+  fill = false,
 }: TaskActivityProps) {
   const [messages, setMessages] = useState<TaskMessageRow[]>(initialMessages);
   const [body, setBody] = useState('');
@@ -198,13 +201,21 @@ export function TaskActivity({
   };
 
   return (
-    <section className="flex flex-col rounded-xl border border-neutral-200 bg-surface">
-      <h2 className="border-b border-neutral-100 px-4 py-3 text-sm font-semibold text-neutral-900">
+    <section
+      className={cn(
+        'flex flex-col rounded-xl border border-neutral-200 bg-surface',
+        fill && 'min-h-0 flex-1',
+      )}
+    >
+      <h2 className="shrink-0 border-b border-neutral-100 px-4 py-3 text-sm font-semibold text-neutral-900">
         Atividade
       </h2>
 
       <div
-        className="max-h-[520px] flex-1 space-y-3 overflow-y-auto px-4 py-4"
+        className={cn(
+          'flex-1 space-y-3 overflow-y-auto px-4 py-4',
+          fill ? 'min-h-0' : 'max-h-[520px]',
+        )}
         onScroll={(e) => {
           const el = e.currentTarget;
           shouldScrollRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;

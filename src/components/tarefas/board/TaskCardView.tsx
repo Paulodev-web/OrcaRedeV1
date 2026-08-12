@@ -41,9 +41,11 @@ export function TaskCardView({ card, index, columnKey }: TaskCardViewProps) {
     index,
     group: columnKey,
     type: 'card',
-    // Aceita colidir com outros cards E com a coluna: sem o segundo, soltar
-    // numa coluna vazia não encontra alvo nenhum.
-    accept: ['card', 'column'],
+    // O card é alvo só de outros cards. Quem aceita cards para o caso da coluna
+    // vazia é o droppable da própria coluna (`StageColumn`), com `accept:
+    // 'card'` — declarar 'column' aqui fazia o card se anunciar como destino de
+    // uma coluna inteira e sujava a detecção de colisão no momento de soltar.
+    accept: 'card',
     data: { columnKey },
   });
 
