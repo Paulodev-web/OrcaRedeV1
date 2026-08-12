@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Building2, Check, Loader2, ShieldCheck, UserMinus, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { APP_MODULES } from "@/components/layout/modules";
+import { InviteMemberDialog } from "./InviteMemberDialog";
 import {
   setMemberActiveAction,
   setMemberRoleAction,
@@ -32,8 +33,9 @@ const GRANTABLE_MODULES = APP_MODULES.filter(
 export function OrganizacaoManager({ data }: { data: OrganizationScreenData }) {
   const [isPending, startTransition] = useTransition();
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
-  const { organizations, activeOrgId, members, canManage, viewerUserId } = data;
+  const { organizations, activeOrgId, members, canManage, canInvite, viewerUserId } = data;
   const activeOrg = organizations.find((org) => org.id === activeOrgId) ?? null;
 
   const run = (action: () => Promise<{ success: boolean; error?: string }>, okMessage: string) => {
@@ -109,13 +111,25 @@ export function OrganizacaoManager({ data }: { data: OrganizationScreenData }) {
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-surface">
-        <div className="border-b border-slate-200 px-6 py-5">
-          <h2 className="text-base font-semibold text-brand-navy">Equipe</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            {canManage
-              ? "Defina o setor de cada pessoa e a quais módulos ela tem acesso."
-              : "Somente o administrador da organização pode alterar acessos."}
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
+          <div>
+            <h2 className="text-base font-semibold text-brand-navy">Equipe</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {canManage
+                ? "Defina o setor de cada pessoa e a quais módulos ela tem acesso."
+                : "Somente o administrador da organização pode alterar acessos."}
+            </p>
+          </div>
+          {canInvite && (
+            <button
+              type="button"
+              onClick={() => setInviteOpen(true)}
+              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-accent-600 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-700"
+            >
+              <UserPlus className="h-4 w-4" />
+              Cadastrar pessoa
+            </button>
+          )}
         </div>
 
         {members.length === 0 ? (
@@ -143,6 +157,8 @@ export function OrganizacaoManager({ data }: { data: OrganizationScreenData }) {
           </ul>
         )}
       </section>
+
+      {inviteOpen && <InviteMemberDialog onClose={() => setInviteOpen(false)} />}
     </div>
   );
 }

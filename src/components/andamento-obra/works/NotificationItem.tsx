@@ -10,6 +10,8 @@ import {
   Flag,
   HardHat,
   CheckCircle2,
+  ArrowRightLeft,
+  UserCheck,
 } from 'lucide-react';
 import { markNotificationAsRead } from '@/actions/notifications';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
@@ -39,6 +41,9 @@ const ICONS: Record<NotificationKind, typeof Bell> = {
   alert_closed: CheckCircle2,
   alert_reopened: AlertTriangle,
   pole_installed: HardHat,
+  task_sector_changed: ArrowRightLeft,
+  task_assigned: UserCheck,
+  task_message: MessageSquare,
 };
 
 export function NotificationItem({ notification, onRead }: NotificationItemProps) {

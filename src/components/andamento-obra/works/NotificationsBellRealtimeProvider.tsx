@@ -32,6 +32,8 @@ interface ProviderProps {
   userId: string;
   initialItems: NotificationRow[];
   initialUnreadCount: number;
+  /** Ver `useNotificationsRealtime` — escopa o INSERT ao vivo por module_key. */
+  moduleKey?: string;
   children: ReactNode;
 }
 
@@ -39,12 +41,14 @@ export function NotificationsBellRealtimeProvider({
   userId,
   initialItems,
   initialUnreadCount,
+  moduleKey,
   children,
 }: ProviderProps) {
   const value = useNotificationsRealtime({
     userId,
     initialItems,
     initialUnreadCount,
+    moduleKey,
   });
 
   return (

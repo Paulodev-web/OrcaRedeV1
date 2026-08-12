@@ -60,5 +60,20 @@ export interface OrganizationScreenData {
   members: OrgMemberRow[];
   /** Se `false`, a tela é somente leitura. */
   canManage: boolean;
+  /** Só o `owner` (ou admin de plataforma) — mais restrito que `canManage`. */
+  canInvite: boolean;
   viewerUserId: string;
+}
+
+export interface CreateOrgUserInput {
+  fullName: string;
+  email: string;
+  temporaryPassword: string;
+  sector: OrgSector | null;
+}
+
+export interface CreatedOrgUser {
+  userId: string;
+  email: string;
+  temporaryPassword: string;
 }

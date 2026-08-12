@@ -3,6 +3,7 @@ import {
   ClipboardList,
   FileText,
   Hammer,
+  KanbanSquare,
   LayoutGrid,
   Package,
   Settings,
@@ -20,6 +21,7 @@ export type AppModuleId =
   | "andamento-obra"
   | "fornecedores"
   | "precificacao"
+  | "tarefas"
   | "configuracoes";
 
 export interface AppModule {
@@ -117,6 +119,16 @@ export const APP_MODULES: AppModule[] = [
     section: "operacao",
   },
   {
+    id: "tarefas",
+    label: "Tarefas",
+    description: "Quadro de trabalho entre Comercial, Engenharia, Compras e Execução",
+    icon: KanbanSquare,
+    tag: "Operação",
+    href: "/tarefas",
+    status: "active",
+    section: "operacao",
+  },
+  {
     id: "configuracoes",
     label: "Configurações",
     description: "Catálogos, dados da empresa e cadastros do sistema",
@@ -136,9 +148,20 @@ const SECTION_LABELS: Record<AppModule["section"], string | undefined> = {
 
 const SECTION_ORDER: AppModule["section"][] = ["principal", "operacao", "sistema"];
 
-/** Módulos que a grade do Portal oferece para abrir (o Portal em si fica de fora). */
-export function getPortalModules(): AppModule[] {
-  return APP_MODULES.filter((mod) => mod.id !== "portal" && mod.status === "active");
+/**
+ * Módulos que a grade do Portal oferece para abrir (o Portal em si fica de fora).
+ *
+ * `allowedModuleIds` vem de `useModuleAccess()`
+ * (`src/contexts/ModuleAccessContext.tsx`). `undefined`/`null` não filtra —
+ * usado enquanto a permissão ainda não chegou, para a grade não piscar vazia.
+ */
+export function getPortalModules(allowedModuleIds?: Set<AppModuleId> | null): AppModule[] {
+  return APP_MODULES.filter(
+    (mod) =>
+      mod.id !== "portal" &&
+      mod.status === "active" &&
+      (!allowedModuleIds || allowedModuleIds.has(mod.id)),
+  );
 }
 
 export interface BuildSidebarSectionsOptions {
@@ -152,15 +175,26 @@ export interface BuildSidebarSectionsOptions {
    * estado no `AppContext`. Sem ele, esses módulos ficam desabilitados.
    */
   onLegacySelect?: (module: AppModule) => void;
+  /**
+   * Vem de `useModuleAccess()`. `undefined`/`null` não filtra — usado enquanto
+   * a permissão ainda não chegou, para a sidebar não piscar vazia. O Portal
+   * nunca é filtrado, mesmo com o conjunto vazio.
+   */
+  allowedModuleIds?: Set<AppModuleId> | null;
 }
 
 /** Monta as seções da `AppSidebar` a partir do registro de módulos. */
 export function buildAppSidebarSections({
   activityCounts = {},
   onLegacySelect,
+  allowedModuleIds,
 }: BuildSidebarSectionsOptions = {}): SidebarSection[] {
   return SECTION_ORDER.map((section) => {
-    const items: SidebarNavItem[] = APP_MODULES.filter((mod) => mod.section === section).map(
+    const items: SidebarNavItem[] = APP_MODULES.filter(
+      (mod) =>
+        mod.section === section &&
+        (mod.id === "portal" || !allowedModuleIds || allowedModuleIds.has(mod.id)),
+    ).map(
       (mod) => {
         const isSoon = mod.status === "soon";
         const canOpenLegacy = !mod.href && !isSoon && Boolean(onLegacySelect);

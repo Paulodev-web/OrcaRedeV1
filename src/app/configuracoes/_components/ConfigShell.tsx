@@ -5,6 +5,7 @@ import { useCallback, useMemo, type ReactNode } from "react";
 import { LogOut, Settings } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useModuleAccess } from "@/contexts/ModuleAccessContext";
 // ⚠️ Importar sempre pelo caminho completo do arquivo: no Windows/macOS o
 // especificador `@/components/layout` resolve para o `Layout.tsx` legado, que
 // difere apenas no caixa-alta.
@@ -64,6 +65,7 @@ export function ConfigShell({
   const router = useRouter();
   const { session, loading, signOut, user } = useAuth();
   const { setActiveModule, setCurrentView } = useApp();
+  const { viewableModuleIds } = useModuleAccess();
 
   /**
    * Módulos que ainda vivem no roteamento por estado do `AppContext`: aponta o
@@ -79,8 +81,8 @@ export function ConfigShell({
   );
 
   const sections = useMemo(
-    () => buildAppSidebarSections({ onLegacySelect: openLegacyModule }),
-    [openLegacyModule],
+    () => buildAppSidebarSections({ onLegacySelect: openLegacyModule, allowedModuleIds: viewableModuleIds }),
+    [openLegacyModule, viewableModuleIds],
   );
 
   const handleLogout = async () => {

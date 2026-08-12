@@ -9,6 +9,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { ModuleHeader, type BreadcrumbItem } from '@/components/layout/ModuleHeader';
 import { buildAppSidebarSections } from '@/components/layout/modules';
 import { useAuth } from '@/contexts/AuthContext';
+import { useModuleAccess } from '@/contexts/ModuleAccessContext';
 
 /**
  * Chrome das telas de proposta: sidebar global + cabeçalho de módulo.
@@ -41,7 +42,11 @@ export function PropostasShell({
   contentClassName,
 }: PropostasShellProps) {
   const { user, signOut } = useAuth();
-  const sections = useMemo(() => buildAppSidebarSections(), []);
+  const { viewableModuleIds } = useModuleAccess();
+  const sections = useMemo(
+    () => buildAppSidebarSections({ allowedModuleIds: viewableModuleIds }),
+    [viewableModuleIds],
+  );
 
   const sidebarFooter = ({ collapsed }: { collapsed: boolean }) =>
     collapsed ? (

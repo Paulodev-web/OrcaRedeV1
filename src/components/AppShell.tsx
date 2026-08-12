@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useModuleAccess } from '@/contexts/ModuleAccessContext';
 import { LegacyLayout } from '@/components/LegacyLayout';
 import { AdminPortal } from '@/components/AdminPortal';
 import { Dashboard } from '@/components/Dashboard';
@@ -23,6 +24,7 @@ import { ON_ENGENHARIA_LOGO_SRC } from '@/lib/branding';
 
 function AuthenticatedApp() {
   const { currentView, activeModule, setActiveModule } = useApp();
+  const { canView, loading: moduleAccessLoading } = useModuleAccess();
 
   // O módulo ativo vive em estado do AppContext, que fica no provider raiz e
   // sobrevive à navegação client-side. Limpar na saída de "/" garante que voltar
@@ -35,11 +37,24 @@ function AuthenticatedApp() {
     };
   }, [setActiveModule]);
 
+  // `portal-engenheiro` é o único módulo sem rota própria — vive neste estado,
+  // então é o único lugar onde a checagem de permissão não pode ser uma guarda
+  // de servidor (não há layout/página para interceptar). Some sozinho para o
+  // Portal se a permissão cair enquanto a pessoa está dentro do módulo.
+  useEffect(() => {
+    if (!moduleAccessLoading && activeModule === 'portal-engenheiro' && !canView('portal-engenheiro')) {
+      setActiveModule(null);
+    }
+  }, [activeModule, canView, moduleAccessLoading, setActiveModule]);
+
   if (!activeModule) {
     return <AdminPortal />;
   }
 
   if (activeModule === 'portal-engenheiro') {
+    if (!moduleAccessLoading && !canView('portal-engenheiro')) {
+      return null;
+    }
     return (
       <ErrorBoundary>
         <EngineerPortalChrome />

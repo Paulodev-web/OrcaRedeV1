@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
+import { getModuleAccess } from '@/lib/auth/moduleAccess';
 import {
   ProposalValidationError,
   renderProposalPdf,
@@ -38,6 +39,13 @@ export async function GET(
     userId = await requireAuthUserId(supabase);
   } catch {
     return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+  }
+
+  // Route Handlers não passam por `layout.tsx` — `/propostas/layout.tsx` não
+  // cobre esta rota, então a checagem de módulo precisa ser explícita aqui.
+  const access = await getModuleAccess();
+  if (!access.isOrgAdmin && !access.canView.has('propostas')) {
+    return NextResponse.json({ error: 'Sem acesso a este módulo.' }, { status: 403 });
   }
 
   const record = await loadProposalRecord(supabase, userId, id);

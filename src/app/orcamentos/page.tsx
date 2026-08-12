@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
+import { requireModuleAccess } from '@/lib/auth/moduleAccess';
 import { OrcamentosListClient } from '@/components/orcamentos/OrcamentosListClient';
 import { OrcamentosErrorScreen } from '@/components/orcamentos/OrcamentosErrorScreen';
 
@@ -22,6 +23,11 @@ export default async function OrcamentosPage() {
       />
     );
   }
+
+  // Fora do try/catch acima de propósito: `redirect()` lança um sinal interno
+  // do Next que aquele `catch` genérico engoliria antes do redirecionamento
+  // acontecer (ver comentário em `requireModuleAccess`).
+  await requireModuleAccess('orca-rede');
 
   return <OrcamentosListClient />;
 }

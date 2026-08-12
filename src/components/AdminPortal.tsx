@@ -4,6 +4,7 @@ import { useCallback, useMemo } from 'react';
 import { ArrowRight, Bell, Clock, LayoutGrid, LogOut, Shield, Sparkles } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useModuleAccess } from '@/contexts/ModuleAccessContext';
 // ⚠️ Importar sempre pelo caminho completo do arquivo: no Windows/macOS o
 // especificador `@/components/layout` resolve para o `Layout.tsx` legado, que
 // difere apenas no caixa-alta. Some com o problema quando a Fase 7 remover o
@@ -25,8 +26,9 @@ const ACTIVITY_COUNTS = {} as const;
 export function AdminPortal() {
   const { setActiveModule, setCurrentView } = useApp();
   const { signOut, user } = useAuth();
+  const { viewableModuleIds } = useModuleAccess();
 
-  const portalModules = getPortalModules();
+  const portalModules = getPortalModules(viewableModuleIds);
 
   /** Módulos que ainda vivem no roteamento por estado do `AppContext`. */
   const openLegacyModule = useCallback(
@@ -38,8 +40,13 @@ export function AdminPortal() {
   );
 
   const sections = useMemo(
-    () => buildAppSidebarSections({ activityCounts: ACTIVITY_COUNTS, onLegacySelect: openLegacyModule }),
-    [openLegacyModule],
+    () =>
+      buildAppSidebarSections({
+        activityCounts: ACTIVITY_COUNTS,
+        onLegacySelect: openLegacyModule,
+        allowedModuleIds: viewableModuleIds,
+      }),
+    [openLegacyModule, viewableModuleIds],
   );
 
   const handleLogout = async () => {

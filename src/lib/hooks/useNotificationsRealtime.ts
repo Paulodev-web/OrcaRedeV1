@@ -13,6 +13,14 @@ interface UseNotificationsRealtimeOptions {
   userId: string;
   initialItems: NotificationRow[];
   initialUnreadCount: number;
+  /**
+   * Filtra os INSERTs recebidos por `module_key`. O canal do Supabase filtra
+   * só por `user_id` (Realtime não faz AND de duas colunas), então sem isso um
+   * bell escopado por módulo (ex.: Tarefas) receberia ao vivo notificações de
+   * QUALQUER módulo do mesmo usuário — descasando do fetch inicial, que já vem
+   * filtrado por `getNotificationsForUser({ moduleKey })`.
+   */
+  moduleKey?: string;
 }
 
 interface UseNotificationsRealtimeResult {
@@ -33,6 +41,7 @@ export function useNotificationsRealtime({
   userId,
   initialItems,
   initialUnreadCount,
+  moduleKey,
 }: UseNotificationsRealtimeOptions): UseNotificationsRealtimeResult {
   const router = useRouter();
   const [items, setItems] = useState<NotificationRow[]>(initialItems);
@@ -48,6 +57,7 @@ export function useNotificationsRealtime({
   const handleInsert = useCallback((payload: unknown) => {
     const row = (payload as { new?: Record<string, unknown> })?.new;
     if (!row?.id) return;
+    if (moduleKey && row.module_key !== moduleKey) return;
 
     const newItem: NotificationRow = {
       id: row.id as string,
@@ -73,7 +83,7 @@ export function useNotificationsRealtime({
     setPulse(true);
     if (pulseTimer.current) clearTimeout(pulseTimer.current);
     pulseTimer.current = setTimeout(() => setPulse(false), 1500);
-  }, []);
+  }, [moduleKey]);
 
   const events: RealtimeEventConfig[] = useMemo(
     () => [

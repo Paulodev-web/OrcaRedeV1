@@ -5,6 +5,7 @@ import { useCallback, useMemo, type ReactNode } from "react";
 import { LogOut } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useModuleAccess } from "@/contexts/ModuleAccessContext";
 import { buildAppSidebarSections, type AppModule } from "./modules";
 import type { SidebarSection } from "./AppSidebar";
 
@@ -32,6 +33,7 @@ export function useAppSidebarChrome(): AppSidebarChrome {
   const router = useRouter();
   const { setActiveModule, setCurrentView } = useApp();
   const { signOut, user } = useAuth();
+  const { viewableModuleIds } = useModuleAccess();
 
   /** Módulos que ainda vivem no roteamento por estado do `AppContext`. */
   const openLegacyModule = useCallback(
@@ -44,8 +46,13 @@ export function useAppSidebarChrome(): AppSidebarChrome {
   );
 
   const sections = useMemo(
-    () => buildAppSidebarSections({ activityCounts: ACTIVITY_COUNTS, onLegacySelect: openLegacyModule }),
-    [openLegacyModule],
+    () =>
+      buildAppSidebarSections({
+        activityCounts: ACTIVITY_COUNTS,
+        onLegacySelect: openLegacyModule,
+        allowedModuleIds: viewableModuleIds,
+      }),
+    [openLegacyModule, viewableModuleIds],
   );
 
   const handleLogout = useCallback(async () => {

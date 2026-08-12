@@ -1,11 +1,20 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createSupabaseServerClient, requireAuthUserId } from "@/lib/supabaseServer";
+import { createSupabaseServerClient, requireAuthUserId, createSupabaseServiceRoleClient } from "@/lib/supabaseServer";
 import { ensureOrgAdmin } from "@/lib/auth/ensureOrgAdmin";
-import { ORG_ROLES, ORG_SECTORS, type OrgRole, type OrgSector } from "@/types/organization";
+import { ensureOrgOwner } from "@/lib/auth/ensureOrgOwner";
+import {
+  ORG_ROLES,
+  ORG_SECTORS,
+  type OrgRole,
+  type OrgSector,
+  type CreateOrgUserInput,
+  type CreatedOrgUser,
+} from "@/types/organization";
 
 type ActionResult = { success: boolean; error?: string };
+type ActionResultWithData<T> = { success: true; data: T } | { success: false; error: string };
 
 function revalidateOrg() {
   revalidatePath("/configuracoes/organizacao");
@@ -231,6 +240,109 @@ export async function setModulePermissionAction(
     return { success: true };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Erro inesperado ao alterar o acesso ao módulo.";
+    return { success: false, error: message };
+  }
+}
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD_LENGTH = 8;
+
+function normalizeEmail(raw: string): string {
+  return raw.trim().toLowerCase();
+}
+
+/**
+ * Cadastra uma pessoa nova na organização — só o `owner` (`ensureOrgOwner`).
+ *
+ * Reaproveita o caminho de `createManager` (`src/actions/people.ts`): conta de
+ * verdade via Auth Admin API com senha temporária. O mesmo trigger
+ * `on_auth_user_created` cria `profiles` automaticamente com `role: 'engineer'`
+ * — não passamos `user_metadata.role`, porque `profiles.role` é contrato do
+ * APK e não tem relação nenhuma com a organização.
+ *
+ * Nasce SEM nenhum módulo, de propósito: desde 20260811130000, ausência de
+ * linha em `module_permissions` vale como "sem acesso". Não autoconceder aqui
+ * é o que faz a restrição valer de verdade — conceder é o próximo passo do
+ * owner, na mesma tela, um módulo de cada vez.
+ *
+ * Rollback simétrico ao de `createManager`: falha depois de criar o auth user
+ * desfaz com `deleteUser`.
+ */
+export async function createOrgUserAction(
+  input: CreateOrgUserInput,
+): Promise<ActionResultWithData<CreatedOrgUser>> {
+  try {
+    const fullName = input.fullName?.trim() ?? "";
+    const email = normalizeEmail(input.email ?? "");
+    const temporaryPassword = input.temporaryPassword ?? "";
+    const sector = input.sector;
+
+    if (fullName.length === 0) {
+      return { success: false, error: "Informe o nome completo." };
+    }
+    if (!EMAIL_REGEX.test(email)) {
+      return { success: false, error: "E-mail em formato inválido." };
+    }
+    if (temporaryPassword.length < MIN_PASSWORD_LENGTH) {
+      return {
+        success: false,
+        error: `A senha temporária precisa ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`,
+      };
+    }
+    if (sector !== null && !ORG_SECTORS.includes(sector)) {
+      return { success: false, error: "Setor inválido." };
+    }
+
+    const gate = await ensureOrgOwner();
+    if (!gate.ok) return { success: false, error: gate.error };
+
+    const admin = createSupabaseServiceRoleClient();
+
+    const { data: created, error: createError } = await admin.auth.admin.createUser({
+      email,
+      password: temporaryPassword,
+      email_confirm: true,
+      user_metadata: { full_name: fullName },
+    });
+
+    if (createError || !created?.user) {
+      const raw = createError?.message ?? "";
+      let friendly = "Não foi possível criar a conta.";
+      if (/already|registered|exists/i.test(raw)) {
+        friendly = "Já existe um usuário cadastrado com este e-mail.";
+      } else if (raw) {
+        friendly = raw;
+      }
+      return { success: false, error: friendly };
+    }
+
+    const newUserId = created.user.id;
+
+    const { error: memberError } = await admin.from("org_members").insert({
+      org_id: gate.orgId,
+      user_id: newUserId,
+      role: "member",
+      sector,
+      invited_by: gate.userId,
+      is_active: true,
+    });
+
+    if (memberError) {
+      await admin.auth.admin.deleteUser(newUserId).catch(() => undefined);
+      return {
+        success: false,
+        error: `Falha ao vincular a pessoa à organização. A conta foi revertida: ${memberError.message}`,
+      };
+    }
+
+    revalidateOrg();
+
+    return {
+      success: true,
+      data: { userId: newUserId, email, temporaryPassword },
+    };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Erro inesperado ao cadastrar a pessoa.";
     return { success: false, error: message };
   }
 }

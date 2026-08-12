@@ -40,10 +40,20 @@ export async function getOrganizationScreenData(): Promise<OrganizationScreenDat
 
   const orgId = (activeOrgId as string | null) ?? null;
   if (!orgId) {
-    return { activeOrgId: null, organizations, members: [], canManage: false, viewerUserId };
+    return {
+      activeOrgId: null,
+      organizations,
+      members: [],
+      canManage: false,
+      canInvite: false,
+      viewerUserId,
+    };
   }
 
-  const { data: isOrgAdmin } = await supabase.rpc("is_org_admin", { _org_id: orgId });
+  const [{ data: isOrgAdmin }, { data: isPlatformAdmin }] = await Promise.all([
+    supabase.rpc("is_org_admin", { _org_id: orgId }),
+    supabase.rpc("is_platform_admin"),
+  ]);
 
   // Membros da org ativa. O RLS de `org_members` já restringe a quem é membro;
   // o filtro por org_id é o que evita trazer os vínculos do usuário em OUTRAS
@@ -92,10 +102,13 @@ export async function getOrganizationScreenData(): Promise<OrganizationScreenDat
     modulesByUser.set(key, list);
   }
 
+  const viewerRole = members.find((row) => String(row.user_id) === viewerUserId)?.role;
+
   return {
     activeOrgId: orgId,
     organizations,
     canManage: isOrgAdmin === true,
+    canInvite: viewerRole === "owner" || isPlatformAdmin === true,
     viewerUserId,
     members: members.map((row) => {
       const userId = String(row.user_id);

@@ -9,6 +9,8 @@ import type {
 interface Options {
   limit?: number;
   onlyUnread?: boolean;
+  /** Filtra por módulo de origem (ex.: 'tarefas'). Sem filtro por padrão. */
+  moduleKey?: string;
 }
 
 export async function getNotificationsForUser(
@@ -27,6 +29,7 @@ export async function getNotificationsForUser(
     .limit(limit);
 
   if (onlyUnread) query = query.eq('is_read', false);
+  if (options.moduleKey) query = query.eq('module_key', options.moduleKey);
 
   const { data, error } = await query;
 
@@ -45,11 +48,15 @@ export async function getNotificationsForUser(
           createdAt: row.created_at as string,
         }));
 
-  const { count } = await supabase
+  let countQuery = supabase
     .from('notifications')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', userId)
     .eq('is_read', false);
+
+  if (options.moduleKey) countQuery = countQuery.eq('module_key', options.moduleKey);
+
+  const { count } = await countQuery;
 
   return { items, unreadCount: count ?? 0 };
 }

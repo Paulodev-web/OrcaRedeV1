@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
+import { requireModuleAccess } from '@/lib/auth/moduleAccess';
 import { getBudgetWorkspaceData } from '@/services/budgets/budgetWorkspace';
 import { BudgetWorkspaceChrome } from '@/components/orcamentos/BudgetWorkspaceChrome';
 import { OrcamentosErrorScreen } from '@/components/orcamentos/OrcamentosErrorScreen';
@@ -44,6 +45,9 @@ export default async function BudgetLayout({ children, params }: BudgetLayoutPro
       />
     );
   }
+
+  // Fora do try/catch acima de propósito — mesmo motivo de `/orcamentos/page.tsx`.
+  await requireModuleAccess('orca-rede');
 
   return (
     <BudgetWorkspaceChrome

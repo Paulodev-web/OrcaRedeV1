@@ -1,35 +1,12 @@
-"use client";
-
-import { Calculator } from "lucide-react";
-import { AppLayout } from "@/components/layout/AppLayout";
-import { ModuleHeader } from "@/components/layout/ModuleHeader";
-import { useAppSidebarChrome } from "@/components/layout/useAppSidebarChrome";
+import { requireModuleAccess } from "@/lib/auth/moduleAccess";
+import { PrecificacaoChrome } from "./_components/PrecificacaoChrome";
 
 /**
- * Chrome global do módulo Precificação: sidebar + cabeçalho de módulo.
- *
- * Mesma lacuna que Suprimentos tinha: as rotas de `/tools/precificacao`
- * renderizavam direto, sem sidebar. Um `layout.tsx` na raiz da árvore cobre
- * dashboard, nova, editar/[id] de uma vez.
+ * Virou Server Component para poder barrar a URL antes de renderizar — mesmo
+ * tratamento de `/fornecedores/layout.tsx`. Cobre dashboard, nova, editar/[id].
  */
-export default function PrecificacaoLayout({ children }: { children: React.ReactNode }) {
-  const { sections, sidebarFooter } = useAppSidebarChrome();
+export default async function PrecificacaoLayout({ children }: { children: React.ReactNode }) {
+  await requireModuleAccess("precificacao");
 
-  return (
-    <AppLayout
-      sections={sections}
-      activeItemId="precificacao"
-      sidebarFooter={sidebarFooter}
-      header={
-        <ModuleHeader
-          icon={Calculator}
-          title="Precificação"
-          description="Custos, lucro e imposto sobre o valor de serviço."
-          breadcrumb={[{ label: "Precificação" }]}
-        />
-      }
-    >
-      {children}
-    </AppLayout>
-  );
+  return <PrecificacaoChrome>{children}</PrecificacaoChrome>;
 }

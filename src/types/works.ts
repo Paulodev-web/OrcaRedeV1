@@ -38,7 +38,10 @@ export type NotificationKind =
   | 'alert_resolved_in_field'
   | 'alert_closed'
   | 'alert_reopened'
-  | 'pole_installed';
+  | 'pole_installed'
+  | 'task_sector_changed'
+  | 'task_assigned'
+  | 'task_message';
 
 export interface WorkRow {
   id: string;
