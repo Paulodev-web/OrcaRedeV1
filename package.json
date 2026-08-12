@@ -11,6 +11,8 @@
     "pdf:proposta": "tsx src/services/pdf/proposal/dev/render-fixture.ts"
   },
   "dependencies": {
+    "@dnd-kit/helpers": "^0.5.0",
+    "@dnd-kit/react": "^0.5.0",
     "@google/generative-ai": "^0.24.1",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-dialog": "^1.1.15",

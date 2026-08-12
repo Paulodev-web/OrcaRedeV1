@@ -1,70 +1,91 @@
 -- =============================================================================
--- QUADRO DE TRABALHO — chat por task (task_members + task_messages)
+-- ESTEIRA DE TRABALHO — conversa por card (task_messages + task_followers)
 --
--- Generaliza o chat 1:1 engenheiro↔gerente do Andamento de Obra
--- (20260504210000_andamento_obra_chat.sql, work_messages/work_members) para N
--- participantes: quem criou a task, o setor de origem e o setor de destino a
--- cada handoff — sem exigir convite manual pra esses casos comuns.
+-- DUAS CORREÇÕES SOBRE A VERSÃO DA MANHÃ DE 12/08/2026
 --
--- ASSIMETRIA DELIBERADA: a task em si é visível pra org inteira (tasks_select,
--- 20260812120000), mas o chat é gated por participação (task_members). O
--- autor que fez handoff continua vendo ONDE a task está, mas só volta a ler o
--- chat se for readicionado — igual ao "contextualizado" do mapeamento
--- operacional, sem reimplementar RBAC granular que ninguém pediu pra v1.
+-- 1. LEITURA DO CHAT VIRA ORG-WIDE.
+--    A versão anterior gateava `task_messages_select` por `is_task_member()`
+--    enquanto `tasks_select` liberava a task pra org inteira. Resultado: quem
+--    fizesse o handoff continuava vendo ONDE o card estava mas perdia a
+--    conversa — e ia pedir print no WhatsApp. Isso contradiz a camada de org
+--    inteira, cujo ponto foi justamente remover filtros por pessoa (commits
+--    bc366c1, 037996c). Agora o chat enxerga o mesmo que a task enxerga.
 --
--- Sem anexos de mídia nesta fase — mapeamento pede "chat por task" (texto).
--- work_message_attachments mostra que dá pra estender depois sem quebrar nada.
+-- 2. `task_members` VIRA `task_followers` E PARA DE INCHAR.
+--    A versão anterior adicionava TODOS os membros ativos do setor de destino a
+--    cada handoff, e notificava todo membro a cada mensagem. Depois de 3
+--    handoffs, qualquer mensagem em qualquer card notificava a empresa inteira
+--    — o sino morreria por excesso em duas semanas.
+--
+--    A lista agora só decide QUEM É NOTIFICADO, não quem pode ler, e entra
+--    nela quem demonstrou interesse: criou, é responsável, ou comentou. O
+--    handoff continua notificando o setor de destino, mas por consulta direta a
+--    `org_members` (é um evento pontual — "chegou trabalho pra vocês"), sem
+--    deixar resíduo na lista de seguidores.
+--
+-- Anexos ficam na migration seguinte (20260812122000_tarefas_attachments.sql) e
+-- podem pendurar em uma mensagem — é o que faz "mandei a planta no chat" e
+-- "anexei a planta no card" caírem no mesmo lugar.
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
--- 1. task_members
+-- 1. task_followers
 -- -----------------------------------------------------------------------------
-CREATE TABLE public.task_members (
+CREATE TABLE public.task_followers (
   task_id    UUID        NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
   user_id    UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  added_by   UUID        NOT NULL,
+  org_id     UUID        NOT NULL DEFAULT public.current_org_id(),
+  -- Por que a pessoa passou a seguir. Só documental — a UI mostra "seguindo
+  -- porque você comentou" e oferece o botão de parar.
+  reason     TEXT        NOT NULL DEFAULT 'manual'
+                         CHECK (reason IN ('criador', 'responsavel', 'comentou', 'manual')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (task_id, user_id)
 );
 
-COMMENT ON TABLE public.task_members IS
-  'Participantes do chat de uma task. Seed automático (trigger '
-  'tasks_seed_members): autor na criação, membros ativos do setor de destino a '
-  'cada handoff. addTaskParticipantAction cobre o caso manual — trazer alguém '
-  'antes do handoff formal.';
+COMMENT ON TABLE public.task_followers IS
+  'Quem é NOTIFICADO sobre um card — não quem pode lê-lo (isso é org-wide, '
+  'igual à task). Populada por trigger: criador, responsável e quem comentou. '
+  'O setor de destino de um handoff NÃO entra aqui: aquele evento é notificado '
+  'por consulta a org_members, sem inchar a lista.';
 
-CREATE INDEX idx_task_members_user ON public.task_members (user_id);
-
--- Helper SECURITY DEFINER — mesmo motivo de public.is_work_member
--- (20260509000000_fix_rls_recursion_works_members.sql): uma policy em
--- task_members que fizesse EXISTS direto em task_members entraria em recursão.
-CREATE OR REPLACE FUNCTION public.is_task_member(_task_id UUID)
-RETURNS BOOLEAN
-LANGUAGE sql
-SECURITY DEFINER
-STABLE
-SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.task_members tm
-    WHERE tm.task_id = _task_id
-      AND tm.user_id = auth.uid()
-  );
-$$;
-
-REVOKE EXECUTE ON FUNCTION public.is_task_member(UUID) FROM PUBLIC, anon;
-GRANT  EXECUTE ON FUNCTION public.is_task_member(UUID) TO authenticated, service_role;
+CREATE INDEX idx_task_followers_user ON public.task_followers (user_id);
 
 -- -----------------------------------------------------------------------------
--- 2. tasks_seed_members — popula task_members automaticamente
---    AFTER INSERT: autor entra.
---    AFTER UPDATE OF sector: membros ativos do setor de destino entram (quem
---    já estava, fica — ON CONFLICT DO NOTHING).
---    SECURITY DEFINER: sem isso, inserir o PRIMEIRO membro de um setor novo
---    falharia contra a própria policy de INSERT de task_members (que exige já
---    ser membro — problema do ovo e da galinha).
+-- 2. task_messages
 -- -----------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.tasks_seed_members()
+CREATE TABLE public.task_messages (
+  id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id         UUID        NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
+  org_id          UUID        NOT NULL DEFAULT public.current_org_id(),
+  sender_id       UUID        NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  -- Corpo é opcional quando a mensagem carrega só anexo ("mandou a foto sem
+  -- escrever nada"), mas não pode ser string em branco.
+  body            TEXT        NULL CHECK (body IS NULL OR length(btrim(body)) > 0),
+  client_event_id UUID        NULL,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+COMMENT ON COLUMN public.task_messages.client_event_id IS
+  'Id gerado no browser antes do envio. O índice único abaixo faz reenvio '
+  '(retry de rede, duplo clique) não duplicar, e permite ao cliente casar a '
+  'bolha otimista com a linha real que volta pelo Realtime.';
+
+CREATE INDEX idx_task_messages_task_created
+  ON public.task_messages (task_id, created_at);
+
+CREATE UNIQUE INDEX idx_task_messages_client_event
+  ON public.task_messages (client_event_id)
+  WHERE client_event_id IS NOT NULL;
+
+-- -----------------------------------------------------------------------------
+-- 3. Triggers de seguidor — quem demonstra interesse passa a seguir
+--
+--    SECURITY DEFINER: sem isso, o primeiro INSERT em task_followers falharia
+--    contra a própria policy quando quem age não é a pessoa que vai seguir
+--    (ex.: eu atribuo o card pra você, você passa a seguir).
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.tasks_sync_followers()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -72,80 +93,35 @@ SET search_path = public
 AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
-    INSERT INTO public.task_members (task_id, user_id, added_by)
-    VALUES (NEW.id, NEW.created_by, NEW.created_by)
+    INSERT INTO public.task_followers (task_id, user_id, org_id, reason)
+    VALUES (NEW.id, NEW.created_by, NEW.org_id, 'criador')
+    ON CONFLICT DO NOTHING;
+  ELSIF NEW.assigned_to IS NOT NULL THEN
+    INSERT INTO public.task_followers (task_id, user_id, org_id, reason)
+    VALUES (NEW.id, NEW.assigned_to, NEW.org_id, 'responsavel')
     ON CONFLICT DO NOTHING;
   END IF;
-
-  INSERT INTO public.task_members (task_id, user_id, added_by)
-  SELECT NEW.id, m.user_id, COALESCE(auth.uid(), NEW.created_by)
-  FROM public.org_members m
-  WHERE m.org_id = NEW.org_id
-    AND m.sector = NEW.sector
-    AND m.is_active
-  ON CONFLICT DO NOTHING;
 
   RETURN NEW;
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.tasks_seed_members()
-  FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.tasks_sync_followers() FROM PUBLIC, anon, authenticated;
 
-DROP TRIGGER IF EXISTS trg_tasks_seed_members_insert ON public.tasks;
-CREATE TRIGGER trg_tasks_seed_members_insert
+DROP TRIGGER IF EXISTS trg_tasks_follow_creator ON public.tasks;
+CREATE TRIGGER trg_tasks_follow_creator
   AFTER INSERT ON public.tasks
-  FOR EACH ROW EXECUTE FUNCTION public.tasks_seed_members();
+  FOR EACH ROW EXECUTE FUNCTION public.tasks_sync_followers();
 
-DROP TRIGGER IF EXISTS trg_tasks_seed_members_handoff ON public.tasks;
-CREATE TRIGGER trg_tasks_seed_members_handoff
-  AFTER UPDATE OF sector ON public.tasks
+DROP TRIGGER IF EXISTS trg_tasks_follow_assignee ON public.tasks;
+CREATE TRIGGER trg_tasks_follow_assignee
+  AFTER UPDATE OF assigned_to ON public.tasks
   FOR EACH ROW
-  WHEN (NEW.sector IS DISTINCT FROM OLD.sector)
-  EXECUTE FUNCTION public.tasks_seed_members();
+  WHEN (NEW.assigned_to IS DISTINCT FROM OLD.assigned_to)
+  EXECUTE FUNCTION public.tasks_sync_followers();
 
--- -----------------------------------------------------------------------------
--- 3. RLS — task_members
---    SELECT/INSERT via is_task_member(): quem já está no chat pode trazer
---    outra pessoa. O seed automático roda SECURITY DEFINER e não passa por
---    aqui. Sem UPDATE/DELETE — sair do chat não é caso de uso da v1.
--- -----------------------------------------------------------------------------
-ALTER TABLE public.task_members ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "task_members_select" ON public.task_members;
-CREATE POLICY "task_members_select" ON public.task_members
-  FOR SELECT
-  TO authenticated
-  USING (public.is_task_member(task_id));
-
-DROP POLICY IF EXISTS "task_members_insert" ON public.task_members;
-CREATE POLICY "task_members_insert" ON public.task_members
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (public.is_task_member(task_id) AND added_by = auth.uid());
-
--- -----------------------------------------------------------------------------
--- 4. task_messages
--- -----------------------------------------------------------------------------
-CREATE TABLE public.task_messages (
-  id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  task_id         UUID        NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
-  sender_id       UUID        NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
-  body            TEXT        NOT NULL CHECK (length(btrim(body)) > 0),
-  client_event_id UUID        NULL,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX idx_task_messages_task_created
-  ON public.task_messages (task_id, created_at DESC);
-
-CREATE UNIQUE INDEX idx_task_messages_client_event
-  ON public.task_messages (client_event_id)
-  WHERE client_event_id IS NOT NULL;
-
--- Bump em tasks.last_activity_at — mesma razão de
--- update_work_last_activity_on_message (ordenação da lista por atividade).
-CREATE OR REPLACE FUNCTION public.update_task_last_activity_on_message()
+-- Quem comenta passa a seguir, e o card sobe na ordenação por atividade.
+CREATE OR REPLACE FUNCTION public.task_messages_after_insert()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -153,23 +129,55 @@ SET search_path = public
 AS $$
 BEGIN
   UPDATE public.tasks SET last_activity_at = now() WHERE id = NEW.task_id;
+
+  INSERT INTO public.task_followers (task_id, user_id, org_id, reason)
+  VALUES (NEW.task_id, NEW.sender_id, NEW.org_id, 'comentou')
+  ON CONFLICT DO NOTHING;
+
   RETURN NEW;
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.update_task_last_activity_on_message()
+REVOKE EXECUTE ON FUNCTION public.task_messages_after_insert()
   FROM PUBLIC, anon, authenticated;
 
-DROP TRIGGER IF EXISTS trg_task_message_activity ON public.task_messages;
-CREATE TRIGGER trg_task_message_activity
+DROP TRIGGER IF EXISTS trg_task_message_after_insert ON public.task_messages;
+CREATE TRIGGER trg_task_message_after_insert
   AFTER INSERT ON public.task_messages
-  FOR EACH ROW EXECUTE FUNCTION public.update_task_last_activity_on_message();
+  FOR EACH ROW EXECUTE FUNCTION public.task_messages_after_insert();
+
+-- -----------------------------------------------------------------------------
+-- 4. RLS — task_followers
+--    Leitura org-wide (saber quem acompanha o card é informação do time).
+--    INSERT org-wide: dá pra chamar um colega pro card. DELETE só de si mesmo:
+--    ninguém tira você de um assunto que é seu.
+-- -----------------------------------------------------------------------------
+ALTER TABLE public.task_followers ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "task_followers_select" ON public.task_followers;
+CREATE POLICY "task_followers_select" ON public.task_followers
+  FOR SELECT
+  TO authenticated
+  USING (org_id = (SELECT public.current_org_id()));
+
+DROP POLICY IF EXISTS "task_followers_insert" ON public.task_followers;
+CREATE POLICY "task_followers_insert" ON public.task_followers
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (org_id = (SELECT public.current_org_id()));
+
+DROP POLICY IF EXISTS "task_followers_delete" ON public.task_followers;
+CREATE POLICY "task_followers_delete" ON public.task_followers
+  FOR DELETE
+  TO authenticated
+  USING (org_id = (SELECT public.current_org_id()) AND user_id = auth.uid());
 
 -- -----------------------------------------------------------------------------
 -- 5. RLS — task_messages
---    SELECT/INSERT via is_task_member(). Sem UPDATE (não há read receipts na
---    v1, ao contrário de work_messages) nem DELETE — mesmo racional de
---    work_messages (débito documentado, não construído).
+--    SELECT org-wide: a correção nº 1 do cabeçalho.
+--    INSERT: só em nome próprio e só na org corrente.
+--    Sem UPDATE (não há read receipts nesta versão) nem DELETE — mesmo racional
+--    de work_messages: débito documentado, não construído.
 -- -----------------------------------------------------------------------------
 ALTER TABLE public.task_messages ENABLE ROW LEVEL SECURITY;
 
@@ -177,13 +185,21 @@ DROP POLICY IF EXISTS "task_messages_select" ON public.task_messages;
 CREATE POLICY "task_messages_select" ON public.task_messages
   FOR SELECT
   TO authenticated
-  USING (public.is_task_member(task_id));
+  USING (org_id = (SELECT public.current_org_id()));
 
 DROP POLICY IF EXISTS "task_messages_insert" ON public.task_messages;
 CREATE POLICY "task_messages_insert" ON public.task_messages
   FOR INSERT
   TO authenticated
-  WITH CHECK (auth.uid() = sender_id AND public.is_task_member(task_id));
+  WITH CHECK (
+    org_id = (SELECT public.current_org_id())
+    AND auth.uid() = sender_id
+    AND EXISTS (
+      SELECT 1 FROM public.tasks t
+      WHERE t.id = task_messages.task_id
+        AND t.org_id = (SELECT public.current_org_id())
+    )
+  );
 
 -- -----------------------------------------------------------------------------
 -- 6. Realtime

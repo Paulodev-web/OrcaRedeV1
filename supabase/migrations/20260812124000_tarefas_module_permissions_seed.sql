@@ -1,9 +1,9 @@
 -- =============================================================================
--- Semeia module_permissions para o módulo novo 'tarefas'
+-- Semeia module_permissions para o módulo 'tarefas'
 --
 -- Desde 20260811130000_module_permission_enforcement.sql, ausência de linha =
--- sem acesso. Sem este seed, o Quadro de Trabalho nasceria invisível pra todo
--- mundo — inclusive quem pediu o módulo. Mesmo racional e mesmo formato do
+-- sem acesso. Sem este seed, a Esteira de Trabalho nasceria invisível pra todo
+-- mundo — inclusive pra quem pediu o módulo. Mesmo racional e mesmo formato do
 -- seed original: acesso total a todo org_members ativo, granted_by NULL
 -- (baseline de rollout, não concessão de admin).
 -- =============================================================================

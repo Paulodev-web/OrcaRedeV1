@@ -686,12 +686,79 @@
   to { opacity: 1 }
 }
 
+/* ---------------------------------------------------------------------------
+   Esteira de Trabalho (/tarefas)
+
+   A regra que separa animação boa de ruído: só anima o que o usuário pode
+   causar. Card que se mexe sozinho na carga da página é ruído; card que se
+   mexe porque um colega acabou de te passar o trabalho é informação.
+
+   O arrasto em si é do @dnd-kit/dom (transform direto no ponteiro, sem
+   transição — transição durante o arrasto é o que dá a sensação de elástico).
+   O que está aqui embaixo é só o que o dnd-kit não cobre: o pouso, a chegada
+   pelo Realtime e a saída.
+   --------------------------------------------------------------------------- */
+
+/* Pouso. A cor diz o que aconteceu sem precisar de texto: accent avançou,
+   âmbar voltou, verde encerrou. `box-shadow` e não `outline` porque o anel
+   precisa respeitar o raio do cartão. */
+@keyframes task-land-avanco {
+  from { box-shadow: 0 0 0 2px var(--color-accent-500); }
+  to   { box-shadow: 0 0 0 2px transparent; }
+}
+@keyframes task-land-retorno {
+  from { box-shadow: 0 0 0 2px var(--color-amber-500); }
+  to   { box-shadow: 0 0 0 2px transparent; }
+}
+@keyframes task-land-encerramento {
+  from { box-shadow: 0 0 0 2px var(--color-green-500); }
+  to   { box-shadow: 0 0 0 2px transparent; }
+}
+
+/* Chegada e saída — usadas quando a mudança veio do Realtime (colega mexeu),
+   nunca na primeira pintura da página. */
+@keyframes task-card-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes task-card-out {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.97); }
+}
+
+/* Bolha nova no chat. */
+@keyframes task-bubble-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 @theme inline {
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
   --animate-drawer-in: drawer-in 0.25s ease-out;
   --animate-overlay-in: overlay-in 0.2s ease-out;
 
+  --animate-task-land-avanco: task-land-avanco 0.4s ease-out;
+  --animate-task-land-retorno: task-land-retorno 0.4s ease-out;
+  --animate-task-land-encerramento: task-land-encerramento 0.4s ease-out;
+  --animate-task-card-in: task-card-in 0.2s var(--ease-out-soft);
+  --animate-task-card-out: task-card-out 0.16s ease-in;
+  --animate-task-bubble-in: task-bubble-in 0.18s var(--ease-out-soft);
+
   /* Curva de easing: entrada rápida e saída macia, sem "mola". */
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* O card sendo arrastado. `transition: none` no transform é deliberado — quem
+   transiciona a posição durante o arrasto é o dnd-kit, e uma segunda transição
+   por cima faz o card "nadar" atrás do ponteiro. */
+[data-task-card][data-dragging='true'] {
+  transform: scale(1.02) rotate(1.5deg);
+  box-shadow: 0 8px 20px oklch(0.24 0.01 100 / 0.11);
+  cursor: grabbing;
+}
+
+/* O buraco que o card deixou na coluna de origem. */
+[data-task-card][data-drag-source='true'] {
+  opacity: 0.4;
 }

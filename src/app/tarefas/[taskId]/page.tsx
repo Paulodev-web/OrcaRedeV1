@@ -2,11 +2,11 @@ import type { Metadata } from 'next';
 import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
 import { TarefasChrome } from '@/components/tarefas/TarefasChrome';
 import { TarefasModuleHeaderBell } from '@/components/tarefas/TarefasModuleHeaderBell';
-import { TaskDetailPanel } from '@/components/tarefas/TaskDetailPanel';
+import { TaskDetailPanel } from '@/components/tarefas/detail/TaskDetailPanel';
 import { OrcamentosErrorScreen } from '@/components/orcamentos/OrcamentosErrorScreen';
-import { getTaskDetail } from '../_data/tasks';
+import { getBoardMembers, getTaskDetail } from '../_data/tasks';
 
-export const metadata: Metadata = { title: 'Tarefa — OrcaRede' };
+export const metadata: Metadata = { title: 'Card — OrcaRede' };
 
 interface TaskDetailPageProps {
   params: Promise<{ taskId: string }>;
@@ -23,21 +23,26 @@ export default async function TaskDetailPage({ params }: TaskDetailPageProps) {
     return (
       <OrcamentosErrorScreen
         title="Sessão expirada"
-        message="Entre novamente para acessar esta tarefa."
+        message="Entre novamente para acessar este card."
         href="/tarefas"
-        linkLabel="Ir para o Quadro de Trabalho"
+        linkLabel="Ir para a Esteira"
       />
     );
   }
 
-  const task = await getTaskDetail(supabase, taskId);
-  if (!task) {
+  const [{ data: orgId }, task, members] = await Promise.all([
+    supabase.rpc('current_org_id'),
+    getTaskDetail(supabase, taskId),
+    getBoardMembers(supabase),
+  ]);
+
+  if (!task || !orgId) {
     return (
       <OrcamentosErrorScreen
-        title="Tarefa não encontrada"
-        message="Ela pode ter sido excluída ou pertencer a outra organização."
+        title="Card não encontrado"
+        message="Ele pode ter sido excluído ou pertencer a outra organização."
         href="/tarefas"
-        linkLabel="Ir para o Quadro de Trabalho"
+        linkLabel="Ir para a Esteira"
       />
     );
   }
@@ -45,11 +50,16 @@ export default async function TaskDetailPage({ params }: TaskDetailPageProps) {
   return (
     <TarefasChrome
       title={task.title}
-      breadcrumb={[{ label: 'Tarefas', href: '/tarefas' }, { label: task.title }]}
+      breadcrumb={[{ label: 'Esteira', href: '/tarefas' }, { label: task.title }]}
       actions={<TarefasModuleHeaderBell />}
     >
-      <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <TaskDetailPanel task={task} viewerId={viewerId} />
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+        <TaskDetailPanel
+          task={task}
+          members={members}
+          viewerId={viewerId}
+          orgId={orgId as string}
+        />
       </div>
     </TarefasChrome>
   );

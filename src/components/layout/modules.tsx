@@ -120,8 +120,8 @@ export const APP_MODULES: AppModule[] = [
   },
   {
     id: "tarefas",
-    label: "Tarefas",
-    description: "Quadro de trabalho entre Comercial, Engenharia, Compras e Execução",
+    label: "Esteira",
+    description: "Do contato do cliente à obra em campo, passando por cada setor",
     icon: KanbanSquare,
     tag: "Operação",
     href: "/tarefas",
