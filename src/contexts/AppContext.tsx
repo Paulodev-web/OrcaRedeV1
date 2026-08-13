@@ -138,6 +138,21 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
  * @param ascending - Ordem crescente ou decrescente
  * @param filters - Filtros adicionais (opcional)
  * @returns Array com todos os registros
+ *
+ * A primeira página já pede `count: 'exact'` — e usa o total para disparar as
+ * páginas restantes em PARALELO (`Promise.all`), em vez do `while` sequencial
+ * que havia antes. Para `materials` (2.469 linhas, 3 páginas), isso trocava 3
+ * idas e voltas ao banco, uma esperando a outra terminar, por 2 (a primeira, e
+ * depois as duas restantes ao mesmo tempo) — e o `count` pedido deixa de ser
+ * jogado fora: antes a condição de parada olhava só `data.length === pageSize`.
+ *
+ * `.order(orderBy)` sozinho NÃO é suficiente para paginar: `created_at` tem
+ * lotes de até 200 linhas com o mesmo instante exato (import em massa), e
+ * Postgres não garante ordem entre empates — a mesma linha podia cair em duas
+ * páginas e outra sumir no meio. Confirmado testando contra dados reais antes
+ * de trocar para paralelo (que expõe o problema mais cedo que o `while`
+ * sequencial, mas o risco já existia). `id` como desempate final resolve:
+ * dois UUIDs nunca colidem, então a fronteira de cada página fica fixa.
  */
 async function fetchAllRecords(
   tableName: string,
@@ -146,45 +161,56 @@ async function fetchAllRecords(
   ascending: boolean = false,
   filters?: any
 ): Promise<any[]> {
-  let allRecords: any[] = [];
-  let page = 0;
   const pageSize = 1000;
-  let hasMore = true;
 
-  while (hasMore) {
-    const from = page * pageSize;
-    const to = from + pageSize - 1;
-    
+  const buildQuery = (from: number, to: number) => {
     let query = supabase
       .from(tableName)
       .select(selectQuery, { count: 'exact' })
       .order(orderBy, { ascending })
+      .order('id', { ascending: true })
       .range(from, to);
 
-    // Aplicar filtros adicionais se fornecidos
     if (filters) {
       Object.keys(filters).forEach(key => {
         query = query.eq(key, filters[key]);
       });
     }
 
-    const { data, error } = await query;
+    return query;
+  };
 
-    if (error) {
-      console.error(`Erro ao buscar registros de "${tableName}":`, error);
-      throw error;
-    }
+  const { data: firstPage, count, error: firstError } = await buildQuery(0, pageSize - 1);
 
-    if (data && data.length > 0) {
-      allRecords = [...allRecords, ...data];
-      hasMore = data.length === pageSize;
-      page++;
-    } else {
-      hasMore = false;
-    }
+  if (firstError) {
+    console.error(`Erro ao buscar registros de "${tableName}":`, firstError);
+    throw firstError;
   }
 
-  return allRecords;
+  const rows: any[] = firstPage ?? [];
+  const total = count ?? rows.length;
+
+  if (rows.length < pageSize || total <= pageSize) {
+    return rows;
+  }
+
+  const remainingPages = Math.ceil(total / pageSize) - 1;
+  const rest = await Promise.all(
+    Array.from({ length: remainingPages }, (_, i) => {
+      const from = (i + 1) * pageSize;
+      return buildQuery(from, from + pageSize - 1);
+    }),
+  );
+
+  for (const page of rest) {
+    if (page.error) {
+      console.error(`Erro ao buscar registros de "${tableName}":`, page.error);
+      throw page.error;
+    }
+    if (page.data) rows.push(...page.data);
+  }
+
+  return rows;
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -245,13 +271,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const fetchMaterials = useCallback(async (forceRefresh: boolean = false) => {
     // ⚡ CACHE: Evita recarregar se já tiver dados em cache (a menos que forçado)
     if (hasFetchedMaterials && materiais.length > 0 && !forceRefresh) {
-      console.log("💾 Usando materiais do cache (", materiais.length, "itens)");
       return;
     }
 
     try {
       setLoadingMaterials(true);
-      console.log("📦 Carregando materiais do banco de dados...");
 
       // Buscar TODOS os materiais usando a função helper de paginação
       const allMaterials = await fetchAllRecords('materials', '*', 'created_at', false);
@@ -284,7 +308,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       setMateriais(materiaisUnicos);
       setHasFetchedMaterials(true);
-      console.log("✅ Materiais carregados:", materiaisUnicos.length, "itens");
     } catch (error) {
       console.error('Erro ao buscar materiais:', error);
       // Em caso de erro, mantém a lista vazia
@@ -548,11 +571,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const fetchBudgetDetails = useCallback(async (budgetId: string): Promise<BudgetDetails | null> => {
     try {
       setLoadingBudgetDetails(true);
-      console.time('⏱️ Total fetchBudgetDetails');
 
       
       // ⚡ OTIMIZAÇÃO: Buscar dados em paralelo quando possível
-      console.time('⏱️ Budget info');
       const { data: budgetData, error: budgetError } = await supabase
         .from('budgets')
         .select(`
@@ -569,7 +590,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         `)
         .eq('id', budgetId)
         .single();
-      console.timeEnd('⏱️ Budget info');
 
       if (budgetError) {
         console.error('ERRO DETALHADO DO SUPABASE (budget):', budgetError);
@@ -577,7 +597,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       
       // ⚡ OTIMIZAÇÃO: Query simplificada - buscar apenas campos essenciais
-      console.time('⏱️ Posts query');
       const { data: postsData, error: postsError } = await supabase
         .from('budget_posts')
         .select(`
@@ -631,7 +650,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .eq('budget_id', budgetId)
         .order('counter', { ascending: true })
         .limit(2000);
-      console.timeEnd('⏱️ Posts query');
 
       if (postsError) {
         console.error('ERRO DETALHADO DO SUPABASE (posts):', postsError);
@@ -647,7 +665,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       // Mapear os dados dos postes para o tipo correto
       const postsFormatted: BudgetPostDetail[] = postsData?.map(post => {
-        console.log('📍 Carregando poste:', { id: post.id, name: post.name, counter: post.counter, custom_name: post.custom_name });
         return {
           id: post.id,
           name: post.name || '',
@@ -740,8 +757,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       };
 
       setBudgetDetails(budgetDetails);
-      console.timeEnd('⏱️ Total fetchBudgetDetails');
-      console.log(`✅ Orçamento carregado: ${postsFormatted.length} postes`);
       return budgetDetails;
     } catch (error) {
       console.error('❌ ERRO ao carregar orçamento:', error);
@@ -758,13 +773,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const fetchPostTypes = useCallback(async (forceRefresh: boolean = false) => {
     // ⚡ CACHE: Evita recarregar se já tiver dados em cache (a menos que forçado)
     if (hasFetchedPostTypes && postTypes.length > 0 && !forceRefresh) {
-      console.log("💾 Usando tipos de poste do cache (", postTypes.length, "itens)");
       return;
     }
 
     try {
       setLoadingPostTypes(true);
-      console.log("🏗️ Carregando tipos de poste do banco de dados...");
 
       
       // Buscar TODOS os tipos de poste usando a função helper de paginação
@@ -786,7 +799,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       setPostTypes(postTypesFormatted);
       setHasFetchedPostTypes(true);
-      console.log("✅ Tipos de poste carregados:", postTypesFormatted.length, "itens");
     } catch (error) {
       console.error('Erro ao buscar tipos de poste:', error);
       setPostTypes([]);
