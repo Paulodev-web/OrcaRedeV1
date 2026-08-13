@@ -14,6 +14,8 @@ import { AlertDialog } from '@/components/ui/alert-dialog';
 import { getPostDisplayName } from '@/lib/utils';
 import { exportByPostAndGroupToExcel, PostWithMaterials } from '@/services/exportService';
 import { PostItemGroupSegmentField, PostSegmentBadge, PostSegmentField } from '@/components/orcamentos/segments/SegmentFields';
+// Instrumentação temporária — ver src/lib/perf/openBudget.ts.
+import { perfRender } from '@/lib/perf/openBudget';
 
 export type AreaTrabalhoView = 'main' | 'consolidation';
 
@@ -30,6 +32,7 @@ export interface AreaTrabalhoProps {
 }
 
 export function AreaTrabalho({ embedded = false, view, onViewChange }: AreaTrabalhoProps = {}) {
+  perfRender('AreaTrabalho');
   const [splitPercent, setSplitPercent] = useState(50);
   const isDragging = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1080,6 +1083,7 @@ function PostListAccordion({
   removeLooseMaterialFromPost,
   onExportByPostAndGroup
 }: PostListAccordionProps) {
+  perfRender('PostListAccordion');
   const [isRendering, setIsRendering] = useState(false);
   const [postSearchTerm, setPostSearchTerm] = useState('');
   

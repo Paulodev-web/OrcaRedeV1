@@ -2,6 +2,8 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabaseClient';
+// Instrumentação temporária — ver src/lib/perf/openBudget.ts.
+import { perfPhase } from '@/lib/perf/openBudget';
 
 interface AuthContextType {
   session: Session | null;
@@ -24,8 +26,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async function initAuth() {
       try {
         // Busca a sessão inicial
+        const fimSessao = perfPhase('auth:getSession (trava as demais queries)');
         const { data: { session }, error } = await supabase.auth.getSession();
-        
+        fimSessao({ tem_sessao: !!session });
+
+
         if (error) {
           console.error('Erro ao buscar sessão:', error);
         }
