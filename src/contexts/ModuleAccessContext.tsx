@@ -3,6 +3,8 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "./AuthContext";
 import { APP_MODULES, type AppModuleId } from "@/components/layout/modules";
+// Instrumentação temporária — ver src/lib/perf/openBudget.ts.
+import { perfPhase } from "@/lib/perf/openBudget";
 
 interface ModuleAccessContextType {
   /** `true` enquanto a permissão ainda não chegou — módulos ficam visíveis para não piscar. */
@@ -53,7 +55,10 @@ export function ModuleAccessProvider({ children }: { children: React.ReactNode }
     setLoading(true);
 
     async function load() {
+      // Três idas EM SÉRIE ao banco — cada uma espera a anterior.
+      const fimOrg = perfPhase("permissões:rpc current_org_id (1 de 3, serial)");
       const { data: orgId } = await supabase.rpc("current_org_id");
+      fimOrg();
       if (cancelled) return;
       if (!orgId) {
         setIsOrgAdmin(false);
@@ -62,7 +67,9 @@ export function ModuleAccessProvider({ children }: { children: React.ReactNode }
         return;
       }
 
+      const fimAdmin = perfPhase("permissões:rpc is_org_admin (2 de 3, serial)");
       const { data: isAdmin } = await supabase.rpc("is_org_admin", { _org_id: orgId });
+      fimAdmin();
       if (cancelled) return;
       if (isAdmin === true) {
         setIsOrgAdmin(true);
@@ -71,11 +78,13 @@ export function ModuleAccessProvider({ children }: { children: React.ReactNode }
         return;
       }
 
+      const fimPerms = perfPhase("permissões:module_permissions (3 de 3, serial)");
       const { data: rows } = await supabase
         .from("module_permissions")
         .select("module_key, can_view")
         .eq("org_id", orgId)
         .eq("user_id", user!.id);
+      fimPerms();
       if (cancelled) return;
 
       const next = new Set<AppModuleId>(["portal"]);

@@ -75,22 +75,35 @@ export function createSupabasePublicProposalClient(shareToken: string): Supabase
   );
 }
 
-/** JWT do cookie; lança se não houver sessão válida (alinhado a políticas RLS com auth.uid() = user_id). */
-export const requireAuthUserId = cache(async (supabase: SupabaseClient): Promise<string> => {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-  if (userError || !user) {
-    throw new Error('Usuário não autenticado.');
-  }
-  return user.id;
-});
-
-/** Como requireAuthUserId, mas retorna o objeto `user` completo (não só o id) e não lança em erro. */
+/**
+ * Usuário do JWT, memoizado por requisição. Devolve `null` em vez de lançar.
+ *
+ * `auth.getUser()` NÃO é local: ele valida o token contra o servidor de auth do
+ * Supabase, ou seja, é um round-trip de rede a cada chamada (diferente de
+ * `getSession()`, que só lê o cookie). Por isso passa por `cache()`.
+ */
 export const getCachedAuthUser = cache(async (supabase: SupabaseClient) => {
   const {
     data: { user },
   } = await supabase.auth.getUser();
   return user;
+});
+
+/**
+ * JWT do cookie; lança se não houver sessão válida (alinhado a políticas RLS
+ * com auth.uid() = user_id).
+ *
+ * Delega para `getCachedAuthUser` DE PROPÓSITO. Antes as duas funções faziam a
+ * própria chamada a `auth.getUser()`, cada uma dentro do seu `cache()` — e
+ * `cache()` deduplica por função, não por resultado, então elas não se
+ * enxergavam. Na abertura de um orçamento isso custava duas validações de rede
+ * do mesmo token, em série: o layout chama esta, e `requireModuleAccess` chama
+ * a outra. Agora as duas compartilham um único round-trip.
+ */
+export const requireAuthUserId = cache(async (supabase: SupabaseClient): Promise<string> => {
+  const user = await getCachedAuthUser(supabase);
+  if (!user) {
+    throw new Error('Usuário não autenticado.');
+  }
+  return user.id;
 });

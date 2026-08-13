@@ -6,6 +6,8 @@ import {
   type BudgetSegmentAssignments,
   type WorkSegment,
 } from '@/services/segments/workSegments';
+// Instrumentação temporária — ver src/lib/perf/serverTiming.ts (PERF=1 npm run dev).
+import { timeServer } from '@/lib/perf/serverTiming';
 
 /**
  * Carga de abertura da esteira do orçamento (`/orcamentos/[budgetId]/*`).
@@ -79,14 +81,18 @@ export async function getBudgetWorkspaceData(
   userId: string,
   budgetId: string
 ): Promise<BudgetWorkspaceData | null> {
-  const budget = await getBudgetForWorkspace(supabase, userId, budgetId);
+  const budget = await timeServer('  ├─ query do orçamento (1 linha)', () =>
+    getBudgetForWorkspace(supabase, userId, budgetId)
+  );
   if (!budget) {
     return null;
   }
 
   const [segments, segmentAssignments] = await Promise.all([
-    listWorkSegments(supabase, userId),
-    listBudgetSegmentAssignments(supabase, budgetId),
+    timeServer('  ├─ catálogo de segmentos', () => listWorkSegments(supabase, userId)),
+    timeServer('  └─ marcações (280 postes + 1175 grupos)', () =>
+      listBudgetSegmentAssignments(supabase, budgetId)
+    ),
   ]);
 
   return { budget, segments, segmentAssignments };

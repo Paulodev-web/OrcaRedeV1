@@ -11,6 +11,8 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { ModuleHeader } from '@/components/layout/ModuleHeader';
 import { StepTabs, type StepTabItem } from '@/components/layout/StepTabs';
 import { useOrcaRedeChrome } from './OrcaRedeChrome';
+// Instrumentação temporária — ver src/lib/perf/openBudget.ts.
+import { perfEvent, perfRender } from '@/lib/perf/openBudget';
 import { SegmentCoverageBadge } from './segments/SegmentCoverage';
 import { WorkSegmentsProvider } from './segments/WorkSegmentsProvider';
 import type { BudgetSegmentAssignments, WorkSegment } from '@/services/segments/workSegments';
@@ -39,6 +41,7 @@ export function BudgetWorkspaceChrome({
   segmentAssignments,
   children,
 }: BudgetWorkspaceChromeProps) {
+  perfRender('BudgetWorkspaceChrome');
   const pathname = usePathname();
   const step: BudgetStepId = pathname?.endsWith('/materiais')
     ? 'materiais'
@@ -69,6 +72,8 @@ export function BudgetWorkspaceChrome({
   // Carga inicial do orçamento. `fetchPostTypes` e `fetchMaterials` têm cache
   // interno no contexto e só batem no banco na primeira vez.
   useEffect(() => {
+    // Marco zero da medição: todo tempo do relatório é relativo a este ponto.
+    perfEvent('open:inicio', { orcamento: budget.id });
     fetchBudgetDetails(budget.id);
     fetchPostTypes();
     fetchMaterials();

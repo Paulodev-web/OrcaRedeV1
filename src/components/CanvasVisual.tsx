@@ -9,6 +9,8 @@ import 'react-pdf/dist/Page/TextLayer.css';
 import { Orcamento, Poste, TipoPoste, BudgetPostDetail, BudgetDetails } from '@/types';
 import { PostIcon } from './PostIcon';
 import { getPostDisplayName } from '@/lib/utils';
+// Instrumentação temporária — ver src/lib/perf/openBudget.ts.
+import { perfEvent, perfPhase, perfRender } from '@/lib/perf/openBudget';
 
 // Worker via CDN usando a versão exata do pdfjs-dist instalado
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -74,6 +76,7 @@ export function CanvasVisual({
   postIconAlwaysGreen = false,
   hideToolbar = false
 }: CanvasVisualProps) {
+  perfRender('CanvasVisual');
 
   const containerRef = useRef<HTMLDivElement>(null);
   const transformRef = useRef<ReactZoomPanPinchRef>(null);
@@ -282,12 +285,56 @@ export function CanvasVisual({
     setShowPdfLayer(true);
   }, [isPDF, orcamento.imagemPlanta]);
 
+  // Marco final da medição de abertura: o primeiro quadro em que os postes
+  // realmente foram para a tela. Dois rAF encadeados esperam o browser pintar —
+  // um só ainda está antes do paint. Instrumentação temporária.
+  const jaMarcouPaint = useRef(false);
+  useEffect(() => {
+    if (jaMarcouPaint.current) return;
+    const total = budgetDetails?.posts?.length ?? 0;
+    if (total === 0) return;
+
+    // A marca só é dada DENTRO do callback, nunca antes de agendar. Marcando
+    // antes, o ciclo monta/desmonta/remonta do StrictMode cancelava o rAF pelo
+    // cleanup com a trava já ligada — e o evento não disparava nunca, deixando
+    // `abertura_ate_canvas_ms` como "(ainda não pintou)".
+    let interno = 0;
+    const externo = requestAnimationFrame(() => {
+      interno = requestAnimationFrame(() => {
+        jaMarcouPaint.current = true;
+        perfEvent('canvas:postes-pintados', { postes: total });
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(externo);
+      cancelAnimationFrame(interno);
+    };
+  }, [budgetDetails?.posts?.length]);
+
 
   // Funções para PDF
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    perfEvent('pdf:documento-carregado', { paginas: numPages });
     setNumPages(numPages);
     setPageNumber(1);
     setPdfLoading(false);
+  };
+
+  // Instrumentação temporária: `onLoadSuccess` do <Page> dispara quando a
+  // página existe, ANTES de virar pixel. Quem mede a rasterização de verdade —
+  // 6000px de largura na render_version 2 — é o par com `onRenderSuccess`.
+  const fimRasterizacao = useRef<((meta?: Record<string, unknown>) => void) | null>(null);
+
+  const onPageRenderSuccess = () => {
+    fimRasterizacao.current?.({
+      largura_px: imageDimensions?.width ?? null,
+      altura_px: imageDimensions?.height ?? null,
+      megapixels: imageDimensions
+        ? Math.round((imageDimensions.width * imageDimensions.height) / 100000) / 10
+        : null,
+    });
+    fimRasterizacao.current = null;
   };
 
   const onDocumentLoadError = () => {
@@ -332,6 +379,10 @@ export function CanvasVisual({
       
       console.log(`[Render V1] PDF legado: scale=${scale.toFixed(2)}, width=${finalWidth}px, height=${finalHeight}px`);
     }
+
+    // Relógio da rasterização começa aqui: é a partir de agora que o pdf.js
+    // pinta os pixels. Fecha em `onPageRenderSuccess`.
+    fimRasterizacao.current = perfPhase(`pdf:rasterizar página (render_version ${renderVersion})`);
 
     setImageDimensions({
       width: finalWidth,
@@ -1019,6 +1070,7 @@ export function CanvasVisual({
                               renderTextLayer={false}
                               renderAnnotationLayer={false}
                                     onLoadSuccess={onPageLoadSuccess as any}
+                              onRenderSuccess={onPageRenderSuccess}
                               onLoadError={() => setPdfLoading(false)}
                                     width={imageDimensions?.width || 1200}
                               renderMode="canvas"

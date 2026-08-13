@@ -6,6 +6,9 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from './AuthContext';
 import { processAndUploadMaterials } from '@/services/materialImportService';
 import { syncMaterialPriceAction } from '@/actions/materials';
+// Instrumentação temporária da abertura de orçamento — no-op enquanto
+// desligada. Ver src/lib/perf/openBudget.ts para como ligar e ler.
+import { perfEnabled, perfEvent, perfJsonKb, perfPhase } from '@/lib/perf/openBudget';
 
 interface AppContextType {
   materiais: Material[];
@@ -62,7 +65,7 @@ interface AppContextType {
   
   // Funções de orçamentos
   fetchBudgets: () => Promise<void>;
-  fetchBudgetDetails: (budgetId: string) => Promise<BudgetDetails | null>;
+  fetchBudgetDetails: (budgetId: string, forceRefresh?: boolean) => Promise<BudgetDetails | null>;
   uploadPlanImage: (budgetId: string, file: File) => Promise<void>;
   deletePlanImage: (budgetId: string) => Promise<void>;
   
@@ -180,7 +183,13 @@ async function fetchAllRecords(
     return query;
   };
 
+  const fimPrimeira = perfPhase(`rede:${tableName} (pág. 1)`);
   const { data: firstPage, count, error: firstError } = await buildQuery(0, pageSize - 1);
+  fimPrimeira({
+    KB: perfJsonKb(firstPage),
+    linhas: firstPage?.length ?? 0,
+    total_na_tabela: count ?? null,
+  });
 
   if (firstError) {
     console.error(`Erro ao buscar registros de "${tableName}":`, firstError);
@@ -195,12 +204,14 @@ async function fetchAllRecords(
   }
 
   const remainingPages = Math.ceil(total / pageSize) - 1;
+  const fimResto = perfPhase(`rede:${tableName} (págs. 2..${remainingPages + 1}, paralelas)`);
   const rest = await Promise.all(
     Array.from({ length: remainingPages }, (_, i) => {
       const from = (i + 1) * pageSize;
       return buildQuery(from, from + pageSize - 1);
     }),
   );
+  fimResto({ paginas: remainingPages });
 
   for (const page of rest) {
     if (page.error) {
@@ -211,6 +222,56 @@ async function fetchAllRecords(
   }
 
   return rows;
+}
+
+/**
+ * Buscas em voo, por chave.
+ *
+ * Os caches deste contexto (`hasFetchedMaterials` e afins) só barram uma
+ * segunda busca depois que a primeira TERMINOU e gravou o estado. Enquanto ela
+ * está no ar, o portão está aberto: dois chamadores simultâneos passam os dois
+ * e disparam duas cargas completas na rede. Medido na abertura de um orçamento
+ * de 280 postes: `budget_posts` (2,3 MB) baixado DUAS vezes, `materials` seis
+ * (3 páginas × 2), e as duas cópias ainda competem entre si — a segunda passada
+ * de postes levou 3.715ms contra 2.273ms da primeira.
+ *
+ * Aqui o segundo chamador recebe a MESMA promise do primeiro, em vez de abrir
+ * outra requisição. A entrada sai do mapa quando a promise assenta, então a
+ * próxima chamada de verdade (um refresh, outro orçamento) busca normalmente.
+ *
+ * Fora do componente de propósito: precisa sobreviver ao ciclo
+ * monta/desmonta/remonta que o StrictMode faz em desenvolvimento — que é
+ * justamente onde o problema aparece dobrado.
+ */
+const buscasEmVoo = new Map<string, Promise<unknown>>();
+
+/**
+ * @param forcar Ignora o que estiver em voo e começa uma busca nova.
+ *
+ * Obrigatório em recarga-após-escrita (`fetchMaterials(true)` depois de
+ * sincronizar um preço, por exemplo): uma busca que JÁ estava no ar quando a
+ * escrita aconteceu carrega o dado de antes dela. Pendurar o refresh nessa
+ * busca devolveria o preço velho e a tela mentiria sobre o que foi salvo.
+ */
+function deduplicar<T>(chave: string, executar: () => Promise<T>, forcar = false): Promise<T> {
+  if (!forcar) {
+    const emVoo = buscasEmVoo.get(chave);
+    if (emVoo) return emVoo as Promise<T>;
+  }
+
+  const promise = executar();
+  buscasEmVoo.set(chave, promise);
+
+  // A checagem de identidade impede que uma busca antiga, ao terminar, apague
+  // do mapa a busca forçada que tomou o lugar dela.
+  const limpar = () => {
+    if (buscasEmVoo.get(chave) === promise) buscasEmVoo.delete(chave);
+  };
+  // Dois handlers em vez de `.finally`: quem trata o erro de verdade é o
+  // chamador original; aqui só se limpa o mapa, sem virar rejeição não tratada.
+  promise.then(limpar, limpar);
+
+  return promise;
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -259,8 +320,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Efeito para inicializar o AppContext apenas após o AuthContext estar estável
   useEffect(() => {
+    perfEvent('gate:AppProvider hidratou (spinner na tela)');
     // Pequeno delay para garantir que o AuthContext esteja completamente inicializado
     const timer = setTimeout(() => {
+      perfEvent('gate:AppProvider liberou a árvore (fim dos 100ms)');
       setIsInitialized(true);
     }, 100);
 
@@ -274,11 +337,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    return deduplicar('materials', async () => {
+    const fimMateriais = perfPhase('catálogo:fetchMaterials (todas as colunas)');
     try {
       setLoadingMaterials(true);
 
       // Buscar TODOS os materiais usando a função helper de paginação
       const allMaterials = await fetchAllRecords('materials', '*', 'created_at', false);
+      fimMateriais({ KB: perfJsonKb(allMaterials), linhas: allMaterials.length });
 
       // Mapear os dados do banco para o formato do frontend
       const materiaisFormatados: Material[] = allMaterials.map(item => ({
@@ -315,6 +381,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoadingMaterials(false);
     }
+    }, forceRefresh);
   }, [hasFetchedMaterials, materiais.length]);
 
   const deleteAllMaterials = async () => {
@@ -568,36 +635,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const fetchBudgetDetails = useCallback(async (budgetId: string): Promise<BudgetDetails | null> => {
+  const fetchBudgetDetails = useCallback(async (
+    budgetId: string,
+    forceRefresh: boolean = false
+  ): Promise<BudgetDetails | null> => {
+    return deduplicar(`budgetDetails:${budgetId}`, async () => {
     try {
       setLoadingBudgetDetails(true);
 
       
-      // ⚡ OTIMIZAÇÃO: Buscar dados em paralelo quando possível
-      const { data: budgetData, error: budgetError } = await supabase
-        .from('budgets')
-        .select(`
-          id,
-          project_name,
-          company_id,
-          client_name,
-          city,
-          status,
-          created_at,
-          updated_at,
-          plan_image_url,
-          render_version
-        `)
-        .eq('id', budgetId)
-        .single();
+      const fimQueryOrcamento = perfPhase('detalhes:query-orçamento');
+      // A consulta pesada da abertura: postes + grupos + materiais aninhados.
+      const fimQueryPostes = perfPhase('detalhes:query-postes (a pesada)');
 
-      if (budgetError) {
-        console.error('ERRO DETALHADO DO SUPABASE (budget):', budgetError);
-        throw budgetError;
-      }
-      
-      // ⚡ OTIMIZAÇÃO: Query simplificada - buscar apenas campos essenciais
-      const { data: postsData, error: postsError } = await supabase
+      // As duas consultas são disparadas JUNTAS de propósito. Elas não dependem
+      // uma da outra — só do `budgetId`, que já está em mãos. Antes a dos postes
+      // esperava a do orçamento terminar, e como a de UMA linha estava levando
+      // ~1,4s (medido), a consulta pesada só começava a 1,4s da abertura. Nada
+      // ali precisava ser sequencial.
+      const [
+        { data: budgetData, error: budgetError },
+        { data: postsData, error: postsError },
+      ] = await Promise.all([
+        supabase
+          .from('budgets')
+          .select(`
+            id,
+            project_name,
+            company_id,
+            client_name,
+            city,
+            status,
+            created_at,
+            updated_at,
+            plan_image_url,
+            render_version
+          `)
+          .eq('id', budgetId)
+          .single()
+          .then((r) => {
+            fimQueryOrcamento();
+            return r;
+          }),
+        // ⚡ OTIMIZAÇÃO: Query simplificada - buscar apenas campos essenciais
+        supabase
         .from('budget_posts')
         .select(`
           id,
@@ -619,37 +700,55 @@ export function AppProvider({ children }: { children: ReactNode }) {
             post_item_group_materials (
               material_id,
               quantity,
-              price_at_addition,
-              materials (
-                id,
-                code,
-                name,
-                unit,
-                price,
-                subgroup_id,
-                material_subgroups ( name )
-              )
+              price_at_addition
             )
           ),
           post_materials (
             id,
             material_id,
             quantity,
-            price_at_addition,
-            materials (
-              id,
-              code,
-              name,
-              unit,
-              price,
-              subgroup_id,
-              material_subgroups ( name )
-            )
+            price_at_addition
           )
         `)
         .eq('budget_id', budgetId)
         .order('counter', { ascending: true })
-        .limit(2000);
+        .limit(2000),
+      ]);
+
+      if (budgetError) {
+        console.error('ERRO DETALHADO DO SUPABASE (budget):', budgetError);
+        throw budgetError;
+      }
+
+      // Quantas linhas aninhadas vieram, e quantos materiais DISTINTOS existem
+      // de fato: a diferença entre os dois é a duplicação do payload. A varredura
+      // fica atrás do flag — com o perfilador desligado não custa nada.
+      if (perfEnabled()) {
+        let grupos = 0;
+        let materiaisDeGrupo = 0;
+        let materiaisAvulsos = 0;
+        const idsDistintos = new Set<string>();
+        for (const post of postsData ?? []) {
+          grupos += post.post_item_groups?.length ?? 0;
+          materiaisAvulsos += post.post_materials?.length ?? 0;
+          for (const grupo of post.post_item_groups ?? []) {
+            materiaisDeGrupo += grupo.post_item_group_materials?.length ?? 0;
+            for (const m of grupo.post_item_group_materials ?? []) idsDistintos.add(m.material_id);
+          }
+          for (const m of post.post_materials ?? []) idsDistintos.add(m.material_id);
+        }
+        fimQueryPostes({
+          KB: perfJsonKb(postsData),
+          postes: postsData?.length ?? 0,
+          grupos,
+          materiais_de_grupo: materiaisDeGrupo,
+          materiais_avulsos: materiaisAvulsos,
+          materiais_distintos: idsDistintos.size,
+          objetos_material_no_json: materiaisDeGrupo + materiaisAvulsos,
+        });
+      } else {
+        fimQueryPostes();
+      }
 
       if (postsError) {
         console.error('ERRO DETALHADO DO SUPABASE (posts):', postsError);
@@ -661,9 +760,92 @@ export function AppProvider({ children }: { children: ReactNode }) {
         throw postsError;
       }
 
+      // Catálogo dos materiais DESTE orçamento, buscado à parte.
+      //
+      // A query acima costumava embutir o objeto `materials` inteiro em cada
+      // linha de material. Como o mesmo material se repete em dezenas de postes,
+      // isso inflava o payload sem acrescentar informação: medido num orçamento
+      // de 115 postes, 94 materiais distintos apareciam 2.603 vezes — 798 KB,
+      // dos quais ~500 KB eram cópia. No de 280 postes eram 100 distintos em
+      // 6.404 cópias, 2,33 MB. Aqui cada material vem UMA vez e o objeto por
+      // linha é remontado abaixo, com o mesmo formato de antes.
+      const idsUsados = new Set<string>();
+      for (const post of postsData ?? []) {
+        for (const grupo of post.post_item_groups ?? []) {
+          for (const m of grupo.post_item_group_materials ?? []) idsUsados.add(m.material_id);
+        }
+        for (const m of post.post_materials ?? []) idsUsados.add(m.material_id);
+      }
 
+      const fimQueryMateriais = perfPhase('detalhes:query-materiais-do-orçamento (distintos)');
+      // Em blocos: os ids vão na URL do `.in()`, e o maior orçamento da base tem
+      // 185 materiais distintos (~7 KB de URL só de UUID). 100 por requisição
+      // mantém folga confortável e no caso comum (média 79) é uma só.
+      const TAMANHO_BLOCO = 100;
+      const blocos: string[][] = [];
+      const todosIds = [...idsUsados];
+      for (let i = 0; i < todosIds.length; i += TAMANHO_BLOCO) {
+        blocos.push(todosIds.slice(i, i + TAMANHO_BLOCO));
+      }
+
+      const resultadosMateriais = await Promise.all(
+        blocos.map((bloco) =>
+          supabase
+            .from('materials')
+            .select('id, code, name, unit, price, subgroup_id, material_subgroups ( name )')
+            .in('id', bloco)
+        )
+      );
+      fimQueryMateriais({ distintos: idsUsados.size, requisicoes: blocos.length });
+
+      const catalogo = new Map<string, any>();
+      for (const resultado of resultadosMateriais) {
+        if (resultado.error) {
+          console.error('ERRO DETALHADO DO SUPABASE (materiais do orçamento):', resultado.error);
+          throw resultado.error;
+        }
+        for (const material of resultado.data ?? []) catalogo.set(material.id, material);
+      }
+
+      /**
+       * Reconstrói o objeto `materials` que antes vinha embutido na linha.
+       *
+       * Devolve uma instância NOVA a cada chamada, em vez de compartilhar a do
+       * catálogo entre as linhas que apontam para o mesmo material. É o que
+       * mantém o comportamento idêntico ao de antes: se algum ponto do app
+       * mutar esse objeto, a mutação não pode vazar para os outros postes.
+       *
+       * O material ausente cai no mesmo registro de "não encontrado" que a
+       * query aninhada produzia quando o embed vinha nulo.
+       */
+      const resolverMaterial = (materialId: string) => {
+        const encontrado = catalogo.get(materialId);
+        if (!encontrado) {
+          return {
+            id: '',
+            code: '',
+            name: 'Material não encontrado',
+            description: undefined,
+            unit: '',
+            price: 0,
+            subgroup_id: null,
+            material_subgroups: null,
+          };
+        }
+        return {
+          id: encontrado.id,
+          code: encontrado.code || '',
+          name: encontrado.name || '',
+          description: undefined, // ⚡ Não carregado para otimização
+          unit: encontrado.unit || '',
+          price: encontrado.price || 0,
+          subgroup_id: encontrado.subgroup_id ?? null,
+          material_subgroups: encontrado.material_subgroups ?? null,
+        };
+      };
 
       // Mapear os dados dos postes para o tipo correto
+      const fimMapeamento = perfPhase('detalhes:map em JS (aloca 1 objeto por linha aninhada)');
       const postsFormatted: BudgetPostDetail[] = postsData?.map(post => {
         return {
           id: post.id,
@@ -690,25 +872,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
               material_id: material.material_id,
               quantity: material.quantity || 0,
               price_at_addition: material.price_at_addition || 0,
-              materials: material.materials ? {
-                id: (material.materials as any).id,
-                code: (material.materials as any).code || '',
-                name: (material.materials as any).name || '',
-                description: undefined, // ⚡ Não carregado para otimização
-                unit: (material.materials as any).unit || '',
-                price: (material.materials as any).price || 0,
-                subgroup_id: (material.materials as any).subgroup_id ?? null,
-                material_subgroups: (material.materials as any).material_subgroups ?? null
-              } : {
-                id: '',
-                code: '',
-                name: 'Material não encontrado',
-                description: undefined,
-                unit: '',
-                price: 0,
-                subgroup_id: null,
-                material_subgroups: null
-              }
+              materials: resolverMaterial(material.material_id)
             };
           }) || []
         })) || [],
@@ -718,28 +882,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
           material_id: material.material_id,
           quantity: material.quantity || 0,
           price_at_addition: material.price_at_addition || 0,
-          materials: material.materials ? {
-            id: (material.materials as any).id,
-            code: (material.materials as any).code || '',
-            name: (material.materials as any).name || '',
-            description: undefined, // ⚡ Não carregado para otimização
-            unit: (material.materials as any).unit || '',
-            price: (material.materials as any).price || 0,
-            subgroup_id: (material.materials as any).subgroup_id ?? null,
-            material_subgroups: (material.materials as any).material_subgroups ?? null
-          } : {
-            id: '',
-            code: '',
-            name: 'Material não encontrado',
-            description: undefined,
-            unit: '',
-            price: 0,
-            subgroup_id: null,
-            material_subgroups: null
-          }
+          materials: resolverMaterial(material.material_id)
         })) || []
         };
       }) || [];
+      fimMapeamento({ postes: postsFormatted.length });
 
       // Combinar dados do orçamento e postes em um objeto BudgetDetails
       const budgetDetails: BudgetDetails = {
@@ -756,6 +903,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         posts: postsFormatted
       };
 
+      perfEvent('dados:budgetDetails-no-estado');
       setBudgetDetails(budgetDetails);
       return budgetDetails;
     } catch (error) {
@@ -768,6 +916,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoadingBudgetDetails(false);
     }
+    }, forceRefresh);
   }, []);
 
   const fetchPostTypes = useCallback(async (forceRefresh: boolean = false) => {
@@ -776,12 +925,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    return deduplicar('postTypes', async () => {
+    const fimPostTypes = perfPhase('catálogo:fetchPostTypes');
     try {
       setLoadingPostTypes(true);
 
-      
+
       // Buscar TODOS os tipos de poste usando a função helper de paginação
       const data = await fetchAllRecords('post_types', '*', 'name', true);
+      fimPostTypes({ linhas: data.length });
 
 
 
@@ -805,6 +957,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoadingPostTypes(false);
     }
+    });
   }, [hasFetchedPostTypes, postTypes.length]);
 
   const addPostToBudget = async (newPostData: { budget_id: string; post_type_id: string; name: string; x_coord: number; y_coord: number; skipPostTypeMaterial?: boolean; postTypeMaterialId?: string; postTypePrice?: number; pole_standard_id?: string; }) => {
@@ -1582,7 +1735,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       throw new Error(result.error);
     }
 
-    await Promise.all([fetchBudgetDetails(budgetId), fetchMaterials(true)]);
+    // `true` nos dois: é recarga logo após a escrita do preço, e uma busca já
+    // em voo traria o valor de antes dela.
+    await Promise.all([fetchBudgetDetails(budgetId, true), fetchMaterials(true)]);
   };
 
   // Função para remover um material de todas as ocorrências do orçamento (grupos + avulsos)
@@ -1701,10 +1856,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Funções para grupos de itens
   const fetchItemGroups = useCallback(async (companyId: string) => {
+    return deduplicar(`itemGroups:${companyId}`, async () => {
+    const fimGrupos = perfPhase('catálogo:fetchItemGroups (templates + materiais)');
     try {
       setLoadingGroups(true);
 
-      
+
       // Buscar templates de grupos para a empresa
       const { data: templatesData, error: templatesError } = await supabase
         .from('item_group_templates')
@@ -1727,6 +1884,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         `, { count: 'exact' })
         .eq('company_id', companyId)
         .range(0, 200); // Limite de 200 grupos por concessionária (otimizado)
+      fimGrupos({ KB: perfJsonKb(templatesData), templates: templatesData?.length ?? 0 });
 
       if (templatesError) {
         console.error('Erro ao buscar templates de grupos:', templatesError);
@@ -1755,6 +1913,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoadingGroups(false);
     }
+    });
   }, []);
 
   // Busca grupos de itens de várias concessionárias de uma vez. Usado pelo
@@ -1994,6 +2153,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Função centralizada para buscar todos os dados essenciais
   const fetchAllCoreData = useCallback(async () => {
     console.log("🔄 Sincronizando dados essenciais com o banco de dados...");
+    const fimCore = perfPhase('global:fetchAllCoreData (orçamentos + concessionárias + pastas)');
     setLoading(true);
     try {
       // ⚡ OTIMIZAÇÃO: Carregar apenas dados críticos para o dashboard inicial
@@ -2009,6 +2169,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("❌ Falha ao sincronizar dados essenciais:", error);
     } finally {
+      fimCore();
       setLoading(false);
     }
   }, [fetchBudgets, fetchUtilityCompanies, fetchFolders]);
