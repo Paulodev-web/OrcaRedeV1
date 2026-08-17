@@ -81,19 +81,32 @@ export async function getBudgetWorkspaceData(
   userId: string,
   budgetId: string
 ): Promise<BudgetWorkspaceData | null> {
-  const budget = await timeServer('  ├─ query do orçamento (1 linha)', () =>
-    getBudgetForWorkspace(supabase, userId, budgetId)
-  );
-  if (!budget) {
-    return null;
-  }
-
-  const [segments, segmentAssignments] = await Promise.all([
+  // As TRÊS leituras saem juntas.
+  //
+  // Antes o orçamento era aguardado sozinho e só depois os segmentos partiam —
+  // duas idas ao Supabase em série no caminho do primeiro byte, com o navegador
+  // sem nada na tela durante as duas. Nenhuma das outras duas precisa do
+  // resultado do orçamento: as duas se viram só com `budgetId` e `userId`, que
+  // já estão em mãos. Em série isso custava um round-trip inteiro de rede por
+  // abertura, e round-trip é justamente o que não dá para otimizar depois.
+  //
+  // Quando o orçamento não existe (ou o RLS não o entrega), os segmentos foram
+  // buscados à toa — mas esse é o caminho raro, e ele já termina em tela de
+  // erro. Pagar o desperdício no caso raro para economizar rede no caso normal
+  // é a troca certa aqui.
+  const [budget, segments, segmentAssignments] = await Promise.all([
+    timeServer('  ├─ query do orçamento (1 linha)', () =>
+      getBudgetForWorkspace(supabase, userId, budgetId)
+    ),
     timeServer('  ├─ catálogo de segmentos', () => listWorkSegments(supabase, userId)),
     timeServer('  └─ marcações (280 postes + 1175 grupos)', () =>
       listBudgetSegmentAssignments(supabase, budgetId)
     ),
   ]);
+
+  if (!budget) {
+    return null;
+  }
 
   return { budget, segments, segmentAssignments };
 }
