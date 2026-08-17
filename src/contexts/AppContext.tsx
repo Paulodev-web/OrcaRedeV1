@@ -338,12 +338,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     return deduplicar('materials', async () => {
-    const fimMateriais = perfPhase('catálogo:fetchMaterials (todas as colunas)');
+    const fimMateriais = perfPhase('catálogo:fetchMaterials (só as colunas usadas)');
     try {
       setLoadingMaterials(true);
 
-      // Buscar TODOS os materiais usando a função helper de paginação
-      const allMaterials = await fetchAllRecords('materials', '*', 'created_at', false);
+      // Colunas explícitas, não `*`.
+      //
+      // O `*` trazia 18 colunas por linha quando o mapeamento abaixo usa 11.
+      // As 7 extras não são de graça: `description` é texto livre (a maior
+      // coluna da tabela) e `embedding` é um `vector` que o PostgREST
+      // serializa como array de floats em JSON — hoje está todo NULL, mas no
+      // dia em que a busca semântica preencher, `*` viraria dezenas de MB
+      // nesta rota sem ninguém mudar uma linha aqui. Medido nos 2.470
+      // materiais da base: 1.592 KB com `*` contra ~505 KB assim.
+      //
+      // `descricao` do frontend vem de `name`, NÃO de `description` — por isso
+      // `description` fica de fora sem perder nada na tela.
+      const allMaterials = await fetchAllRecords(
+        'materials',
+        'id, code, name, price, unit, subgroup_id, price_source_supplier_name, price_source_supplier_id, price_source_quote_id, price_source_session_id, price_source_updated_at',
+        'created_at',
+        false
+      );
       fimMateriais({ KB: perfJsonKb(allMaterials), linhas: allMaterials.length });
 
       // Mapear os dados do banco para o formato do frontend
@@ -1863,6 +1879,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
 
       // Buscar templates de grupos para a empresa
+      //
+      // Sem o embed de `materials`: o mapeamento logo abaixo só lê
+      // `material_id` e `quantity` (é tudo que `GrupoItem.materiais` tem), então
+      // o objeto do material vinha pela rede e era descartado na hora. Como o
+      // mesmo material se repete em dezenas de templates, era o mesmo padrão de
+      // duplicação já corrigido em `fetchBudgetDetails`: na concessionária mais
+      // pesada da base são 1.191 linhas de `template_materials` carregando um
+      // objeto cada. Quem precisa do material resolve pelo catálogo de
+      // `materiais`, que o `fetchMaterials` já mantém em memória.
+      //
+      // `count: 'exact'` também saiu: nada lê a contagem, e ela obriga o
+      // Postgres a um COUNT completo além da página.
       const { data: templatesData, error: templatesError } = await supabase
         .from('item_group_templates')
         .select(`
@@ -1872,16 +1900,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           company_id,
           template_materials (
             material_id,
-            quantity,
-            materials (
-              id,
-              code,
-              name,
-              price,
-              unit
-            )
+            quantity
           )
-        `, { count: 'exact' })
+        `)
         .eq('company_id', companyId)
         .range(0, 200); // Limite de 200 grupos por concessionária (otimizado)
       fimGrupos({ KB: perfJsonKb(templatesData), templates: templatesData?.length ?? 0 });

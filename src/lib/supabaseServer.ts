@@ -76,18 +76,42 @@ export function createSupabasePublicProposalClient(shareToken: string): Supabase
 }
 
 /**
- * Usuário do JWT, memoizado por requisição. Devolve `null` em vez de lançar.
+ * Identidade do JWT, memoizada por requisição. Devolve `null` em vez de lançar.
  *
- * `auth.getUser()` NÃO é local: ele valida o token contra o servidor de auth do
- * Supabase, ou seja, é um round-trip de rede a cada chamada (diferente de
- * `getSession()`, que só lê o cookie). Por isso passa por `cache()`.
+ * Usa `getClaims()`, NÃO `getUser()`.
+ *
+ * `getUser()` valida o token batendo no servidor de auth do Supabase — um
+ * round-trip de rede a CADA chamada. Medido contra a produção deste projeto, o
+ * endpoint de auth respondia entre 300ms e 3s, e isso acontecia em toda
+ * navegação (uma vez no `proxy.ts` e outra aqui), antes de qualquer dado da
+ * página ser buscado. Era o "clica e demora pra acontecer" que o cliente
+ * relatou.
+ *
+ * `getClaims()` verifica a assinatura LOCALMENTE com a WebCrypto quando o
+ * projeto assina o JWT com chave assimétrica — e este assina: o JWKS responde
+ * uma chave ES256. O JWKS em si é buscado uma vez e fica em cache. A própria
+ * lib recomenda: "Prefer this method over getUser which always sends a request
+ * to the Auth server for each JWT".
+ *
+ * Continua sendo verificação criptográfica de verdade, não `getSession()` — o
+ * token é validado (assinatura + expiração) antes de virar identidade. O que
+ * some é só a ida à rede.
+ *
+ * Devolve apenas `{ id }` de propósito: é o que todo consumidor usa hoje, e o
+ * tipo estreito impede que alguém volte a depender do registro completo do
+ * Auth server sem perceber que isso custaria um round-trip. Quem realmente
+ * precisar do usuário inteiro (e-mail, metadados) deve chamar
+ * `supabase.auth.getUser()` explicitamente, ciente do custo.
  */
-export const getCachedAuthUser = cache(async (supabase: SupabaseClient) => {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user;
-});
+export const getCachedAuthUser = cache(
+  async (supabase: SupabaseClient): Promise<{ id: string } | null> => {
+    const { data, error } = await supabase.auth.getClaims();
+    if (error || !data?.claims?.sub) {
+      return null;
+    }
+    return { id: data.claims.sub };
+  }
+);
 
 /**
  * JWT do cookie; lança se não houver sessão válida (alinhado a políticas RLS
@@ -98,7 +122,11 @@ export const getCachedAuthUser = cache(async (supabase: SupabaseClient) => {
  * `cache()` deduplica por função, não por resultado, então elas não se
  * enxergavam. Na abertura de um orçamento isso custava duas validações de rede
  * do mesmo token, em série: o layout chama esta, e `requireModuleAccess` chama
- * a outra. Agora as duas compartilham um único round-trip.
+ * a outra. Agora as duas compartilham uma única verificação.
+ *
+ * Desde a troca para `getClaims()`, essa verificação é local — mas manter o
+ * `cache()` continua valendo: ele evita repetir a checagem de assinatura e
+ * mantém uma só resposta para "quem é o usuário" dentro da mesma requisição.
  */
 export const requireAuthUserId = cache(async (supabase: SupabaseClient): Promise<string> => {
   const user = await getCachedAuthUser(supabase);
