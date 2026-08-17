@@ -28,34 +28,87 @@ const GRANTABLE_MODULE_IDS = APP_MODULES.filter((mod) => mod.id !== 'portal').ma
  * tudo, SEM depender de ter linha em `module_permissions`. Sem isso, um admin
  * conseguiria se trancar para fora da própria tela de permissões.
  */
-export const getModuleAccess = cache(async (): Promise<ModuleAccessState> => {
-  const supabase = await createSupabaseServerClient();
-  const user = await getCachedAuthUser(supabase);
-  if (!user) return EMPTY_STATE;
+interface PermissionRow {
+  module_key: string;
+  can_view: boolean;
+  can_edit: boolean;
+}
 
-  const { data: orgId } = await supabase.rpc('current_org_id');
-  if (!orgId) return EMPTY_STATE;
-
-  const { data: isAdmin } = await supabase.rpc('is_org_admin', { _org_id: orgId });
-  if (isAdmin === true) {
-    const all = new Set(GRANTABLE_MODULE_IDS);
-    return { isOrgAdmin: true, canView: all, canEdit: all };
-  }
-
-  const { data: rows } = await supabase
-    .from('module_permissions')
-    .select('module_key, can_view, can_edit')
-    .eq('org_id', orgId)
-    .eq('user_id', user.id);
-
+/** Monta o estado a partir das linhas de `module_permissions`. */
+function buildState(rows: PermissionRow[]): ModuleAccessState {
   const canView = new Set<AppModuleId>();
   const canEdit = new Set<AppModuleId>();
-  for (const row of (rows ?? []) as { module_key: string; can_view: boolean; can_edit: boolean }[]) {
+  for (const row of rows) {
     const moduleId = row.module_key as AppModuleId;
     if (row.can_view) canView.add(moduleId);
     if (row.can_edit) canEdit.add(moduleId);
   }
   return { isOrgAdmin: false, canView, canEdit };
+}
+
+const ADMIN_STATE = (): ModuleAccessState => {
+  const all = new Set(GRANTABLE_MODULE_IDS);
+  return { isOrgAdmin: true, canView: all, canEdit: all };
+};
+
+/**
+ * Caminho antigo: três consultas EM SÉRIE.
+ *
+ * Continua aqui só como rede de segurança para o intervalo entre subir este
+ * código e rodar a migration `20260817120000_current_module_access`. Sem isso,
+ * quem publicasse o código antes da migration derrubaria a permissão de TODO
+ * mundo — `redirect('/')` em cada página — porque a função ainda não existiria
+ * no banco. Pode ser removido assim que a migration estiver aplicada em
+ * produção.
+ */
+async function getModuleAccessLegacy(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  userId: string
+): Promise<ModuleAccessState> {
+  const { data: orgId } = await supabase.rpc('current_org_id');
+  if (!orgId) return EMPTY_STATE;
+
+  const { data: isAdmin } = await supabase.rpc('is_org_admin', { _org_id: orgId });
+  if (isAdmin === true) return ADMIN_STATE();
+
+  const { data: rows } = await supabase
+    .from('module_permissions')
+    .select('module_key, can_view, can_edit')
+    .eq('org_id', orgId)
+    .eq('user_id', userId);
+
+  return buildState((rows ?? []) as PermissionRow[]);
+}
+
+export const getModuleAccess = cache(async (): Promise<ModuleAccessState> => {
+  const supabase = await createSupabaseServerClient();
+  const user = await getCachedAuthUser(supabase);
+  if (!user) return EMPTY_STATE;
+
+  // UMA chamada no lugar de três em série (org ativa → é admin? → permissões).
+  // Cada ida ao PostgREST custa ~250ms de rede nesta produção, contra ~37ms de
+  // execução no banco; encadeadas, eram ~500-750ms em toda navegação, antes de
+  // a página buscar qualquer dado próprio. A regra de acesso não mudou — ela só
+  // passou a ser resolvida de uma vez, dentro do banco.
+  const { data, error } = await supabase.rpc('current_module_access');
+
+  if (error) {
+    // Só chega aqui se a migration ainda não rodou (função inexistente). Ver
+    // `getModuleAccessLegacy`.
+    console.error('current_module_access indisponível, usando caminho antigo:', error.message);
+    return getModuleAccessLegacy(supabase, user.id);
+  }
+
+  const access = data as {
+    org_id: string | null;
+    is_admin: boolean;
+    permissions: PermissionRow[];
+  } | null;
+
+  if (!access?.org_id) return EMPTY_STATE;
+  if (access.is_admin) return ADMIN_STATE();
+
+  return buildState(access.permissions ?? []);
 });
 
 /**
