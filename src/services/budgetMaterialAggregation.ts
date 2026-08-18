@@ -1,4 +1,6 @@
 import type { BudgetDetails } from '@/types';
+import { getPostDisplayName } from '@/lib/utils';
+import type { PostWithMaterials } from './exportService';
 
 /**
  * Lista consolidada no cliente (Painel Consolidado).
@@ -81,4 +83,43 @@ export function consolidateMaterialsFromBudgetDetails(
   });
 
   return Array.from(materiaisMap.values()).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+}
+
+/**
+ * Detalhamento poste a poste (grupos + materiais avulsos), usado nas
+ * exportações que separam os materiais por poste.
+ */
+export function buildPostsWithMaterialsFromBudgetDetails(
+  budgetDetails: BudgetDetails
+): PostWithMaterials[] {
+  return budgetDetails.posts.map((post) => {
+    const groups = post.post_item_groups.map((group) => ({
+      groupName: group.name,
+      materials: group.post_item_group_materials.map((material) => ({
+        codigo: material.materials.code || '-',
+        nome: material.materials.name,
+        unidade: material.materials.unit,
+        quantidade: material.quantity,
+        precoUnit: material.price_at_addition,
+        subtotal: material.quantity * material.price_at_addition,
+      })),
+    }));
+
+    const looseMaterials = (post.post_materials || []).map((material) => ({
+      codigo: material.materials.code || '-',
+      nome: material.materials.name,
+      unidade: material.materials.unit,
+      quantidade: material.quantity,
+      precoUnit: material.price_at_addition,
+      subtotal: material.quantity * material.price_at_addition,
+    }));
+
+    return {
+      postName: getPostDisplayName(post),
+      postType: post.post_types?.name || 'Tipo não definido',
+      coords: { x: post.x_coord, y: post.y_coord },
+      groups,
+      looseMaterials,
+    };
+  });
 }

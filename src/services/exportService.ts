@@ -8,6 +8,7 @@ export interface MaterialExport {
   precoUnit: number;
   quantidade: number;
   subtotal: number;
+  subgrupo?: string;
 }
 
 export interface ExportOptions {
@@ -22,10 +23,15 @@ const formatarNumero = (numero: number, casasDecimais: number = 2): string => {
   return numero.toFixed(casasDecimais).replace('.', ',');
 };
 
-export const exportToExcel = (materiais: MaterialExport[], options: ExportOptions): void => {
+export const exportToExcel = (
+  materiais: MaterialExport[],
+  options: ExportOptions,
+  posts?: PostWithMaterials[]
+): void => {
   const materialsData = materiais.map(material => ({
     'Código': material.codigo || '-',
     'Material': material.nome,
+    'Subgrupo': material.subgrupo || '-',
     'Unidade': material.unidade || '-',
     'Quantidade Total': formatarNumero(material.quantidade),
     'Preço Unitário (R$)': formatarNumero(material.precoUnit),
@@ -35,6 +41,7 @@ export const exportToExcel = (materiais: MaterialExport[], options: ExportOption
   materialsData.push({
     'Código': '',
     'Material': 'TOTAL',
+    'Subgrupo': '',
     'Unidade': '',
     'Quantidade Total': '',
     'Preço Unitário (R$)': '',
@@ -52,9 +59,19 @@ export const exportToExcel = (materiais: MaterialExport[], options: ExportOption
   const workbook = XLSX.utils.book_new();
   const materialsWorksheet = XLSX.utils.json_to_sheet(materialsData);
   materialsWorksheet['!cols'] = [
-    { wch: 15 }, { wch: 40 }, { wch: 10 }, { wch: 15 }, { wch: 18 }, { wch: 18 },
+    { wch: 15 }, { wch: 40 }, { wch: 20 }, { wch: 10 }, { wch: 15 }, { wch: 18 }, { wch: 18 },
   ];
   XLSX.utils.book_append_sheet(workbook, materialsWorksheet, 'Materiais');
+
+  const subgroupWorksheet = XLSX.utils.aoa_to_sheet(buildSubgroupRows(materiais));
+  subgroupWorksheet['!cols'] = [{ wch: 20 }, { wch: 50 }, { wch: 10 }, { wch: 15 }, { wch: 18 }, { wch: 18 }];
+  XLSX.utils.book_append_sheet(workbook, subgroupWorksheet, 'Por Subgrupo');
+
+  if (posts && posts.length > 0) {
+    const postWorksheet = XLSX.utils.aoa_to_sheet(buildPostGroupRows(posts));
+    postWorksheet['!cols'] = [{ wch: 20 }, { wch: 50 }, { wch: 10 }, { wch: 15 }, { wch: 18 }, { wch: 18 }];
+    XLSX.utils.book_append_sheet(workbook, postWorksheet, 'Por Poste');
+  }
 
   const infoWorksheet = XLSX.utils.aoa_to_sheet(infoData);
   infoWorksheet['!cols'] = [{ wch: 25 }, { wch: 40 }];
@@ -161,44 +178,80 @@ export interface PostWithMaterials {
   looseMaterials: { codigo: string; nome: string; unidade: string; quantidade: number; precoUnit: number; subtotal: number }[];
 }
 
-export const exportByPostAndGroupToExcel = (posts: PostWithMaterials[], budgetName: string): void => {
-  const workbook = XLSX.utils.book_new();
-  const sheetData: any[] = [];
-  sheetData.push([`ORÇAMENTO: ${budgetName}`]);
-  sheetData.push([`Data de Exportação: ${new Date().toLocaleString('pt-BR')}`]);
-  sheetData.push([]);
+const buildPostGroupRows = (posts: PostWithMaterials[]): any[][] => {
+  const rows: any[][] = [];
   let totalGeral = 0;
   posts.forEach((post, postIndex) => {
-    sheetData.push([`POSTE ${postIndex + 1}: ${post.postName} - ${post.postType}`]);
-    sheetData.push([`Localização: X: ${post.coords.x}, Y: ${post.coords.y}`]);
-    sheetData.push([]);
+    rows.push([`POSTE ${postIndex + 1}: ${post.postName} - ${post.postType}`]);
+    rows.push([`Localização: X: ${post.coords.x}, Y: ${post.coords.y}`]);
+    rows.push([]);
     let totalPoste = 0;
     if (post.groups.length > 0) {
       post.groups.forEach((group) => {
-        sheetData.push([`  GRUPO: ${group.groupName}`]);
-        sheetData.push(['    Código', 'Material', 'Unidade', 'Quantidade', 'Preço Unit. (R$)', 'Subtotal (R$)']);
+        rows.push([`  GRUPO: ${group.groupName}`]);
+        rows.push(['    Código', 'Material', 'Unidade', 'Quantidade', 'Preço Unit. (R$)', 'Subtotal (R$)']);
         group.materials.forEach((material) => {
-          sheetData.push([`    ${material.codigo}`, material.nome, material.unidade, formatarNumero(material.quantidade), formatarNumero(material.precoUnit), formatarNumero(material.subtotal)]);
+          rows.push([`    ${material.codigo}`, material.nome, material.unidade, formatarNumero(material.quantidade), formatarNumero(material.precoUnit), formatarNumero(material.subtotal)]);
           totalPoste += material.subtotal;
         });
-        sheetData.push([]);
+        rows.push([]);
       });
     }
     if (post.looseMaterials.length > 0) {
-      sheetData.push([`  MATERIAIS AVULSOS`]);
-      sheetData.push(['    Código', 'Material', 'Unidade', 'Quantidade', 'Preço Unit. (R$)', 'Subtotal (R$)']);
+      rows.push([`  MATERIAIS AVULSOS`]);
+      rows.push(['    Código', 'Material', 'Unidade', 'Quantidade', 'Preço Unit. (R$)', 'Subtotal (R$)']);
       post.looseMaterials.forEach((material) => {
-        sheetData.push([`    ${material.codigo}`, material.nome, material.unidade, formatarNumero(material.quantidade), formatarNumero(material.precoUnit), formatarNumero(material.subtotal)]);
+        rows.push([`    ${material.codigo}`, material.nome, material.unidade, formatarNumero(material.quantidade), formatarNumero(material.precoUnit), formatarNumero(material.subtotal)]);
         totalPoste += material.subtotal;
       });
-      sheetData.push([]);
+      rows.push([]);
     }
-    sheetData.push(['', '', '', '', 'TOTAL DO POSTE:', formatarNumero(totalPoste)]);
-    sheetData.push([]);
-    sheetData.push([]);
+    rows.push(['', '', '', '', 'TOTAL DO POSTE:', formatarNumero(totalPoste)]);
+    rows.push([]);
+    rows.push([]);
     totalGeral += totalPoste;
   });
-  sheetData.push(['', '', '', '', 'TOTAL GERAL DO ORÇAMENTO:', formatarNumero(totalGeral)]);
+  rows.push(['', '', '', '', 'TOTAL GERAL DO ORÇAMENTO:', formatarNumero(totalGeral)]);
+  return rows;
+};
+
+const buildSubgroupRows = (materiais: MaterialExport[]): any[][] => {
+  const SEM_SUBGRUPO = 'Não classificado';
+  const bySubgroup = new Map<string, MaterialExport[]>();
+  materiais.forEach((material) => {
+    const key = material.subgrupo || SEM_SUBGRUPO;
+    if (!bySubgroup.has(key)) bySubgroup.set(key, []);
+    bySubgroup.get(key)!.push(material);
+  });
+
+  const subgroupNames = Array.from(bySubgroup.keys()).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  const rows: any[][] = [];
+  let totalGeral = 0;
+  subgroupNames.forEach((subgrupo) => {
+    const items = [...bySubgroup.get(subgrupo)!].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    rows.push([`SUBGRUPO: ${subgrupo}`]);
+    rows.push(['Código', 'Material', 'Unidade', 'Quantidade', 'Preço Unit. (R$)', 'Subtotal (R$)']);
+    let totalSubgrupo = 0;
+    items.forEach((material) => {
+      rows.push([material.codigo || '-', material.nome, material.unidade || '-', formatarNumero(material.quantidade), formatarNumero(material.precoUnit), formatarNumero(material.subtotal)]);
+      totalSubgrupo += material.subtotal;
+    });
+    rows.push(['', '', '', '', 'TOTAL DO SUBGRUPO:', formatarNumero(totalSubgrupo)]);
+    rows.push([]);
+    totalGeral += totalSubgrupo;
+  });
+  rows.push(['', '', '', '', 'TOTAL GERAL:', formatarNumero(totalGeral)]);
+  return rows;
+};
+
+export const exportByPostAndGroupToExcel = (posts: PostWithMaterials[], budgetName: string): void => {
+  const workbook = XLSX.utils.book_new();
+  const sheetData: any[] = [
+    [`ORÇAMENTO: ${budgetName}`],
+    [`Data de Exportação: ${new Date().toLocaleString('pt-BR')}`],
+    [],
+    ...buildPostGroupRows(posts),
+  ];
   const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
   worksheet['!cols'] = [{ wch: 20 }, { wch: 50 }, { wch: 10 }, { wch: 15 }, { wch: 18 }, { wch: 18 }];
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Materiais por Poste');

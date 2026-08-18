@@ -6,10 +6,11 @@ import {
 } from '@/lib/pricingMath';
 import { consolidateMaterialsFromBudgetDetails } from '@/services/budgetMaterialAggregation';
 import { getBudgetPostsForPricing } from '@/services/works/getBudgetForImport';
-import { resolveCostItemValue } from '@/components/precificacao/types';
+import { DRE_COST_GROUPS, inferCostItemGroup, resolveCostItemValue } from '@/components/precificacao/types';
 import type {
   CostItem,
   CostItemTipo,
+  DreCostGroup,
   PercentualBase,
   PricingInputMode,
   PricingMaterialSnapshot,
@@ -104,6 +105,16 @@ function toPercentualBase(value: unknown): PercentualBase {
   return value === 'servico' ? 'servico' : 'total';
 }
 
+// Linha gravada antes de `grupo` existir (MD/PLANO-DRE-OBRA.md Fase 2): infere
+// pela descrição/tipo em vez de largar tudo em 'adicional' sem tentar.
+function toDreCostGroup(value: unknown, descricao: string, tipo: CostItemTipo): DreCostGroup {
+  if (typeof value === 'string' && (DRE_COST_GROUPS as string[]).includes(value)) {
+    return value as DreCostGroup;
+  }
+
+  return inferCostItemGroup(descricao, tipo);
+}
+
 function sanitizeCostItems(value: unknown): CostItem[] {
   return asObjectArray(value).map((item, index) => {
     const row = item && typeof item === 'object' ? item as Record<string, unknown> : {};
@@ -121,6 +132,7 @@ function sanitizeCostItems(value: unknown): CostItem[] {
         id,
         descricao,
         tipo: 'unitario' as const,
+        grupo: toDreCostGroup(row.grupo, descricao, 'unitario'),
         unidade: valorSalvo > 0 ? 1 : 0,
         valorUnitario: valorSalvo,
         pessoas: 0,
@@ -135,6 +147,7 @@ function sanitizeCostItems(value: unknown): CostItem[] {
       id,
       descricao,
       tipo,
+      grupo: toDreCostGroup(row.grupo, descricao, tipo),
       unidade,
       valorUnitario,
       pessoas: Math.max(toNumber(row.pessoas), 0),

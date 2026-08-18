@@ -4,7 +4,7 @@ import { Calculator, Package, Edit2, Check, X, FileSpreadsheet, Download, Users,
 import { BudgetDetails } from '@/types';
 import { useApp } from '@/contexts/AppContext';
 import { exportToExcel, exportToCSV, exportToExcelForSuppliers, exportToCSVForSuppliers, MaterialExport, ExportOptions } from '@/services/exportService';
-import { consolidateMaterialsFromBudgetDetails } from '@/services/budgetMaterialAggregation';
+import { consolidateMaterialsFromBudgetDetails, buildPostsWithMaterialsFromBudgetDetails } from '@/services/budgetMaterialAggregation';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 
@@ -132,6 +132,7 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
       precoUnit: material.precoUnit,
       quantidade: material.quantidade,
       subtotal: material.subtotal,
+      subgrupo: material.subgrupo,
     }));
 
     const exportOptions: ExportOptions = {
@@ -142,8 +143,10 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
       exportDate: new Date().toLocaleString('pt-BR'),
     };
 
+    const postsData = budgetDetails ? buildPostsWithMaterialsFromBudgetDetails(budgetDetails) : [];
+
     try {
-      exportToExcel(exportData, exportOptions);
+      exportToExcel(exportData, exportOptions, postsData);
     } catch (error) {
       console.error('Erro ao exportar para Excel:', error);
       alert('Erro ao exportar arquivo Excel. Por favor, tente novamente.');

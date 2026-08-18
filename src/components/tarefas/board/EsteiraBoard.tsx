@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { DragDropProvider } from '@dnd-kit/react';
 import { move } from '@dnd-kit/helpers';
+import { cardDragSensors } from '@/lib/dnd/sensors';
 import { StageColumn } from './StageColumn';
 import { ReturnNoteDialog, type PendingReturn } from './ReturnNoteDialog';
 import {
@@ -57,6 +58,7 @@ export function EsteiraBoard() {
 
   return (
     <DragDropProvider
+      sensors={cardDragSensors}
       onDragStart={beginDrag}
       onDragOver={(event) => {
         applyColumns((prev) => move(prev, event));

@@ -11,6 +11,7 @@
     "pdf:proposta": "tsx src/services/pdf/proposal/dev/render-fixture.ts"
   },
   "dependencies": {
+    "@dnd-kit/dom": "^0.5.0",
     "@dnd-kit/helpers": "^0.5.0",
     "@dnd-kit/react": "^0.5.0",
     "@google/generative-ai": "^0.24.1",

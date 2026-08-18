@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSortable } from '@dnd-kit/react/sortable';
 import { CalendarDays, Lock, MessageSquare, Paperclip } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DRAG_ACTIVATION_DISTANCE } from '@/lib/dnd/sensors';
 import { useBoard, type ColumnKey } from './BoardProvider';
 import type { TaskCard } from '@/types/tasks';
 
@@ -56,7 +57,9 @@ export function TaskCardView({ card, index, columnKey }: TaskCardViewProps) {
 
   // Onde o ponteiro desceu. Sem isso, soltar um card depois de arrastá-lo
   // dispara o `click` do elemento e a pessoa cai no detalhe sem querer — o
-  // sintoma clássico de kanban com card clicável.
+  // sintoma clássico de kanban com card clicável. O limiar é o MESMO que ativa
+  // o arrasto (`DRAG_ACTIVATION_DISTANCE`): com dois números diferentes sobra
+  // uma faixa em que o gesto não abre nem arrasta.
   const pointerDownAt = useRef<{ x: number; y: number } | null>(null);
 
   const openIfNotDragged = (x: number, y: number) => {
@@ -64,7 +67,7 @@ export function TaskCardView({ card, index, columnKey }: TaskCardViewProps) {
     pointerDownAt.current = null;
     if (!start) return;
     const moved = Math.hypot(x - start.x, y - start.y);
-    if (moved < 5) router.push(`/tarefas/${card.id}`);
+    if (moved < DRAG_ACTIVATION_DISTANCE) router.push(`/tarefas/${card.id}`);
   };
 
   return (
@@ -84,7 +87,10 @@ export function TaskCardView({ card, index, columnKey }: TaskCardViewProps) {
       role="button"
       aria-label={card.title}
       className={cn(
-        'group cursor-grab touch-none rounded-lg border border-neutral-200 bg-surface p-3 text-left shadow-2xs',
+        // `touch-pan-y` e não `touch-none`: no celular a esteira precisa rolar
+        // com o dedo em cima de um card. Quem separa rolar de arrastar é o
+        // atraso de 250 ms do sensor de toque — parou, arrasta; andou, rola.
+        'group cursor-grab touch-pan-y rounded-lg border border-neutral-200 bg-surface p-3 text-left shadow-2xs',
         'transition-[box-shadow,opacity] duration-150 hover:shadow-sm',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500',
         card.blockedReason && 'border-l-2 border-l-red-500',

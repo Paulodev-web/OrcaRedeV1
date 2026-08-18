@@ -4,11 +4,61 @@ export type CostItemTipo = 'unitario' | 'maoDeObra' | 'percentual';
 /** Base sobre a qual um custo percentual incide. */
 export type PercentualBase = 'total' | 'servico';
 
+/**
+ * Grupo da DRE de Obra que esta linha de custo alimenta (MD/PLANO-DRE-OBRA.md §5.1).
+ * Espelha o ENUM `public.dre_group` do banco, exceto 'material': materiais não
+ * são um CostItem, vêm do orçamento consolidado (`valorMateriais`) — mesma regra
+ * de `dre_actuals_nao_material` do lado do realizado.
+ */
+export type DreCostGroup = 'mao_de_obra' | 'imposto' | 'frete' | 'comissao' | 'adicional';
+
+export const DRE_COST_GROUPS: DreCostGroup[] = ['mao_de_obra', 'imposto', 'frete', 'comissao', 'adicional'];
+
+/** Rótulo em português do grupo, para selects e para o painel da DRE. */
+export function dreCostGroupLabel(grupo: DreCostGroup): string {
+  switch (grupo) {
+    case 'mao_de_obra':
+      return 'Mão de obra';
+    case 'imposto':
+      return 'Imposto';
+    case 'frete':
+      return 'Frete';
+    case 'comissao':
+      return 'Comissão';
+    case 'adicional':
+    default:
+      return 'Adicional';
+  }
+}
+
+/**
+ * Classifica uma linha de custo legada (sem `grupo` gravado) por palavra-chave
+ * na descrição, com o `tipo` como segundo critério. Usada só para preencher
+ * dado antigo — toda linha nova já nasce com `grupo` escolhido na UI.
+ */
+export function inferCostItemGroup(descricao: string, tipo: CostItemTipo): DreCostGroup {
+  const texto = descricao
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+  if (/imposto|issqn|\biss\b|tributo/.test(texto)) return 'imposto';
+  if (/comiss/.test(texto)) return 'comissao';
+  if (/frete|carreto|transporte/.test(texto)) return 'frete';
+  if (/mao de obra|diaria|ajudante|equipe|salario|encarregado/.test(texto)) return 'mao_de_obra';
+
+  if (tipo === 'maoDeObra') return 'mao_de_obra';
+
+  return 'adicional';
+}
+
 /** Linha de custo do serviço adicionada livremente pelo usuário (mão de obra, diária, comissão etc.). */
 export interface CostItem {
   id: string;
   descricao: string;
   tipo: CostItemTipo;
+  /** Grupo da DRE que esta linha alimenta (§5.1 do plano). */
+  grupo: DreCostGroup;
   /** Quantidade (ex.: 10 diárias) — usado no tipo 'unitario'. */
   unidade: number;
   /** Valor por unidade (R$) no tipo 'unitario'; valor por pessoa/dia (diária) no tipo 'maoDeObra'. */

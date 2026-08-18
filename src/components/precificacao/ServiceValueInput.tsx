@@ -10,8 +10,10 @@ interface ServiceValueInputProps {
   valorServico: number;
   percentMateriais: number;
   inputMode: PricingInputMode;
+  impostoPercent: number;
   onValorServicoChange: (value: number) => void;
   onPercentMateriaisChange: (value: number) => void;
+  onImpostoPercentChange: (value: number) => void;
 }
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
@@ -30,14 +32,17 @@ export function ServiceValueInput({
   valorServico,
   percentMateriais,
   inputMode,
+  impostoPercent,
   onValorServicoChange,
   onPercentMateriaisChange,
+  onImpostoPercentChange,
 }: ServiceValueInputProps) {
   const hasMateriais = valorMateriais > 0;
   const totalCliente = valorMateriais + valorServico;
   const sobraAposCustos = valorServico - totalCustos;
   const sobraNegativa = sobraAposCustos < 0;
   const semBaseParaPercent = !hasMateriais && inputMode === 'percentual';
+  const impostoValor = valorServico * (Math.min(Math.max(impostoPercent, 0), 100) / 100);
 
   return (
     <div className="rounded-xl border border-gray-200 bg-surface p-4 shadow-sm">
@@ -57,7 +62,7 @@ export function ServiceValueInput({
         </span>
       </div>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <div className="mt-4 grid gap-4 sm:grid-cols-3">
         <div className="space-y-1">
           <label htmlFor="percent-materiais" className="text-xs font-medium text-gray-700">
             % sobre os materiais
@@ -94,6 +99,22 @@ export function ServiceValueInput({
           />
           <p className="text-[10px] text-gray-400">
             {inputMode === 'valor' ? 'Entrada ativa' : 'Calculado pelo percentual'}
+          </p>
+        </div>
+
+        <div className="space-y-1">
+          <label htmlFor="imposto-percent" className="text-xs font-medium text-gray-700">
+            Imposto sobre o serviço (%)
+          </label>
+          <DecimalInput
+            id="imposto-percent"
+            value={impostoPercent}
+            onValueChange={onImpostoPercentChange}
+            placeholder="Ex: 6"
+            className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-800 outline-none transition focus:border-accent-500/80 focus:ring-2 focus:ring-accent-500/20"
+          />
+          <p className="text-[10px] text-gray-400">
+            {valorServico > 0 ? `${currencyFormatter.format(impostoValor)} sobre o VS` : 'Incide só sobre o Valor do Serviço'}
           </p>
         </div>
       </div>

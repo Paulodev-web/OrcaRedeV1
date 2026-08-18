@@ -2,7 +2,8 @@
 
 import { Plus, Trash2 } from 'lucide-react';
 import { DecimalInput } from './DecimalInput';
-import type { CostItem, CostItemTipo, CostItemWithPercent, PercentualBase } from './types';
+import { DRE_COST_GROUPS, dreCostGroupLabel } from './types';
+import type { CostItem, CostItemTipo, CostItemWithPercent, DreCostGroup, PercentualBase } from './types';
 
 interface CostItemsTableProps {
   valorServico: number;
@@ -157,6 +158,7 @@ export function CostItemsTable({
           <thead>
             <tr className="border-b border-gray-100 text-left text-xs uppercase tracking-wide text-gray-500">
               <th className="py-2 pr-3">Descrição</th>
+              <th className="py-2 pr-3">Grupo (DRE)</th>
               <th className="py-2 pr-3">Tipo</th>
               <th className="py-2 pr-3">Cálculo</th>
               <th className="py-2 pr-3 text-right">Total (R$)</th>
@@ -175,6 +177,20 @@ export function CostItemsTable({
                     placeholder="Ex: Mão de obra, Comissão, Alimentação..."
                     className="h-10 w-full min-w-[140px] rounded-lg border border-gray-200 px-3 text-sm text-gray-800 outline-none transition focus:border-accent-500/80 focus:ring-2 focus:ring-accent-500/20"
                   />
+                </td>
+                <td className="py-2 pr-3">
+                  <select
+                    value={item.grupo}
+                    onChange={(event) => onUpdateCostItem(item.id, { grupo: event.target.value as DreCostGroup })}
+                    aria-label="Grupo da DRE"
+                    className="h-10 w-full min-w-[130px] rounded-lg border border-gray-200 bg-surface px-2 text-sm text-gray-800 outline-none transition focus:border-accent-500/80 focus:ring-2 focus:ring-accent-500/20"
+                  >
+                    {DRE_COST_GROUPS.map((grupo) => (
+                      <option key={grupo} value={grupo}>
+                        {dreCostGroupLabel(grupo)}
+                      </option>
+                    ))}
+                  </select>
                 </td>
                 <td className="py-2 pr-3">
                   <select
@@ -213,7 +229,7 @@ export function CostItemsTable({
             ))}
             {costItems.length === 0 && (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-sm text-gray-500">
+                <td colSpan={7} className="py-8 text-center text-sm text-gray-500">
                   Adicione custos do serviço (mão de obra, comissão, alimentação, etc.) para ver quanto sobra da
                   verba da obra.
                 </td>
@@ -223,7 +239,7 @@ export function CostItemsTable({
           {costItems.length > 0 && (
             <tfoot>
               <tr className="bg-gray-50 text-sm font-semibold text-neutral-900">
-                <td className="py-2 pr-3 text-right" colSpan={3}>
+                <td className="py-2 pr-3 text-right" colSpan={4}>
                   Total
                 </td>
                 <td className="py-2 pr-3 text-right">{currencyFormatter.format(totalCustos)}</td>

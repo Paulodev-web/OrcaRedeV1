@@ -25,6 +25,7 @@ import { BudgetCard } from '@/components/orcamentos/BudgetCard';
 import { FolderCard } from '@/components/orcamentos/FolderCard';
 import { FolderDropZone } from '@/components/orcamentos/dnd/FolderDropZone';
 import { parseDraggableId, parseDropZoneId } from '@/components/orcamentos/dnd/dashboardDnd';
+import { cardDragSensors } from '@/lib/dnd/sensors';
 
 const STATUS_FILTER_ALL = 'all';
 const CONCESSIONARIA_FILTER_ALL = 'all';
@@ -474,6 +475,7 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
 
   return (
     <DragDropProvider
+      sensors={cardDragSensors}
       onDragStart={(event) => setActiveDragId(String(event.operation.source?.id ?? ''))}
       onDragEnd={(event) => {
         const sourceId = String(event.operation.source?.id ?? '');

@@ -13,6 +13,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { getPostDisplayName } from '@/lib/utils';
 import { exportByPostAndGroupToExcel, PostWithMaterials } from '@/services/exportService';
+import { buildPostsWithMaterialsFromBudgetDetails } from '@/services/budgetMaterialAggregation';
 import { PostItemGroupSegmentField, PostSegmentBadge, PostSegmentField } from '@/components/orcamentos/segments/SegmentFields';
 // Instrumentação temporária — ver src/lib/perf/openBudget.ts.
 import { perfRender } from '@/lib/perf/openBudget';
@@ -458,42 +459,8 @@ export function AreaTrabalho({ embedded = false, view, onViewChange }: AreaTraba
     }
     
     // Organizar dados no formato necessário
-    const postsData: PostWithMaterials[] = budgetDetails.posts.map((post: BudgetPostDetail) => {
-      const postName = getPostDisplayName(post);
-      const postType = post.post_types?.name || 'Tipo não definido';
-      
-      // Organizar grupos
-      const groups = post.post_item_groups.map((group: PostItemGroupDetail) => ({
-        groupName: group.name,
-        materials: group.post_item_group_materials.map((material: PostItemGroupMaterial) => ({
-          codigo: material.materials.code || '-',
-          nome: material.materials.name,
-          unidade: material.materials.unit,
-          quantidade: material.quantity,
-          precoUnit: material.price_at_addition,
-          subtotal: material.quantity * material.price_at_addition
-        }))
-      }));
-      
-      // Organizar materiais avulsos
-      const looseMaterials = (post.post_materials || []).map((material: PostMaterial) => ({
-        codigo: material.materials.code || '-',
-        nome: material.materials.name,
-        unidade: material.materials.unit,
-        quantidade: material.quantity,
-        precoUnit: material.price_at_addition,
-        subtotal: material.quantity * material.price_at_addition
-      }));
-      
-      return {
-        postName,
-        postType,
-        coords: { x: post.x_coord, y: post.y_coord },
-        groups,
-        looseMaterials
-      };
-    });
-    
+    const postsData: PostWithMaterials[] = buildPostsWithMaterialsFromBudgetDetails(budgetDetails);
+
     // Exportar para Excel
     exportByPostAndGroupToExcel(postsData, budgetDetails.name || 'Orçamento');
     
