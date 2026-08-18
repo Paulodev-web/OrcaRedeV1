@@ -111,7 +111,8 @@ export function FolderCard({
       ref={setRefs}
       state={state}
       className={cn(
-        'touch-none select-none rounded-xl',
+        // Ver BudgetCard: rolar com o dedo por cima do cartão continua valendo.
+        'touch-pan-y select-none rounded-xl',
         state === 'drop-invalid'
           ? 'cursor-not-allowed'
           : isDragging

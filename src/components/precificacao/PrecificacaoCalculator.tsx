@@ -48,6 +48,7 @@ function createCostItem(): CostItem {
     id: `${Date.now()}-${Math.round(Math.random() * 100000)}`,
     descricao: '',
     tipo: 'unitario',
+    grupo: 'adicional',
     unidade: 0,
     valorUnitario: 0,
     pessoas: 0,
@@ -88,6 +89,7 @@ export function PrecificacaoCalculator({
   const [pricingInputMode, setPricingInputMode] = useState<PricingInputMode>(
     () => initialSaved?.pricingInputMode ?? 'percentual'
   );
+  const [impostoPercentInput, setImpostoPercentInput] = useState(() => initialSaved?.impostoPercent ?? 0);
   const [costItems, setCostItems] = useState<CostItem[]>(() => initialSaved?.costItems ?? []);
   const [savingMode, setSavingMode] = useState<PricingSaveMode | null>(null);
   const [isExportingExcel, setIsExportingExcel] = useState(false);
@@ -142,8 +144,8 @@ export function PrecificacaoCalculator({
   }, [pricingInputMode, valorServicoInput, percentMateriaisInput, valorMateriais]);
 
   const pricingResult = useMemo(
-    () => calculateServicePricing(valorServico, costItems, 0, valorMateriais),
-    [valorServico, costItems, valorMateriais]
+    () => calculateServicePricing(valorServico, costItems, impostoPercentInput, valorMateriais),
+    [valorServico, costItems, impostoPercentInput, valorMateriais]
   );
 
   const selectedBudget = useMemo(
@@ -171,6 +173,10 @@ export function PrecificacaoCalculator({
     setPricingInputMode('percentual');
   };
 
+  const handleImpostoPercentChange = (value: number) => {
+    setImpostoPercentInput(parseNonNegativeNumber(String(value)));
+  };
+
   const handleAddCostItem = () => {
     setCostItems((prev) => [...prev, createCostItem()]);
   };
@@ -194,7 +200,7 @@ export function PrecificacaoCalculator({
     pricingInputMode,
     valorServicoInput,
     percentMateriaisInput,
-    impostoPercent: 0,
+    impostoPercent: impostoPercentInput,
     // Persiste os custos com o valor resolvido (inclusive percentuais) no momento do save.
     costItems: pricingResult.custosDetalhados.map(({ percentualDoVS: _percentualDoVS, ...item }) => item),
     materialsSnapshot: consolidatedMaterials,
@@ -340,8 +346,10 @@ export function PrecificacaoCalculator({
             valorServico={valorServico}
             percentMateriais={percentMateriais}
             inputMode={pricingInputMode}
+            impostoPercent={impostoPercentInput}
             onValorServicoChange={handleValorServicoChange}
             onPercentMateriaisChange={handlePercentMateriaisChange}
+            onImpostoPercentChange={handleImpostoPercentChange}
           />
 
           <CostItemsTable

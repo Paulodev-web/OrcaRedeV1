@@ -99,7 +99,9 @@ export function BudgetCard({
       ref={ref}
       state={isDragging ? 'dragging' : 'default'}
       className={cn(
-        'group touch-none select-none rounded-xl',
+        // `touch-pan-y`: o dedo ainda rola a lista por cima do cartão; o
+        // arrasto sai do atraso de 250 ms do sensor de toque.
+        'group touch-pan-y select-none rounded-xl',
         isDragging ? 'cursor-grabbing' : 'cursor-grab hover:-translate-y-0.5 hover:shadow-lg',
         menuOpen && 'z-40',
       )}

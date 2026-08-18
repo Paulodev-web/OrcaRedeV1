@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs';
-import { costItemTipoLabel, describeCostItemFormula } from '@/components/precificacao/types';
+import { costItemTipoLabel, describeCostItemFormula, dreCostGroupLabel } from '@/components/precificacao/types';
 import type {
   CostItem,
   PricingMaterialSnapshot,
@@ -124,7 +124,7 @@ export async function buildPricingWorkbook(data: PricingWorkbookData): Promise<E
 
   const costs = workbook.addWorksheet('Custos');
   const costsHeader = costs.getRow(1);
-  ['Descrição', 'Tipo', 'Cálculo', 'Total', '% do VS'].forEach((label, index) => {
+  ['Descrição', 'Grupo (DRE)', 'Tipo', 'Cálculo', 'Total', '% do VS'].forEach((label, index) => {
     costsHeader.getCell(index + 1).value = label;
   });
   styleHeader(costsHeader);
@@ -136,15 +136,16 @@ export async function buildPricingWorkbook(data: PricingWorkbookData): Promise<E
       const detalhe = data.result.custosDetalhados.find((custo) => custo.id === item.id);
       const row = costs.getRow(index + 2);
       row.getCell(1).value = item.descricao || 'Custo sem descrição';
-      row.getCell(2).value = costItemTipoLabel(item.tipo);
-      row.getCell(3).value = describeCostItemFormula(item);
-      row.getCell(4).value = detalhe?.valor ?? item.valor;
-      row.getCell(4).numFmt = MONEY_FMT;
-      row.getCell(5).value = (detalhe?.percentualDoVS ?? 0) / 100;
-      row.getCell(5).numFmt = PERCENT_FMT;
+      row.getCell(2).value = dreCostGroupLabel(item.grupo);
+      row.getCell(3).value = costItemTipoLabel(item.tipo);
+      row.getCell(4).value = describeCostItemFormula(item);
+      row.getCell(5).value = detalhe?.valor ?? item.valor;
+      row.getCell(5).numFmt = MONEY_FMT;
+      row.getCell(6).value = (detalhe?.percentualDoVS ?? 0) / 100;
+      row.getCell(6).numFmt = PERCENT_FMT;
     });
   }
-  autoFitColumns(costs, 5);
+  autoFitColumns(costs, 6);
 
   const materials = workbook.addWorksheet('Materiais');
   const materialHeader = materials.getRow(1);

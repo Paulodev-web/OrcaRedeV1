@@ -234,11 +234,11 @@ export default function FornecedoresHub({
         <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {initialSessions.map((s) => (
             <li key={s.id}>
-              <div className="relative flex h-full flex-col rounded-2xl border border-accent-500/40 bg-surface shadow-md transition-shadow hover:shadow-lg">
+              <div className="relative flex h-full flex-col rounded-2xl border border-neutral-200 bg-surface shadow-2xs transition-[border-color,box-shadow] hover:border-neutral-300 hover:shadow-md">
                 <Link
                   prefetch
                   href={`/fornecedores/sessao/${s.id}`}
-                  className="absolute inset-0 z-0 rounded-2xl outline-none ring-2 ring-transparent ring-offset-2 focus-visible:ring-accent-500"
+                  className="absolute inset-0 z-0 rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2"
                   aria-label={`Abrir sessão: ${s.title}`}
                   onMouseEnter={() => prefetchSession(s.id)}
                   onFocus={() => prefetchSession(s.id)}

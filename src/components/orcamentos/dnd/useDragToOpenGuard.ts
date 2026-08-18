@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useRef } from 'react';
+import { DRAG_ACTIVATION_DISTANCE } from '@/lib/dnd/sensors';
 
 /**
  * Impede que soltar um card depois de arrastá-lo conte como clique.
@@ -11,7 +12,10 @@ import { useCallback, useRef } from 'react';
  * ponteiro não há esse evento, então a pergunta certa é geométrica: o ponteiro
  * andou o suficiente para ter sido um arrasto?
  */
-export function useDragToOpenGuard(onOpen: () => void, threshold = 5) {
+export function useDragToOpenGuard(
+  onOpen: () => void,
+  threshold = DRAG_ACTIVATION_DISTANCE,
+) {
   const downAt = useRef<{ x: number; y: number } | null>(null);
 
   const onPointerDown = useCallback((event: React.PointerEvent) => {

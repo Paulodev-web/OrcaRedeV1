@@ -1768,12 +1768,16 @@ export function EngineerPortal() {
                       onChange={(e) => {
                         if (e.target.value === '') return;
                         const v = Math.max(0, Math.floor(Number(e.target.value)));
+                        updateTracking(activeTracking.id, (t) => ({ ...t, mt_extension_km: v / 1000, updated_at: new Date().toISOString() }));
+                      }}
+                      onBlur={(e) => {
+                        if (e.target.value === '') return;
+                        const v = Math.max(0, Math.floor(Number(e.target.value)));
                         const planned = activeTracking.planned_mt_meters ?? 0;
                         if (planned > 0 && v > planned) {
-                          alertDialog.showError('Valor inválido', `Instalado não pode ser maior que a meta (${planned} m).`);
-                          return;
+                          alertDialog.showError('Valor inválido', `Instalado não pode ser maior que a meta (${planned} m). Ajustado para ${planned} m.`);
+                          updateTracking(activeTracking.id, (t) => ({ ...t, mt_extension_km: planned / 1000, updated_at: new Date().toISOString() }));
                         }
-                        updateTracking(activeTracking.id, (t) => ({ ...t, mt_extension_km: v / 1000, updated_at: new Date().toISOString() }));
                       }}
                       title="Instalado (m)"
                       className="w-full rounded-md border border-slate-300 bg-surface px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
@@ -1785,12 +1789,15 @@ export function EngineerPortal() {
                       value={activeTracking.planned_mt_meters ?? ''}
                       onChange={(e) => {
                         const v = e.target.value ? Math.max(0, Math.floor(Number(e.target.value))) : undefined;
+                        updateTracking(activeTracking.id, (t) => ({ ...t, planned_mt_meters: v, updated_at: new Date().toISOString() }));
+                      }}
+                      onBlur={(e) => {
+                        const v = e.target.value ? Math.max(0, Math.floor(Number(e.target.value))) : undefined;
                         const installed = Math.round((activeTracking.mt_extension_km ?? 0) * 1000);
                         if (v != null && v < installed) {
-                          alertDialog.showError('Valor inválido', `A meta não pode ser menor que o instalado (${installed} m).`);
-                          return;
+                          alertDialog.showError('Valor inválido', `A meta não pode ser menor que o instalado (${installed} m). Ajustado para ${installed} m.`);
+                          updateTracking(activeTracking.id, (t) => ({ ...t, planned_mt_meters: installed, updated_at: new Date().toISOString() }));
                         }
-                        updateTracking(activeTracking.id, (t) => ({ ...t, planned_mt_meters: v, updated_at: new Date().toISOString() }));
                       }}
                       title="Meta total (m)"
                       placeholder="Meta"
@@ -1819,12 +1826,16 @@ export function EngineerPortal() {
                       onChange={(e) => {
                         if (e.target.value === '') return;
                         const v = Math.max(0, Math.floor(Number(e.target.value)));
+                        updateTracking(activeTracking.id, (t) => ({ ...t, bt_extension_km: v / 1000, updated_at: new Date().toISOString() }));
+                      }}
+                      onBlur={(e) => {
+                        if (e.target.value === '') return;
+                        const v = Math.max(0, Math.floor(Number(e.target.value)));
                         const planned = activeTracking.planned_bt_meters ?? 0;
                         if (planned > 0 && v > planned) {
-                          alertDialog.showError('Valor inválido', `Instalado não pode ser maior que a meta (${planned} m).`);
-                          return;
+                          alertDialog.showError('Valor inválido', `Instalado não pode ser maior que a meta (${planned} m). Ajustado para ${planned} m.`);
+                          updateTracking(activeTracking.id, (t) => ({ ...t, bt_extension_km: planned / 1000, updated_at: new Date().toISOString() }));
                         }
-                        updateTracking(activeTracking.id, (t) => ({ ...t, bt_extension_km: v / 1000, updated_at: new Date().toISOString() }));
                       }}
                       title="Instalado (m)"
                       className="w-full rounded-md border border-slate-300 bg-surface px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
@@ -1836,12 +1847,15 @@ export function EngineerPortal() {
                       value={activeTracking.planned_bt_meters ?? ''}
                       onChange={(e) => {
                         const v = e.target.value ? Math.max(0, Math.floor(Number(e.target.value))) : undefined;
+                        updateTracking(activeTracking.id, (t) => ({ ...t, planned_bt_meters: v, updated_at: new Date().toISOString() }));
+                      }}
+                      onBlur={(e) => {
+                        const v = e.target.value ? Math.max(0, Math.floor(Number(e.target.value))) : undefined;
                         const installed = Math.round((activeTracking.bt_extension_km ?? 0) * 1000);
                         if (v != null && v < installed) {
-                          alertDialog.showError('Valor inválido', `A meta não pode ser menor que o instalado (${installed} m).`);
-                          return;
+                          alertDialog.showError('Valor inválido', `A meta não pode ser menor que o instalado (${installed} m). Ajustado para ${installed} m.`);
+                          updateTracking(activeTracking.id, (t) => ({ ...t, planned_bt_meters: installed, updated_at: new Date().toISOString() }));
                         }
-                        updateTracking(activeTracking.id, (t) => ({ ...t, planned_bt_meters: v, updated_at: new Date().toISOString() }));
                       }}
                       title="Meta total (m)"
                       placeholder="Meta"
@@ -1877,11 +1891,14 @@ export function EngineerPortal() {
                       value={activeTracking.planned_poles ?? ''}
                       onChange={(e) => {
                         const v = e.target.value ? Math.max(0, Math.floor(Number(e.target.value))) : undefined;
-                        if (v != null && v < polesInstalled) {
-                          alertDialog.showError('Valor inválido', `A meta não pode ser menor que o instalado (${polesInstalled}).`);
-                          return;
-                        }
                         updateTracking(activeTracking.id, (t) => ({ ...t, planned_poles: v, updated_at: new Date().toISOString() }));
+                      }}
+                      onBlur={(e) => {
+                        const v = e.target.value ? Math.max(0, Math.floor(Number(e.target.value))) : undefined;
+                        if (v != null && v < polesInstalled) {
+                          alertDialog.showError('Valor inválido', `A meta não pode ser menor que o instalado (${polesInstalled}). Ajustado para ${polesInstalled}.`);
+                          updateTracking(activeTracking.id, (t) => ({ ...t, planned_poles: polesInstalled, updated_at: new Date().toISOString() }));
+                        }
                       }}
                       title="Meta total"
                       placeholder="Meta"
@@ -1910,12 +1927,16 @@ export function EngineerPortal() {
                       onChange={(e) => {
                         if (e.target.value === '') return;
                         const v = Math.max(0, Math.floor(Number(e.target.value)));
+                        updateTracking(activeTracking.id, (t) => ({ ...t, equipment_installed: v, updated_at: new Date().toISOString() }));
+                      }}
+                      onBlur={(e) => {
+                        if (e.target.value === '') return;
+                        const v = Math.max(0, Math.floor(Number(e.target.value)));
                         const planned = activeTracking.planned_equipment ?? 0;
                         if (planned > 0 && v > planned) {
-                          alertDialog.showError('Valor inválido', `Instalado não pode ser maior que a meta (${planned}).`);
-                          return;
+                          alertDialog.showError('Valor inválido', `Instalado não pode ser maior que a meta (${planned}). Ajustado para ${planned}.`);
+                          updateTracking(activeTracking.id, (t) => ({ ...t, equipment_installed: planned, updated_at: new Date().toISOString() }));
                         }
-                        updateTracking(activeTracking.id, (t) => ({ ...t, equipment_installed: v, updated_at: new Date().toISOString() }));
                       }}
                       title="Instalado"
                       className="w-full rounded-md border border-slate-300 bg-surface px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
@@ -1927,12 +1948,15 @@ export function EngineerPortal() {
                       value={activeTracking.planned_equipment ?? ''}
                       onChange={(e) => {
                         const v = e.target.value ? Math.max(0, Math.floor(Number(e.target.value))) : undefined;
+                        updateTracking(activeTracking.id, (t) => ({ ...t, planned_equipment: v, updated_at: new Date().toISOString() }));
+                      }}
+                      onBlur={(e) => {
+                        const v = e.target.value ? Math.max(0, Math.floor(Number(e.target.value))) : undefined;
                         const installed = activeTracking.equipment_installed ?? 0;
                         if (v != null && v < installed) {
-                          alertDialog.showError('Valor inválido', `A meta não pode ser menor que o instalado (${installed}).`);
-                          return;
+                          alertDialog.showError('Valor inválido', `A meta não pode ser menor que o instalado (${installed}). Ajustado para ${installed}.`);
+                          updateTracking(activeTracking.id, (t) => ({ ...t, planned_equipment: installed, updated_at: new Date().toISOString() }));
                         }
-                        updateTracking(activeTracking.id, (t) => ({ ...t, planned_equipment: v, updated_at: new Date().toISOString() }));
                       }}
                       title="Meta total"
                       placeholder="Meta"
@@ -1961,12 +1985,16 @@ export function EngineerPortal() {
                       onChange={(e) => {
                         if (e.target.value === '') return;
                         const v = Math.max(0, Math.floor(Number(e.target.value)));
+                        updateTracking(activeTracking.id, (t) => ({ ...t, public_lighting_installed: v, updated_at: new Date().toISOString() }));
+                      }}
+                      onBlur={(e) => {
+                        if (e.target.value === '') return;
+                        const v = Math.max(0, Math.floor(Number(e.target.value)));
                         const planned = activeTracking.planned_public_lighting ?? 0;
                         if (planned > 0 && v > planned) {
-                          alertDialog.showError('Valor inválido', `Instalado não pode ser maior que a meta (${planned}).`);
-                          return;
+                          alertDialog.showError('Valor inválido', `Instalado não pode ser maior que a meta (${planned}). Ajustado para ${planned}.`);
+                          updateTracking(activeTracking.id, (t) => ({ ...t, public_lighting_installed: planned, updated_at: new Date().toISOString() }));
                         }
-                        updateTracking(activeTracking.id, (t) => ({ ...t, public_lighting_installed: v, updated_at: new Date().toISOString() }));
                       }}
                       title="Instalado"
                       className="w-full rounded-md border border-slate-300 bg-surface px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
@@ -1978,12 +2006,15 @@ export function EngineerPortal() {
                       value={activeTracking.planned_public_lighting ?? ''}
                       onChange={(e) => {
                         const v = e.target.value ? Math.max(0, Math.floor(Number(e.target.value))) : undefined;
+                        updateTracking(activeTracking.id, (t) => ({ ...t, planned_public_lighting: v, updated_at: new Date().toISOString() }));
+                      }}
+                      onBlur={(e) => {
+                        const v = e.target.value ? Math.max(0, Math.floor(Number(e.target.value))) : undefined;
                         const installed = activeTracking.public_lighting_installed ?? 0;
                         if (v != null && v < installed) {
-                          alertDialog.showError('Valor inválido', `A meta não pode ser menor que o instalado (${installed}).`);
-                          return;
+                          alertDialog.showError('Valor inválido', `A meta não pode ser menor que o instalado (${installed}). Ajustado para ${installed}.`);
+                          updateTracking(activeTracking.id, (t) => ({ ...t, planned_public_lighting: installed, updated_at: new Date().toISOString() }));
                         }
-                        updateTracking(activeTracking.id, (t) => ({ ...t, planned_public_lighting: v, updated_at: new Date().toISOString() }));
                       }}
                       title="Meta total"
                       placeholder="Meta"

@@ -1,16 +1,11 @@
-import Link from 'next/link';
-import {
-  Building2,
-  ChevronRight,
-  GitMerge,
-  LayoutGrid,
-  Package,
-  BarChart3,
-  Users,
-} from 'lucide-react';
-import SessionNotesBox from '@/components/suppliers/SessionNotesBox';
+'use client';
 
-type HeaderStep = 'fornecedores' | 'cotacoes' | 'conciliacao' | 'cenarios';
+import { useEffect } from 'react';
+import { BarChart3, GitMerge, Package, TrendingUp, Users } from 'lucide-react';
+import { StepTabs, type StepTabItem } from '@/components/layout/StepTabs';
+import { useSuppliesHeaderContext } from '@/components/suppliers/SuppliesHeaderContext';
+
+type HeaderStep = 'fornecedores' | 'cotacoes' | 'conciliacao' | 'cenarios' | 'dre';
 
 interface SuppliesHeaderProps {
   sessionId?: string;
@@ -22,16 +17,11 @@ interface SuppliesHeaderProps {
   description?: string;
 }
 
-function stepClass(active: boolean, disabled = false) {
-  if (disabled) {
-    return 'inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-surface px-3 py-1.5 text-xs font-medium text-gray-300';
-  }
-  if (active) {
-    return 'inline-flex items-center gap-1.5 rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1.5 text-xs font-semibold text-neutral-900';
-  }
-  return 'inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-surface px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:border-accent-500/40 hover:text-neutral-900';
-}
-
+/**
+ * Não renderiza cabeçalho próprio — registra título e abas no `ModuleHeader`
+ * único da chrome de `/fornecedores` (ver `FornecedoresChrome`). Mantém a
+ * mesma API de antes para não exigir mudanças nas páginas que a usam.
+ */
 export default function SuppliesHeader({
   sessionId,
   sessionTitle,
@@ -40,87 +30,63 @@ export default function SuppliesHeader({
   title = 'Suprimentos e Cotações',
   description = 'Cadastre fornecedores, importe cotações, concilie materiais e compare cenários.',
 }: SuppliesHeaderProps) {
-  const fornecedoresHref = '/fornecedores/cadastro';
-  const cotacoesHref = sessionId ? `/fornecedores/sessao/${sessionId}` : '/fornecedores';
-  const conciliacaoHref = sessionId ? `/fornecedores/sessao/${sessionId}/conciliacao` : '';
-  const cenariosHref = sessionId ? `/fornecedores/sessao/${sessionId}/cenarios` : '';
-  const showCenariosLink = Boolean(sessionId && hasBudget);
+  const { setState } = useSuppliesHeaderContext();
 
-  return (
-    <div className="sticky top-0 z-20 rounded-2xl border border-accent-500/30 bg-surface/95 p-5 shadow-sm backdrop-blur-sm sm:p-6">
-      {/* `gray-600`: trilha de 12px precisa de 4.5:1; em gray-400 dava 2.1:1. */}
-      <div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-600">
-        <Link href="/" className="inline-flex items-center gap-1 transition-colors hover:text-link">
-          <LayoutGrid className="h-3.5 w-3.5" />
-          Portal
-        </Link>
-        <ChevronRight className="h-3 w-3" />
-        <Link href="/fornecedores" className="transition-colors hover:text-link">
-          Suprimentos
-        </Link>
-        {sessionTitle && (
-          <>
-            <ChevronRight className="h-3 w-3" />
-            <span className="font-medium text-gray-600">{sessionTitle}</span>
-          </>
-        )}
-      </div>
+  useEffect(() => {
+    const cenariosEnabled = Boolean(sessionId && hasBudget);
+    const dreEnabled = Boolean(sessionId && hasBudget);
+    const budgetHint =
+      sessionId && !hasBudget ? 'Vincule um orçamento à sessão para comparar cenários de compra.' : undefined;
+    const dreHint =
+      sessionId && !hasBudget ? 'Vincule um orçamento à sessão para abrir a DRE.' : undefined;
 
-      <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-accent-500/40 bg-accent-500/15">
-              <Building2 className="h-5 w-5 text-neutral-900" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h1 className="text-xl font-bold text-neutral-900 sm:text-2xl">{title}</h1>
-              <p className="mt-1 text-sm text-slate-600">{description}</p>
-            </div>
-          </div>
+    const steps: StepTabItem[] = [
+      {
+        id: 'fornecedores',
+        label: 'Fornecedores',
+        icon: Users,
+        href: '/fornecedores/cadastro',
+      },
+      {
+        id: 'cotacoes',
+        label: 'Cotações',
+        icon: Package,
+        href: sessionId ? `/fornecedores/sessao/${sessionId}` : '/fornecedores',
+      },
+      {
+        id: 'conciliacao',
+        label: 'Conciliação',
+        icon: GitMerge,
+        href: sessionId ? `/fornecedores/sessao/${sessionId}/conciliacao` : undefined,
+        disabled: !sessionId,
+      },
+      {
+        id: 'cenarios',
+        label: 'Cenários',
+        icon: BarChart3,
+        href: cenariosEnabled ? `/fornecedores/sessao/${sessionId}/cenarios` : undefined,
+        disabled: !cenariosEnabled,
+        disabledHint: budgetHint,
+      },
+      {
+        id: 'dre',
+        label: 'DRE',
+        icon: TrendingUp,
+        href: dreEnabled ? `/fornecedores/sessao/${sessionId}/dre` : undefined,
+        disabled: !dreEnabled,
+        disabledHint: dreHint,
+      },
+    ];
 
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <Link href={fornecedoresHref} className={stepClass(activeStep === 'fornecedores')}>
-              <Users className="h-3.5 w-3.5" />
-              Fornecedores
-            </Link>
-            <Link href={cotacoesHref} className={stepClass(activeStep === 'cotacoes')}>
-              <Package className="h-3.5 w-3.5" />
-              Cotações
-            </Link>
-            {sessionId ? (
-              <Link href={conciliacaoHref} className={stepClass(activeStep === 'conciliacao')}>
-                <GitMerge className="h-3.5 w-3.5" />
-                Conciliação
-              </Link>
-            ) : (
-              <span className={stepClass(false, true)}>
-                <GitMerge className="h-3.5 w-3.5" />
-                Conciliação
-              </span>
-            )}
-            {showCenariosLink ? (
-              <Link href={cenariosHref} className={stepClass(activeStep === 'cenarios')}>
-                <BarChart3 className="h-3.5 w-3.5" />
-                Cenários
-              </Link>
-            ) : (
-              <span
-                className={stepClass(false, true)}
-                title={
-                  sessionId && !hasBudget
-                    ? 'Vincule um orçamento à sessão para comparar cenários de compra.'
-                    : undefined
-                }
-              >
-                <BarChart3 className="h-3.5 w-3.5" />
-                Cenários
-              </span>
-            )}
-          </div>
-        </div>
+    setState({
+      title,
+      description,
+      breadcrumbExtra: sessionTitle ? [{ label: sessionTitle }] : undefined,
+      tabs: <StepTabs steps={steps} activeStepId={activeStep} />,
+    });
 
-        {sessionId ? <SessionNotesBox sessionId={sessionId} /> : null}
-      </div>
-    </div>
-  );
+    return () => setState({});
+  }, [sessionId, sessionTitle, activeStep, hasBudget, title, description, setState]);
+
+  return null;
 }
