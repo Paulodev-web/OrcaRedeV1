@@ -182,12 +182,8 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
       exportDate: new Date().toLocaleString('pt-BR'),
     };
 
-    const postsData = budgetDetails
-      ? buildPostsWithMaterialsFromBudgetDetails(budgetDetails, segmentNameFor)
-      : [];
-
     try {
-      exportToCSV(exportData, exportOptions, postsData);
+      exportToCSV(exportData, exportOptions);
     } catch (error) {
       console.error('Erro ao exportar para CSV:', error);
       alert('Erro ao exportar arquivo CSV. Por favor, tente novamente.');

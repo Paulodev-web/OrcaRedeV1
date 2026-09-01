@@ -149,13 +149,13 @@ export async function reorderWorkSegmentsAction(orderedIds: string[]): Promise<A
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
 
+    // Sem filtro por `user_id`: depois do org-flip o catálogo é da ORGANIZAÇÃO,
+    // e o segmento que um colega criou continua sendo reordenável por quem tem
+    // acesso. Quem delimita o escopo é o RLS; filtrar por autoria aqui faria o
+    // UPDATE casar zero linhas e a tela mentir "ordem salva".
     const results = await Promise.all(
       orderedIds.map((id, index) =>
-        supabase
-          .from('work_segments')
-          .update({ order_index: index + 1 })
-          .eq('id', id)
-          .eq('user_id', userId)
+        supabase.from('work_segments').update({ order_index: index + 1 }).eq('id', id)
       )
     );
 
@@ -180,15 +180,27 @@ export async function seedDefaultWorkSegmentsAction(): Promise<ActionResult> {
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
 
+    // Insere só o que falta, em vez de `upsert(onConflict)`: a unicidade do
+    // catálogo mudou de (user_id, name) para (org_id, name) no org-flip, e
+    // nomear a constraint aqui amarraria a action a uma versão do schema.
+    const { data: existentes, error: leituraError } = await supabase
+      .from('work_segments')
+      .select('name');
+
+    if (leituraError) return { success: false, error: leituraError.message };
+
+    const jaTem = new Set((existentes ?? []).map((linha) => linha.name));
+    const faltando = CATALOGO_PADRAO.filter((name) => !jaTem.has(name));
+    if (faltando.length === 0) return { success: true };
+
     const base = await nextOrderIndex(supabase, userId);
-    const { error } = await supabase.from('work_segments').upsert(
-      CATALOGO_PADRAO.map((name, index) => ({
+    const { error } = await supabase.from('work_segments').insert(
+      faltando.map((name, index) => ({
         user_id: userId,
         name,
         order_index: base + index,
         is_default: true,
-      })),
-      { onConflict: 'user_id,name', ignoreDuplicates: true }
+      }))
     );
 
     if (error) return { success: false, error: error.message };
