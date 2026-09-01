@@ -13,6 +13,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { getPostDisplayName } from '@/lib/utils';
 import { exportByPostAndGroupToExcel, PostWithMaterials } from '@/services/exportService';
+import { useWorkSegmentNameResolver } from '@/components/orcamentos/segments/useWorkSegmentNameResolver';
 import { buildPostsWithMaterialsFromBudgetDetails } from '@/services/budgetMaterialAggregation';
 import { PostItemGroupSegmentField, PostSegmentBadge, PostSegmentField } from '@/components/orcamentos/segments/SegmentFields';
 // Instrumentação temporária — ver src/lib/perf/openBudget.ts.
@@ -448,6 +449,9 @@ export function AreaTrabalho({ embedded = false, view, onViewChange }: AreaTraba
     }
   }, [clickCoordinates, currentOrcamento, addPostToBudget, addGroupToPost, addLooseMaterialToPost, materiais, postTypes, alertDialog]);
 
+  // Segmento resolvido de cada poste/grupo, para a planilha sair classificada.
+  const segmentNameFor = useWorkSegmentNameResolver();
+
   // Função para exportar materiais organizados por poste/grupo
   const handleExportByPostAndGroup = useCallback(() => {
     if (!budgetDetails || budgetDetails.posts.length === 0) {
@@ -459,7 +463,10 @@ export function AreaTrabalho({ embedded = false, view, onViewChange }: AreaTraba
     }
     
     // Organizar dados no formato necessário
-    const postsData: PostWithMaterials[] = buildPostsWithMaterialsFromBudgetDetails(budgetDetails);
+    const postsData: PostWithMaterials[] = buildPostsWithMaterialsFromBudgetDetails(
+      budgetDetails,
+      segmentNameFor
+    );
 
     // Exportar para Excel
     exportByPostAndGroupToExcel(postsData, budgetDetails.name || 'Orçamento');
@@ -468,7 +475,7 @@ export function AreaTrabalho({ embedded = false, view, onViewChange }: AreaTraba
       'Exportação Concluída',
       'A planilha foi exportada com sucesso!'
     );
-  }, [budgetDetails, alertDialog]);
+  }, [budgetDetails, alertDialog, segmentNameFor]);
   // --- FIM DO BLOCO DE CÓDIGO ---
 
   if (!currentOrcamento) {
