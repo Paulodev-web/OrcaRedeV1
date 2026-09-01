@@ -8,6 +8,7 @@ import {
   resolveSegmentId,
   setPostItemGroupSegment,
   setPostSegment,
+  setPostsSegment,
   type BudgetSegmentAssignments,
   type WorkSegment,
 } from '@/services/segments/workSegments';
@@ -25,6 +26,10 @@ interface WorkSegmentsContextValue {
   isSaving: (id: string) => boolean;
   updatePostSegment: (postId: string, segmentId: string | null) => Promise<void>;
   updateGroupSegment: (postItemGroupId: string, segmentId: string | null) => Promise<void>;
+  /** Marcação em lote — devolve quantos postes o banco realmente gravou. */
+  updatePostsSegment: (postIds: string[], segmentId: string | null) => Promise<number>;
+  /** `true` enquanto uma marcação em lote está no ar. */
+  isBulkSaving: boolean;
 }
 
 const WorkSegmentsContext = createContext<WorkSegmentsContextValue | null>(null);
@@ -53,6 +58,7 @@ export function WorkSegmentsProvider({
     initialAssignments ?? EMPTY_SEGMENT_ASSIGNMENTS
   );
   const [savingIds, setSavingIds] = useState<string[]>([]);
+  const [bulkSaving, setBulkSaving] = useState(false);
 
   const segmentName = useCallback(
     (segmentId: string | null | undefined) => {
@@ -117,6 +123,39 @@ export function WorkSegmentsProvider({
     [persist]
   );
 
+  /**
+   * Marcação em lote.
+   *
+   * Diferente do `persist` de um poste só, aqui a reversão não pode ser
+   * cega: o banco pode ter gravado parte dos postes (o RLS decide linha a
+   * linha). Só o que voltou do `.select()` fica marcado na tela.
+   */
+  const updatePostsSegment = useCallback(
+    async (postIds: string[], segmentId: string | null): Promise<number> => {
+      if (postIds.length === 0) return 0;
+
+      setBulkSaving(true);
+      try {
+        const gravados = await setPostsSegment(supabase, postIds, segmentId);
+        setAssignments((current) => {
+          const posts = { ...current.posts };
+          for (const id of gravados) {
+            posts[id] = segmentId;
+          }
+          return { ...current, posts };
+        });
+        return gravados.length;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Erro desconhecido.';
+        toast.error('Não foi possível marcar os postes.', { description: message });
+        return 0;
+      } finally {
+        setBulkSaving(false);
+      }
+    },
+    []
+  );
+
   const value = useMemo<WorkSegmentsContextValue>(
     () => ({
       segments,
@@ -126,6 +165,8 @@ export function WorkSegmentsProvider({
       isSaving,
       updatePostSegment,
       updateGroupSegment,
+      updatePostsSegment,
+      isBulkSaving: bulkSaving,
     }),
     [
       segments,
@@ -135,6 +176,8 @@ export function WorkSegmentsProvider({
       isSaving,
       updatePostSegment,
       updateGroupSegment,
+      updatePostsSegment,
+      bulkSaving,
     ]
   );
 

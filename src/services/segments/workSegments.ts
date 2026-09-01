@@ -124,6 +124,41 @@ async function updateSegmentColumn(
   }
 }
 
+/**
+ * Marca o segmento de VÁRIOS postes de uma vez.
+ *
+ * A divisão que o campo pede é geográfica — "deste trecho para cá é
+ * subterrâneo" — e não cabe num dropdown por poste: uma obra de 149 postes
+ * viraria 149 decisões. Aqui é um `UPDATE ... IN`, uma viagem só ao banco.
+ *
+ * O `.select('id')` devolve quais linhas realmente mudaram: o RLS barra em
+ * silêncio, e sem isso a tela marcaria 50 postes na interface tendo gravado 3.
+ */
+export async function setPostsSegment(
+  supabase: SupabaseClient,
+  postIds: string[],
+  segmentId: string | null
+): Promise<string[]> {
+  if (postIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('budget_posts')
+    .update({ segment_id: segmentId })
+    .in('id', postIds)
+    .select('id');
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const gravados = (data ?? []).map((linha) => (linha as { id: string }).id);
+  if (gravados.length === 0) {
+    throw new Error('Nenhum poste foi atualizado — verifique seu acesso ao orçamento.');
+  }
+
+  return gravados;
+}
+
 /** Marca (ou desmarca, com `null`) o segmento do poste. */
 export async function setPostSegment(
   supabase: SupabaseClient,

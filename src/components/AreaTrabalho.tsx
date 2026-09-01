@@ -14,6 +14,7 @@ import { AlertDialog } from '@/components/ui/alert-dialog';
 import { getPostDisplayName } from '@/lib/utils';
 import { exportByPostAndGroupToExcel, PostWithMaterials } from '@/services/exportService';
 import { useWorkSegmentNameResolver } from '@/components/orcamentos/segments/useWorkSegmentNameResolver';
+import { BulkSegmentBar } from '@/components/orcamentos/segments/BulkSegmentBar';
 import { buildPostsWithMaterialsFromBudgetDetails } from '@/services/budgetMaterialAggregation';
 import { PostItemGroupSegmentField, PostSegmentBadge, PostSegmentField } from '@/components/orcamentos/segments/SegmentFields';
 // Instrumentação temporária — ver src/lib/perf/openBudget.ts.
@@ -1077,6 +1078,9 @@ function PostListAccordion({
   }, [budgetDetails?.posts?.length]);
   
   // Estados locais para materiais avulsos
+  // Seleção em lote para marcar o segmento de vários postes de uma vez.
+  const [selectedPostIds, setSelectedPostIds] = useState<string[]>([]);
+
   const [materialSearchTerm, setMaterialSearchTerm] = useState('');
   const [addingLooseMaterial, setAddingLooseMaterial] = useState(false);
   const [removingLooseMaterial, setRemovingLooseMaterial] = useState<string | null>(null);
@@ -1104,6 +1108,12 @@ function PostListAccordion({
       return counterA - counterB;
     });
   }, [postsToDisplay, debouncedPostSearchTerm]);
+
+  const togglePostSelection = useCallback((postId: string) => {
+    setSelectedPostIds((ids) =>
+      ids.includes(postId) ? ids.filter((id) => id !== postId) : [...ids, postId]
+    );
+  }, []);
 
   // Garantir que o poste selecionado esteja sempre na lista para o Accordion expandir
   const postsToRender = useMemo(() => {
@@ -1233,6 +1243,19 @@ function PostListAccordion({
             )}
           </div>
         )}
+
+        {postsToDisplay.length > 0 && (
+          <div className="mt-3">
+            <BulkSegmentBar
+              selectedIds={selectedPostIds}
+              filteredCount={filteredPosts.length}
+              onSelectAllFiltered={() =>
+                setSelectedPostIds(filteredPosts.map((post: BudgetPostDetail) => post.id))
+              }
+              onClear={() => setSelectedPostIds([])}
+            />
+          </div>
+        )}
       </div>
 
       {isRendering ? (
@@ -1291,6 +1314,16 @@ function PostListAccordion({
                 <AccordionTrigger className="hover:no-underline py-2 px-1">
                   <div className="flex min-w-0 flex-1 items-center justify-between gap-2 pr-1">
                     <div className="flex min-w-0 flex-1 items-center gap-3">
+                      {/* Fora do AccordionTrigger em comportamento: marcar não expande. */}
+                      <input
+                        type="checkbox"
+                        checked={selectedPostIds.includes(post.id)}
+                        onChange={() => togglePostSelection(post.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        className="h-4 w-4 shrink-0 cursor-pointer rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                        aria-label={`Selecionar ${postName} para marcação em lote`}
+                      />
                       <TowerControl className="h-5 w-5 shrink-0 text-blue-600" />
                       <div className="min-w-0 text-left">
                         <div className="font-medium leading-tight">{postName} - {postType || 'Tipo não definido'}</div>
