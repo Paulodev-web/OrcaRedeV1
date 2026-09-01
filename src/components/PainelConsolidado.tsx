@@ -5,6 +5,7 @@ import { BudgetDetails } from '@/types';
 import { useApp } from '@/contexts/AppContext';
 import { exportToExcel, exportToCSV, exportToExcelForSuppliers, exportToCSVForSuppliers, MaterialExport, ExportOptions } from '@/services/exportService';
 import { consolidateMaterialsFromBudgetDetails, buildPostsWithMaterialsFromBudgetDetails } from '@/services/budgetMaterialAggregation';
+import { useWorkSegmentNameResolver } from '@/components/orcamentos/segments/useWorkSegmentNameResolver';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 
@@ -20,6 +21,8 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
   const [isUpdating, setIsUpdating] = useState(false);
   const [deletingMaterialId, setDeletingMaterialId] = useState<string | null>(null);
   const alertDialog = useAlertDialog();
+  // Segmento resolvido de cada poste/grupo, para a planilha sair classificada.
+  const segmentNameFor = useWorkSegmentNameResolver();
 
   const materiaisConsolidados = consolidateMaterialsFromBudgetDetails(budgetDetails);
   const custoTotal = materiaisConsolidados.reduce((total, material) => total + material.subtotal, 0);
@@ -143,7 +146,9 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
       exportDate: new Date().toLocaleString('pt-BR'),
     };
 
-    const postsData = budgetDetails ? buildPostsWithMaterialsFromBudgetDetails(budgetDetails) : [];
+    const postsData = budgetDetails
+      ? buildPostsWithMaterialsFromBudgetDetails(budgetDetails, segmentNameFor)
+      : [];
 
     try {
       exportToExcel(exportData, exportOptions, postsData);
@@ -177,8 +182,12 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
       exportDate: new Date().toLocaleString('pt-BR'),
     };
 
+    const postsData = budgetDetails
+      ? buildPostsWithMaterialsFromBudgetDetails(budgetDetails, segmentNameFor)
+      : [];
+
     try {
-      exportToCSV(exportData, exportOptions);
+      exportToCSV(exportData, exportOptions, postsData);
     } catch (error) {
       console.error('Erro ao exportar para CSV:', error);
       alert('Erro ao exportar arquivo CSV. Por favor, tente novamente.');

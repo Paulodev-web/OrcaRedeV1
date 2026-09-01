@@ -112,8 +112,8 @@ export const CONFIG_SECTIONS: ConfigSection[] = [
     label: "Segmentos de obra",
     description: "Catálogo de segmentos (rede, iluminação, ramais…) marcados no orçamento",
     icon: Split,
-    href: null,
-    status: "soon",
+    href: "/configuracoes/segmentos",
+    status: "active",
     group: "sistema",
   },
   {

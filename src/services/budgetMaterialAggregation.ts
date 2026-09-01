@@ -86,16 +86,29 @@ export function consolidateMaterialsFromBudgetDetails(
 }
 
 /**
+ * Nome do segmento de obra já resolvido pela cascata da §7.3
+ * (grupo → poste → não segmentado). Vem do `WorkSegmentsProvider`; quando o
+ * orçamento é aberto fora dele, nada é passado e a exportação sai sem segmento.
+ */
+export type SegmentNameResolver = (
+  postId: string,
+  postItemGroupId?: string
+) => string | null;
+
+/**
  * Detalhamento poste a poste (grupos + materiais avulsos), usado nas
- * exportações que separam os materiais por poste.
+ * exportações que separam os materiais por poste e por segmento.
  */
 export function buildPostsWithMaterialsFromBudgetDetails(
-  budgetDetails: BudgetDetails
+  budgetDetails: BudgetDetails,
+  segmentNameFor?: SegmentNameResolver
 ): PostWithMaterials[] {
   return budgetDetails.posts.map((post) => {
     const groups = post.post_item_groups.map((group) => ({
       groupName: group.name,
+      segment: segmentNameFor?.(post.id, group.id) ?? null,
       materials: group.post_item_group_materials.map((material) => ({
+        materialId: material.material_id,
         codigo: material.materials.code || '-',
         nome: material.materials.name,
         unidade: material.materials.unit,
@@ -106,6 +119,7 @@ export function buildPostsWithMaterialsFromBudgetDetails(
     }));
 
     const looseMaterials = (post.post_materials || []).map((material) => ({
+      materialId: material.material_id,
       codigo: material.materials.code || '-',
       nome: material.materials.name,
       unidade: material.materials.unit,
@@ -118,6 +132,7 @@ export function buildPostsWithMaterialsFromBudgetDetails(
       postName: getPostDisplayName(post),
       postType: post.post_types?.name || 'Tipo não definido',
       coords: { x: post.x_coord, y: post.y_coord },
+      segment: segmentNameFor?.(post.id) ?? null,
       groups,
       looseMaterials,
     };
