@@ -280,20 +280,30 @@ export async function syncMaterialPriceAcrossUserBudgets(
 }
 
 /**
- * Atualiza catálogo e linhas do orçamento informado (fluxo do Painel Consolidado).
+ * Preço editado no Painel Consolidado: mexe SÓ neste orçamento.
+ *
+ * Antes daqui saía também uma escrita no catálogo (`materials.price`), e como o
+ * catálogo é a base de todos os orçamentos, corrigir o preço de um parafuso
+ * dentro de uma obra reescrevia o preço em toda a operação. Quem orça uma obra
+ * ajusta o preço DAQUELA obra, com o frete e a data daquela compra; a base é
+ * outra decisão, e tem tela própria.
+ *
+ * O preço da obra vive em `price_at_addition` das linhas (grupos e avulsos),
+ * que existe exatamente para o orçamento não ficar refém do catálogo.
+ *
+ * A propagação para todos os orçamentos continua existindo, no lugar certo:
+ * `syncMaterialPriceAcrossUserBudgets`, disparada ao salvar em Materiais.
  */
-export async function syncMaterialPriceEverywhere(
+export async function syncMaterialPriceInBudgetOnly(
   supabase: SupabaseClient,
-  userId: string,
   budgetId: string,
   materialId: string,
   newPrice: number
 ): Promise<SyncMaterialPriceEverywhereResult> {
-  const catalogUpdated = await syncMaterialPriceInCatalog(supabase, userId, materialId, newPrice);
   const budgetResult = await syncMaterialPriceInBudget(supabase, budgetId, materialId, newPrice);
 
   return {
-    catalogUpdated,
+    catalogUpdated: false,
     budgetsUpdated: 1,
     groupLinesUpdated: budgetResult.groupLinesUpdated,
     looseLinesUpdated: budgetResult.looseLinesUpdated,

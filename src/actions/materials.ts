@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
 import {
   syncMaterialPriceAcrossUserBudgets,
-  syncMaterialPriceEverywhere,
+  syncMaterialPriceInBudgetOnly,
   type SyncMaterialPriceEverywhereResult,
 } from '@/services/budgets/syncMaterialPrice';
 
@@ -98,7 +98,9 @@ export async function syncMaterialPriceAction(
     }
 
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    // Guarda de sessão: o `userId` em si não é mais necessário aqui, agora que
+    // a edição não passa pelo catálogo, mas a rota continua exigindo login.
+    await requireAuthUserId(supabase);
 
     const { data: budget, error: budgetError } = await supabase
       .from('budgets')
@@ -114,7 +116,7 @@ export async function syncMaterialPriceAction(
       return { success: false, error: 'Orçamento não encontrado.' };
     }
 
-    const data = await syncMaterialPriceEverywhere(supabase, userId, budgetId, materialId, newPrice);
+    const data = await syncMaterialPriceInBudgetOnly(supabase, budgetId, materialId, newPrice);
 
     revalidatePath('/');
     return { success: true, data };

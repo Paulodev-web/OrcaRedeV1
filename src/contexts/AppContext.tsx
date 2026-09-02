@@ -1751,9 +1751,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       throw new Error(result.error);
     }
 
-    // `true` nos dois: é recarga logo após a escrita do preço, e uma busca já
-    // em voo traria o valor de antes dela.
-    await Promise.all([fetchBudgetDetails(budgetId, true), fetchMaterials(true)]);
+    // Só o orçamento é recarregado. O catálogo de materiais não é mais tocado
+    // por esta edição, então recarregar as ~2.500 linhas de `materials` seria
+    // baixar de novo um dado que não mudou.
+    // `true` força a recarga: uma busca já em voo traria o valor de antes da escrita.
+    await fetchBudgetDetails(budgetId, true);
   };
 
   // Função para remover um material de todas as ocorrências do orçamento (grupos + avulsos)

@@ -74,7 +74,7 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
       setEditingMaterialId(null);
       setEditingPrice('');
       alert(
-        `Preço atualizado para ${formatCurrency(newPrice)} no orçamento e no catálogo de materiais.`
+        `Preço atualizado para ${formatCurrency(newPrice)} neste orçamento. O catálogo de materiais não foi alterado.`
       );
     } catch (error) {
       console.error('Erro ao salvar preço consolidado:', error);
@@ -324,7 +324,7 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
             )}
             <div className="flex items-center space-x-1 text-xs text-gray-500">
               <Edit2 className="h-3 w-3" />
-              <span>Clique no ícone para editar preços</span>
+              <span>Clique no ícone para editar o preço só neste orçamento</span>
             </div>
           </div>
         </div>
@@ -461,7 +461,7 @@ export function PainelConsolidado({ budgetDetails, orcamentoNome }: PainelConsol
                               onClick={() => handleStartEdit(material.materialId, material.precoUnit)}
                               disabled={deletingMaterialId !== null}
                               className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                              title="Editar Preço"
+                              title="Editar o preço deste material neste orçamento"
                             >
                               <Edit2 className="h-4 w-4" />
                             </button>
