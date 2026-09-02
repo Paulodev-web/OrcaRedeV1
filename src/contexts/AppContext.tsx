@@ -71,7 +71,7 @@ interface AppContextType {
   
   // Funções de tipos de poste
   fetchPostTypes: () => Promise<void>;
-  addPostToBudget: (newPostData: { budget_id: string; post_type_id: string; name: string; x_coord: number; y_coord: number; skipPostTypeMaterial?: boolean; postTypeMaterialId?: string; postTypePrice?: number; pole_standard_id?: string; }) => Promise<string>;
+  addPostToBudget: (newPostData: { budget_id: string; post_type_id: string; name: string; x_coord: number; y_coord: number; skipPostTypeMaterial?: boolean; postTypeMaterialId?: string; postTypePrice?: number; pole_standard_id?: string; segment_id?: string | null; }) => Promise<string>;
   addGroupToPost: (groupId: string, postId: string, poleStandardId?: string) => Promise<void>;
   deletePostFromBudget: (postId: string) => Promise<void>;
   updatePostCoordinates: (postId: string, x: number, y: number) => Promise<void>;
@@ -976,7 +976,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, [hasFetchedPostTypes, postTypes.length]);
 
-  const addPostToBudget = async (newPostData: { budget_id: string; post_type_id: string; name: string; x_coord: number; y_coord: number; skipPostTypeMaterial?: boolean; postTypeMaterialId?: string; postTypePrice?: number; pole_standard_id?: string; }) => {
+  const addPostToBudget = async (newPostData: { budget_id: string; post_type_id: string; name: string; x_coord: number; y_coord: number; skipPostTypeMaterial?: boolean; postTypeMaterialId?: string; postTypePrice?: number; pole_standard_id?: string; segment_id?: string | null; }) => {
     try {
       console.log(`🔄 === SUPABASE INSERT INICIADO ===`);
       console.log(`📤 Dados sendo enviados para Supabase:`, newPostData);
@@ -1029,6 +1029,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           x_coord: newPostData.x_coord,
           y_coord: newPostData.y_coord,
           pole_standard_id: newPostData.pole_standard_id || null,
+          // O segmento entra no próprio INSERT: o poste nasce marcado, sem uma
+          // segunda escrita que poderia falhar e deixá-lo solto.
+          segment_id: newPostData.segment_id ?? null,
         })
         .select(`
           *,

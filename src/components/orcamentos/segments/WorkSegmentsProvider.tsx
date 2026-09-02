@@ -26,10 +26,23 @@ interface WorkSegmentsContextValue {
   isSaving: (id: string) => boolean;
   updatePostSegment: (postId: string, segmentId: string | null) => Promise<void>;
   updateGroupSegment: (postItemGroupId: string, segmentId: string | null) => Promise<void>;
-  /** Marcação em lote — devolve quantos postes o banco realmente gravou. */
+  /** Marcação em lote. Devolve quantos postes o banco realmente gravou. */
   updatePostsSegment: (postIds: string[], segmentId: string | null) => Promise<number>;
   /** `true` enquanto uma marcação em lote está no ar. */
   isBulkSaving: boolean;
+  /**
+   * Espelha no estado local o segmento de um poste que JÁ nasceu marcado no
+   * banco (o insert do modal de criação grava `segment_id` junto). Não escreve.
+   */
+  registerPostSegment: (postId: string, segmentId: string | null) => void;
+  /**
+   * Último segmento escolhido ao criar um poste, para o modal já vir preenchido.
+   *
+   * A divisão é geográfica: quem está lançando o trecho subterrâneo cria uma
+   * dezena de postes seguidos no mesmo segmento. Sem isso, seria reescolher a
+   * cada poste, que é o mesmo atrito que matou a marcação individual.
+   */
+  lastUsedSegmentId: string | null;
 }
 
 const WorkSegmentsContext = createContext<WorkSegmentsContextValue | null>(null);
@@ -59,6 +72,7 @@ export function WorkSegmentsProvider({
   );
   const [savingIds, setSavingIds] = useState<string[]>([]);
   const [bulkSaving, setBulkSaving] = useState(false);
+  const [lastUsedSegmentId, setLastUsedSegmentId] = useState<string | null>(null);
 
   const segmentName = useCallback(
     (segmentId: string | null | undefined) => {
@@ -156,6 +170,14 @@ export function WorkSegmentsProvider({
     []
   );
 
+  const registerPostSegment = useCallback((postId: string, segmentId: string | null) => {
+    setAssignments((current) => ({
+      ...current,
+      posts: { ...current.posts, [postId]: segmentId },
+    }));
+    setLastUsedSegmentId(segmentId);
+  }, []);
+
   const value = useMemo<WorkSegmentsContextValue>(
     () => ({
       segments,
@@ -167,6 +189,8 @@ export function WorkSegmentsProvider({
       updateGroupSegment,
       updatePostsSegment,
       isBulkSaving: bulkSaving,
+      registerPostSegment,
+      lastUsedSegmentId,
     }),
     [
       segments,
@@ -178,6 +202,8 @@ export function WorkSegmentsProvider({
       updateGroupSegment,
       updatePostsSegment,
       bulkSaving,
+      registerPostSegment,
+      lastUsedSegmentId,
     ]
   );
 

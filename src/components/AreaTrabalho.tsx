@@ -14,6 +14,7 @@ import { AlertDialog } from '@/components/ui/alert-dialog';
 import { getPostDisplayName } from '@/lib/utils';
 import { exportByPostAndGroupToExcel, PostWithMaterials } from '@/services/exportService';
 import { useWorkSegmentNameResolver } from '@/components/orcamentos/segments/useWorkSegmentNameResolver';
+import { useWorkSegments } from '@/components/orcamentos/segments/WorkSegmentsProvider';
 import { BulkSegmentBar } from '@/components/orcamentos/segments/BulkSegmentBar';
 import { buildPostsWithMaterialsFromBudgetDetails } from '@/services/budgetMaterialAggregation';
 import { PostItemGroupSegmentField, PostSegmentBadge, PostSegmentField } from '@/components/orcamentos/segments/SegmentFields';
@@ -121,6 +122,9 @@ export function AreaTrabalho({ embedded = false, view, onViewChange }: AreaTraba
   const [clickCoordinates, setClickCoordinates] = useState<{ x: number, y: number } | null>(null);
   
   // Estados para o modal de edição
+  // `null` fora do provider (OrçaRede legado), e aí nada de segmento acontece.
+  const workSegmentsStore = useWorkSegments();
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [postToEdit, setPostToEdit] = useState<BudgetPostDetail | null>(null);
   
@@ -348,7 +352,7 @@ export function AreaTrabalho({ embedded = false, view, onViewChange }: AreaTraba
   }, []);
   
   // Função para ser chamada pelo modal para adicionar o poste
-  const handleAddPost = useCallback(async (postTypeId: string, postName: string) => {
+  const handleAddPost = useCallback(async (postTypeId: string, postName: string, segmentId: string | null) => {
     if (!clickCoordinates || !currentOrcamento?.id) {
       alertDialog.showError(
         "Erro ao Adicionar Poste",
@@ -359,7 +363,7 @@ export function AreaTrabalho({ embedded = false, view, onViewChange }: AreaTraba
     
     try {
       const postType = postTypes.find(pt => pt.id === postTypeId);
-      await addPostToBudget({
+      const newPostId = await addPostToBudget({
         budget_id: currentOrcamento.id,
         post_type_id: postTypeId,
         name: postName,
@@ -367,7 +371,12 @@ export function AreaTrabalho({ embedded = false, view, onViewChange }: AreaTraba
         y_coord: clickCoordinates.y,
         postTypeMaterialId: postType?.material_id,
         postTypePrice: postType?.price,
+        segment_id: segmentId,
       });
+
+      // O banco já gravou o segmento no INSERT; aqui só espelhamos no estado
+      // do provider, que é quem alimenta o chip e o seletor da lista.
+      workSegmentsStore?.registerPostSegment(newPostId, segmentId);
 
       setIsModalOpen(false);
       setClickCoordinates(null);
@@ -378,7 +387,7 @@ export function AreaTrabalho({ embedded = false, view, onViewChange }: AreaTraba
         "Ocorreu um erro ao salvar o poste. Tente novamente."
       );
     }
-  }, [clickCoordinates, currentOrcamento, addPostToBudget, postTypes, alertDialog]);
+  }, [clickCoordinates, currentOrcamento, addPostToBudget, postTypes, alertDialog, workSegmentsStore]);
 
   // Função para adicionar poste com grupos e materiais
   const handleAddPostWithItems = useCallback(async (
@@ -386,7 +395,8 @@ export function AreaTrabalho({ embedded = false, view, onViewChange }: AreaTraba
     postName: string,
     selectedGroups: string[],
     selectedMaterials: {materialId: string, quantity: number}[],
-    appliedStandardId?: string
+    appliedStandardId?: string,
+    segmentId?: string | null
   ) => {
     if (!clickCoordinates || !currentOrcamento?.id) {
       alertDialog.showError(
@@ -411,7 +421,10 @@ export function AreaTrabalho({ embedded = false, view, onViewChange }: AreaTraba
         postTypeMaterialId: postType?.material_id,
         postTypePrice: postType?.price,
         pole_standard_id: appliedStandardId,
+        segment_id: segmentId ?? null,
       });
+
+      workSegmentsStore?.registerPostSegment(newPostId, segmentId ?? null);
 
       // Adicionar grupos e materiais avulsos em paralelo (cada um é uma
       // operação independente no banco), em vez de sequencialmente com
@@ -448,7 +461,7 @@ export function AreaTrabalho({ embedded = false, view, onViewChange }: AreaTraba
         "Ocorreu um erro ao salvar o poste e seus itens. Tente novamente."
       );
     }
-  }, [clickCoordinates, currentOrcamento, addPostToBudget, addGroupToPost, addLooseMaterialToPost, materiais, postTypes, alertDialog]);
+  }, [clickCoordinates, currentOrcamento, addPostToBudget, addGroupToPost, addLooseMaterialToPost, materiais, postTypes, alertDialog, workSegmentsStore]);
 
   // Segmento resolvido de cada poste/grupo, para a planilha sair classificada.
   const segmentNameFor = useWorkSegmentNameResolver();

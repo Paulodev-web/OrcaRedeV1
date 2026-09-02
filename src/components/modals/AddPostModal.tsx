@@ -12,6 +12,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Material } from '@/types';
+import { NewPostSegmentField } from '@/components/orcamentos/segments/NewPostSegmentField';
+import { useWorkSegments } from '@/components/orcamentos/segments/WorkSegmentsProvider';
 
 const EMPTY_POST_TYPE_VALUE = '__no_post_type__';
 const EMPTY_SOURCE_POST_VALUE = '__no_source_post__';
@@ -67,8 +69,8 @@ interface AddPostModalProps {
   isOpen: boolean;
   onClose: () => void;
   coordinates: {x: number, y: number} | null;
-  onSubmit: (postTypeId: string, postName: string) => Promise<void>;
-  onSubmitWithItems?: (postTypeId: string, postName: string, selectedGroups: string[], selectedMaterials: {materialId: string, quantity: number}[], appliedStandardId?: string) => Promise<void>;
+  onSubmit: (postTypeId: string, postName: string, segmentId: string | null) => Promise<void>;
+  onSubmitWithItems?: (postTypeId: string, postName: string, selectedGroups: string[], selectedMaterials: {materialId: string, quantity: number}[], appliedStandardId?: string, segmentId?: string | null) => Promise<void>;
 }
 
 type TabType = 'post' | 'standard' | 'groups' | 'materials' | 'duplicate';
@@ -92,10 +94,18 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
   } = useApp();
   
   const alertDialog = useAlertDialog();
+
+  // O reset dos campos roda dentro de um setTimeout, fora do render, então o
+  // último segmento usado é lido de um ref e não direto do contexto.
+  const workSegments = useWorkSegments();
+  const lastUsedSegmentIdRef = useRef<string | null>(null);
+  lastUsedSegmentIdRef.current = workSegments?.lastUsedSegmentId ?? null;
   
   // Estados básicos do poste
   const [postName, setPostName] = useState('');
   const [selectedPostType, setSelectedPostType] = useState('');
+  // Segmento de obra escolhido para o poste novo (§7.3).
+  const [selectedSegmentId, setSelectedSegmentId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Estados das abas
@@ -137,6 +147,9 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
         setStandardSearchTerm('');
         setAppliedStandardId('');
         setIsSubmitting(false);
+        // Ao contrário dos outros campos, o segmento herda a última escolha:
+        // um trecho de obra são vários postes seguidos no mesmo segmento.
+        setSelectedSegmentId(lastUsedSegmentIdRef.current ?? '');
       }, 0);
 
       // O modal fica montado (só retorna null quando fechado), então o estado
@@ -180,12 +193,19 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
       quantity: pm.quantity
     }));
     setSelectedMaterials(materials);
-    
+
+    // Duplicar um poste copia também o segmento: quem duplica está repetindo um
+    // poste do mesmo trecho da obra, não criando um poste igual em outro lugar.
+    const sourceSegmentId = workSegments?.assignments.posts[sourcePost.id] ?? null;
+    if (sourceSegmentId) {
+      setSelectedSegmentId(sourceSegmentId);
+    }
+
     alertDialog.showSuccess(
       'Configurações Copiadas',
       `Tipo de poste, grupos e materiais do poste "${sourcePost.name}" foram copiados com sucesso!`
     );
-  }, [budgetDetails, alertDialog]);
+  }, [budgetDetails, alertDialog, workSegments?.assignments.posts]);
 
   // Função para aplicar um padrão de poste (grupo de grupos de itens)
   const handleApplyPoleStandard = useCallback((standardId: string) => {
@@ -252,9 +272,9 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
         ? [...selectedMaterials, { materialId: postTypeMaterialId, quantity: 1 }]
         : selectedMaterials;
 
-      onSubmitWithItems(selectedPostType, postName.trim(), selectedGroups, materialsToSubmit, appliedStandardId || undefined);
+      onSubmitWithItems(selectedPostType, postName.trim(), selectedGroups, materialsToSubmit, appliedStandardId || undefined, selectedSegmentId || null);
     } else {
-      onSubmit(selectedPostType, postName.trim());
+      onSubmit(selectedPostType, postName.trim(), selectedSegmentId || null);
     }
 
     onClose();
@@ -755,6 +775,12 @@ function AddPostModalContent({ isOpen, onClose, coordinates, onSubmit, onSubmitW
                     )}
                   </div>
                   
+                  <NewPostSegmentField
+                    value={selectedSegmentId}
+                    onChange={setSelectedSegmentId}
+                    disabled={isSubmitting}
+                  />
+
                   {(selectedGroups.length > 0 || selectedMaterials.length > 0) && (
                     <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                       <h4 className="font-semibold text-green-900 mb-2">Itens Copiados</h4>
