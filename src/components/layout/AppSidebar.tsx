@@ -345,6 +345,11 @@ function SidebarItem({ item, collapsed, active, onNavigate }: SidebarItemProps) 
 
   if (item.href) {
     return (
+      // Sem `prefetch` forçado: a barra aparece em TODA tela, então cada item
+      // com prefetch explícito mandava o servidor renderizar aquela rota inteira,
+      // com as consultas dela, a cada navegação. Era o multiplicador do gargalo
+      // que derrubou a produção (docs/perf-diagnostico-producao.md, P2). O padrão
+      // do Next busca só até o `loading` da rota, que já dá navegação instantânea.
       <Link
         href={item.href}
         onClick={onNavigate}

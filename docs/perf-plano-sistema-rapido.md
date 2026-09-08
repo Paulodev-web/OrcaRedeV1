@@ -29,7 +29,7 @@ chegar lá, é preciso parar de fazer trabalho desnecessário.
 | 2. Conciliação presa em `after()` | feito, na branch (exige deploy da Edge) |
 | 3. Custo fixo por tela | aguardando medição pós-deploy |
 | 4. Navegador | aguardando medição pós-deploy |
-| 5. Impedir que volte | regras 1 e 2 escritas no código |
+| 5. Impedir que volte | feito |
 
 ## Fase 0: publicar o que já está pronto
 
@@ -168,6 +168,18 @@ problema juntas. Sem uma trava, volta.
 3. **Um olho no painel:** uma vez por semana, rodar a consulta de validação do
    diagnóstico nos logs do Supabase. Se `budget_posts` aparecer com centenas de
    chamadas, alguma tela voltou a carregar orçamento inteiro sem precisar.
+
+### Feito
+
+As três regras saíram do papel:
+
+1. O comentário sobre prefetch está em `AdminPortal` e em `AppSidebar`, nos dois
+   lugares onde a tentação de voltar a usar `prefetch` é maior.
+2. A regra de listagem está escrita em cima de `listSavedPricingBudgets`, que é
+   onde ela foi quebrada, com o número do estrago junto.
+3. A conferência semanal virou arquivo pronto para colar:
+   [docs/sql/perf-validacao-semanal.sql](sql/perf-validacao-semanal.sql), com as
+   três consultas, onde rodar (é o Logs Explorer, não o SQL Editor) e as metas.
 
 ## Sequência recomendada
 
