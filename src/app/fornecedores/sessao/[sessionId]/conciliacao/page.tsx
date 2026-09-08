@@ -17,11 +17,13 @@ interface Props {
 export default async function SessionConciliacaoPage({ params }: Props) {
   const { sessionId } = await params;
 
-  const sessionRes = await getQuotationSessionByIdCached(sessionId);
+  const [sessionRes, jobsRes] = await Promise.all([
+    getQuotationSessionByIdCached(sessionId),
+    listExtractionJobsBySessionCached(sessionId),
+  ]);
   if (!sessionRes.success) notFound();
 
   const session = sessionRes.data;
-  const jobsRes = await listExtractionJobsBySessionCached(sessionId);
   const jobs = jobsRes.success ? jobsRes.data.jobs : [];
   const hasActiveJobs = jobs.some((job) => job.status === 'pending' || job.status === 'processing');
   const hasErroredJobs = jobs.some((job) => job.status === 'error');

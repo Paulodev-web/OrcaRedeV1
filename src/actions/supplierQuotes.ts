@@ -3,6 +3,7 @@
 import { after } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
+import { getQuotationSessionByIdCached } from '@/lib/quotationSessionReads';
 import { getSupplierDisplayName } from '@/lib/supplierDisplay';
 import { effectiveUnitPrice, normalizedPrice } from '@/lib/supplierPrice';
 import { autoMatchQuoteItems } from '@/services/suppliers/autoMatchQuoteItems';
@@ -20,6 +21,7 @@ import {
   loadConsolidatedBudgetMaterialsFromDb,
 } from '@/services/supplies/budgetMaterialQuantities';
 import { MAX_PDFS_PER_QUOTATION } from '@/lib/suppliesLimits';
+import { timeServer } from '@/lib/perf/serverTiming';
 import type { SupplierExtractItem } from '@/types/supplierExtract';
 import type { SupplierQuote, SupplierQuoteItem, SupplierMatchMethod, SupplierQuoteStatus } from '@/types';
 
@@ -29,6 +31,42 @@ import type { SupplierQuote, SupplierQuoteItem, SupplierMatchMethod, SupplierQuo
 type ActionResult<T = void> =
   | { success: true; data: T }
   | { success: false; error: string };
+
+/**
+ * Revalidação depois de uma escrita feita a partir da tela de Conciliação.
+ *
+ * A regra que vale para o módulo inteiro: NÃO revalidar a rota de onde a action
+ * foi chamada. Quando `revalidatePath` aponta para a rota atual, o Next
+ * re-renderiza o Server Component e devolve o payload RSC junto da resposta da
+ * própria action, ou seja, cada vínculo salvo reexecutava
+ * `getConciliationPayloadBySessionAction` inteiro. A tela já se atualiza de
+ * forma otimista no cliente, então esse trabalho era jogado fora.
+ *
+ * As outras rotas continuam sendo invalidadas: elas não custam nada agora
+ * (só marcam o Router Cache do cliente como velho) e evitam que a sessão e os
+ * cenários apareçam desatualizados numa navegação seguinte.
+ */
+function revalidateAfterConciliationWrite(sessionId: string | null | undefined) {
+  if (sessionId) {
+    revalidatePath(`/fornecedores/sessao/${sessionId}`);
+    revalidatePath(`/fornecedores/sessao/${sessionId}/cenarios`);
+  }
+  revalidatePath('/fornecedores');
+}
+
+/**
+ * Mesma regra para as escritas feitas de dentro da tela de Cenários (preço
+ * negociado, estoque, OC, seleção do cenário ideal).
+ *
+ * Aqui o desperdício era maior: revalidar `/cenarios` forçava um
+ * `calculateScenariosAction` completo dentro da resposta da action, e logo em
+ * seguida `useSessionScenariosRefresh` rodava o mesmo cálculo de novo pelo
+ * cliente. A atualização da tela é responsabilidade do hook; a action só marca
+ * as outras rotas.
+ */
+function revalidateAfterScenarioWrite(sessionId: string) {
+  revalidatePath(`/fornecedores/sessao/${sessionId}`);
+}
 
 // ---------------------------------------------------------------------------
 // createSupplierQuoteAction
@@ -574,26 +612,9 @@ export async function saveManualMatchAction(
       console.warn('[supplierQuotes] Falha ao persistir memória De/Para:', mappingError.message);
     }
 
-    const { data: itemRow } = await supabase
-      .from('supplier_quote_items')
-      .select('quote_id')
-      .eq('id', input.itemId)
-      .single();
-
-    if (itemRow?.quote_id) {
-      const { data: quoteRow } = await supabase
-        .from('supplier_quotes')
-        .select('session_id')
-        .eq('id', itemRow.quote_id)
-        .single();
-
-      if (quoteRow?.session_id) {
-        revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}`);
-        revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/conciliacao`);
-        revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/cenarios`);
-      }
-    }
-    revalidatePath('/fornecedores');
+    // O session_id já veio no join lá em cima; buscá-lo de novo custava duas
+    // idas ao banco por vínculo salvo.
+    revalidateAfterConciliationWrite(quote.session_id);
     return { success: true, data: undefined };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao salvar vínculo manual.';
@@ -689,26 +710,7 @@ export async function acceptAiSuggestionAction(
       console.warn('[supplierQuotes] Falha ao persistir mapping IA aceita:', mappingError.message);
     }
 
-    const { data: itemRow } = await supabase
-      .from('supplier_quote_items')
-      .select('quote_id')
-      .eq('id', input.itemId)
-      .single();
-
-    if (itemRow?.quote_id) {
-      const { data: quoteRow } = await supabase
-        .from('supplier_quotes')
-        .select('session_id')
-        .eq('id', itemRow.quote_id)
-        .single();
-
-      if (quoteRow?.session_id) {
-        revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}`);
-        revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/conciliacao`);
-        revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/cenarios`);
-      }
-    }
-    revalidatePath('/fornecedores');
+    revalidateAfterConciliationWrite(quote.session_id);
     return { success: true, data: undefined };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao aceitar sugestão IA.';
@@ -732,7 +734,9 @@ export async function rejectAiSuggestionAction(
     const supabase = await createSupabaseServerClient();
     await requireAuthUserId(supabase);
 
-    const { error: itemError } = await supabase
+    // O próprio update devolve o session_id pelo join, então as duas consultas
+    // que existiam depois dele para redescobrir isso saíram.
+    const { data: updated, error: itemError } = await supabase
       .from('supplier_quote_items')
       .update({
         matched_material_id: null,
@@ -742,11 +746,16 @@ export async function rejectAiSuggestionAction(
         match_level: null,
         match_confidence: null,
       })
-      .eq('id', input.itemId);
+      .eq('id', input.itemId)
+      .select('quote_id, supplier_quotes!inner (session_id)')
+      .single();
 
     if (itemError) {
       return { success: false, error: `Erro ao recusar sugestão: ${itemError.message}` };
     }
+
+    const sessionId = (updated?.supplier_quotes as unknown as { session_id: string | null } | null)
+      ?.session_id ?? null;
 
     if (input.suggestionId) {
       await supabase
@@ -755,26 +764,7 @@ export async function rejectAiSuggestionAction(
         .eq('id', input.suggestionId);
     }
 
-    const { data: itemRow } = await supabase
-      .from('supplier_quote_items')
-      .select('quote_id')
-      .eq('id', input.itemId)
-      .single();
-
-    if (itemRow?.quote_id) {
-      const { data: quoteRow } = await supabase
-        .from('supplier_quotes')
-        .select('session_id')
-        .eq('id', itemRow.quote_id)
-        .single();
-
-      if (quoteRow?.session_id) {
-        revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}`);
-        revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/conciliacao`);
-        revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/cenarios`);
-      }
-    }
-    revalidatePath('/fornecedores');
+    revalidateAfterConciliationWrite(sessionId);
     return { success: true, data: undefined };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao recusar sugestão IA.';
@@ -789,31 +779,39 @@ export async function rejectAiSuggestionAction(
 export async function markQuoteConciliatedAction(
   quoteId: string
 ): Promise<ActionResult<void>> {
+  return markQuotesConciliatedAction([quoteId]);
+}
+
+/**
+ * Fecha a conciliação de várias cotações de uma vez.
+ *
+ * O botão Finalizar disparava uma server action por fornecedor em `Promise.all`,
+ * e o Next serializa server actions da mesma sessão: com cinco fornecedores eram
+ * cinco viagens completas, cada uma com suas próprias revalidações. Agora é um
+ * update só.
+ */
+export async function markQuotesConciliatedAction(
+  quoteIds: string[]
+): Promise<ActionResult<void>> {
   try {
+    if (quoteIds.length === 0) {
+      return { success: true, data: undefined };
+    }
+
     const supabase = await createSupabaseServerClient();
     await requireAuthUserId(supabase);
 
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from('supplier_quotes')
       .update({ status: 'conciliado' })
-      .eq('id', quoteId);
+      .in('id', quoteIds)
+      .select('session_id');
 
     if (error) {
       return { success: false, error: error.message };
     }
 
-    const { data: quoteRow } = await supabase
-      .from('supplier_quotes')
-      .select('session_id')
-      .eq('id', quoteId)
-      .single();
-
-    if (quoteRow?.session_id) {
-      revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}`);
-      revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/conciliacao`);
-      revalidatePath(`/fornecedores/sessao/${quoteRow.session_id}/cenarios`);
-    }
-    revalidatePath('/fornecedores');
+    revalidateAfterConciliationWrite(updated?.[0]?.session_id ?? null);
     return { success: true, data: undefined };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao concluir conciliação.';
@@ -1010,6 +1008,7 @@ export async function calculateScenariosAction(
   budgetId: string,
   sessionId?: string
 ): Promise<ActionResult<ScenariosResult>> {
+  return timeServer('cenarios: calculateScenariosAction', async () => {
   try {
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
@@ -1038,8 +1037,12 @@ export async function calculateScenariosAction(
           suppliers ( name )
         )
       `)
+      // Sem filtro por user_id: o isolamento é da organização e quem o aplica é
+      // a RLS. Filtrar por pessoa aqui deixava os Cenários ignorando as cotações
+      // importadas por um colega, que a Conciliação já mostra desde a migration
+      // 20260908121000. O resultado seria pior que inconsistente: o material
+      // apareceria sem oferta e sairia da comparação de preço.
       .eq('supplier_quotes.budget_id', budgetId)
-      .eq('supplier_quotes.user_id', userId)
       .in('match_status', ['automatico', 'manual', 'ia_suggested']);
 
     if (sessionId) {
@@ -1259,6 +1262,7 @@ export async function calculateScenariosAction(
     const message = err instanceof Error ? err.message : 'Erro ao calcular cenários.';
     return { success: false, error: message };
   }
+  });
 }
 
 export async function getConciliationPayloadByQuoteAction(
@@ -1451,25 +1455,27 @@ export async function getConciliationPayloadBySessionAction(
   budget_consolidated_count: number;
   excluded_material_ids: string[];
 }>> {
+  return timeServer('conciliacao: getConciliationPayloadBySession', async () => {
   try {
     const supabase = await createSupabaseServerClient();
     await requireAuthUserId(supabase);
 
-    const { data: sessionRow } = await supabase
-      .from('quotation_sessions')
-      .select('id, budget_id')
-      .eq('id', sessionId)
-      .single();
+    // Sessão e cotações não dependem uma da outra. Antes eram duas idas em
+    // série, e a sessão ainda era buscada de novo aqui mesmo tendo sido lida
+    // pela página (agora vem do read memoizado por requisição).
+    const [sessionRes, { data: quotes }] = await Promise.all([
+      getQuotationSessionByIdCached(sessionId),
+      supabase
+        .from('supplier_quotes')
+        .select('id, supplier_id, supplier_name, status, suppliers ( name )')
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: true }),
+    ]);
 
-    if (!sessionRow) {
+    if (!sessionRes.success) {
       return { success: false, error: 'Sessão não encontrada.' };
     }
-
-    const { data: quotes } = await supabase
-      .from('supplier_quotes')
-      .select('id, supplier_id, supplier_name, status, suppliers ( name )')
-      .eq('session_id', sessionId)
-      .order('created_at', { ascending: true });
+    const sessionRow = sessionRes.data;
 
     type QuoteRow = {
       id: string;
@@ -1514,21 +1520,23 @@ export async function getConciliationPayloadBySessionAction(
     const quoteIds = quoteRows.map((q) => q.id);
     const quoteNameMap = new Map(quoteRows.map((q) => [q.id, getSupplierDisplayName(q)]));
 
-    const { data: rawItems } = await supabase
-      .from('supplier_quote_items')
-      .select(`
-        id, quote_id, descricao, unidade, quantidade, preco_unit, total_item,
-        ipi_percent, st_incluso, alerta, matched_material_id, conversion_factor,
-        match_status, match_level, match_confidence, match_method, created_at,
-        materials (code, name, unit),
-        semantic_match_suggestions (id, rationale, status, suggested_material_id, suggested_conversion_factor)
-      `)
-      .in('quote_id', quoteIds)
-      .order('created_at', { ascending: true });
-
-    const mats = sessionRow.budget_id
-      ? await getBudgetMaterialsAction(sessionRow.budget_id, sessionId)
-      : await getCatalogMaterialsAction(sessionId);
+    // Itens e lista de materiais também são independentes entre si.
+    const [{ data: rawItems }, mats] = await Promise.all([
+      supabase
+        .from('supplier_quote_items')
+        .select(`
+          id, quote_id, descricao, unidade, quantidade, preco_unit, total_item,
+          ipi_percent, st_incluso, alerta, matched_material_id, conversion_factor,
+          match_status, match_level, match_confidence, match_method, created_at,
+          materials (code, name, unit),
+          semantic_match_suggestions (id, rationale, status, suggested_material_id, suggested_conversion_factor)
+        `)
+        .in('quote_id', quoteIds)
+        .order('created_at', { ascending: true }),
+      sessionRow.budget_id
+        ? getBudgetMaterialsAction(sessionRow.budget_id, sessionId)
+        : getCatalogMaterialsAction(sessionId),
+    ]);
 
     const budgetMaterials = mats.success ? mats.data.materials : [];
     const budget_consolidated_count = mats.success ? mats.data.budget_consolidated_count : 0;
@@ -1637,6 +1645,7 @@ export async function getConciliationPayloadBySessionAction(
     const message = err instanceof Error ? err.message : 'Erro ao carregar conciliação da sessão.';
     return { success: false, error: message };
   }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -1702,7 +1711,7 @@ export async function saveSessionStockInputsAction(
       return { success: false, error: error.message };
     }
 
-    revalidatePath(`/fornecedores/sessao/${sessionId}/cenarios`);
+    revalidateAfterScenarioWrite(sessionId);
     return { success: true, data: undefined };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao salvar estoque manual.';
@@ -1758,7 +1767,7 @@ export async function updateNegotiatedPriceAction(
       return { success: false, error: updateError.message };
     }
 
-    revalidatePath(`/fornecedores/sessao/${sessionId}/cenarios`);
+    revalidateAfterScenarioWrite(sessionId);
     return { success: true, data: undefined };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao salvar preço negociado.';
@@ -1793,8 +1802,8 @@ export async function saveManualSessionQuoteItemAction(input: {
       return { success: false, error: result.error };
     }
 
+    // Chamada da tela de Cenários, que já refaz o cálculo pelo cliente.
     revalidatePath(`/fornecedores/sessao/${input.sessionId}`);
-    revalidatePath(`/fornecedores/sessao/${input.sessionId}/cenarios`);
     revalidatePath(`/fornecedores/sessao/${input.sessionId}/conciliacao`);
 
     return { success: true, data: result };
@@ -1874,7 +1883,7 @@ export async function saveIdealSelectionAction(
       return { success: false, error: error.message };
     }
 
-    revalidatePath(`/fornecedores/sessao/${sessionId}/cenarios`);
+    revalidateAfterScenarioWrite(sessionId);
     return { success: true, data: undefined };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao salvar seleção do cenário ideal.';
@@ -1930,7 +1939,7 @@ export async function bulkSaveIdealSelectionsAction(
       return { success: false, error: error.message };
     }
 
-    revalidatePath(`/fornecedores/sessao/${sessionId}/cenarios`);
+    revalidateAfterScenarioWrite(sessionId);
     return { success: true, data: { saved: rows.length } };
   } catch (err: unknown) {
     const message =
@@ -1998,7 +2007,7 @@ export async function savePurchaseOrderAction(
         return { success: false, error: error.message };
       }
 
-      revalidatePath(`/fornecedores/sessao/${sessionId}/cenarios`);
+      revalidateAfterScenarioWrite(sessionId);
       return { success: true, data: undefined };
     }
 
@@ -2016,7 +2025,7 @@ export async function savePurchaseOrderAction(
       return { success: false, error: error.message };
     }
 
-    revalidatePath(`/fornecedores/sessao/${sessionId}/cenarios`);
+    revalidateAfterScenarioWrite(sessionId);
     return { success: true, data: undefined };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao salvar OC do cenário ideal.';
@@ -2261,7 +2270,7 @@ export async function removeIdealSelectionAction(
       return { success: false, error: error.message };
     }
 
-    revalidatePath(`/fornecedores/sessao/${sessionId}/cenarios`);
+    revalidateAfterScenarioWrite(sessionId);
     return { success: true, data: undefined };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao remover seleção do cenário ideal.';
@@ -2329,7 +2338,6 @@ export async function closeIdealScenarioAndUpdateMaterialsAction(
     revalidatePath('/');
     revalidatePath('/fornecedores');
     revalidatePath(`/fornecedores/sessao/${sessionId}`);
-    revalidatePath(`/fornecedores/sessao/${sessionId}/cenarios`);
 
     return { success: true, data: result };
   } catch (err: unknown) {
@@ -2400,7 +2408,6 @@ export async function updateMaterialsFromSupplierAction(
     revalidatePath('/');
     revalidatePath('/fornecedores');
     revalidatePath(`/fornecedores/sessao/${sessionId}`);
-    revalidatePath(`/fornecedores/sessao/${sessionId}/cenarios`);
 
     return { success: true, data: result };
   } catch (err: unknown) {

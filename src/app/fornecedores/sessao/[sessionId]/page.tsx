@@ -24,21 +24,16 @@ export default async function QuotationSessionPage({ params }: Props) {
   const supabase = await createSupabaseServerClient();
   await requireAuthUserId(supabase);
 
-  const { data: budgetRow } = session.budget_id
-    ? await supabase
-        .from('budgets')
-        .select('project_name')
-        .eq('id', session.budget_id)
-        .single()
-    : { data: null };
-
-  const jobsRes = await listExtractionJobsBySessionCached(sessionId);
-  const initialJobs = jobsRes.success ? jobsRes.data.jobs : [];
-
-  const { data: conciliationQuotesRaw } = await supabase
-    .from('supplier_quotes')
-    .select(
-      `
+  // As três leituras são independentes: orçamento, fila de extração e cotações.
+  const [{ data: budgetRow }, jobsRes, { data: conciliationQuotesRaw }] = await Promise.all([
+    session.budget_id
+      ? supabase.from('budgets').select('project_name').eq('id', session.budget_id).single()
+      : Promise.resolve({ data: null }),
+    listExtractionJobsBySessionCached(sessionId),
+    supabase
+      .from('supplier_quotes')
+      .select(
+        `
       id,
       supplier_id,
       supplier_name,
@@ -49,9 +44,12 @@ export default async function QuotationSessionPage({ params }: Props) {
       extraction_validated_at,
       supplier_quote_items (id, match_status)
     `
-    )
-    .eq('session_id', sessionId)
-    .order('created_at', { ascending: false });
+      )
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: false }),
+  ]);
+
+  const initialJobs = jobsRes.success ? jobsRes.data.jobs : [];
 
   const conciliationQuotes = (conciliationQuotesRaw ?? []).map((q) => {
     const items = (q.supplier_quote_items ?? []) as {

@@ -21,7 +21,7 @@ import {
   acceptAiSuggestionAction,
   rejectAiSuggestionAction,
   saveManualMatchAction,
-  markQuoteConciliatedAction,
+  markQuotesConciliatedAction,
   type SessionConciliationMaterialRow,
   type SessionConciliationQuoteSummary,
   type BudgetMaterialOption,
@@ -583,7 +583,7 @@ export default function ConciliationCurationView({
       if (!ok) return;
     }
     startFinalizando(async () => {
-      await Promise.all(pendingQuotes.map((q) => markQuoteConciliatedAction(q.id)));
+      await markQuotesConciliatedAction(pendingQuotes.map((q) => q.id));
       router.push(`/fornecedores/sessao/${sessionId}/cenarios`);
     });
   };

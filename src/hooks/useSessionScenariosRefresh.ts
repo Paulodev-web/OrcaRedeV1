@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   calculateScenariosAction,
   getIdealSelectionsAction,
@@ -28,10 +27,15 @@ export function useSessionScenariosRefresh({
   onIdealSelections,
   quoteIds = [],
 }: UseSessionScenariosRefreshOptions) {
-  const router = useRouter();
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshInFlightRef = useRef(false);
   const quoteIdsRef = useRef<Set<string>>(new Set(quoteIds));
+  /**
+   * Itens que esta aba acabou de salvar. O Realtime devolve o UPDATE que a
+   * própria pessoa fez, e reagir a ele significava recalcular os cenários mais
+   * uma vez logo depois do refresh que o save já disparou.
+   */
+  const escritasLocaisRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     quoteIdsRef.current = new Set(quoteIds);
@@ -61,11 +65,15 @@ export function useSessionScenariosRefresh({
         onIdealSelections(idealRes.data);
       }
 
-      router.refresh();
+      // Não há `router.refresh()` aqui de propósito: `calculateScenariosAction`
+      // acabou de devolver os dados novos por `onScenarios`, e o refresh do
+      // router mandaria o servidor re-renderizar a página inteira para calcular
+      // exatamente a mesma coisa de novo. Era a terceira execução do cálculo
+      // mais caro do módulo por save.
     } finally {
       refreshInFlightRef.current = false;
     }
-  }, [budgetId, sessionId, onScenarios, onIdealSelections, router]);
+  }, [budgetId, sessionId, onScenarios, onIdealSelections]);
 
   const scheduleRefresh = useCallback(() => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
@@ -137,11 +145,17 @@ export function useSessionScenariosRefresh({
           table: 'supplier_quote_items',
         },
         (payload) => {
-          const row = (payload.new ?? payload.old) as { quote_id?: string } | null;
+          const row = (payload.new ?? payload.old) as { id?: string; quote_id?: string } | null;
           const quoteId = row?.quote_id;
-          if (quoteId && quoteIdsRef.current.has(quoteId)) {
-            scheduleRefresh();
+          if (!quoteId || !quoteIdsRef.current.has(quoteId)) return;
+
+          // Eco do próprio save: consome a marca e ignora uma vez.
+          if (row?.id && escritasLocaisRef.current.has(row.id)) {
+            escritasLocaisRef.current.delete(row.id);
+            return;
           }
+
+          scheduleRefresh();
         }
       )
       .subscribe();
@@ -160,5 +174,17 @@ export function useSessionScenariosRefresh({
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, [scheduleRefresh]);
 
-  return { refresh, scheduleRefresh };
+  /**
+   * Avisa que esta aba está salvando estes itens, para o eco do Realtime não
+   * virar um recálculo extra. A marca expira sozinha em 10s caso o evento não
+   * chegue (conexão caiu, canal reconectando).
+   */
+  const markLocalWrite = useCallback((itemIds: string[]) => {
+    for (const id of itemIds) {
+      escritasLocaisRef.current.add(id);
+      setTimeout(() => escritasLocaisRef.current.delete(id), 10_000);
+    }
+  }, []);
+
+  return { refresh, scheduleRefresh, markLocalWrite };
 }

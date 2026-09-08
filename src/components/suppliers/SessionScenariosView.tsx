@@ -908,7 +908,7 @@ export default function SessionScenariosView({
     [quotes]
   );
 
-  const { refresh: refreshScenarios } = useSessionScenariosRefresh({
+  const { refresh: refreshScenarios, markLocalWrite } = useSessionScenariosRefresh({
     budgetId,
     sessionId,
     onScenarios: setScenarios,
@@ -1108,13 +1108,14 @@ export default function SessionScenariosView({
           : negotiatedFromNormalized(precoNegociadoNormalized, item.conversion_factor);
 
       setIsSavingPrice(true);
+      markLocalWrite([quoteItemId]);
       const res = await updateNegotiatedPriceAction(sessionId, quoteItemId, precoNegociado);
       setIsSavingPrice(false);
       if (res.success) {
         await refreshScenarios();
       }
     },
-    [scenarios, sessionId, refreshScenarios]
+    [scenarios, sessionId, refreshScenarios, markLocalWrite]
   );
 
   const handleOcSave = useCallback(
