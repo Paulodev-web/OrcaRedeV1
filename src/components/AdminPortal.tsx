@@ -252,9 +252,14 @@ function ModuleCard({ module: mod, onOpenLegacy }: ModuleCardProps) {
     </>
   );
 
+  // Sem `prefetch` forçado no Link: com ele, abrir o Portal mandava o servidor
+  // RENDERIZAR os sete módulos inteiros, cada um com as consultas da sua
+  // página, só porque os cards estão na tela. O padrão do Next busca apenas até
+  // o `loading` da rota, que é o que dá a navegação instantânea sem pagar a
+  // página duas vezes.
   if (mod.href) {
     return (
-      <Link href={mod.href} prefetch className={cardClass}>
+      <Link href={mod.href} className={cardClass}>
         {cardBody}
       </Link>
     );

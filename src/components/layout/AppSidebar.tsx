@@ -347,7 +347,6 @@ function SidebarItem({ item, collapsed, active, onNavigate }: SidebarItemProps) 
     return (
       <Link
         href={item.href}
-        prefetch
         onClick={onNavigate}
         className={itemClass}
         title={title}

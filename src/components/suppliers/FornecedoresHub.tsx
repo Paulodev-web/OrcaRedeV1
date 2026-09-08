@@ -144,10 +144,6 @@ export default function FornecedoresHub({
     }
   };
 
-  const prefetchSession = (sessionId: string) => {
-    router.prefetch(`/fornecedores/sessao/${sessionId}`);
-  };
-
   const handleDelete = async (sessionId: string) => {
     const accepted = confirm(
       'Excluir esta sessão? Esta ação é irreversível e também removerá as cotações e itens vinculados.'
@@ -235,13 +231,15 @@ export default function FornecedoresHub({
           {initialSessions.map((s) => (
             <li key={s.id}>
               <div className="relative flex h-full flex-col rounded-2xl border border-neutral-200 bg-surface shadow-2xs transition-[border-color,box-shadow] hover:border-neutral-300 hover:shadow-md">
+                {/* Havia três prefetches para o mesmo destino: o `prefetch` do
+                    Link, mais `router.prefetch` no hover e no foco. Cada um
+                    manda o servidor renderizar a sessão inteira, então passar o
+                    mouse pela lista disparava uma renderização por card. Ficou
+                    só o prefetch padrão do Next, que para no `loading`. */}
                 <Link
-                  prefetch
                   href={`/fornecedores/sessao/${s.id}`}
                   className="absolute inset-0 z-0 rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2"
                   aria-label={`Abrir sessão: ${s.title}`}
-                  onMouseEnter={() => prefetchSession(s.id)}
-                  onFocus={() => prefetchSession(s.id)}
                 />
                 <div className="relative z-10 flex flex-1 flex-col p-5 pointer-events-none">
                   <div className="flex items-start justify-between gap-2">

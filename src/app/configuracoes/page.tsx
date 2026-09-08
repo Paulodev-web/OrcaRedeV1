@@ -110,7 +110,6 @@ function SectionCard({ section }: { section: ConfigSection }) {
   return (
     <Link
       href={section.href!}
-      prefetch
       className={`${baseClass} border-brand-blue/40 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue`}
     >
       {body}

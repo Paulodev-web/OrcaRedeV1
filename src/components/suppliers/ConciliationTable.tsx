@@ -87,11 +87,10 @@ export default function ConciliationTable({ quote, items: initialItems, budgetMa
   const allMatched = matchedCount === totalCount;
   const progressPct = totalCount > 0 ? Math.round((matchedCount / totalCount) * 100) : 0;
 
-  useEffect(() => {
-    if (!quote.session_id) return;
-    const href = `/fornecedores/sessao/${quote.session_id}/cenarios`;
-    void router.prefetch(href);
-  }, [quote.session_id, router]);
+  // Havia um `router.prefetch` da tela de Cenários aqui, disparado na
+  // montagem. Prefetch imperativo é sempre completo: mandava o servidor
+  // calcular os cenários inteiros (o caminho mais caro do módulo) antes de
+  // alguém clicar em qualquer coisa.
 
   const handleSaved = (
     itemId: string,
