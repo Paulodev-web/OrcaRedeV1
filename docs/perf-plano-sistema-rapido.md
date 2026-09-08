@@ -26,7 +26,7 @@ chegar lá, é preciso parar de fazer trabalho desnecessário.
 |---|---|
 | 0. Publicar o que estava pronto | pendente, é deploy |
 | 1. N+1 da Precificação | feito, na branch |
-| 2. Conciliação presa em `after()` | feito, na branch (exige deploy da Edge) |
+| 2. Conciliação presa em `after()` | escrita, guardada fora do deploy (ver abaixo) |
 | 3. Custo fixo por tela | aguardando medição pós-deploy |
 | 4. Navegador | aguardando medição pós-deploy |
 | 5. Impedir que volte | feito |
@@ -113,9 +113,20 @@ teto de 20 s por garantia. Desistir de esperar não cancela nada: o trabalho viv
 na Edge e o fim é gravado no status de `supplier_quotes`, que a tela acompanha
 por Realtime.
 
-**Atenção no deploy:** a Edge Function precisa ir junto com o app. Se o app
-novo subir antes dela, o teto de 20 s passa a cortar uma conciliação que ainda
-só responde no fim.
+**Fora do deploy de 08/09/2026, de propósito.** A correção existe no commit
+`ca7a8d1`, na branch `perf/suprimentos-cotacao`, e foi revertida em `main` antes
+de publicar. Dois motivos:
+
+1. O timeout de 300 s era consequência do banco saturado. Com as fases 0 e 1 no
+   ar, a conciliação deixa de esperar um banco lento e a chance de chegar perto
+   do teto fica pequena. Vale medir antes de mexer.
+2. A correção depende de `EdgeRuntime.waitUntil` segurar o trabalho depois da
+   resposta, e isso ainda não foi conferido na documentação do Supabase nem
+   testado em dev. Se não segurar, a cotação fica presa em `conciliando` e só
+   sai com correção manual no banco.
+
+Quando for a hora: conferir o `waitUntil`, testar em dev, e publicar a Edge e o
+app na mesma janela. `git revert` do revert traz o código de volta.
 
 O mesmo defeito existe em `createQuoteAndDispatchExtractAction`, que espera a
 `extract-supplier-pdf` terminar dentro de um `after()`. Não foi mexido porque
