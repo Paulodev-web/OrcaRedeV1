@@ -6,6 +6,7 @@ import {
 } from '@/lib/pricingMath';
 import { consolidateMaterialsFromBudgetDetails } from '@/services/budgetMaterialAggregation';
 import { getBudgetPostsForPricing } from '@/services/works/getBudgetForImport';
+import { loadFullConsolidatedBudgetMaterials } from '@/services/supplies/budgetMaterialQuantities';
 import { DRE_COST_GROUPS, inferCostItemGroup, resolveCostItemValue } from '@/components/precificacao/types';
 import type {
   CostItem,
@@ -73,6 +74,21 @@ interface BudgetPricingSnapshot {
   city: string | null;
   materials: PricingMaterialSnapshot[];
   valorMateriais: number;
+}
+
+/** Nome/cliente/cidade do orçamento, sem nenhum poste junto (ver `listSavedPricingBudgets`). */
+interface LiveBudgetHeader {
+  budgetName: string;
+  clientName: string | null;
+  city: string | null;
+}
+
+interface BudgetHeaderRow {
+  id: string;
+  project_name: string;
+  client_name: string | null;
+  city: string | null;
+  user_id: string;
 }
 
 function toNumber(value: unknown): number {
@@ -288,40 +304,13 @@ export function buildSavedPricingUpsertRow(input: SavePricingBudgetInput, userId
   };
 }
 
-export async function resolveSavedPricingBudget(
-  supabase: SupabaseClient,
-  row: SavedPricingBudgetRow,
-  userId: string
-): Promise<SavedPricingBudget> {
-  const costItems = sanitizeCostItems(row.cost_items);
-  const saveMode = toPricingSaveMode(row.save_mode);
-  const fallbackMaterials = sanitizeMaterials(row.materials_snapshot);
-  const fallbackResult = resultFromRow(row, costItems);
-
-  if (saveMode === 'live') {
-    const liveSnapshot = await getBudgetPricingSnapshot(supabase, row.budget_id, userId);
-    if (liveSnapshot) {
-      return {
-        id: row.id,
-        userId: row.user_id,
-        budgetId: row.budget_id,
-        budgetName: liveSnapshot.budgetName,
-        clientName: liveSnapshot.clientName,
-        city: liveSnapshot.city,
-        saveMode,
-        pricingInputMode: toPricingInputMode(row.pricing_input_mode),
-        valorServicoInput: toNumber(row.valor_servico_input) || toNumber(row.valor_servico),
-        percentMateriaisInput: toNumber(row.percent_materiais_input),
-        impostoPercent: toNumber(row.imposto_percent),
-        costItems,
-        materialsSnapshot: liveSnapshot.materials,
-        result: calculateLiveResult(row, costItems, liveSnapshot.valorMateriais),
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-      };
-    }
-  }
-
+/**
+ * Linha como ela está gravada, sem ir ao orçamento.
+ *
+ * É o resultado final do modo `snapshot` e a base sobre a qual o modo `live`
+ * sobrescreve nome, cliente, cidade e totais.
+ */
+function savedPricingFromRow(row: SavedPricingBudgetRow, costItems: CostItem[]): SavedPricingBudget {
   return {
     id: row.id,
     userId: row.user_id,
@@ -329,19 +318,142 @@ export async function resolveSavedPricingBudget(
     budgetName: row.budget_name,
     clientName: row.client_name,
     city: row.city,
-    saveMode,
+    saveMode: toPricingSaveMode(row.save_mode),
     pricingInputMode: toPricingInputMode(row.pricing_input_mode),
     valorServicoInput: toNumber(row.valor_servico_input) || toNumber(row.valor_servico),
     percentMateriaisInput: toNumber(row.percent_materiais_input),
     impostoPercent: toNumber(row.imposto_percent),
     costItems,
-    materialsSnapshot: fallbackMaterials,
-    result: fallbackResult,
+    materialsSnapshot: sanitizeMaterials(row.materials_snapshot),
+    result: resultFromRow(row, costItems),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
 }
 
+/**
+ * Resolução completa de uma linha: no modo `live` relê o orçamento inteiro.
+ *
+ * Caro de propósito, e só vale quando alguém ABRE a precificação e vai ver a
+ * lista de materiais item a item. Para montar a lista de cards use
+ * `listSavedPricingBudgets`, que não carrega poste nenhum.
+ */
+export async function resolveSavedPricingBudget(
+  supabase: SupabaseClient,
+  row: SavedPricingBudgetRow,
+  userId: string
+): Promise<SavedPricingBudget> {
+  const costItems = sanitizeCostItems(row.cost_items);
+  const saved = savedPricingFromRow(row, costItems);
+
+  if (saved.saveMode !== 'live') {
+    return saved;
+  }
+
+  const liveSnapshot = await getBudgetPricingSnapshot(supabase, row.budget_id, userId);
+  if (!liveSnapshot) {
+    return saved;
+  }
+
+  return {
+    ...saved,
+    budgetName: liveSnapshot.budgetName,
+    clientName: liveSnapshot.clientName,
+    city: liveSnapshot.city,
+    materialsSnapshot: liveSnapshot.materials,
+    result: calculateLiveResult(row, costItems, liveSnapshot.valorMateriais),
+  };
+}
+
+/**
+ * Cabeçalho dos orçamentos em modo live, tudo em uma consulta.
+ *
+ * A checagem de dono espelha `getBudgetPostsForPricing`: orçamento de outro
+ * engenheiro devolve nada e a linha cai para o snapshot gravado, que é o que
+ * acontecia antes.
+ */
+async function loadLiveBudgetHeaders(
+  supabase: SupabaseClient,
+  budgetIds: string[],
+  userId: string
+): Promise<Map<string, LiveBudgetHeader>> {
+  const headers = new Map<string, LiveBudgetHeader>();
+  if (budgetIds.length === 0) {
+    return headers;
+  }
+
+  const { data, error } = await supabase
+    .from('budgets')
+    .select('id, project_name, client_name, city, user_id')
+    .in('id', budgetIds);
+
+  if (error) {
+    return headers;
+  }
+
+  for (const row of (data ?? []) as unknown as BudgetHeaderRow[]) {
+    if (row.user_id !== userId) continue;
+    headers.set(row.id, {
+      budgetName: row.project_name,
+      clientName: row.client_name,
+      city: row.city,
+    });
+  }
+
+  return headers;
+}
+
+/**
+ * Valor de materiais de cada orçamento, sem trazer nenhum poste.
+ *
+ * `budget_consolidated_materials` devolve uma linha por material (uma centena
+ * no maior orçamento da base) no lugar dos ~2 MB de postes, grupos e catálogo
+ * aninhados que a leitura live trazia por precificação salva.
+ *
+ * Falha em um orçamento não derruba a lista: aquela linha cai para o valor
+ * gravado, igual ao que já acontecia quando a leitura live não vinha.
+ */
+async function loadLiveValorMateriais(
+  supabase: SupabaseClient,
+  budgetIds: string[]
+): Promise<Map<string, number>> {
+  const entries = await Promise.all(
+    budgetIds.map(async (budgetId): Promise<[string, number] | null> => {
+      try {
+        const materials = await loadFullConsolidatedBudgetMaterials(supabase, budgetId);
+        let total = 0;
+        for (const material of materials.values()) {
+          total += material.required_qty * material.unit_price;
+        }
+        return [budgetId, total];
+      } catch (err) {
+        console.error('[listSavedPricingBudgets] BOM consolidado falhou:', budgetId, err);
+        return null;
+      }
+    })
+  );
+
+  return new Map(entries.filter((entry): entry is [string, number] => entry !== null));
+}
+
+/**
+ * Lista de cards da Precificação.
+ *
+ * REGRA: tela de lista não carrega o detalhe completo de cada item. Esta função
+ * já foi o gargalo do sistema inteiro (docs/perf-diagnostico-producao.md, P1):
+ * resolvia cada linha com `resolveSavedPricingBudget` e, em modo `live`, cada
+ * uma relia o orçamento completo. Com 11 precificações live isso eram 11
+ * leituras de 2 MB por montagem da página, 1.348 na janela medida, com média de
+ * 16 s em `budget_posts` e o banco cancelando queries por timeout.
+ *
+ * O card mostra nome, cliente, cidade e totais. Nada disso precisa de poste:
+ * são duas consultas fixas para a lista toda (a tabela e os cabeçalhos dos
+ * orçamentos) mais uma agregação por orçamento live.
+ *
+ * `materialsSnapshot` fica com o valor gravado de propósito: a lista não exibe
+ * material, e quem abre a precificação passa por `getSavedPricingBudgetById`,
+ * que resolve o live item a item.
+ */
 export async function listSavedPricingBudgets(
   supabase: SupabaseClient,
   userId: string
@@ -356,7 +468,39 @@ export async function listSavedPricingBudgets(
   }
 
   const rows = (data ?? []) as unknown as SavedPricingBudgetRow[];
-  return Promise.all(rows.map((row) => resolveSavedPricingBudget(supabase, row, userId)));
+  const liveBudgetIds = [
+    ...new Set(
+      rows
+        .filter((row) => toPricingSaveMode(row.save_mode) === 'live')
+        .map((row) => row.budget_id)
+    ),
+  ];
+
+  const headers = await loadLiveBudgetHeaders(supabase, liveBudgetIds, userId);
+  const valorMateriaisPorOrcamento = await loadLiveValorMateriais(supabase, [...headers.keys()]);
+
+  return rows.map((row) => {
+    const costItems = sanitizeCostItems(row.cost_items);
+    const saved = savedPricingFromRow(row, costItems);
+
+    if (saved.saveMode !== 'live') {
+      return saved;
+    }
+
+    const header = headers.get(row.budget_id);
+    const valorMateriais = valorMateriaisPorOrcamento.get(row.budget_id);
+    if (!header || valorMateriais === undefined) {
+      return saved;
+    }
+
+    return {
+      ...saved,
+      budgetName: header.budgetName,
+      clientName: header.clientName,
+      city: header.city,
+      result: calculateLiveResult(row, costItems, valorMateriais),
+    };
+  });
 }
 
 /**
