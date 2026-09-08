@@ -2,8 +2,8 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { resolveSupplierForQuote } from '@/services/suppliers/resolveSupplierForQuote';
 import {
-  assertMaterialInBudgetScope,
-  loadBudgetMaterialQuantities,
+  loadBudgetMaterialRow,
+  OFF_BUDGET_MATCH_ERROR,
 } from '@/services/supplies/budgetMaterialQuantities';
 
 export const MANUAL_QUOTE_PDF_PATH = 'manual://cotacao';
@@ -32,26 +32,17 @@ export async function saveManualSessionQuoteItem(
     return { error: 'Informe um preço unitário maior que zero.' };
   }
 
-  const scope = await assertMaterialInBudgetScope(supabase, budgetId, materialId, {
-    sessionId,
-    userId,
-  });
-  if (!scope.ok) {
-    return { error: scope.error };
+  // Uma consulta responde as duas perguntas que antes custavam duas varreduras
+  // do orçamento inteiro: o material pertence ao escopo (RDN04) e quais são o
+  // nome, a unidade e a quantidade necessária dele.
+  const material = await loadBudgetMaterialRow(supabase, budgetId, materialId);
+  if (!material) {
+    return { error: OFF_BUDGET_MATCH_ERROR };
   }
 
   const resolved = await resolveSupplierForQuote(supabase, userId, supplierId.trim());
   if ('error' in resolved) {
     return { error: resolved.error };
-  }
-
-  const budgetQtyMap = await loadBudgetMaterialQuantities(supabase, budgetId, {
-    sessionId,
-    userId,
-  });
-  const material = budgetQtyMap.get(materialId);
-  if (!material) {
-    return { error: 'Material não encontrado no orçamento.' };
   }
 
   const { data: session, error: sessionError } = await supabase
