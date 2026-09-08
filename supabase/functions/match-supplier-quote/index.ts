@@ -101,195 +101,24 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 2. Resolver budget_id
-    let budgetId: string | null = quote.budget_id ?? null;
-    if (!budgetId && quote.session_id) {
-      const { data: session } = await supabase
-        .from('quotation_sessions')
-        .select('budget_id')
-        .eq('id', quote.session_id)
-        .single<{ budget_id: string | null }>();
-      budgetId = session?.budget_id ?? null;
-    }
-
-    // 3. Carregar itens sem match
-    const { data: items, error: itemsError } = await supabase
-      .from('supplier_quote_items')
-      .select('id, descricao, unidade')
-      .eq('quote_id', quoteId)
-      .eq('match_status', 'sem_match')
-      .returns<ItemRow[]>();
-
-    if (itemsError) {
-      await markQuoteError(supabase, quoteId, `Erro ao carregar itens: ${itemsError.message}`);
-      return new Response(JSON.stringify({ error: itemsError.message }), {
-        status: 500,
-        headers: JSON_HEADERS,
-      });
-    }
-
-    if (!items || items.length === 0) {
-      await supabase
-        .from('supplier_quotes')
-        .update({ status: 'aguardando_revisao' })
-        .eq('id', quoteId);
-      return new Response(
-        JSON.stringify({ ok: true, quote_id: quoteId, l1_matched: 0, l2_matched: 0, sem_match: 0 }),
-        { status: 200, headers: JSON_HEADERS }
-      );
-    }
-
-    console.log('[match-supplier-quote] processando', items.length, 'itens - quote:', quoteId, '- budget:', budgetId ?? 'sem budget');
-
-    // 4. Carregar exclusoes de sessao
-    const sessionExclusions = new Set<string>();
-    if (quote.session_id) {
-      const { data: exclusions } = await supabase
-        .from('session_material_exclusions')
-        .select('material_id')
-        .eq('session_id', quote.session_id)
-        .eq('user_id', quote.user_id)
-        .returns<{ material_id: string }[]>();
-      for (const e of exclusions ?? []) {
-        sessionExclusions.add(e.material_id);
-      }
-    }
-
-    // 5. L1: Memoria Exata
-    const { data: mappings } = await supabase
-      .from('supplier_material_mappings')
-      .select('supplier_material_name, internal_material_id, conversion_factor')
-      .eq('user_id', quote.user_id)
-      .eq('supplier_name', quote.supplier_name)
-      .returns<MappingRow[]>();
-
-    type MappingValue = { internal_material_id: string; conversion_factor: number; original_name: string };
-    const mappingMap = new Map<string, MappingValue>();
-    for (const m of mappings ?? []) {
-      mappingMap.set(m.supplier_material_name.toLowerCase(), {
-        internal_material_id: m.internal_material_id,
-        conversion_factor: m.conversion_factor,
-        original_name: m.supplier_material_name,
-      });
-    }
-
-    const l1Updates: {
-      id: string;
-      matched_material_id: string;
-      conversion_factor: number;
-      original_mapping_name: string;
-    }[] = [];
-    const remainingItems: ItemRow[] = [];
-
-    for (const item of items) {
-      const mapping = mappingMap.get(item.descricao.toLowerCase());
-      if (!mapping) { remainingItems.push(item); continue; }
-      const matId = mapping.internal_material_id;
-      if (!sessionExclusions.has(matId)) {
-        l1Updates.push({
-          id: item.id,
-          matched_material_id: matId,
-          conversion_factor: mapping.conversion_factor,
-          original_mapping_name: mapping.original_name,
-        });
-      } else {
-        remainingItems.push(item);
-      }
-    }
-
-    if (l1Updates.length > 0) {
-      await Promise.all(
-        l1Updates.map((u) =>
-          supabase.from('supplier_quote_items').update({
-            matched_material_id: u.matched_material_id,
-            conversion_factor: u.conversion_factor,
-            match_status: 'automatico',
-            match_method: 'exact_memory',
-            match_level: 1,
-            match_confidence: 100,
-          }).eq('id', u.id)
-        )
-      );
-      const usedNames = [...new Set(l1Updates.map((u) => u.original_mapping_name))];
-      await supabase
-        .from('supplier_material_mappings')
-        .update({ last_seen_at: new Date().toISOString() })
-        .eq('user_id', quote.user_id)
-        .eq('supplier_name', quote.supplier_name)
-        .in('supplier_material_name', usedNames);
-    }
-
-    console.log('[match-supplier-quote] L1:', l1Updates.length, 'matched |', remainingItems.length, 'para L2');
-
-    // 6. L2: Gemini LLM De-Para (contexto fechado: apenas materiais do orcamento)
-    let l2Matched = 0;
-    let semMatchCount = remainingItems.length;
-
-    if (remainingItems.length > 0 && budgetId && geminiKey) {
-      const { data: scopeRows } = await supabase.rpc('get_budget_material_ids', {
-        p_budget_id: budgetId,
-      }) as { data: { material_id: string }[] | null };
-
-      const validIds = (scopeRows ?? [])
-        .map((r) => r.material_id)
-        .filter((id) => !sessionExclusions.has(id));
-
-      if (validIds.length > 0) {
-        const { data: catalogMaterials } = await supabase
-          .from('materials')
-          .select('id, code, name, unit')
-          .in('id', validIds)
-          .returns<MaterialRow[]>();
-
-        const catalog = catalogMaterials ?? [];
-
-        if (catalog.length > 0) {
-          const geminiMatches = await callGeminiForMatching(geminiKey, catalog, remainingItems);
-
-          if (geminiMatches.length > 0) {
-            const validCatalogIds = new Set(catalog.map((m) => m.id));
-            const validItemIds = new Set(remainingItems.map((i) => i.id));
-
-            const confirmed = geminiMatches.filter(
-              (m) =>
-                validItemIds.has(m.supplier_item_id) &&
-                validCatalogIds.has(m.internal_material_id) &&
-                m.confidence_score >= MIN_CONFIDENCE,
-            );
-
-            if (confirmed.length > 0) {
-              await Promise.all(
-                confirmed.map((m) =>
-                  supabase.from('supplier_quote_items').update({
-                    matched_material_id: m.internal_material_id,
-                    conversion_factor: 1,
-                    match_status: 'ia_suggested',
-                    match_method: 'semantic_ai',
-                    match_level: 2,
-                    match_confidence: m.confidence_score,
-                  }).eq('id', m.supplier_item_id)
-                )
-              );
-              l2Matched = confirmed.length;
-              semMatchCount = remainingItems.length - l2Matched;
-            }
-          }
-        }
-      }
-    } else if (remainingItems.length > 0 && !budgetId) {
-      console.warn('[match-supplier-quote] L2 pulado - sem budget_id (contexto fechado obrigatorio)');
-    } else if (remainingItems.length > 0 && !geminiKey) {
-      console.warn('[match-supplier-quote] L2 pulado - GEMINI_API_KEY ausente');
-    }
-
-    // 7. Finalizar
-    await supabase.from('supplier_quotes').update({ status: 'aguardando_revisao' }).eq('id', quoteId);
-
-    console.log('[match-supplier-quote] concluido:', quoteId, '-> aguardando_revisao | L1:', l1Updates.length, 'L2:', l2Matched, 'sem_match:', semMatchCount);
+    // A conciliacao em si roda em segundo plano: a Edge responde o aceite na
+    // hora e o progresso chega na tela pelo status de supplier_quotes.
+    //
+    // Antes ela so respondia no fim, e quem chamava (processarConciliacaoAction,
+    // dentro de after()) segurava a instancia serverless o tempo todo. Em
+    // producao isso bateu o teto de 300 s da Vercel com a instancia parada
+    // esperando a IA (docs/perf-diagnostico-producao.md, P4).
+    runInBackground(
+      runMatch(supabase, quote, geminiKey).catch(async (err: unknown) => {
+        const message = err instanceof Error ? err.message : 'Erro inesperado na conciliacao.';
+        console.error('[match-supplier-quote] falha em segundo plano:', quoteId, err);
+        await markQuoteError(supabase, quote.id, message);
+      }),
+    );
 
     return new Response(
-      JSON.stringify({ ok: true, quote_id: quoteId, l1_matched: l1Updates.length, l2_matched: l2Matched, sem_match: semMatchCount }),
-      { status: 200, headers: JSON_HEADERS }
+      JSON.stringify({ ok: true, quote_id: quoteId, accepted: true }),
+      { status: 202, headers: JSON_HEADERS }
     );
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro inesperado na conciliacao.';
@@ -301,6 +130,219 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ error: message }), { status: 500, headers: JSON_HEADERS });
   }
 });
+
+// ---------------------------------------------------------------------------
+// Trabalho em segundo plano
+// ---------------------------------------------------------------------------
+
+/**
+ * Mantem a promise viva depois da resposta.
+ *
+ * `EdgeRuntime.waitUntil` e o que impede o runtime de encerrar a invocacao
+ * quando o cliente ja recebeu o 202. Sem ele, quem chama teria de ficar
+ * esperando a resposta so para o trabalho acontecer, que era o problema.
+ */
+function runInBackground(task: Promise<unknown>): void {
+  const runtime = (globalThis as {
+    EdgeRuntime?: { waitUntil?: (task: Promise<unknown>) => void };
+  }).EdgeRuntime;
+
+  if (typeof runtime?.waitUntil === 'function') {
+    runtime.waitUntil(task);
+    return;
+  }
+
+  void task;
+}
+
+/** Conciliacao propriamente dita: L1 memoria exata, L2 Gemini, e status final. */
+async function runMatch(
+  supabase: ReturnType<typeof createAdminClient>,
+  quote: QuoteRow,
+  geminiKey: string | undefined,
+): Promise<void> {
+  const quoteId = quote.id;
+
+  // 2. Resolver budget_id
+  let budgetId: string | null = quote.budget_id ?? null;
+  if (!budgetId && quote.session_id) {
+    const { data: session } = await supabase
+      .from('quotation_sessions')
+      .select('budget_id')
+      .eq('id', quote.session_id)
+      .single<{ budget_id: string | null }>();
+    budgetId = session?.budget_id ?? null;
+  }
+
+  // 3. Carregar itens sem match
+  const { data: items, error: itemsError } = await supabase
+    .from('supplier_quote_items')
+    .select('id, descricao, unidade')
+    .eq('quote_id', quoteId)
+    .eq('match_status', 'sem_match')
+    .returns<ItemRow[]>();
+
+  if (itemsError) {
+    throw new Error(`Erro ao carregar itens: ${itemsError.message}`);
+  }
+
+  if (!items || items.length === 0) {
+    await supabase
+      .from('supplier_quotes')
+      .update({ status: 'aguardando_revisao' })
+      .eq('id', quoteId);
+    console.log('[match-supplier-quote] concluido sem itens pendentes:', quoteId);
+    return;
+  }
+
+  console.log('[match-supplier-quote] processando', items.length, 'itens - quote:', quoteId, '- budget:', budgetId ?? 'sem budget');
+
+  // 4. Carregar exclusoes de sessao
+  const sessionExclusions = new Set<string>();
+  if (quote.session_id) {
+    const { data: exclusions } = await supabase
+      .from('session_material_exclusions')
+      .select('material_id')
+      .eq('session_id', quote.session_id)
+      .eq('user_id', quote.user_id)
+      .returns<{ material_id: string }[]>();
+    for (const e of exclusions ?? []) {
+      sessionExclusions.add(e.material_id);
+    }
+  }
+
+  // 5. L1: Memoria Exata
+  const { data: mappings } = await supabase
+    .from('supplier_material_mappings')
+    .select('supplier_material_name, internal_material_id, conversion_factor')
+    .eq('user_id', quote.user_id)
+    .eq('supplier_name', quote.supplier_name)
+    .returns<MappingRow[]>();
+
+  type MappingValue = { internal_material_id: string; conversion_factor: number; original_name: string };
+  const mappingMap = new Map<string, MappingValue>();
+  for (const m of mappings ?? []) {
+    mappingMap.set(m.supplier_material_name.toLowerCase(), {
+      internal_material_id: m.internal_material_id,
+      conversion_factor: m.conversion_factor,
+      original_name: m.supplier_material_name,
+    });
+  }
+
+  const l1Updates: {
+    id: string;
+    matched_material_id: string;
+    conversion_factor: number;
+    original_mapping_name: string;
+  }[] = [];
+  const remainingItems: ItemRow[] = [];
+
+  for (const item of items) {
+    const mapping = mappingMap.get(item.descricao.toLowerCase());
+    if (!mapping) { remainingItems.push(item); continue; }
+    const matId = mapping.internal_material_id;
+    if (!sessionExclusions.has(matId)) {
+      l1Updates.push({
+        id: item.id,
+        matched_material_id: matId,
+        conversion_factor: mapping.conversion_factor,
+        original_mapping_name: mapping.original_name,
+      });
+    } else {
+      remainingItems.push(item);
+    }
+  }
+
+  if (l1Updates.length > 0) {
+    await Promise.all(
+      l1Updates.map((u) =>
+        supabase.from('supplier_quote_items').update({
+          matched_material_id: u.matched_material_id,
+          conversion_factor: u.conversion_factor,
+          match_status: 'automatico',
+          match_method: 'exact_memory',
+          match_level: 1,
+          match_confidence: 100,
+        }).eq('id', u.id)
+      )
+    );
+    const usedNames = [...new Set(l1Updates.map((u) => u.original_mapping_name))];
+    await supabase
+      .from('supplier_material_mappings')
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq('user_id', quote.user_id)
+      .eq('supplier_name', quote.supplier_name)
+      .in('supplier_material_name', usedNames);
+  }
+
+  console.log('[match-supplier-quote] L1:', l1Updates.length, 'matched |', remainingItems.length, 'para L2');
+
+  // 6. L2: Gemini LLM De-Para (contexto fechado: apenas materiais do orcamento)
+  let l2Matched = 0;
+  let semMatchCount = remainingItems.length;
+
+  if (remainingItems.length > 0 && budgetId && geminiKey) {
+    const { data: scopeRows } = await supabase.rpc('get_budget_material_ids', {
+      p_budget_id: budgetId,
+    }) as { data: { material_id: string }[] | null };
+
+    const validIds = (scopeRows ?? [])
+      .map((r) => r.material_id)
+      .filter((id) => !sessionExclusions.has(id));
+
+    if (validIds.length > 0) {
+      const { data: catalogMaterials } = await supabase
+        .from('materials')
+        .select('id, code, name, unit')
+        .in('id', validIds)
+        .returns<MaterialRow[]>();
+
+      const catalog = catalogMaterials ?? [];
+
+      if (catalog.length > 0) {
+        const geminiMatches = await callGeminiForMatching(geminiKey, catalog, remainingItems);
+
+        if (geminiMatches.length > 0) {
+          const validCatalogIds = new Set(catalog.map((m) => m.id));
+          const validItemIds = new Set(remainingItems.map((i) => i.id));
+
+          const confirmed = geminiMatches.filter(
+            (m) =>
+              validItemIds.has(m.supplier_item_id) &&
+              validCatalogIds.has(m.internal_material_id) &&
+              m.confidence_score >= MIN_CONFIDENCE,
+          );
+
+          if (confirmed.length > 0) {
+            await Promise.all(
+              confirmed.map((m) =>
+                supabase.from('supplier_quote_items').update({
+                  matched_material_id: m.internal_material_id,
+                  conversion_factor: 1,
+                  match_status: 'ia_suggested',
+                  match_method: 'semantic_ai',
+                  match_level: 2,
+                  match_confidence: m.confidence_score,
+                }).eq('id', m.supplier_item_id)
+              )
+            );
+            l2Matched = confirmed.length;
+            semMatchCount = remainingItems.length - l2Matched;
+          }
+        }
+      }
+    }
+  } else if (remainingItems.length > 0 && !budgetId) {
+    console.warn('[match-supplier-quote] L2 pulado - sem budget_id (contexto fechado obrigatorio)');
+  } else if (remainingItems.length > 0 && !geminiKey) {
+    console.warn('[match-supplier-quote] L2 pulado - GEMINI_API_KEY ausente');
+  }
+
+  // 7. Finalizar
+  await supabase.from('supplier_quotes').update({ status: 'aguardando_revisao' }).eq('id', quoteId);
+
+  console.log('[match-supplier-quote] concluido:', quoteId, '-> aguardando_revisao | L1:', l1Updates.length, 'L2:', l2Matched, 'sem_match:', semMatchCount);
+}
 
 // ---------------------------------------------------------------------------
 // Gemini LLM: De-Para estruturado com JSON Schema

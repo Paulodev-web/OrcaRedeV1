@@ -2134,6 +2134,15 @@ export async function createQuoteAndDispatchExtractAction(
 // Conciliação assíncrona: dispara a Edge Function match-supplier-quote
 // =============================================================================
 
+/**
+ * Teto de espera pelo ACEITE da Edge, não pelo trabalho dela.
+ *
+ * A `match-supplier-quote` responde 202 assim que valida a cotação e segue
+ * conciliando em segundo plano. Se nem o aceite vier nesse prazo, a instância
+ * serverless é solta em vez de ficar parada esperando.
+ */
+const EDGE_ACK_TIMEOUT_MS = 20_000;
+
 export async function processarConciliacaoAction(quoteId: string): Promise<ActionResult<void>> {
   try {
     const supabase = await createSupabaseServerClient();
@@ -2169,7 +2178,13 @@ export async function processarConciliacaoAction(quoteId: string): Promise<Actio
       return { success: false, error: updateError.message };
     }
 
-    // Fire-and-forget: mantém a função serverless viva após o retorno via after()
+    // Fire-and-forget de verdade: o after() mantém a instância viva só até a Edge
+    // ACEITAR o trabalho (202, alguns milissegundos), não até ela terminar.
+    //
+    // Antes esperava a conciliação inteira, com a IA rodando sobre a cotação, e
+    // em produção uma instância ficou presa até bater o teto de 300 s da Vercel
+    // (docs/perf-diagnostico-producao.md, P4). Quem conta o fim é o status de
+    // supplier_quotes, que a tela acompanha por Realtime.
     after(async () => {
       await dispatchMatchToEdge(quoteIdTrimmed).catch((err) => {
         console.error('[processarConciliacaoAction] Falha ao disparar match Edge:', quoteIdTrimmed, err);
@@ -2203,17 +2218,27 @@ async function dispatchMatchToEdge(quoteId: string): Promise<void> {
     headers['x-orcarede-gemini-pass'] = geminiKey;
   }
 
-  const res = await fetch(`${supabaseUrl}/functions/v1/match-supplier-quote`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ quote_id: quoteId }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${supabaseUrl}/functions/v1/match-supplier-quote`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ quote_id: quoteId }),
+      signal: AbortSignal.timeout(EDGE_ACK_TIMEOUT_MS),
+    });
+  } catch (err: unknown) {
+    // Só o aceite estourou. A Edge trabalha em segundo plano (EdgeRuntime.waitUntil),
+    // então desistir de esperar aqui não cancela a conciliação; ela termina e grava
+    // o status. Melhor soltar a instância do que segurá-la sem entregar nada.
+    console.warn('[dispatchMatchToEdge] sem aceite da Edge em', EDGE_ACK_TIMEOUT_MS, 'ms:', quoteId, err);
+    return;
+  }
 
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     console.warn('[dispatchMatchToEdge] Edge respondeu erro:', res.status, body.slice(0, 200));
   } else {
-    console.log('[dispatchMatchToEdge] sucesso:', quoteId);
+    console.log('[dispatchMatchToEdge] aceite recebido:', quoteId, res.status);
   }
 }
 
