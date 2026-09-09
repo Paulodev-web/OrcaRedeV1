@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ComponentType, ReactNode } from "react";
+import { useCallback, useState, type ComponentType, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 export interface StepTabItem {
@@ -29,6 +29,21 @@ export interface StepTabsProps {
   /** Rótulo do `<nav>`. Padrão: "Etapas". */
   ariaLabel?: string;
   className?: string;
+  /**
+   * Carrega a etapa inteira quando o ponteiro encosta nela, para o clique ser
+   * instantâneo.
+   *
+   * DESLIGADO POR PADRÃO, e a justificativa para ligar tem de ser escrita por
+   * quem liga (regra que nasceu em docs/perf-plano-sistema-rapido.md, Fase 5).
+   * `prefetch` explícito faz o servidor RENDERIZAR a rota inteira, com as
+   * consultas dela: foi assim que sete cards do Portal e a barra lateral
+   * inteira viraram o gargalo que derrubou a produção.
+   *
+   * Aqui é seguro porque o custo é limitado e vem de intenção real: são as
+   * poucas abas de UMA sessão já aberta, e só a aba que a pessoa está prestes a
+   * clicar, uma de cada vez. Nada é carregado por estar apenas visível na tela.
+   */
+  prefetchOnIntent?: boolean;
 }
 
 type StepState = "active" | "idle" | "disabled";
@@ -58,8 +73,33 @@ export function StepTabs({
   size = "sm",
   ariaLabel = "Etapas",
   className,
+  prefetchOnIntent = false,
 }: StepTabsProps) {
   const iconSize = size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4";
+
+  // Etapas em que a pessoa já encostou. Uma vez marcada, fica marcada: o Next
+  // guarda a rota no cache do roteador e não repete a viagem.
+  //
+  // Marcar aqui é o que dispara o carregamento: virar o `prefetch` do Link de
+  // indefinido para `true` troca a estratégia de parcial (só o esqueleto do
+  // `loading`) para completa (a página com as consultas dela). Conferido no
+  // Next 16.2.1: o ref do Link é recriado quando a estratégia muda, o que
+  // refaz o prefetch sem remontar o elemento, então o foco do teclado não se
+  // perde ao usar `onFocus`.
+  const [intent, setIntent] = useState<ReadonlySet<string>>(() => new Set());
+
+  const registerIntent = useCallback(
+    (stepId: string) => {
+      if (!prefetchOnIntent) return;
+      setIntent((prev) => {
+        if (prev.has(stepId)) return prev;
+        const next = new Set(prev);
+        next.add(stepId);
+        return next;
+      });
+    },
+    [prefetchOnIntent],
+  );
 
   return (
     <nav aria-label={ariaLabel} className={cn("flex flex-wrap items-center gap-2", className)}>
@@ -98,12 +138,20 @@ export function StepTabs({
         }
 
         if (step.href) {
+          const href = step.href;
+          // A aba ativa não se prefetcha: já é a página aberta.
+          const wantsPrefetch = prefetchOnIntent && !isActive && intent.has(step.id);
+
           return (
             <Link
               key={step.id}
-              href={step.href}
+              href={href}
               className={stepClass}
               aria-current={isActive ? "page" : undefined}
+              prefetch={wantsPrefetch ? true : undefined}
+              onMouseEnter={() => registerIntent(step.id)}
+              onFocus={() => registerIntent(step.id)}
+              onTouchStart={() => registerIntent(step.id)}
             >
               {content}
             </Link>

@@ -82,7 +82,13 @@ export default function SuppliesHeader({
       title,
       description,
       breadcrumbExtra: sessionTitle ? [{ label: sessionTitle }] : undefined,
-      tabs: <StepTabs steps={steps} activeStepId={activeStep} />,
+      // prefetchOnIntent ligado só aqui, e a justificativa exigida pela regra é
+      // esta: as abas de Suprimentos são as etapas de UMA sessão já aberta, e a
+      // pessoa percorre quase sempre todas em sequência. Sem isso, cada clique
+      // paga do zero as consultas da aba, que nesta instância custam de 50 a
+      // 300 ms cada. Carregar sob intenção, uma aba de cada vez, é o oposto do
+      // prefetch por visibilidade que derrubou a produção em 08/09/2026.
+      tabs: <StepTabs steps={steps} activeStepId={activeStep} prefetchOnIntent />,
     });
 
     return () => setState({});

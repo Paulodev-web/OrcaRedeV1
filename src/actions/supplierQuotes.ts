@@ -1013,8 +1013,6 @@ export async function calculateScenariosAction(
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
 
-    const budgetQtyMap = await loadBudgetMaterialQuantities(supabase, budgetId);
-
     let query = supabase
       .from('supplier_quote_items')
       .select(`
@@ -1049,26 +1047,36 @@ export async function calculateScenariosAction(
       query = query.eq('supplier_quotes.session_id', sessionId);
     }
 
-    const { data: rawItems, error } = await query;
+    // As quatro leituras são independentes entre si e antes rodavam em fila, uma
+    // esperando a anterior. Em produção, medido nos logs do Supabase, cada ida ao
+    // banco custa de 50 a 300 ms nesta instância, então a fila somava perto de
+    // 700 ms de espera pura para depois fazer um cálculo que roda em memória.
+    // Em paralelo, a aba passa a esperar só pela mais lenta delas.
+    const [budgetQtyMap, itemsRes, stockRows, excludedMaterialIds] = await Promise.all([
+      loadBudgetMaterialQuantities(supabase, budgetId),
+      query,
+      sessionId
+        ? supabase
+            .from('session_material_stock_inputs')
+            .select('material_id, stock_qty')
+            .eq('session_id', sessionId)
+            .then(({ data }) => data ?? [])
+        : Promise.resolve([] as { material_id: string; stock_qty: number | string }[]),
+      sessionId
+        ? getSessionExcludedMaterialIds(supabase, sessionId, userId)
+        : Promise.resolve(new Set<string>()),
+    ]);
+
+    const { data: rawItems, error } = itemsRes;
 
     if (error) {
       return { success: false, error: error.message };
     }
 
     const stockMap = new Map<string, number>();
-    if (sessionId) {
-      const { data: stockRows } = await supabase
-        .from('session_material_stock_inputs')
-        .select('material_id, stock_qty')
-        .eq('session_id', sessionId);
-      for (const r of stockRows ?? []) {
-        stockMap.set(r.material_id, Number(r.stock_qty));
-      }
+    for (const r of stockRows) {
+      stockMap.set(r.material_id, Number(r.stock_qty));
     }
-
-    const excludedMaterialIds = sessionId
-      ? await getSessionExcludedMaterialIds(supabase, sessionId, userId)
-      : new Set<string>();
 
     type Offer = {
       quote_item_id: string;
