@@ -722,7 +722,16 @@ deixar o vão explícito a inventar uma lista.
 
 ---
 
-### E9 · O ciclo ponta a ponta, com aparelho 🔴
+### E9 · O ciclo ponta a ponta 🔴 em andamento
+
+**Sem aparelho físico: roda no emulador do Android Studio.** O roteiro e os resultados de cada
+rodada ficam em `docs/testes-campo.md`, que é registro de execução, não plano.
+
+A obra de teste foi montada em 10 set 2026 a partir de uma **cópia** de orçamento real (Weissberg
+II, 52 postes, prancha A1 sem rotação). A cópia existe porque a sincronia é um dos testes, e ela
+precisa poder acrescentar e apagar postes sem mexer no projeto de ninguém.
+
+### E9 (roteiro original) · O ciclo ponta a ponta, com aparelho 🔴
 
 **Objetivo:** a primeira vez que o caminho completo roda contra dado real.
 **Depende de:** E2 a E8.
