@@ -393,10 +393,8 @@ Camada nova em `WorkCanvas` para trechos executados, e o painel do poste passand
 montado nele e o que o projeto previa e não subiu.
 *Pronto quando:* um poste com equipamento se distingue no canvas e a ficha mostra as duas listas.
 
-**C3. Migration de equipamento e rede em produção.**
-`ApkOrcaRede/migrations/work_equipment_and_spans.sql` existe e está aplicado só em dev. Faltam as
-cinco tabelas, as duas RPCs, as policies de storage e os dois gatilhos de notificação.
-*Pronto quando:* prod tem o mesmo schema que dev e o APK de produção grava sem erro.
+**C3. Migration de equipamento e rede em produção.** ✅ feita em 10 set 2026.
+Cinco tabelas, duas RPCs, dez policies de RLS e duas de storage. Dev e produção em paridade.
 
 **C4. Ficha do poste e o acender (A3, A3b).**
 `postes.tsx` deixa de criar poste por toque livre. Toque num pino abre a ficha; a ficha do cinza
@@ -430,7 +428,7 @@ A prancha tem cache por obra, as marcações não. Hoje a planta abre sem sinal 
 
 ### 7.2. Consertar (existe e não funciona)
 
-**R1. Geometria da prancha divergente.** Ver 10.1. **Rebaixado pelo modelo novo**: deixou de ser erro
+**R1. Geometria da prancha divergente.** ✅ feita em 10 set 2026. Ver 10.1 e E4. Ver **Rebaixado pelo modelo novo**: deixou de ser erro
 de dado (o campo não produz mais coordenada) e virou erro de desenho. Ainda precisa ser consertado,
 porque o anel cinza tem que cair sobre o símbolo de poste da prancha; se estiver deslocado, o gerente
 toca no lugar errado da rua. Conserto igual: gravar `plan_geometry` no snapshot durante a importação
@@ -588,19 +586,40 @@ caminho.
 
 ---
 
-### E4 · Geometria da prancha e migration em produção
+### E4 · Geometria da prancha e migration em produção ✅
 
-**Objetivo:** o anel cinza cai sobre o símbolo certo, e equipamento e rede existem em produção.
-**Depende de:** nada. **Roda em paralelo com E1 e E2.**
+**Feita em 10 set 2026.**
 
-**Eu faço:** R1 (gravar `plan_geometry` no snapshot durante o import, os dois lados lendo dali) e C3
-(as cinco tabelas, as duas RPCs, as policies de storage e os dois gatilhos de notificação em prod).
+**R1, a geometria.** A conta de onde a planta fica dentro do quadro 6000x6000
+passou a ser feita uma vez, no servidor, durante a importação, e gravada em
+`work_project_snapshot.plan_geometry`. Os dois lados leem dali.
 
-**Sua verificação:** abrir uma obra importada depois da mudança e conferir o encaixe.
+- `src/lib/canvas/planFrame.ts` virou a única implementação. O
+  `calculatePdfPageDimensions` do portal delega para ela: não há mais como as duas
+  divergirem sem ninguém notar.
+- `src/lib/canvas/pdfPageGeometry.ts` lê a página com `pdf-lib`, que já era
+  dependência e aguenta PDF com object stream. Devolve a página **exibida**, com
+  a rotação aplicada, igual ao `getViewport` do pdf.js. Conferido contra o
+  poppler em três pranchas reais.
+- No APK, `planFrame` ganhou um quarto argumento e prefere a geometria gravada.
+  Geometria pela metade é descartada em vez de usada torta.
+- Prancha ilegível não derruba a importação: fica nulo e o aparelho cai no
+  caminho antigo.
+- De brinde: `pdf_num_pages` deixa de ser sempre nulo. A variável existia desde o
+  início e nunca era atribuída.
 
-**Meu tempo:** 1 dia. **Seu:** 15 min.
+**C3, a migration.** Em produção agora existem as cinco tabelas de equipamento e
+rede, as duas RPCs (`SECURITY DEFINER`, `authenticated` e `service_role`, igual às
+outras oito do módulo), as dez policies de RLS, e duas policies de storage novas
+para `{work_id}/pole-equipment/` e `{work_id}/network-spans/`. Dev e produção
+estão em paridade. Os advisors de segurança não acusaram nada novo.
 
----
+**O que ficou de fora, e por quê.** Os gatilhos de notificação de equipamento e
+trecho (C7) não foram criados: eles precisam apontar para uma tela do portal que
+ainda não existe. Vão junto com a E7.
+
+**Verificação:** `tsc` limpo nos dois repositórios, 124 testes passando no APK,
+e a sobreposição visual dos postes sobre a prancha em dois orçamentos reais.
 
 ### E5 · A navegação nova dos dois lados
 
