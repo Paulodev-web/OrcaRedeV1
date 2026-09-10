@@ -19,10 +19,10 @@ interface WorkTabsNavProps {
  * com o gerente e aprovar etapa.
  *
  * Alertas nao esta aqui de proposito: virou faixa no topo (WorkAlertBanner).
- * Dia a dia entra junto com a tela dele.
  */
 const tabs = [
   { slug: 'visao-geral', label: 'Obra' },
+  { slug: 'dia-a-dia', label: 'Dia a dia' },
   { slug: 'chat', label: 'Conversa' },
   { slug: 'progresso', label: 'Marcos' },
 ];
