@@ -621,19 +621,37 @@ ainda não existe. Vão junto com a E7.
 **Verificação:** `tsc` limpo nos dois repositórios, 124 testes passando no APK,
 e a sobreposição visual dos postes sobre a prancha em dois orçamentos reais.
 
-### E5 · A navegação nova dos dois lados
+### E5 · A navegação nova dos dois lados ✅
 
-**Objetivo:** nenhuma tela que dorme continua visível.
-**Depende de:** nada de E2 ou E3. Pode vir antes se a sincronia empacar.
+**Feita em 10 set 2026.**
 
-**Eu faço:** F1 (nove abas viram quatro, obra abre no canvas, impedimento vira faixa), F2 (o critério
-de urgência da home, que hoje conta diário pendente e checklist devolvido), F3, F4 e F6.
+**Portal.** Nove abas viram três: Obra, Conversa e Marcos. Alertas sai da aba e vira faixa no topo,
+acima do cabeçalho, com texto próprio para `resolved_in_field`, senão o encerramento formal nunca
+acontece. Os quatro números passam a ser postes de pé, metros de rede lançados (quebrados por BT, MT
+e IP), marcos, e data do último registro. Na home, a urgência deixa de sair de diário pendente e
+checklist devolvido: vermelho é impedimento `critical` ou `high`, amarelo é marco aguardando ou
+impedimento leve. O cartão ganha o sinal de silêncio, que aparece em âmbar quando uma obra em
+execução passa dois dias sem registro.
 
-**Sua verificação:** navegar os dois lados procurando algo que deveria ter sumido.
+**APK.** A obra abre na planta, não num painel de números. O painel tinha quatro coisas e cada uma
+foi para um lugar: os números viraram cabeçalho da planta, o diário do dia virou a aba Dia, o marco
+segue na folha Registrar, e o impedimento aberto virou faixa vermelha no topo da planta, espelhando
+o portal. `/obra/{id}` continua existindo como redirecionamento, para não quebrar deep link nem
+histórico. A folha Registrar perde Diário e Checklist, e os dois caminhos saem da lista de deep
+links válidos: o banco ainda gera notificação apontando para eles, e link velho passa a cair na
+home.
 
-**Meu tempo:** 1 dia. **Seu:** 30 min.
+**Uma peça nova, que serve a duas etapas.** `getWorkExecutionStats` lê as três origens de execução
+em batch e devolve metragem por categoria e data do último registro. Ele **não** usa
+`works.last_activity_at`, porque aquele campo também anda quando chega mensagem: uma obra pode estar
+cheia de conversa e parada há uma semana. É ele que alimenta o cabeçalho, o sinal de silêncio e,
+na E6, o dia automático.
 
----
+**Adiado de propósito:** a aba Dia a dia entra junto com a tela dela, na E6. Aba que leva a lugar
+nenhum é pior que aba a menos.
+
+**Verificação:** `tsc` limpo nos dois repositórios, 123 testes passando, eslint sem erro novo. Os
+dois erros de eslint que aparecem em `WorkCanvas.tsx` são anteriores a esta etapa.
 
 ### E6 · O dia automático
 
