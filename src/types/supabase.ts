@@ -5176,6 +5176,7 @@ export type Database = {
           meters_planned: Json
           original_pdf_path: string | null
           pdf_num_pages: number | null
+          plan_geometry: Json | null
           pdf_storage_path: string | null
           render_version: number | null
           source_budget_id: string | null
@@ -5190,6 +5191,7 @@ export type Database = {
           meters_planned?: Json
           original_pdf_path?: string | null
           pdf_num_pages?: number | null
+          plan_geometry?: Json | null
           pdf_storage_path?: string | null
           render_version?: number | null
           source_budget_id?: string | null
@@ -5204,6 +5206,7 @@ export type Database = {
           meters_planned?: Json
           original_pdf_path?: string | null
           pdf_num_pages?: number | null
+          plan_geometry?: Json | null
           pdf_storage_path?: string | null
           render_version?: number | null
           source_budget_id?: string | null

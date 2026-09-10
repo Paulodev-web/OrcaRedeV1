@@ -13,6 +13,8 @@ import {
   getImageNaturalDimensions,
 } from '@/lib/storage/publicUrl';
 import { computeRasterCoordTransform } from '@/lib/canvas/rasterPlanGeometry';
+import { buildPlanGeometry, type PlanGeometry } from '@/lib/canvas/planFrame';
+import { readPdfPageGeometry } from '@/lib/canvas/pdfPageGeometry';
 import { isBudgetFinalizedForImport } from '@/lib/budgetStatus';
 import { getImportableBudgets } from '@/services/works/getImportableBudgets';
 import { getBudgetForImport } from '@/services/works/getBudgetForImport';
@@ -290,7 +292,7 @@ interface CoordTransform {
  * Em qualquer falha pós-criação, faz rollback manual (Storage primeiro, depois DELETE works).
  *
  * Se uma obra existente ficou sem PDF no snapshot (pdf_storage_path NULL) por importação
- * anterior, ver [DEBT-014] em docs/known-debt.md — SQL opcional para apagar a obra e reimportar.
+ * anterior, ver [DEBT-014] em docs/_arquivo/known-debt.md — SQL opcional para apagar a obra e reimportar.
  */
 export async function createWorkFromBudget(
   input: CreateWorkFromBudgetInput,
@@ -363,6 +365,7 @@ export async function createWorkFromBudget(
     // Cópia da planta (PDF ou imagem raster). Falhas tratam como "sem planta" e seguem.
     const parsed = parseSupabaseStoragePublicUrl(budget.planImageUrl);
     let pdfNumPages: number | null = null;
+    let planGeometry: PlanGeometry | null = null;
     let coordTransform: CoordTransform | undefined;
 
     if (parsed) {
@@ -434,6 +437,22 @@ export async function createWorkFromBudget(
           }
           ctx.planStoragePath = destPath;
           ctx.planUploaded = true;
+
+          // A geometria da prancha e resolvida AQUI, uma vez, e gravada no
+          // snapshot. O APK nao consegue descobri-la sozinho: o Android reporta
+          // o tamanho da view em pixels, nao o da pagina em pontos, e o quadro
+          // logico do aparelho diverge do quadro do portal. Ver `planFrame.ts`.
+          const pageGeometry = await readPdfPageGeometry(bytes);
+          if (pageGeometry) {
+            pdfNumPages = pageGeometry.numPages;
+            planGeometry = buildPlanGeometry({
+              pageWidth: pageGeometry.width,
+              pageHeight: pageGeometry.height,
+              rotation: pageGeometry.rotation,
+              renderVersion: budget.renderVersion ?? 2,
+              numPages: pageGeometry.numPages,
+            });
+          }
         } else if (
           looksLikeRasterImage({
             contentType: blob.type ?? null,
@@ -478,6 +497,7 @@ export async function createWorkFromBudget(
       original_pdf_path: parsed ? parsed.path : null,
       render_version: renderVersion,
       pdf_num_pages: pdfNumPages,
+      plan_geometry: planGeometry,
       materials_planned: budget.materialsPlanned,
       meters_planned: budget.metersPlanned,
       imported_by: gate.engineerId,

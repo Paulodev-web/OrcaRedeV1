@@ -1,0 +1,224 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Mapa e fluxos"
+    },
+    {
+      "id": "page-2",
+      "name": "APK"
+    },
+    {
+      "id": "page-3",
+      "name": "Portal"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "NavMap.dc.html",
+      "page": "page-1",
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 880
+    },
+    {
+      "file": "FluxoSync.dc.html",
+      "page": "page-1",
+      "x": 1400,
+      "y": 0,
+      "w": 1280,
+      "h": 820
+    },
+    {
+      "file": "FluxoPoste.dc.html",
+      "page": "page-1",
+      "x": 1400,
+      "y": 960,
+      "w": 1280,
+      "h": 760
+    },
+    {
+      "file": "FluxoDia.dc.html",
+      "page": "page-1",
+      "x": 0,
+      "y": 1020,
+      "w": 1280,
+      "h": 700
+    },
+    {
+      "file": "Obras.dc.html",
+      "page": "page-2",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Main.dc.html",
+      "page": "page-2",
+      "x": 480,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "FichaPoste.dc.html",
+      "page": "page-2",
+      "x": 960,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Poste.dc.html",
+      "page": "page-2",
+      "x": 1440,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Registrar.dc.html",
+      "page": "page-2",
+      "x": 1920,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Equipamento.dc.html",
+      "page": "page-2",
+      "x": 0,
+      "y": 980,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Rede.dc.html",
+      "page": "page-2",
+      "x": 480,
+      "y": 980,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Dia.dc.html",
+      "page": "page-2",
+      "x": 960,
+      "y": 980,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Conversa.dc.html",
+      "page": "page-2",
+      "x": 1440,
+      "y": 980,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PortalHome.dc.html",
+      "page": "page-3",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "PortalObra.dc.html",
+      "page": "page-3",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "PortalDia.dc.html",
+      "page": "page-3",
+      "x": 0,
+      "y": 1030,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "PortalConversa.dc.html",
+      "page": "page-3",
+      "x": 1560,
+      "y": 1030,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "PortalMarcos.dc.html",
+      "page": "page-3",
+      "x": 0,
+      "y": 2060,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "PortalUsuarios.dc.html",
+      "page": "page-3",
+      "x": 1560,
+      "y": 2060,
+      "w": 1440,
+      "h": 900
+    }
+  ],
+  "annotations": [
+    {
+      "id": "nota-corrente",
+      "page": "page-1",
+      "x": 1400,
+      "y": -210,
+      "w": 540,
+      "text": "A decisao de 10 set 2026: o orcamento e o planejado e manda sempre.\n\nO poste deixa de ser criado em campo e passa a ser um estado de um poste que o orcamento ja desenhou. Cinza e o que falta, verde e o que esta de pe. Um desenho so, tres papeis: no orcamento se desenha, no portal se acompanha, no APK se executa."
+    },
+    {
+      "id": "nota-corte",
+      "page": "page-1",
+      "x": 0,
+      "y": 940,
+      "w": 1280,
+      "text": "O corte: sai checklist, sai o formulario de diario, sai equipe e presenca, sai galeria, sai documentos, sai curva S.\n\nFica o que o gerente faz o dia inteiro (poste, equipamento, rede), o que interrompe (impedimento), o que fecha etapa (marco), e a conversa. O diario deixa de ser digitado e passa a ser lido."
+    },
+    {
+      "id": "nota-planta",
+      "page": "page-2",
+      "x": 480,
+      "y": -210,
+      "w": 420,
+      "text": "A planta e a casa da obra no APK.\n\nTodo poste do projeto aparece. Tocar num cinza abre a ficha com o que o projeto preve ali e um botao so: levantei este poste. Tocar no vazio nao faz nada, entao nao existe poste fantasma."
+    },
+    {
+      "id": "nota-captura",
+      "page": "page-2",
+      "x": 1440,
+      "y": -210,
+      "w": 380,
+      "text": "As capturas seguem a mesma anatomia: prova primeiro (foto), depois o que o projeto ja sabe preenchido, depois o que so o campo sabe.\n\nO rodape sempre diz o estado da rede como informacao, nunca como erro."
+    },
+    {
+      "id": "nota-portal-obra",
+      "page": "page-3",
+      "x": 1560,
+      "y": -210,
+      "w": 430,
+      "text": "O engenheiro abre a obra no canvas, nao num painel de numeros. Ele quer ver a rede crescer.\n\nO painel da direita e a ficha do poste: foto, o que foi montado nele, o que o projeto previa e ainda nao subiu, e o GPS real do campo."
+    },
+    {
+      "id": "nota-portal-dia",
+      "page": "page-3",
+      "x": 0,
+      "y": 1970,
+      "w": 430,
+      "text": "O dia a dia e leitura pura: nenhuma aprovacao, nenhum campo de texto.\n\nO que estava na fila aparece com a hora real do campo e a hora em que chegou, lado a lado. Dia sem registro aparece vazio, nao some."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}

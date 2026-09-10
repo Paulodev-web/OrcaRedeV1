@@ -1,7 +1,9 @@
 import { pdfjs } from 'react-pdf';
-import { CANVAS_SIZE } from './canvasTokens';
+import { calculatePlanFrame } from './planFrame';
 
 export type { RasterImageDimensions } from './rasterPlanGeometry';
+export { calculatePlanFrame, buildPlanGeometry } from './planFrame';
+export type { PlanFrame, PlanGeometry } from './planFrame';
 export {
   calculateRasterImageDimensions,
   computeRasterCoordTransform,
@@ -42,25 +44,10 @@ export function calculatePdfPageDimensions(
   viewportHeight: number,
   renderVersion: number | null | undefined,
 ): PdfPageDimensions {
-  if (renderVersion === 2) {
-    const scale = CANVAS_SIZE / viewportWidth;
-    return {
-      scale,
-      width: CANVAS_SIZE,
-      height: viewportHeight * scale,
-    };
-  }
-  const minScale = 2;
-  const maxScale = 4;
-  const scale = Math.max(
-    minScale,
-    Math.min(maxScale, 1200 / Math.max(viewportWidth, viewportHeight)),
-  );
-  return {
-    scale,
-    width: viewportWidth * scale,
-    height: viewportHeight * scale,
-  };
+  // Uma implementacao so, compartilhada com a Server Action de importacao e,
+  // via `plan_geometry`, com o APK. Ver `planFrame.ts`.
+  const frame = calculatePlanFrame(viewportWidth, viewportHeight, renderVersion);
+  return { scale: frame.scale, width: frame.width, height: frame.height };
 }
 
 /**
