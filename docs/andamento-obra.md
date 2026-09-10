@@ -653,20 +653,29 @@ nenhum é pior que aba a menos.
 **Verificação:** `tsc` limpo nos dois repositórios, 123 testes passando, eslint sem erro novo. Os
 dois erros de eslint que aparecem em `WorkCanvas.tsx` são anteriores a esta etapa.
 
-### E6 · O dia automático
+### E6 · O dia automático ✅
 
-**Objetivo:** o diário existe sem ninguém escrever.
-**Depende de:** E4 (equipamento e rede em produção) para o dia ter as três origens.
+**Feita em 10 set 2026.**
 
-**Eu faço:** C1 (o service de agregação com a regra 5.2, a aba no portal) e F5 (`registros.tsx` vira
-a aba Dia, lendo as três origens).
+**Portal.** Aba Dia a dia nova, servida por `getWorkDays`: coluna de dias à esquerda, e no dia
+aberto quatro números, a linha do dia hora a hora e a grade de fotos. Nenhuma aprovação, nenhum
+campo de texto. Registro que passou pela fila mostra as duas horas, com a de chegada em âmbar.
+Botão de imprimir, porque cliente pede relatório.
 
-**Sua verificação:** fazer três registros de tipos diferentes no aparelho, um deles em modo avião, e
-conferir que o dia no portal bate, com as duas horas no que ficou na fila.
+**APK.** A aba Dia passa a ler equipamento e trecho, deixa de listar diário, e ganha três números do
+dia de hoje no topo. Os filtros viram Tudo, Postes, Equipamento, Rede e Na fila.
 
-**Meu tempo:** 1 a 2 dias. **Seu:** 30 min.
+**A regra que sustenta as duas telas:** agrupar por `installed_at`, a hora do aparelho, e cortar o
+dia à meia-noite em `America/Sao_Paulo`. Sem a primeira, um poste levantado às 16h38 sem sinal cairia
+no dia em que o servidor o recebeu. Sem a segunda, todo registro feito depois das 21h cairia no dia
+seguinte.
 
----
+**Detalhes que valem lembrar:** só as fotos do dia aberto são assinadas, senão uma obra com meses de
+execução pagaria centenas de assinaturas para mostrar uma grade de nove. E a leitura lança em vez de
+devolver lista vazia: "não consegui ler" é diferente de "o campo não trabalhou", e a segunda é uma
+acusação.
+
+**Verificação:** `tsc` limpo nos dois repositórios, 123 testes passando, eslint sem aviso novo.
 
 ### E7 · Equipamento e rede no portal
 
