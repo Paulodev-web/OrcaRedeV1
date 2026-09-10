@@ -79,6 +79,17 @@ export interface PlanGeometry {
   frame: { width: number; height: number; offsetX: number; offsetY: number };
   renderVersion: number;
   numPages: number | null;
+  /**
+   * So existe quando a planta e imagem raster, nao PDF.
+   *
+   * A importacao converte a coordenada do poste do espaco do canvas do
+   * orcamento (max 1200x800) para o quadro 6000x6000. A sincronia do orcamento,
+   * que roda no banco, precisa reaplicar exatamente a mesma transformada nos
+   * postes que chegarem depois — senao eles caem num sistema de coordenadas
+   * diferente dos que ja estao la, e a planta fica com dois grupos de postes
+   * desencontrados.
+   */
+  rasterTransform?: { scale: number; offsetX: number; offsetY: number };
 }
 
 export function buildPlanGeometry(params: {
@@ -105,5 +116,44 @@ export function buildPlanGeometry(params: {
     },
     renderVersion: params.renderVersion,
     numPages: params.numPages,
+  };
+}
+
+/**
+ * Geometria de uma planta em imagem raster.
+ *
+ * O caminho do PDF passa por `buildPlanGeometry`. Este existe pelo mesmo motivo
+ * que aquele: gravar de uma vez o que os dois lados precisam saber, em vez de
+ * cada um recalcular por conta propria.
+ */
+export function buildRasterPlanGeometry(params: {
+  naturalWidth: number;
+  naturalHeight: number;
+  displayWidth: number;
+  displayHeight: number;
+  transform: { scale: number; offsetX: number; offsetY: number };
+  renderVersion: number;
+}): PlanGeometry {
+  const arredonda = (n: number) => Math.round(n * 100) / 100;
+  return {
+    version: 1,
+    page: {
+      width: arredonda(params.naturalWidth),
+      height: arredonda(params.naturalHeight),
+      rotation: 0,
+    },
+    frame: {
+      width: arredonda(params.displayWidth),
+      height: arredonda(params.displayHeight),
+      offsetX: arredonda(CANVAS_CENTER - params.displayWidth / 2),
+      offsetY: arredonda(CANVAS_CENTER - params.displayHeight / 2),
+    },
+    renderVersion: params.renderVersion,
+    numPages: null,
+    rasterTransform: {
+      scale: params.transform.scale,
+      offsetX: params.transform.offsetX,
+      offsetY: params.transform.offsetY,
+    },
   };
 }
