@@ -9,7 +9,7 @@
 > plano paralelo, roadmap separado nem contrato em outro lugar. Se der vontade de criar um, é sinal
 > de que a seção 9 está grande demais.
 
-**Última atualização:** 10 set 2026 (segunda revisão: o orçamento manda)
+**Última atualização:** 10 set 2026 (E1 a E8 fechadas; resta o ciclo com aparelho)
 
 ---
 
@@ -473,17 +473,18 @@ arqueologia.
 
 ## 8. O que está em aberto
 
-Decidido em 10 set 2026 e fechado: o orçamento manda sempre (1.4); poste fora do projeto só o
-engenheiro cria; equipamento tem dois caminhos, a ficha do poste e a folha do +.
+Fechado em 10 set 2026: o orçamento manda sempre; poste fora do projeto só o engenheiro cria;
+equipamento tem dois caminhos; a sincronia roda por gatilho em `budget_posts`; poste verde apagado
+do orçamento fica e é contado como divergência.
 
-| # | Questão | Recomendação |
+| # | Questão | Situação |
 | --- | --- | --- |
-| **A1** | Por qual mecanismo a sincronia roda | Gatilho no orçamento reaplicando o diff na obra vinculada, mais uma varredura de segurança quando a obra abre. Botão manual só como escape. Preciso desenhar isso com você antes de codar, é o item de maior risco. |
-| **A2** | Poste verde apagado do orçamento: o que o portal mostra | Selo "fora do projeto atual" no pino e na ficha, e uma linha no dia a dia no momento em que acontece. |
-| **A3** | Estruturas previstas mudam depois de o equipamento ter sido registrado | Recomendo não mexer no registrado, e mostrar a diferença na ficha: "o projeto pede 3, o campo montou 2". |
-| **A4** | O que a conversa mostra de contexto | Os chips de registro no fio são palpite de desenho, não decisão sua. Se poluir, saem. |
-| **A5** | Engenheiro vê todas as obras da organização? | Confirmar como intencional e registrar aqui. Aberta desde 14 ago. |
-| **A6** | Numeração do poste é editável no campo? | Recomendo não. Se o número vem do projeto e o projeto manda, deixar editar cria duas verdades. |
+| **A1** | "O projeto previa e ainda não subiu", na ficha do poste | **Falta dado.** A lista de estruturas previstas por poste vive em `post_item_groups`, no orçamento, e não é copiada para a obra. Copiar isso é uma etapa em si, e vale decidir se entra antes ou depois do piloto. |
+| **A2** | Poste verde apagado do orçamento | A sincronia já o preserva e conta como divergência. Falta desenhar como o portal **mostra** isso: hoje ele aparece como um poste normal. |
+| **A3** | Estruturas previstas mudam depois do equipamento registrado | Recomendo não mexer no registrado e mostrar a diferença. Depende de A1. |
+| **A4** | O que a conversa mostra de contexto | Os chips de registro no fio continuam sendo palpite meu, e ainda não foram construídos. |
+| **A5** | Engenheiro vê todas as obras da organização? | Aberta desde 14 ago. Confirmar como intencional e registrar aqui. |
+| **A6** | Legenda do canvas do portal | Cabo lançado e vão previsto se distinguem pela forma, mas não há legenda dizendo isso. Polimento. |
 
 ## 9. Como trabalhamos, e a fila
 
@@ -549,42 +550,52 @@ derivar o tamanho da página do que o Android reporta (pixels da view) em vez de
 `plan_geometry` gravada no import, o anel cinza é desenhado no lugar errado **no aparelho**, mesmo
 com o orçamento correto.
 
-### E2 · A sincronia do orçamento
+### E2 · A sincronia do orçamento ✅
 
-**Objetivo:** o orçamento passa a mandar na obra, com as quatro regras de 1.4.
-**Depende de:** E1 responder que o modelo é viável.
-**É o item de maior risco do catálogo**, porque transforma o orçamento de documento comercial em
-documento com consequência no canteiro.
+**Feita em 10 set 2026.** As quatro regras de 1.4 estão no ar, e cada uma foi testada no dev antes
+de subir para produção.
 
-**Antes de eu escrever código:** uma sessão de desenho com você, sobre o mecanismo (seção 8, A1) e
-sobre o que acontece quando um poste verde é apagado do orçamento (A2).
+**Onde ela vive, e por quê.** No banco. O orçamento é editado direto do navegador, sem passar por
+Server Action, então não existe ponto na aplicação onde pendurar isso de forma confiável. O gatilho
+fica em `budget_posts`, statement-level com tabelas de transição, então um arrasto que reposiciona
+vinte postes vira **uma** sincronia, não vinte. E começa checando se existe obra vinculada, que é
+falso para a esmagadora maioria dos orçamentos.
 
-**Eu faço:** o diff idempotente, o gatilho, a varredura de segurança na abertura da obra, e o rastro
-no dia a dia quando a obra muda de forma sozinha.
+**Uma implementação só.** A conversão "poste de orçamento vira poste de obra" virou
+`sync_work_project_from_budget`, e a importação chama ela também. Antes era `buildPostRow` em
+TypeScript, e a sincronia precisaria repetir a mesma regra em SQL: duas implementações da mesma
+conta divergem com o tempo, e divergir aqui move poste de lugar.
 
-**Sua verificação:** acrescentar um poste no orçamento de uma obra de teste e ver ele aparecer cinza
-no aparelho, sem reimportar nada. Depois apagar um poste já executado e confirmar que ele fica, com
-o selo de fora do projeto.
+**O que foi testado:** primeira sincronia traz tudo; rodar de novo não muda nada; mover um poste no
+orçamento atualiza exatamente um; apagar um poste cinza remove; apagar um poste **verde** não
+remove, e ele passa a ser contado como divergência; acrescentar no orçamento faz o poste descer para
+a obra sem ninguém chamar nada.
 
-**Meu tempo:** 1 a 2 dias. **Seu:** 1 h, entre a sessão de desenho e a verificação.
+**Rastro.** Mudança de projeto embaixo de obra em execução avisa o gerente. Ficou como gatilho
+próprio em `work_project_posts`, e não dentro da sincronia, para pegar qualquer mudança venha de
+onde vier. Só avisa depois do primeiro poste levantado, senão uma importação de 280 postes viraria
+280 avisos.
 
----
-
-### E3 · O vínculo e a ficha do poste
-
-**Objetivo:** o cinza vira verde por toque, e não existe mais caminho que crie poste fora do projeto.
-**Depende de:** E2 (o poste cinza precisa existir e estar correto no aparelho).
-
-**Eu faço:** C5 (coluna `project_post_id`, sempre preenchida) e C4 (a ficha do poste, o botão único,
-a captura entrando por ela). Sai o pino provisório, sai o raio de acerto ambíguo, sai a folha de novo
-poste como ela é hoje.
-
-**Sua verificação:** tentar, no aparelho, criar um poste que o projeto não previu. Não deve haver
-caminho.
-
-**Meu tempo:** 1 dia. **Seu:** 30 min.
+**Planta em imagem raster** ganhou a transformada gravada no `plan_geometry`, senão poste que
+chegasse depois cairia num sistema de coordenadas diferente dos que já estavam lá.
 
 ---
+
+### E3 · O vínculo e a ficha do poste ✅
+
+**Feita em 10 set 2026.**
+
+`work_pole_installations.project_post_id` liga o executado ao projetado, com um índice único parcial
+que garante **um poste de projeto de pé uma vez só**. Poste removido não ocupa a vaga: o gerente
+pode ter derrubado e levantado de novo, e isso é execução real.
+
+A RPC deixou de aceitar a coordenada que o campo mandar. Recebe o `project_post_id` e **copia** x, y,
+numeração e tipo do projeto. O aparelho nem precisa saber calcular quadro lógico, e a divergência
+entre os dois lados deixa de ter por onde acontecer.
+
+No app, tocar num poste cinza abre a ficha com o que o projeto prevê ali e um botão só. Tocar no
+vazio não faz mais nada: o poste fantasma acabou junto com o toque livre. Poste já aceso sai do
+cinza, senão o verde e o cinza ficariam empilhados no mesmo ponto.
 
 ### E4 · Geometria da prancha e migration em produção ✅
 
@@ -677,30 +688,37 @@ acusação.
 
 **Verificação:** `tsc` limpo nos dois repositórios, 123 testes passando, eslint sem aviso novo.
 
-### E7 · Equipamento e rede no portal
+### E7 · Equipamento e rede no portal ✅
 
-**Objetivo:** o que o campo registra tem onde ser visto.
-**Depende de:** E4.
+**Feita em 10 set 2026.**
 
-**Eu faço:** C2 (camada de trechos no canvas, ficha do poste listando o montado e o previsto que não
-subiu) e C7 (notificação dos dois tipos novos).
+No canvas, o vão previsto continua tracejado e translúcido, e o cabo lançado desenha por cima, cheio
+e opaco. Diferença de forma, não só de cor. Trecho lançado fora do projeto, que pode não ter as duas
+pontas em `work_project_posts`, some do canvas em silêncio em vez de virar linha inventada; ele
+continua no dia a dia, com metragem.
 
-**Sua verificação:** montar equipamento no aparelho e achar no portal em menos de dez segundos, sem
-ninguém te dizer onde.
+Na ficha do poste entra "montado neste poste", com quantidade, e o que veio de fora do projeto ganha
+selo âmbar, porque é divergência entre projeto e execução.
 
-**Meu tempo:** 1 dia. **Seu:** 30 min.
+Os dois gatilhos de notificação que ficaram de fora na E4 entraram, apontando para o dia a dia.
+
+**Fica em aberto, por falta de dado:** "o projeto previa e ainda não subiu". A lista de estruturas
+previstas por poste vive no orçamento (`post_item_groups`) e não é copiada para a obra. Preferi
+deixar o vão explícito a inventar uma lista.
 
 ---
 
-### E8 · Os consertos
+### E8 · Os consertos ✅
 
-**Objetivo:** tirar da frente o que trava o uso real.
-**Depende de:** nada. É o preenchimento natural de qualquer espera.
+**Feita em 10 set 2026.**
 
-C6 (player de áudio e vídeo), C8 (cache offline das marcações), R2 (policy de UPDATE no bucket), R3
-(senha temporária obrigada), R4 (a consulta que engole erro).
-
-**Meu tempo:** 1 dia. **Seu:** 30 min de reteste.
+- **Áudio e vídeo tocam no chat.** Só a imagem pedia URL assinada, então o áudio nunca teve como
+  tocar. `expo-av` já era dependência e não era usado.
+- **A planta abre com os postes sem sinal.** A prancha tinha cache local, as marcações não.
+- **Policy de UPDATE no bucket**, que destrava a retentativa de foto. Mesmo predicado das de INSERT.
+- **`must_change_password`** na criação do gerente: a senha temporária deixa de virar definitiva.
+- **Erro de leitura deixa de virar tela vazia** em mais três lugares: equipe, materiais previstos do
+  poste, e equipe do diário.
 
 ---
 
