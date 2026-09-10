@@ -8,6 +8,7 @@ import { StatusDropdown } from './StatusDropdown';
 import { WorkKPIs } from './WorkKPIs';
 import { ImportedBudgetBadge } from './ImportedBudgetBadge';
 import type { ManagerRow } from '@/types/people';
+import type { WorkExecutionStats } from '@/services/works/getWorkExecutionStats';
 import type { WorkMilestone, WorkWithManager } from '@/types/works';
 
 interface WorkHeaderProps {
@@ -16,6 +17,7 @@ interface WorkHeaderProps {
   managers: ManagerRow[];
   postsPlanned?: number;
   postsInstalled?: number;
+  execution?: WorkExecutionStats | null;
 }
 
 export function WorkHeader({
@@ -24,6 +26,7 @@ export function WorkHeader({
   managers,
   postsPlanned,
   postsInstalled,
+  execution = null,
 }: WorkHeaderProps) {
   const [editOpen, setEditOpen] = useState(false);
 
@@ -90,6 +93,7 @@ export function WorkHeader({
             milestones={milestones}
             postsPlanned={postsPlanned ?? 0}
             postsInstalled={postsInstalled ?? 0}
+            execution={execution}
           />
         </div>
       </div>

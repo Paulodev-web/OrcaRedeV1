@@ -5,17 +5,22 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { WorkCard } from './WorkCard';
 import type { WorksGrouped, WorkWithManager } from '@/types/works';
 
-/** Contagem de alertas ativos por obra, já agregada em batch pela page. */
-export interface WorkAlertCounts {
-  critical: number;
-  totalActive: number;
+/** Impedimentos por obra, já agregados em batch pela page. */
+export interface WorkImpedimentCounts {
+  /** `critical` ou `high` ainda em aberto. */
+  graves: number;
+  /** Tudo que não foi encerrado, inclusive o resolvido em campo. */
+  ativos: number;
+  /** Resolvidos em campo, esperando o engenheiro confirmar. */
+  resolvidos: number;
 }
 
 interface AcompanhamentoCenterProps {
   grouped: WorksGrouped;
   unreadCountsByWorkId?: Record<string, number>;
-  alertCountsByWorkId?: Record<string, WorkAlertCounts>;
-  checklistCountsByWorkId?: Record<string, number>;
+  impedimentCountsByWorkId?: Record<string, WorkImpedimentCounts>;
+  /** Último registro de execução por obra, para sinalizar obra em silêncio. */
+  lastRecordByWorkId?: Record<string, string | null>;
 }
 
 interface GroupConfig {
@@ -32,14 +37,14 @@ const GROUPS: GroupConfig[] = [
     label: 'Precisa de você agora',
     emoji: '🔴',
     defaultOpen: true,
-    emptyHint: 'Nenhuma obra com alertas críticos.',
+    emptyHint: 'Nenhuma obra parada.',
   },
   {
     key: 'yellow',
     label: 'Aguardando revisão',
     emoji: '🟡',
     defaultOpen: true,
-    emptyHint: 'Nenhuma pendência de revisão.',
+    emptyHint: 'Nada esperando sua decisão.',
   },
   {
     key: 'green',
@@ -60,8 +65,8 @@ const GROUPS: GroupConfig[] = [
 export function AcompanhamentoCenter({
   grouped,
   unreadCountsByWorkId,
-  alertCountsByWorkId,
-  checklistCountsByWorkId,
+  impedimentCountsByWorkId,
+  lastRecordByWorkId,
 }: AcompanhamentoCenterProps) {
   const [openKey, setOpenKey] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(GROUPS.map((g) => [g.key, g.defaultOpen])),
@@ -107,15 +112,16 @@ export function AcompanhamentoCenter({
                 ) : (
                   <div className="grid gap-3 sm:grid-cols-2">
                     {items.map((work) => {
-                      const alerts = alertCountsByWorkId?.[work.id];
+                      const impedimentos = impedimentCountsByWorkId?.[work.id];
                       return (
                         <WorkCard
                           key={work.id}
                           work={work}
                           unreadCount={unreadCountsByWorkId?.[work.id] ?? 0}
-                          criticalAlertsCount={alerts?.critical ?? 0}
-                          totalActiveAlertsCount={alerts?.totalActive ?? 0}
-                          checklistsAwaitingCount={checklistCountsByWorkId?.[work.id] ?? 0}
+                          impedimentosGraves={impedimentos?.graves ?? 0}
+                          impedimentosAtivos={impedimentos?.ativos ?? 0}
+                          impedimentosResolvidos={impedimentos?.resolvidos ?? 0}
+                          lastRecordAt={lastRecordByWorkId?.[work.id] ?? null}
                         />
                       );
                     })}

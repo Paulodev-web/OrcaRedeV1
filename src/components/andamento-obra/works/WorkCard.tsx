@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { User, Calendar, MessageCircle, AlertTriangle, ClipboardCheck } from 'lucide-react';
+import { User, MessageCircle, AlertTriangle, Radio, CheckCircle2 } from 'lucide-react';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { STATUS_LABELS, type WorkStatus, type WorkWithManager } from '@/types/works';
 import { ImportedBudgetBadge } from './ImportedBudgetBadge';
@@ -9,9 +9,14 @@ import { ImportedBudgetBadge } from './ImportedBudgetBadge';
 interface WorkCardProps {
   work: WorkWithManager;
   unreadCount?: number;
-  criticalAlertsCount?: number;
-  totalActiveAlertsCount?: number;
-  checklistsAwaitingCount?: number;
+  /** Impedimentos `critical` ou `high` ainda em aberto. */
+  impedimentosGraves?: number;
+  /** Todos os impedimentos não encerrados, inclusive os resolvidos em campo. */
+  impedimentosAtivos?: number;
+  /** Resolvidos em campo, esperando o engenheiro confirmar o encerramento. */
+  impedimentosResolvidos?: number;
+  /** Último registro de execução, pelo relógio do aparelho. Null: nada ainda. */
+  lastRecordAt?: string | null;
 }
 
 const STATUS_BADGE: Record<WorkStatus, string> = {
@@ -22,13 +27,34 @@ const STATUS_BADGE: Record<WorkStatus, string> = {
   cancelled: 'bg-red-50 text-red-700 ring-red-200',
 };
 
+/**
+ * Depois de quantos dias sem registro a obra passa a ser sinalizada.
+ *
+ * Dois: um dia sem registro e chuva, feriado ou material atrasado. Tres ja e
+ * alguma coisa que o engenheiro deveria ter perguntado ontem.
+ */
+const DIAS_ATE_SILENCIO = 2;
+
+function diasDesde(iso: string): number {
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return 0;
+  return Math.floor((Date.now() - t) / (1000 * 60 * 60 * 24));
+}
+
 export function WorkCard({
   work,
   unreadCount = 0,
-  criticalAlertsCount = 0,
-  totalActiveAlertsCount = 0,
-  checklistsAwaitingCount = 0,
+  impedimentosGraves = 0,
+  impedimentosAtivos = 0,
+  impedimentosResolvidos = 0,
+  lastRecordAt = null,
 }: WorkCardProps) {
+  const emExecucao = work.status === 'in_progress';
+  const diasEmSilencio = lastRecordAt ? diasDesde(lastRecordAt) : null;
+  const calada = emExecucao && diasEmSilencio !== null && diasEmSilencio >= DIAS_ATE_SILENCIO;
+  const nuncaRegistrou = emExecucao && lastRecordAt === null;
+  const apenasResolvidos = impedimentosAtivos > 0 && impedimentosAtivos === impedimentosResolvidos;
+
   return (
     <Link
       href={`/tools/andamento-obra/obras/${work.id}`}
@@ -53,10 +79,24 @@ export function WorkCard({
           <User className="h-3.5 w-3.5 text-gray-400" />
           <span className="truncate">{work.managerName ?? 'Sem gerente atribuído'}</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <Calendar className="h-3.5 w-3.5 text-gray-400" />
-          <span>Atualizada {formatRelativeTime(work.lastActivityAt)}</span>
+
+        {/* O que o CAMPO fez, não quando a linha da obra foi tocada pela última
+            vez: conversa mexe em `last_activity_at` e não é execução. */}
+        <div
+          className={`flex items-center gap-1.5 ${
+            calada || nuncaRegistrou ? 'font-medium text-amber-700' : 'text-gray-600'
+          }`}
+        >
+          <Radio className={`h-3.5 w-3.5 ${calada || nuncaRegistrou ? '' : 'text-gray-400'}`} />
+          <span>
+            {nuncaRegistrou
+              ? 'Nenhum registro ainda'
+              : lastRecordAt
+                ? `Último registro ${formatRelativeTime(lastRecordAt)}`
+                : 'Sem registros de campo'}
+          </span>
         </div>
+
         {unreadCount > 0 && (
           <div className="flex items-center gap-1.5 text-blue-700">
             <MessageCircle className="h-3.5 w-3.5" />
@@ -67,30 +107,34 @@ export function WorkCard({
             </span>
           </div>
         )}
-        {criticalAlertsCount > 0 && (
+
+        {impedimentosGraves > 0 && (
           <div className="flex items-center gap-1.5 text-red-700">
             <AlertTriangle className="h-3.5 w-3.5" />
             <span className="font-medium">
-              {criticalAlertsCount} alerta{criticalAlertsCount > 1 ? 's' : ''} crítico{criticalAlertsCount > 1 ? 's' : ''}
+              {impedimentosGraves === 1 ? 'Obra parada' : `${impedimentosGraves} impedimentos graves`}
             </span>
           </div>
         )}
-        {totalActiveAlertsCount > 0 && criticalAlertsCount === 0 && (
+
+        {impedimentosGraves === 0 && impedimentosAtivos > 0 && !apenasResolvidos && (
           <div className="flex items-center gap-1.5 text-orange-600">
             <AlertTriangle className="h-3.5 w-3.5" />
             <span className="font-medium">
-              {totalActiveAlertsCount} alerta{totalActiveAlertsCount > 1 ? 's' : ''} ativo{totalActiveAlertsCount > 1 ? 's' : ''}
+              {impedimentosAtivos} impedimento{impedimentosAtivos > 1 ? 's' : ''} em aberto
             </span>
           </div>
         )}
-        {checklistsAwaitingCount > 0 && (
+
+        {apenasResolvidos && (
           <div className="flex items-center gap-1.5 text-amber-600">
-            <ClipboardCheck className="h-3.5 w-3.5" />
+            <CheckCircle2 className="h-3.5 w-3.5" />
             <span className="font-medium">
-              {checklistsAwaitingCount} checklist{checklistsAwaitingCount > 1 ? 's' : ''} pendente{checklistsAwaitingCount > 1 ? 's' : ''}
+              Resolvido em campo, falta você encerrar
             </span>
           </div>
         )}
+
         {work.budgetId && (
           <div className="pt-0.5">
             <ImportedBudgetBadge />

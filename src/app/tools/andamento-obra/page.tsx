@@ -9,8 +9,8 @@ import { getWorkPendingApprovals } from '@/services/works/getWorkPendingApproval
 import { categorizeWorks } from '@/services/works/categorizeWorks';
 import { getManagers } from '@/services/people/getManagers';
 import { WorksHomeView } from '@/components/andamento-obra/works/WorksHomeView';
-import type { WorkAlertCounts } from '@/components/andamento-obra/works/AcompanhamentoCenter';
-import { PENDING_DAILY_LOG_RED_THRESHOLD_HOURS } from '@/types/works';
+import { getWorkExecutionStats } from '@/services/works/getWorkExecutionStats';
+import type { WorkImpedimentCounts } from '@/components/andamento-obra/works/AcompanhamentoCenter';
 
 export const metadata: Metadata = {
   title: 'Andamento de Obra — OrcaRede',
@@ -38,56 +38,59 @@ export default async function AndamentoObraPage() {
 
   const workIds = works.map((w) => w.id);
 
-  const [unreadCounts, pendingApprovals] = await Promise.all([
+  const [unreadCounts, sinais, executionStats] = await Promise.all([
     getUnreadCountsForWorks(supabase, workIds),
     getWorkPendingApprovals(supabase, workIds),
+    getWorkExecutionStats(supabase, workIds),
   ]);
 
-  // Categorizacao:
-  //  - red: diario pending >24h OU alertas critical em open/in_progress
-  //         OU resolved_in_field aguardando >12h
-  //  - yellow: diario pending <24h OU marco awaiting_approval
-  //            OU checklists awaiting/returned OU alertas nao-criticos ativos
+  // Duas coisas tiram uma obra do "andamento normal", e as duas sao decisao do
+  // engenheiro:
+  //
+  //  - vermelho: impedimento grave (`critical` ou `high`) ainda em aberto. A
+  //    obra parou e a decisao e agora.
+  //  - amarelo:  marco esperando aprovacao, impedimento leve, ou impedimento ja
+  //    resolvido em campo esperando o encerramento formal.
+  //
+  // O que saiu: diario `pending_approval` e checklist `awaiting_validation`.
+  // Nao e que estejam vazios hoje; e que deixaram de existir como fluxo.
   const redWorkIds = new Set<string>();
   const yellowWorkIds = new Set<string>();
 
-  // Badges dos WorkCards: reaproveitam o mesmo `pendingApprovals` da categorizacao,
-  // que ja agrega alertas e checklists em batch. Nenhuma query nova por obra.
-  const alertCountsByWorkId: Record<string, WorkAlertCounts> = {};
-  const checklistCountsByWorkId: Record<string, number> = {};
+  // Os selos do cartao reaproveitam a mesma leitura em batch da categorizacao.
+  // Nenhuma consulta a mais por obra.
+  const impedimentCountsByWorkId: Record<string, WorkImpedimentCounts> = {};
 
-  for (const item of pendingApprovals.pendingDailyLogs) {
-    if (item.hoursWaiting > PENDING_DAILY_LOG_RED_THRESHOLD_HOURS) {
-      redWorkIds.add(item.workId);
-    } else {
-      yellowWorkIds.add(item.workId);
-    }
+  for (const item of sinais.pendingMilestones) {
+    yellowWorkIds.add(item.workId);
   }
-  for (const item of pendingApprovals.pendingMilestones) {
-    if (!redWorkIds.has(item.workId)) {
-      yellowWorkIds.add(item.workId);
-    }
-  }
-  for (const item of pendingApprovals.activeAlerts) {
+
+  for (const item of sinais.activeAlerts) {
     const work = works.find((w) => w.id === item.workId);
-    // Obra cancelada nao acende faixa vermelha; o badge segue a mesma regra
-    // para o card nao contradizer o grupo em que ele aparece.
+    // Obra cancelada nao acende faixa; o selo segue a mesma regra para o cartao
+    // nao contradizer o grupo em que ele aparece.
     if (work?.status === 'cancelled') continue;
-    alertCountsByWorkId[item.workId] = {
-      critical: item.criticalCount,
-      totalActive: item.totalActiveCount,
+
+    impedimentCountsByWorkId[item.workId] = {
+      graves: item.gravesCount,
+      ativos: item.totalActiveCount,
+      resolvidos: item.resolvidosCount,
     };
-    if (item.criticalCount > 0) {
+
+    if (item.gravesCount > 0) {
       redWorkIds.add(item.workId);
-    } else if (item.totalActiveCount > 0) {
-      if (!redWorkIds.has(item.workId)) yellowWorkIds.add(item.workId);
-    }
-  }
-  for (const item of pendingApprovals.pendingChecklists) {
-    checklistCountsByWorkId[item.workId] = item.count;
-    if (!redWorkIds.has(item.workId)) {
+      yellowWorkIds.delete(item.workId);
+    } else if (item.totalActiveCount > 0 && !redWorkIds.has(item.workId)) {
       yellowWorkIds.add(item.workId);
     }
+  }
+
+  // Silencio nao entra na categorizacao: nao e uma decisao esperando o
+  // engenheiro, e uma observacao. Ela aparece no proprio cartao, dentro do
+  // grupo onde a obra ja estava.
+  const lastRecordByWorkId: Record<string, string | null> = {};
+  for (const id of workIds) {
+    lastRecordByWorkId[id] = executionStats[id]?.lastRecordAt ?? null;
   }
 
   const grouped = categorizeWorks(works, {
@@ -104,8 +107,8 @@ export default async function AndamentoObraPage() {
           managers={managers}
           hasAnyWork={works.length > 0}
           unreadCountsByWorkId={unreadCounts}
-          alertCountsByWorkId={alertCountsByWorkId}
-          checklistCountsByWorkId={checklistCountsByWorkId}
+          impedimentCountsByWorkId={impedimentCountsByWorkId}
+          lastRecordByWorkId={lastRecordByWorkId}
         />
       </div>
     </main>
