@@ -13,7 +13,7 @@ import type {
   WorkProjectPost,
 } from '@/types/works';
 import { removePoleInstallation } from '@/actions/workPoleInstallations';
-import type { MountedItem } from '@/services/works/getWorkExecutionOverlay';
+import type { MountedEquipment } from '@/services/works/getWorkExecutionOverlay';
 import { ImageLightbox } from '../shared/ImageLightbox';
 
 type Selected =
@@ -37,7 +37,7 @@ interface PostDetailsPanelProps {
   /** Notifica o canvas que uma instalacao foi removida pelo manager. */
   onInstallationRemoved: (installationId: string) => void;
   /** O que o campo montou em cada poste, por id de instalação. */
-  mountedByInstallation?: Record<string, MountedItem[]>;
+  mountedByInstallation?: Record<string, MountedEquipment[]>;
 }
 
 /**
@@ -339,7 +339,7 @@ function InstallationBody({
   creatorName: string | null;
   onInstallationRemoved: (installationId: string) => void;
   /** O que o campo montou neste poste. */
-  mounted: MountedItem[];
+  mounted: MountedEquipment[];
 }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
@@ -504,23 +504,33 @@ function InstallationBody({
 
       {mounted.length > 0 && (
         <Section title="Montado neste poste">
-          <ul className="flex flex-col gap-1">
-            {mounted.map((item, i) => (
+          <ul className="flex flex-col gap-2">
+            {mounted.map((item) => (
               <li
-                key={`${item.label}-${i}`}
-                className="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-2 py-1.5"
+                key={item.id}
+                className="flex gap-2 rounded-md bg-gray-50 p-2"
               >
-                <span className="min-w-0 flex-1 truncate text-[11px] text-gray-700">
-                  {item.label}
-                  {!item.fromProject && (
-                    <span className="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
-                      fora do projeto
-                    </span>
-                  )}
-                </span>
-                <span className="text-[11px] font-semibold tabular-nums text-gray-700">
-                  {item.quantity}
-                </span>
+                {item.photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.photoUrl}
+                    alt="Foto do equipamento montado"
+                    className="h-12 w-12 shrink-0 rounded-md border border-gray-200 object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-dashed border-gray-200 bg-gray-100 text-[9px] text-gray-400">
+                    sem foto
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] text-gray-700">
+                    {item.notes ?? 'Sem descrição'}
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-gray-400">
+                    {formatRelativeShort(item.installedAt)}
+                  </p>
+                </div>
               </li>
             ))}
           </ul>

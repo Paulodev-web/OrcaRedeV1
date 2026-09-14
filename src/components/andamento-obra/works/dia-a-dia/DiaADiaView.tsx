@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { MapPin, Wrench, Waves, Clock } from 'lucide-react';
+import { MapPin, Wrench, Clock } from 'lucide-react';
 import type { WorkDay, DayEntry, DayEntryKind } from '@/services/works/getWorkDays';
 import { PrintDayButton } from './PrintDayButton';
 
@@ -10,18 +10,14 @@ interface Props {
   signedUrls: Record<string, string>;
 }
 
-const formatoMetros = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 });
-
 const ICONE: Record<DayEntryKind, typeof MapPin> = {
   pole: MapPin,
   equipment: Wrench,
-  span: Waves,
 };
 
 const COR: Record<DayEntryKind, string> = {
   pole: 'bg-emerald-500',
   equipment: 'bg-emerald-600',
-  span: 'bg-teal-600',
 };
 
 /** 'YYYY-MM-DD' vira meio-dia local: às 00:00 UTC o dia vira o anterior aqui. */
@@ -65,8 +61,7 @@ function atrasou(entry: DayEntry): boolean {
 function resumoCurto(dia: WorkDay): string {
   const partes = [
     dia.poles > 0 ? `${dia.poles} poste${dia.poles > 1 ? 's' : ''}` : null,
-    dia.meters.total > 0 ? `${formatoMetros.format(dia.meters.total)} m` : null,
-    dia.structures > 0 ? `${dia.structures} estrutura${dia.structures > 1 ? 's' : ''}` : null,
+    dia.structures > 0 ? `${dia.structures} equipamento${dia.structures > 1 ? 's' : ''}` : null,
   ].filter(Boolean);
   return partes.length > 0 ? partes.join(' · ') : 'Sem registros';
 }
@@ -77,21 +72,16 @@ export function DiaADiaView({ workId, dias, selecionado, signedUrls }: Props) {
       <div className="rounded-xl border border-gray-200 bg-surface p-8 text-center">
         <p className="text-sm font-medium text-neutral-900">Nenhum registro ainda</p>
         <p className="mt-1 text-xs text-gray-500">
-          Assim que o gerente levantar um poste, montar equipamento ou lançar um trecho, o dia
-          aparece aqui sozinho. Não há nada para preencher.
+          Assim que o gerente levantar um poste ou montar um equipamento, o dia aparece aqui
+          sozinho. Não há nada para preencher.
         </p>
       </div>
     );
   }
 
-  const metros = selecionado.meters;
   const numeros = [
     { valor: String(selecionado.poles), rotulo: 'postes levantados' },
-    {
-      valor: metros.total > 0 ? `${formatoMetros.format(metros.total)} m` : '—',
-      rotulo: 'rede lançada',
-    },
-    { valor: String(selecionado.structures), rotulo: 'estruturas montadas' },
+    { valor: String(selecionado.structures), rotulo: 'equipamentos montados' },
     { valor: String(selecionado.photos), rotulo: selecionado.photos === 1 ? 'foto' : 'fotos' },
   ];
 
@@ -145,7 +135,7 @@ export function DiaADiaView({ workId, dias, selecionado, signedUrls }: Props) {
           <PrintDayButton />
         </div>
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {numeros.map((n) => (
             <div key={n.rotulo} className="rounded-xl border border-gray-200 bg-surface p-3">
               <p className="text-xl font-bold text-neutral-900">{n.valor}</p>
@@ -153,18 +143,6 @@ export function DiaADiaView({ workId, dias, selecionado, signedUrls }: Props) {
             </div>
           ))}
         </div>
-
-        {metros.total > 0 && (
-          <p className="text-xs text-gray-500">
-            {[
-              metros.BT > 0 ? `BT ${formatoMetros.format(metros.BT)} m` : null,
-              metros.MT > 0 ? `MT ${formatoMetros.format(metros.MT)} m` : null,
-              metros.iluminacao > 0 ? `IP ${formatoMetros.format(metros.iluminacao)} m` : null,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-          </p>
-        )}
 
         <div>
           <p className="pb-3 text-[11px] font-semibold uppercase tracking-wide text-gray-400">

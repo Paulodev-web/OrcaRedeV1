@@ -95,7 +95,6 @@ export default async function VisaoGeralPage({ params }: VisaoGeralPageProps) {
             initialInstallations={installations}
             initialInstallationSignedUrls={installationSignedUrls}
             initialCreatorNames={creatorNames}
-            executedSpans={overlay.spans}
             mountedByInstallation={overlay.mountedByInstallation}
           />
         </div>
