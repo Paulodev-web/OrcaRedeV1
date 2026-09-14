@@ -10,10 +10,206 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
+      briefing_answers: {
+        Row: {
+          briefing_id: string
+          id: string
+          question_id: string
+          updated_at: string
+          value_json: Json | null
+          value_text: string | null
+        }
+        Insert: {
+          briefing_id: string
+          id?: string
+          question_id: string
+          updated_at?: string
+          value_json?: Json | null
+          value_text?: string | null
+        }
+        Update: {
+          briefing_id?: string
+          id?: string
+          question_id?: string
+          updated_at?: string
+          value_json?: Json | null
+          value_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "briefing_answers_briefing_id_fkey"
+            columns: ["briefing_id"]
+            isOneToOne: false
+            referencedRelation: "briefings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "briefing_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: true
+            referencedRelation: "briefing_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      briefing_blocks: {
+        Row: {
+          briefing_id: string
+          created_at: string
+          id: string
+          order_index: number
+          title: string
+        }
+        Insert: {
+          briefing_id: string
+          created_at?: string
+          id?: string
+          order_index: number
+          title: string
+        }
+        Update: {
+          briefing_id?: string
+          created_at?: string
+          id?: string
+          order_index?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "briefing_blocks_briefing_id_fkey"
+            columns: ["briefing_id"]
+            isOneToOne: false
+            referencedRelation: "briefings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      briefing_questions: {
+        Row: {
+          block_id: string
+          config: Json
+          created_at: string
+          helper_text: string | null
+          id: string
+          label: string
+          order_index: number
+          required: boolean
+          type: string
+        }
+        Insert: {
+          block_id: string
+          config?: Json
+          created_at?: string
+          helper_text?: string | null
+          id?: string
+          label: string
+          order_index: number
+          required?: boolean
+          type: string
+        }
+        Update: {
+          block_id?: string
+          config?: Json
+          created_at?: string
+          helper_text?: string | null
+          id?: string
+          label?: string
+          order_index?: number
+          required?: boolean
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "briefing_questions_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "briefing_blocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      briefing_uploads: {
+        Row: {
+          briefing_id: string
+          created_at: string
+          file_name: string
+          file_path: string
+          id: string
+          mime_type: string | null
+          question_id: string
+          size_bytes: number | null
+        }
+        Insert: {
+          briefing_id: string
+          created_at?: string
+          file_name: string
+          file_path: string
+          id?: string
+          mime_type?: string | null
+          question_id: string
+          size_bytes?: number | null
+        }
+        Update: {
+          briefing_id?: string
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          mime_type?: string | null
+          question_id?: string
+          size_bytes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "briefing_uploads_briefing_id_fkey"
+            columns: ["briefing_id"]
+            isOneToOne: false
+            referencedRelation: "briefings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "briefing_uploads_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "briefing_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      briefings: {
+        Row: {
+          access_token: string
+          client_name: string | null
+          created_at: string
+          id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string
+          client_name?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          client_name?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       budget_folders: {
         Row: {
           color: string | null
@@ -2988,6 +3184,7 @@ export type Database = {
           created_at: string
           id: string
           model: string
+          org_id: string
           rationale: string | null
           reviewed_at: string | null
           status: string
@@ -3000,6 +3197,7 @@ export type Database = {
           created_at?: string
           id?: string
           model?: string
+          org_id: string
           rationale?: string | null
           reviewed_at?: string | null
           status?: string
@@ -3012,6 +3210,7 @@ export type Database = {
           created_at?: string
           id?: string
           model?: string
+          org_id?: string
           rationale?: string | null
           reviewed_at?: string | null
           status?: string
@@ -3020,6 +3219,13 @@ export type Database = {
           supplier_quote_item_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "semantic_match_suggestions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "semantic_match_suggestions_suggested_material_id_fkey"
             columns: ["suggested_material_id"]
@@ -3223,6 +3429,7 @@ export type Database = {
           match_method: string | null
           match_status: string
           matched_material_id: string | null
+          org_id: string
           preco_negociado: number | null
           preco_unit: number
           preco_unit_desconto: number | null
@@ -3244,6 +3451,7 @@ export type Database = {
           match_method?: string | null
           match_status?: string
           matched_material_id?: string | null
+          org_id: string
           preco_negociado?: number | null
           preco_unit?: number
           preco_unit_desconto?: number | null
@@ -3265,6 +3473,7 @@ export type Database = {
           match_method?: string | null
           match_status?: string
           matched_material_id?: string | null
+          org_id?: string
           preco_negociado?: number | null
           preco_unit?: number
           preco_unit_desconto?: number | null
@@ -3280,6 +3489,13 @@ export type Database = {
             columns: ["matched_material_id"]
             isOneToOne: false
             referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_quote_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
@@ -4554,6 +4770,9 @@ export type Database = {
           contract_value: number
           created_at: string
           id: string
+          negotiated_at: string | null
+          negotiated_by: string | null
+          negotiated_value: number | null
           org_id: string
           planned_snapshot: Json
           proposal_id: string | null
@@ -4568,6 +4787,9 @@ export type Database = {
           contract_value: number
           created_at?: string
           id?: string
+          negotiated_at?: string | null
+          negotiated_by?: string | null
+          negotiated_value?: number | null
           org_id?: string
           planned_snapshot: Json
           proposal_id?: string | null
@@ -4582,6 +4804,9 @@ export type Database = {
           contract_value?: number
           created_at?: string
           id?: string
+          negotiated_at?: string | null
+          negotiated_by?: string | null
+          negotiated_value?: number | null
           org_id?: string
           planned_snapshot?: Json
           proposal_id?: string | null
@@ -4937,6 +5162,297 @@ export type Database = {
           },
         ]
       }
+      work_network_span_media: {
+        Row: {
+          created_at: string
+          id: string
+          is_primary: boolean
+          kind: string
+          mime_type: string | null
+          size_bytes: number | null
+          span_id: string
+          storage_path: string
+          work_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          kind: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          span_id: string
+          storage_path: string
+          work_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          kind?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          span_id?: string
+          storage_path?: string
+          work_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_network_span_media_span_id_fkey"
+            columns: ["span_id"]
+            isOneToOne: false
+            referencedRelation: "work_network_spans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_network_span_media_work_id_fkey"
+            columns: ["work_id"]
+            isOneToOne: false
+            referencedRelation: "works"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_network_spans: {
+        Row: {
+          cable_type: string | null
+          category: string
+          client_event_id: string
+          connection_id: string | null
+          created_at: string
+          created_by: string
+          from_post_id: string | null
+          gps_lat: number | null
+          gps_lng: number | null
+          id: string
+          installed_at: string
+          meters: number
+          meters_planned: number | null
+          notes: string | null
+          to_post_id: string | null
+          work_id: string
+        }
+        Insert: {
+          cable_type?: string | null
+          category: string
+          client_event_id: string
+          connection_id?: string | null
+          created_at?: string
+          created_by: string
+          from_post_id?: string | null
+          gps_lat?: number | null
+          gps_lng?: number | null
+          id?: string
+          installed_at?: string
+          meters: number
+          meters_planned?: number | null
+          notes?: string | null
+          to_post_id?: string | null
+          work_id: string
+        }
+        Update: {
+          cable_type?: string | null
+          category?: string
+          client_event_id?: string
+          connection_id?: string | null
+          created_at?: string
+          created_by?: string
+          from_post_id?: string | null
+          gps_lat?: number | null
+          gps_lng?: number | null
+          id?: string
+          installed_at?: string
+          meters?: number
+          meters_planned?: number | null
+          notes?: string | null
+          to_post_id?: string | null
+          work_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_network_spans_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "work_project_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_network_spans_from_post_id_fkey"
+            columns: ["from_post_id"]
+            isOneToOne: false
+            referencedRelation: "work_project_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_network_spans_to_post_id_fkey"
+            columns: ["to_post_id"]
+            isOneToOne: false
+            referencedRelation: "work_project_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_network_spans_work_id_fkey"
+            columns: ["work_id"]
+            isOneToOne: false
+            referencedRelation: "works"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_pole_equipment: {
+        Row: {
+          client_event_id: string
+          created_at: string
+          created_by: string
+          id: string
+          installation_id: string
+          installed_at: string
+          notes: string | null
+          work_id: string
+        }
+        Insert: {
+          client_event_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          installation_id: string
+          installed_at?: string
+          notes?: string | null
+          work_id: string
+        }
+        Update: {
+          client_event_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          installation_id?: string
+          installed_at?: string
+          notes?: string | null
+          work_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_pole_equipment_installation_id_fkey"
+            columns: ["installation_id"]
+            isOneToOne: false
+            referencedRelation: "work_pole_installations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_pole_equipment_work_id_fkey"
+            columns: ["work_id"]
+            isOneToOne: false
+            referencedRelation: "works"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_pole_equipment_items: {
+        Row: {
+          created_at: string
+          equipment_id: string
+          from_project: boolean
+          id: string
+          label: string
+          material_id: string | null
+          quantity: number
+          work_id: string
+        }
+        Insert: {
+          created_at?: string
+          equipment_id: string
+          from_project?: boolean
+          id?: string
+          label: string
+          material_id?: string | null
+          quantity?: number
+          work_id: string
+        }
+        Update: {
+          created_at?: string
+          equipment_id?: string
+          from_project?: boolean
+          id?: string
+          label?: string
+          material_id?: string | null
+          quantity?: number
+          work_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_pole_equipment_items_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "work_pole_equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_pole_equipment_items_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_pole_equipment_items_work_id_fkey"
+            columns: ["work_id"]
+            isOneToOne: false
+            referencedRelation: "works"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_pole_equipment_media: {
+        Row: {
+          created_at: string
+          equipment_id: string
+          id: string
+          is_primary: boolean
+          kind: string
+          mime_type: string | null
+          size_bytes: number | null
+          storage_path: string
+          work_id: string
+        }
+        Insert: {
+          created_at?: string
+          equipment_id: string
+          id?: string
+          is_primary?: boolean
+          kind: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          storage_path: string
+          work_id: string
+        }
+        Update: {
+          created_at?: string
+          equipment_id?: string
+          id?: string
+          is_primary?: boolean
+          kind?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          storage_path?: string
+          work_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_pole_equipment_media_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "work_pole_equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_pole_equipment_media_work_id_fkey"
+            columns: ["work_id"]
+            isOneToOne: false
+            referencedRelation: "works"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_pole_installation_media: {
         Row: {
           created_at: string
@@ -5010,6 +5526,7 @@ export type Database = {
           notes: string | null
           numbering: string | null
           pole_type: string | null
+          project_post_id: string | null
           removed_at: string | null
           removed_by: string | null
           status: string
@@ -5030,6 +5547,7 @@ export type Database = {
           notes?: string | null
           numbering?: string | null
           pole_type?: string | null
+          project_post_id?: string | null
           removed_at?: string | null
           removed_by?: string | null
           status?: string
@@ -5050,6 +5568,7 @@ export type Database = {
           notes?: string | null
           numbering?: string | null
           pole_type?: string | null
+          project_post_id?: string | null
           removed_at?: string | null
           removed_by?: string | null
           status?: string
@@ -5059,6 +5578,13 @@ export type Database = {
           y_coord?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "work_pole_installations_project_post_id_fkey"
+            columns: ["project_post_id"]
+            isOneToOne: false
+            referencedRelation: "work_project_posts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "work_pole_installations_work_id_fkey"
             columns: ["work_id"]
@@ -5176,8 +5702,8 @@ export type Database = {
           meters_planned: Json
           original_pdf_path: string | null
           pdf_num_pages: number | null
-          plan_geometry: Json | null
           pdf_storage_path: string | null
+          plan_geometry: Json | null
           render_version: number | null
           source_budget_id: string | null
           updated_at: string
@@ -5191,8 +5717,8 @@ export type Database = {
           meters_planned?: Json
           original_pdf_path?: string | null
           pdf_num_pages?: number | null
-          plan_geometry?: Json | null
           pdf_storage_path?: string | null
+          plan_geometry?: Json | null
           render_version?: number | null
           source_budget_id?: string | null
           updated_at?: string
@@ -5206,8 +5732,8 @@ export type Database = {
           meters_planned?: Json
           original_pdf_path?: string | null
           pdf_num_pages?: number | null
-          plan_geometry?: Json | null
           pdf_storage_path?: string | null
+          plan_geometry?: Json | null
           render_version?: number | null
           source_budget_id?: string | null
           updated_at?: string
@@ -5609,6 +6135,32 @@ export type Database = {
       }
     }
     Functions: {
+      budget_consolidated_materials: {
+        Args: { p_budget_id: string }
+        Returns: {
+          code: string
+          material_id: string
+          name: string
+          required_qty: number
+          unit: string
+          unit_price: number
+        }[]
+      }
+      create_purchase_order_with_items: {
+        Args: {
+          p_budget_id: string
+          p_delivery_date: string
+          p_freight_type: string
+          p_freight_value: number
+          p_items: Json
+          p_notes: string
+          p_oc_number: string
+          p_session_id: string
+          p_supplier_id: string
+          p_supplier_name: string
+        }
+        Returns: string
+      }
       current_module_access: { Args: never; Returns: Json }
       current_org_id: { Args: never; Returns: string }
       current_org_sector: { Args: never; Returns: string }
@@ -5633,6 +6185,10 @@ export type Database = {
       import_materials_ignore_duplicates: {
         Args: { materials_data: Json }
         Returns: Json
+      }
+      is_material_in_budget: {
+        Args: { p_budget_id: string; p_material_id: string }
+        Returns: boolean
       }
       is_org_admin: { Args: { _org_id: string }; Returns: boolean }
       is_org_member: { Args: { _org_id: string }; Returns: boolean }
@@ -5676,11 +6232,17 @@ export type Database = {
       rpc_mark_checklist_item: { Args: { input: Json }; Returns: Json }
       rpc_open_alert: { Args: { input: Json }; Returns: Json }
       rpc_publish_daily_log: { Args: { input: Json }; Returns: Json }
+      rpc_record_network_span: { Args: { input: Json }; Returns: Json }
+      rpc_record_pole_equipment: { Args: { input: Json }; Returns: Json }
       rpc_record_pole_installation: { Args: { input: Json }; Returns: Json }
       rpc_report_milestone: { Args: { input: Json }; Returns: Json }
       rpc_resolve_alert_in_field: { Args: { input: Json }; Returns: Json }
       rpc_send_work_message: { Args: { input: Json }; Returns: Json }
       shares_org_with: { Args: { _user_id: string }; Returns: boolean }
+      sync_work_project_from_budget: {
+        Args: { p_work_id: string }
+        Returns: Json
+      }
       task_stage_label: { Args: { _stage: string }; Returns: string }
       task_stage_order: { Args: { _stage: string }; Returns: number }
       task_stage_sector: { Args: { _stage: string }; Returns: string }
@@ -5738,12 +6300,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5767,11 +6329,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5792,11 +6354,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5817,11 +6379,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5834,11 +6396,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

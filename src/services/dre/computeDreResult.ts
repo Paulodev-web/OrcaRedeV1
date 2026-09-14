@@ -2,6 +2,8 @@ import { DRE_GROUPS, type DreGroup, type DrePlannedSnapshot, type DreResult } fr
 
 interface ComputeDreResultInput {
   contractValue: number;
+  /** Preço final negociado com o cliente, se lançado. Tem prioridade sobre contractValue no lucro/margem. */
+  negotiatedValue?: number | null;
   revenueSource: 'proposal' | 'pricing';
   planned: DrePlannedSnapshot;
   /** Custo realizado por grupo, já somado (OC para material/frete, dre_actuals para o resto). */
@@ -21,7 +23,8 @@ interface ComputeDreResultInput {
  * de número real.
  */
 export function computeDreResult(input: ComputeDreResultInput): DreResult {
-  const { contractValue, revenueSource, planned, realizado, fechados } = input;
+  const { contractValue, negotiatedValue = null, revenueSource, planned, realizado, fechados } = input;
+  const effectiveContractValue = negotiatedValue ?? contractValue;
 
   const groups = DRE_GROUPS.map((grupo) => {
     const planejado = Math.max(planned[grupo] ?? 0, 0);
@@ -38,17 +41,22 @@ export function computeDreResult(input: ComputeDreResultInput): DreResult {
   const gruposTotal = groups.length;
 
   const custoProjetado = groups.reduce((acc, g) => acc + (g.fechado ? g.realizado : g.planejado), 0);
-  const lucroProjetado = contractValue - custoProjetado;
-  const margemProjetadaPercent = contractValue > 0 ? (lucroProjetado / contractValue) * 100 : 0;
+  const lucroProjetado = effectiveContractValue - custoProjetado;
+  const margemProjetadaPercent =
+    effectiveContractValue > 0 ? (lucroProjetado / effectiveContractValue) * 100 : 0;
 
   const todosFechados = gruposAbertos === 0;
   const custoReal = todosFechados ? groups.reduce((acc, g) => acc + g.realizado, 0) : null;
-  const lucroReal = custoReal !== null ? contractValue - custoReal : null;
+  const lucroReal = custoReal !== null ? effectiveContractValue - custoReal : null;
   const margemRealPercent =
-    custoReal !== null && contractValue > 0 ? ((contractValue - custoReal) / contractValue) * 100 : null;
+    custoReal !== null && effectiveContractValue > 0
+      ? ((effectiveContractValue - custoReal) / effectiveContractValue) * 100
+      : null;
 
   return {
     contractValue,
+    negotiatedValue,
+    effectiveContractValue,
     revenueSource,
     groups,
     totalPlanejado,

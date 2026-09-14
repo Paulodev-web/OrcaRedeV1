@@ -9,6 +9,7 @@ export interface WorkDreRow {
   budgetId: string;
   status: 'aberta' | 'fechada';
   contractValue: number;
+  negotiatedValue: number | null;
   revenueSource: DreRevenueSource;
   plannedSnapshot: DrePlannedSnapshot;
   closedAt: string | null;
@@ -108,7 +109,9 @@ function toPurchaseOrderRow(row: PurchaseOrderQueryRow): PurchaseOrderRow {
 export async function loadDreContext(supabase: SupabaseClient, budgetId: string): Promise<DreContext | null> {
   const { data: dreRow, error: dreError } = await supabase
     .from('work_dre')
-    .select('id, budget_id, status, contract_value, revenue_source, planned_snapshot, closed_at')
+    .select(
+      'id, budget_id, status, contract_value, negotiated_value, revenue_source, planned_snapshot, closed_at'
+    )
     .eq('budget_id', budgetId)
     .maybeSingle();
 
@@ -125,6 +128,7 @@ export async function loadDreContext(supabase: SupabaseClient, budgetId: string)
     budgetId: dreRow.budget_id,
     status: dreRow.status === 'fechada' ? 'fechada' : 'aberta',
     contractValue: dreRow.contract_value,
+    negotiatedValue: dreRow.negotiated_value ?? null,
     revenueSource: dreRow.revenue_source === 'proposal' ? 'proposal' : 'pricing',
     plannedSnapshot: toPlannedSnapshot(dreRow.planned_snapshot),
     closedAt: dreRow.closed_at,
@@ -180,6 +184,7 @@ export async function loadDreContext(supabase: SupabaseClient, budgetId: string)
 
   const result = computeDreResult({
     contractValue: dre.contractValue,
+    negotiatedValue: dre.negotiatedValue,
     revenueSource: dre.revenueSource,
     planned: dre.plannedSnapshot,
     realizado,

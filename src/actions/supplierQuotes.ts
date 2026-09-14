@@ -14,7 +14,7 @@ import {
   getSuppliesExcludedMaterialIds,
 } from '@/services/supplies/materialSuppliesFilter';
 import { applyIdealScenarioPricesToMaterials } from '@/services/supplies/applyIdealScenarioPricesToMaterials';
-import { applySupplierQuotePricesToMaterials } from '@/services/supplies/applySupplierQuotePricesToMaterials';
+import { applyCompletedPurchaseOrderPricesToMaterials } from '@/services/supplies/applyCompletedPurchaseOrderPricesToMaterials';
 import {
   assertMaterialInBudgetScope,
   loadBudgetMaterialQuantities,
@@ -2355,23 +2355,17 @@ export async function closeIdealScenarioAndUpdateMaterialsAction(
   }
 }
 
-export async function updateMaterialsFromSupplierAction(
-  sessionId: string,
-  supplierSlug: string
+export async function updateMaterialsFromCompletedPurchaseOrdersAction(
+  sessionId: string
 ): Promise<
   ActionResult<{
     updated: number;
-    skippedNoOffer: number;
-    supplierName: string;
+    ordersApplied: number;
   }>
 > {
   try {
-    if (!supplierSlug || supplierSlug === 'all') {
-      return { success: false, error: 'Selecione um fornecedor.' };
-    }
-
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { data: session, error: sessionError } = await supabase
       .from('quotation_sessions')
@@ -2387,30 +2381,14 @@ export async function updateMaterialsFromSupplierAction(
       return { success: false, error: 'Sessão sem orçamento vinculado.' };
     }
 
-    const scenariosRes = await calculateScenariosAction(session.budget_id, sessionId);
-    if (!scenariosRes.success) {
-      return { success: false, error: scenariosRes.error };
-    }
-
-    const hasPurchaseDemand = scenariosRes.data.scenarioB.items.some((item) => item.net_qty > 0);
-    if (!hasPurchaseDemand) {
-      return {
-        success: false,
-        error: 'Nenhum material com necessidade de compra para atualizar.',
-      };
-    }
-
-    const result = await applySupplierQuotePricesToMaterials({
+    const result = await applyCompletedPurchaseOrderPricesToMaterials({
       supabase,
-      userId,
       sessionId,
       budgetId: session.budget_id,
-      scenarios: scenariosRes.data,
-      supplierSlug,
     });
 
-    if (!result.supplierName) {
-      return { success: false, error: 'Fornecedor não encontrado nesta sessão.' };
+    if (result.ordersApplied === 0) {
+      return { success: false, error: 'Nenhuma OC lançada para esta sessão ainda.' };
     }
 
     revalidatePath('/');
@@ -2420,7 +2398,7 @@ export async function updateMaterialsFromSupplierAction(
     return { success: true, data: result };
   } catch (err: unknown) {
     const message =
-      err instanceof Error ? err.message : 'Erro ao atualizar materiais deste fornecedor.';
+      err instanceof Error ? err.message : 'Erro ao atualizar materiais pelas OCs lançadas.';
     return { success: false, error: message };
   }
 }

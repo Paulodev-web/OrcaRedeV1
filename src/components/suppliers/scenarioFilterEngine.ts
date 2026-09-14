@@ -175,7 +175,8 @@ export function computeColumnTotals(
  */
 export function deriveFilteredScenarios(
   base: ScenariosResult,
-  filterState: ScenarioFilterState
+  filterState: ScenarioFilterState,
+  effectiveSelectionMap: Map<string, string> = new Map()
 ): FilteredScenariosResult {
   const { enabledQuoteIds, searchTerm, showOnlyUncovered, showOnlyDivergent, sortBy, priceMin, priceMax, showOnlyDifferences } = filterState;
 
@@ -205,6 +206,14 @@ export function deriveFilteredScenarios(
   let scenarioBTotal = 0;
 
   for (const item of base.scenarioB.items) {
+    // Filtro "por fornecedor" mostra só os materiais que aquele fornecedor
+    // efetivamente GANHOU (seleção validada ou melhor preço), não qualquer
+    // material em que ele apenas tenha cotado.
+    if (enabledQuoteIds.size > 0) {
+      const winnerQuoteId = effectiveSelectionMap.get(item.material_id) ?? null;
+      if (!winnerQuoteId || !enabledQuoteIds.has(winnerQuoteId)) continue;
+    }
+
     // Filtra ofertas por quote_id habilitado
     let offers = item.all_offers;
     if (enabledQuoteIds.size > 0) {

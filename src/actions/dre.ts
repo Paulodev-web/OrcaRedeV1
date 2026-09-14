@@ -168,6 +168,45 @@ export async function closeDreAction(dreId: string, sessionId: string): Promise<
   }
 }
 
+/**
+ * Lança/edita o preço final negociado com o CLIENTE (distinto do preço
+ * negociado com fornecedor, que fica em supplier_quote_items). Passar `null`
+ * limpa o valor e a DRE volta a usar o contract_value congelado.
+ */
+export async function setDreNegotiatedValueAction(
+  dreId: string,
+  sessionId: string,
+  value: number | null
+): Promise<ActionResult> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const userId = await requireAuthUserId(supabase);
+
+    if (value !== null && (!Number.isFinite(value) || value <= 0)) {
+      return { success: false, error: 'Valor negociado inválido.' };
+    }
+
+    const { error } = await supabase
+      .from('work_dre')
+      .update({
+        negotiated_value: value,
+        negotiated_at: value !== null ? new Date().toISOString() : null,
+        negotiated_by: value !== null ? userId : null,
+      })
+      .eq('id', dreId);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidateDrePath(sessionId);
+    return { success: true, data: undefined };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro inesperado ao lançar o preço negociado.';
+    return { success: false, error: message };
+  }
+}
+
 export async function reopenDreAction(dreId: string, sessionId: string): Promise<ActionResult> {
   try {
     const supabase = await createSupabaseServerClient();
