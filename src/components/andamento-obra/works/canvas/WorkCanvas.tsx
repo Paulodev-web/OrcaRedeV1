@@ -44,11 +44,7 @@ import { loadPoleInstallation } from '@/actions/workPoleInstallations';
 import { CanvasToolbar } from './CanvasToolbar';
 import { WorkPostMarker } from './WorkPostMarker';
 import { WorkConnectionLine } from './WorkConnectionLine';
-import { WorkExecutedSpanLine } from './WorkExecutedSpanLine';
-import type {
-  ExecutedSpan,
-  MountedItem,
-} from '@/services/works/getWorkExecutionOverlay';
+import type { MountedEquipment } from '@/services/works/getWorkExecutionOverlay';
 import { WorkInstallationPin } from './WorkInstallationPin';
 import { PostDetailsPanel } from './PostDetailsPanel';
 
@@ -66,10 +62,8 @@ interface WorkCanvasProps {
   initialInstallations: WorkPoleInstallation[];
   initialInstallationSignedUrls: Record<string, string>;
   initialCreatorNames: Record<string, string>;
-  /** Trechos já lançados: linha cheia por cima do tracejado do projeto. */
-  executedSpans?: ExecutedSpan[];
   /** O que foi montado em cada poste, para a ficha lateral. */
-  mountedByInstallation?: Record<string, MountedItem[]>;
+  mountedByInstallation?: Record<string, MountedEquipment[]>;
 }
 
 type Selected =
@@ -104,7 +98,6 @@ export function WorkCanvas({
   initialInstallations,
   initialInstallationSignedUrls,
   initialCreatorNames,
-  executedSpans = [],
   mountedByInstallation = {},
 }: WorkCanvasProps) {
   const transformRef = useRef<ReactZoomPanPinchRef>(null);
@@ -200,27 +193,6 @@ export function WorkCanvas({
     }
     return list;
   }, [connections, postsById]);
-
-  /**
-   * Trechos executados que dá para desenhar.
-   *
-   * Um trecho lançado fora do projeto pode não ter as duas pontas em
-   * `work_project_posts`. Ele existe no dia a dia, com metragem e tudo, mas não
-   * tem onde ser desenhado: some daqui em silêncio em vez de virar linha
-   * inventada.
-   */
-  const renderableSpans = useMemo(() => {
-    type Renderable = { span: ExecutedSpan; from: WorkProjectPost; to: WorkProjectPost };
-    const list: Renderable[] = [];
-    for (const s of executedSpans) {
-      if (!s.fromPostId || !s.toPostId || s.fromPostId === s.toPostId) continue;
-      const from = postsById.get(s.fromPostId);
-      const to = postsById.get(s.toPostId);
-      if (!from || !to) continue;
-      list.push({ span: s, from, to });
-    }
-    return list;
-  }, [executedSpans, postsById]);
 
   // -------------------------------------------------------------------------
   // Hidratacao sob demanda de uma instalacao por id (usada pelo Realtime)
@@ -584,17 +556,6 @@ export function WorkCanvas({
                       <WorkConnectionLine
                         key={connection.id}
                         connection={connection}
-                        fromPost={from}
-                        toPost={to}
-                      />
-                    ))}
-
-                    {/* Depois das planejadas de propósito: o cabo lançado
-                        desenha por cima do vão previsto. */}
-                    {renderableSpans.map(({ span, from, to }) => (
-                      <WorkExecutedSpanLine
-                        key={span.id}
-                        span={span}
                         fromPost={from}
                         toPost={to}
                       />

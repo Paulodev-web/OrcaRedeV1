@@ -1,4 +1,4 @@
-import { HardHat, Waves, Flag, Radio } from 'lucide-react';
+import { HardHat, Flag, Radio } from 'lucide-react';
 import type { WorkMilestone, WorkRow } from '@/types/works';
 import type { WorkExecutionStats } from '@/services/works/getWorkExecutionStats';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
@@ -10,20 +10,17 @@ interface WorkKPIsProps {
   postsPlanned: number;
   /** Postes realmente levantados em campo. */
   postsInstalled?: number;
-  /** O que o campo executou: metragem e data do último registro. */
+  /** O que o campo executou: data do último registro. */
   execution?: WorkExecutionStats | null;
 }
 
-const formatoMetros = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 });
-
 /**
- * Quatro numeros sobre a EXECUCAO, nao sobre o calendario.
+ * Tres numeros sobre a EXECUCAO, nao sobre o calendario.
  *
  * Saiu "dias decorridos", que passa igual numa obra tocando e numa obra parada,
  * e saiu "alertas ativos", que agora e a faixa vermelha do topo e nao precisa
- * competir por espaco aqui. Entrou a metragem de rede, que e metade do serviço
- * numa obra de distribuicao, e a data do ultimo registro, que e como se percebe
- * uma obra em silencio.
+ * competir por espaco aqui. O card de metragem de rede saiu junto com o
+ * lancamento de rede, que deixou de existir no produto.
  */
 export function WorkKPIs({
   work,
@@ -37,8 +34,6 @@ export function WorkKPIs({
   const marcosAguardando = milestones.filter((m) => m.status === 'awaiting_approval').length;
 
   const faltamPostes = Math.max(0, postsPlanned - postsInstalled);
-  const metros = execution?.metersTotal ?? 0;
-  const porCategoria = execution?.metersByCategory;
   const ultimoRegistro = execution?.lastRecordAt ?? null;
 
   const kpis = [
@@ -52,24 +47,6 @@ export function WorkKPIs({
             ? 'Todos levantados'
             : `${faltamPostes} a levantar`
           : 'Sem projeto importado',
-      alerta: false,
-    },
-    {
-      icon: Waves,
-      label: 'Rede lançada',
-      value: metros > 0 ? `${formatoMetros.format(metros)} m` : '—',
-      hint:
-        porCategoria && metros > 0
-          ? [
-              porCategoria.BT > 0 ? `BT ${formatoMetros.format(porCategoria.BT)}` : null,
-              porCategoria.MT > 0 ? `MT ${formatoMetros.format(porCategoria.MT)}` : null,
-              porCategoria.iluminacao > 0
-                ? `IP ${formatoMetros.format(porCategoria.iluminacao)}`
-                : null,
-            ]
-              .filter(Boolean)
-              .join(' · ')
-          : 'Nenhum trecho registrado',
       alerta: false,
     },
     {
@@ -101,7 +78,7 @@ export function WorkKPIs({
   ] as const;
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
       {kpis.map((kpi) => {
         const Icon = kpi.icon;
         return (
