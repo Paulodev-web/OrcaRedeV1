@@ -93,12 +93,16 @@ export function DreHeroStats({
         <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-accent-500/30 bg-accent-500/10 text-accent-700">
           <Landmark className="h-4 w-4" />
         </div>
-        <p className="mt-3 text-xs uppercase tracking-wide text-gray-500">Orçado</p>
+        <p className="mt-3 text-xs uppercase tracking-wide text-gray-500">Investimento</p>
         <p className="mt-1 text-2xl font-bold text-neutral-900">
-          {currencyFormatter.format(result.contractValue)}
+          {currencyFormatter.format(result.effectiveContractValue)}
         </p>
         <p className="mt-1 text-xs text-gray-500">
-          {result.revenueSource === 'proposal' ? 'Proposta aceita' : 'Precificação principal'}
+          {result.negotiatedValue !== null
+            ? `Negociado com o cliente · orçado era ${currencyFormatter.format(result.contractValue)}`
+            : result.revenueSource === 'proposal'
+              ? 'Orçado · Proposta aceita'
+              : 'Orçado · Precificação principal'}
         </p>
         <NegotiatedValueEditor
           dreId={dreId}
@@ -209,7 +213,12 @@ function NegotiatedValueEditor({
   if (editing) {
     return (
       <div className="mt-3 border-t border-gray-100 pt-3">
-        <p className="text-xs uppercase tracking-wide text-gray-500">Negociado com o cliente</p>
+        <p className="text-xs uppercase tracking-wide text-gray-500">
+          Preço negociado com o cliente
+        </p>
+        <p className="mt-0.5 text-[11px] text-gray-400">
+          Deixe em branco para o Investimento voltar a usar o orçado.
+        </p>
         <div className="mt-1.5 flex items-center gap-1.5">
           <input
             type="number"
@@ -243,15 +252,10 @@ function NegotiatedValueEditor({
     <button
       type="button"
       onClick={startEdit}
-      className="mt-3 flex w-full items-center justify-between border-t border-gray-100 pt-3 text-left transition-colors hover:opacity-80"
+      className="mt-3 flex w-full items-center gap-1 border-t border-gray-100 pt-3 text-left text-xs font-medium text-accent-700 transition-colors hover:text-accent-800"
     >
-      <span>
-        <span className="block text-xs uppercase tracking-wide text-gray-500">Negociado com o cliente</span>
-        <span className="mt-1 block text-lg font-bold text-neutral-900">
-          {negotiatedValue !== null ? currencyFormatter.format(negotiatedValue) : '—'}
-        </span>
-      </span>
-      <Pencil className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+      <Pencil className="h-3 w-3 shrink-0" />
+      {negotiatedValue !== null ? 'Editar valor negociado' : 'Lançar valor negociado com o cliente'}
     </button>
   );
 }
