@@ -13,6 +13,7 @@ import type {
   WorkProjectPost,
 } from '@/types/works';
 import { removePoleInstallation } from '@/actions/workPoleInstallations';
+import type { MountedItem } from '@/services/works/getWorkExecutionOverlay';
 import { ImageLightbox } from '../shared/ImageLightbox';
 
 type Selected =
@@ -35,6 +36,8 @@ interface PostDetailsPanelProps {
   onSelectInstallation: (installation: WorkPoleInstallation) => void;
   /** Notifica o canvas que uma instalacao foi removida pelo manager. */
   onInstallationRemoved: (installationId: string) => void;
+  /** O que o campo montou em cada poste, por id de instalação. */
+  mountedByInstallation?: Record<string, MountedItem[]>;
 }
 
 /**
@@ -66,6 +69,7 @@ export function PostDetailsPanel({
   onClose,
   onSelectInstallation,
   onInstallationRemoved,
+  mountedByInstallation = {},
 }: PostDetailsPanelProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const isOpen = selected !== null;
@@ -139,6 +143,7 @@ export function PostDetailsPanel({
                 creatorNames[selected.installation.createdBy] ?? null
               }
               onInstallationRemoved={onInstallationRemoved}
+              mounted={mountedByInstallation[selected.installation.id] ?? []}
             />
           )}
         </div>
@@ -326,12 +331,15 @@ function InstallationBody({
   signedUrls,
   creatorName,
   onInstallationRemoved,
+  mounted,
 }: {
   installation: WorkPoleInstallation;
   viewerUserId: string;
   signedUrls: Record<string, string>;
   creatorName: string | null;
   onInstallationRemoved: (installationId: string) => void;
+  /** O que o campo montou neste poste. */
+  mounted: MountedItem[];
 }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
@@ -493,6 +501,31 @@ function InstallationBody({
           </p>
         )}
       </Section>
+
+      {mounted.length > 0 && (
+        <Section title="Montado neste poste">
+          <ul className="flex flex-col gap-1">
+            {mounted.map((item, i) => (
+              <li
+                key={`${item.label}-${i}`}
+                className="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-2 py-1.5"
+              >
+                <span className="min-w-0 flex-1 truncate text-[11px] text-gray-700">
+                  {item.label}
+                  {!item.fromProject && (
+                    <span className="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                      fora do projeto
+                    </span>
+                  )}
+                </span>
+                <span className="text-[11px] font-semibold tabular-nums text-gray-700">
+                  {item.quantity}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
 
       <Section title="Registro">
         <KeyValue label="Data/Hora" value={dateLabel} />

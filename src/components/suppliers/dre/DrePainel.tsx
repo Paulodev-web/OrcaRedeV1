@@ -68,7 +68,7 @@ export function DrePainel({ budgetId, sessionId, context }: DrePainelProps) {
     <div className="space-y-4">
       <DreStatusBar sessionId={sessionId} context={context} />
 
-      <DreHeroStats result={result} />
+      <DreHeroStats result={result} dreId={dre.id} sessionId={sessionId} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <DreCompositionList result={result} />

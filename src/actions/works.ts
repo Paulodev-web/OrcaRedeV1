@@ -12,11 +12,15 @@ import {
   inferImageExtension,
   getImageNaturalDimensions,
 } from '@/lib/storage/publicUrl';
-import { computeRasterCoordTransform } from '@/lib/canvas/rasterPlanGeometry';
+import {
+  calculateRasterImageDimensions,
+  computeRasterCoordTransform,
+} from '@/lib/canvas/rasterPlanGeometry';
+import { buildPlanGeometry, buildRasterPlanGeometry, type PlanGeometry } from '@/lib/canvas/planFrame';
+import { readPdfPageGeometry } from '@/lib/canvas/pdfPageGeometry';
 import { isBudgetFinalizedForImport } from '@/lib/budgetStatus';
 import { getImportableBudgets } from '@/services/works/getImportableBudgets';
 import { getBudgetForImport } from '@/services/works/getBudgetForImport';
-import type { BudgetPostDetail } from '@/types';
 import type {
   ActionResult,
   CreateWorkFromBudgetInput,
@@ -27,7 +31,6 @@ import type {
 } from '@/types/works';
 
 const ANDAMENTO_OBRA_BUCKET = 'andamento-obra';
-const POSTS_INSERT_CHUNK = 300;
 const CONNECTIONS_INSERT_CHUNK = 300;
 
 /** Hosts Supabase cujo Storage público pode ser buscado via HTTP em createWorkFromBudget (fallback). */
@@ -290,7 +293,7 @@ interface CoordTransform {
  * Em qualquer falha pós-criação, faz rollback manual (Storage primeiro, depois DELETE works).
  *
  * Se uma obra existente ficou sem PDF no snapshot (pdf_storage_path NULL) por importação
- * anterior, ver [DEBT-014] em docs/known-debt.md — SQL opcional para apagar a obra e reimportar.
+ * anterior, ver [DEBT-014] em docs/_arquivo/known-debt.md — SQL opcional para apagar a obra e reimportar.
  */
 export async function createWorkFromBudget(
   input: CreateWorkFromBudgetInput,
@@ -363,6 +366,7 @@ export async function createWorkFromBudget(
     // Cópia da planta (PDF ou imagem raster). Falhas tratam como "sem planta" e seguem.
     const parsed = parseSupabaseStoragePublicUrl(budget.planImageUrl);
     let pdfNumPages: number | null = null;
+    let planGeometry: PlanGeometry | null = null;
     let coordTransform: CoordTransform | undefined;
 
     if (parsed) {
@@ -434,6 +438,22 @@ export async function createWorkFromBudget(
           }
           ctx.planStoragePath = destPath;
           ctx.planUploaded = true;
+
+          // A geometria da prancha e resolvida AQUI, uma vez, e gravada no
+          // snapshot. O APK nao consegue descobri-la sozinho: o Android reporta
+          // o tamanho da view em pixels, nao o da pagina em pontos, e o quadro
+          // logico do aparelho diverge do quadro do portal. Ver `planFrame.ts`.
+          const pageGeometry = await readPdfPageGeometry(bytes);
+          if (pageGeometry) {
+            pdfNumPages = pageGeometry.numPages;
+            planGeometry = buildPlanGeometry({
+              pageWidth: pageGeometry.width,
+              pageHeight: pageGeometry.height,
+              rotation: pageGeometry.rotation,
+              renderVersion: budget.renderVersion ?? 2,
+              numPages: pageGeometry.numPages,
+            });
+          }
         } else if (
           looksLikeRasterImage({
             contentType: blob.type ?? null,
@@ -464,6 +484,21 @@ export async function createWorkFromBudget(
               naturalDims.width,
               naturalDims.height,
             );
+            // Gravada porque a sincronia do orçamento roda no banco e precisa
+            // reaplicar exatamente esta transformada nos postes que chegarem
+            // depois da importação.
+            const display = calculateRasterImageDimensions(
+              naturalDims.width,
+              naturalDims.height,
+            );
+            planGeometry = buildRasterPlanGeometry({
+              naturalWidth: naturalDims.width,
+              naturalHeight: naturalDims.height,
+              displayWidth: display.width,
+              displayHeight: display.height,
+              transform: coordTransform,
+              renderVersion: budget.renderVersion ?? 2,
+            });
           }
         }
       }
@@ -478,31 +513,33 @@ export async function createWorkFromBudget(
       original_pdf_path: parsed ? parsed.path : null,
       render_version: renderVersion,
       pdf_num_pages: pdfNumPages,
+      plan_geometry: planGeometry,
       materials_planned: budget.materialsPlanned,
       meters_planned: budget.metersPlanned,
       imported_by: gate.engineerId,
     });
     if (snapError) throw new Error(`Falha ao criar snapshot: ${snapError.message}`);
 
-    // Postes em batch + mapa source_post_id -> new_id.
-    const sourceToNewPostId = new Map<string, string>();
-    const seenSourceIds = new Set<string>();
-    const postRows = budget.posts
-      .filter((p) => {
-        if (seenSourceIds.has(p.id)) return false;
-        seenSourceIds.add(p.id);
-        return true;
-      })
-      .map((p) => buildPostRow(ctx.workId!, p, coordTransform));
+    // Os postes descem pela MESMA função que a sincronia usa.
+    //
+    // Antes isto era um `buildPostRow` em TypeScript, e a sincronia do orçamento
+    // precisaria repetir a conversão em SQL. Duas implementações da mesma regra
+    // divergem com o tempo, e a divergência aqui move poste de lugar. Então a
+    // função do banco é a única, e a importação é só o primeiro `sync` da obra.
+    const { error: syncError } = await serviceRole.rpc('sync_work_project_from_budget', {
+      p_work_id: ctx.workId,
+    });
+    if (syncError) throw new Error(`Falha ao copiar postes: ${syncError.message}`);
 
-    for (let i = 0; i < postRows.length; i += POSTS_INSERT_CHUNK) {
-      const chunk = postRows.slice(i, i + POSTS_INSERT_CHUNK);
-      const { data: inserted, error: postsError } = await serviceRole
+    // O mapa source_post_id -> id novo, para remapear as conexões.
+    const sourceToNewPostId = new Map<string, string>();
+    {
+      const { data: criados, error: readError } = await serviceRole
         .from('work_project_posts')
-        .insert(chunk)
-        .select('id, source_post_id');
-      if (postsError) throw new Error(`Falha ao copiar postes: ${postsError.message}`);
-      for (const row of (inserted ?? []) as Array<{ id: string; source_post_id: string | null }>) {
+        .select('id, source_post_id')
+        .eq('work_id', ctx.workId);
+      if (readError) throw new Error(`Falha ao ler postes copiados: ${readError.message}`);
+      for (const row of (criados ?? []) as Array<{ id: string; source_post_id: string | null }>) {
         if (row.source_post_id) sourceToNewPostId.set(row.source_post_id, row.id);
       }
     }
@@ -542,51 +579,7 @@ export async function createWorkFromBudget(
   }
 }
 
-function buildPostRow(
-  workId: string,
-  post: BudgetPostDetail,
-  transform?: CoordTransform,
-) {
-  const numbering = normalizeNumbering(post);
-  const postType = post.post_types?.name ?? null;
-  const metadata: Record<string, unknown> = {
-    counter: post.counter ?? null,
-    custom_name: post.custom_name ?? null,
-    name: post.name ?? null,
-    post_type_id: post.post_types?.id ?? null,
-    post_type_name: post.post_types?.name ?? null,
-    post_type_code: post.post_types?.code ?? null,
-    post_type_height_m: post.post_types?.height_m ?? null,
-    post_type_shape: post.post_types?.shape ?? null,
-  };
-  const x = transform
-    ? Math.round(post.x_coord * transform.scale + transform.offsetX)
-    : post.x_coord;
-  const y = transform
-    ? Math.round(post.y_coord * transform.scale + transform.offsetY)
-    : post.y_coord;
-  return {
-    work_id: workId,
-    source_post_id: post.id,
-    numbering,
-    post_type: postType,
-    x_coord: x,
-    y_coord: y,
-    metadata,
-  };
-}
 
-function normalizeNumbering(post: BudgetPostDetail): string | null {
-  const custom = post.custom_name?.trim();
-  const counter = post.counter ?? 0;
-  if (counter > 0) {
-    const padded = counter.toString().padStart(2, '0');
-    return custom && custom.length > 0 ? `${custom} ${padded}` : padded;
-  }
-  if (custom && custom.length > 0) return custom;
-  const name = post.name?.trim();
-  return name && name.length > 0 ? name : null;
-}
 
 async function rollbackImport(
   serviceRole: SupabaseClient,

@@ -1,4 +1,10 @@
-import { Landmark, TrendingDown, TrendingUp } from 'lucide-react';
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Landmark, Loader2, Pencil, TrendingDown, TrendingUp } from 'lucide-react';
+import { toast } from 'sonner';
+import { setDreNegotiatedValueAction } from '@/actions/dre';
 import type { DreResult } from '@/services/dre/types';
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -34,15 +40,23 @@ interface ComparisonRow {
  * com orçado como proxy) e troca o rótulo para "Projetado". É a mesma garantia
  * do §4 do plano, só que visual: a barra nunca finge ser real antes de ser.
  */
-export function DreHeroStats({ result }: { result: DreResult }) {
-  const previstoLucro = result.contractValue - result.totalPlanejado;
+export function DreHeroStats({
+  result,
+  dreId,
+  sessionId,
+}: {
+  result: DreResult;
+  dreId: string;
+  sessionId: string;
+}) {
+  const previstoLucro = result.effectiveContractValue - result.totalPlanejado;
   const todosFechados = result.gruposAbertos === 0;
   const realizadoLabel = todosFechados ? 'Real' : 'Projetado (parcial)';
 
   const rows: ComparisonRow[] = [
     {
       label: 'Investimento',
-      previsto: result.contractValue,
+      previsto: result.effectiveContractValue,
       realizado: null,
       realizadoLabel: '',
     },
@@ -63,7 +77,7 @@ export function DreHeroStats({ result }: { result: DreResult }) {
   ];
 
   const maxValue = Math.max(
-    result.contractValue,
+    result.effectiveContractValue,
     result.totalPlanejado,
     result.custoProjetado,
     Math.abs(previstoLucro),
@@ -75,12 +89,23 @@ export function DreHeroStats({ result }: { result: DreResult }) {
 
   return (
     <div className="grid gap-4 lg:grid-cols-[repeat(3,minmax(0,1fr))]">
-      <StatTile
-        icon={Landmark}
-        label="Investimento"
-        value={currencyFormatter.format(result.contractValue)}
-        detail={result.revenueSource === 'proposal' ? 'Proposta aceita' : 'Precificação principal'}
-      />
+      <div className="rounded-2xl border border-gray-200 bg-surface p-4 shadow-sm">
+        <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-accent-500/30 bg-accent-500/10 text-accent-700">
+          <Landmark className="h-4 w-4" />
+        </div>
+        <p className="mt-3 text-xs uppercase tracking-wide text-gray-500">Orçado</p>
+        <p className="mt-1 text-2xl font-bold text-neutral-900">
+          {currencyFormatter.format(result.contractValue)}
+        </p>
+        <p className="mt-1 text-xs text-gray-500">
+          {result.revenueSource === 'proposal' ? 'Proposta aceita' : 'Precificação principal'}
+        </p>
+        <NegotiatedValueEditor
+          dreId={dreId}
+          sessionId={sessionId}
+          negotiatedValue={result.negotiatedValue}
+        />
+      </div>
       <StatTile
         icon={result.custoProjetado > result.totalPlanejado ? TrendingUp : TrendingDown}
         iconTone={result.custoProjetado > result.totalPlanejado ? 'red' : 'emerald'}
@@ -137,6 +162,97 @@ function StatTile({
       <p className="mt-1 text-2xl font-bold text-neutral-900">{value}</p>
       <p className="mt-1 text-xs text-gray-500">{detail}</p>
     </div>
+  );
+}
+
+function NegotiatedValueEditor({
+  dreId,
+  sessionId,
+  negotiatedValue,
+}: {
+  dreId: string;
+  sessionId: string;
+  negotiatedValue: number | null;
+}) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(negotiatedValue !== null ? String(negotiatedValue) : '');
+  const [saving, setSaving] = useState(false);
+
+  const startEdit = () => {
+    setDraft(negotiatedValue !== null ? String(negotiatedValue) : '');
+    setEditing(true);
+  };
+
+  const commit = async () => {
+    const trimmed = draft.trim();
+    const parsed = trimmed === '' ? null : parseFloat(trimmed.replace(',', '.'));
+
+    if (parsed !== null && (Number.isNaN(parsed) || parsed <= 0)) {
+      toast.error('Valor negociado inválido.');
+      return;
+    }
+
+    setSaving(true);
+    const res = await setDreNegotiatedValueAction(dreId, sessionId, parsed);
+    setSaving(false);
+
+    if (!res.success) {
+      toast.error(res.error);
+      return;
+    }
+
+    setEditing(false);
+    router.refresh();
+  };
+
+  if (editing) {
+    return (
+      <div className="mt-3 border-t border-gray-100 pt-3">
+        <p className="text-xs uppercase tracking-wide text-gray-500">Negociado com o cliente</p>
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <input
+            type="number"
+            min={0}
+            step="any"
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void commit();
+              if (e.key === 'Escape') setEditing(false);
+            }}
+            placeholder="0,00"
+            disabled={saving}
+            className="w-full rounded border border-accent-400 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-accent-400"
+          />
+          <button
+            type="button"
+            onClick={() => void commit()}
+            disabled={saving}
+            className="shrink-0 rounded bg-accent-600 px-2 py-1 text-xs font-medium text-white hover:bg-accent-700 disabled:opacity-50"
+          >
+            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Salvar'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={startEdit}
+      className="mt-3 flex w-full items-center justify-between border-t border-gray-100 pt-3 text-left transition-colors hover:opacity-80"
+    >
+      <span>
+        <span className="block text-xs uppercase tracking-wide text-gray-500">Negociado com o cliente</span>
+        <span className="mt-1 block text-lg font-bold text-neutral-900">
+          {negotiatedValue !== null ? currencyFormatter.format(negotiatedValue) : '—'}
+        </span>
+      </span>
+      <Pencil className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+    </button>
   );
 }
 

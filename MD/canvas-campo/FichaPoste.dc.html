@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; font-family: Roboto, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #4472b4; text-decoration: none; }
+    a:hover { color: #355a92; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: #262623; display: flex; flex-direction: column; justify-content: flex-end; box-sizing: border-box; overflow: hidden; position: relative;">
+
+  <!-- a planta continua atras, com o poste tocado em destaque -->
+  <div style="position: absolute; inset: 0;">
+    <svg viewBox="0 0 390 844" style="width: 100%; height: 100%;">
+      <rect width="390" height="844" fill="#f7f6f3"/>
+      <rect x="26" y="120" width="140" height="128" fill="#efeee9" stroke="#e2e0d9"/>
+      <rect x="222" y="120" width="142" height="128" fill="#efeee9" stroke="#e2e0d9"/>
+      <path d="M0 284 H390 M194 90 V420" stroke="#ffffff" stroke-width="26"/>
+      <path d="M62 264 H150 H238" stroke="#357d49" stroke-width="3.5" stroke-linecap="round"/>
+      <path d="M238 264 V380" stroke="#aaa9a2" stroke-width="2.5" stroke-dasharray="7 6"/>
+      <circle cx="62" cy="264" r="11" fill="#357d49" stroke="#ffffff" stroke-width="3"/>
+      <circle cx="150" cy="264" r="11" fill="#357d49" stroke="#ffffff" stroke-width="3"/>
+      <circle cx="238" cy="264" r="11" fill="#357d49" stroke="#ffffff" stroke-width="3"/>
+      <!-- o poste tocado: anel de selecao -->
+      <circle cx="238" cy="380" r="26" fill="#4472b4" opacity="0.14"/>
+      <circle cx="238" cy="380" r="19" fill="none" stroke="#4472b4" stroke-width="2.5"/>
+      <circle cx="238" cy="380" r="10" fill="#f7f6f3" stroke="#767469" stroke-width="2.8"/>
+      <text x="238" y="352" font-size="12" font-weight="700" fill="#4472b4" text-anchor="middle" font-family="Roboto, sans-serif">P7</text>
+    </svg>
+    <div style="position: absolute; inset: 0; background: rgba(38,38,35,0.34);"></div>
+  </div>
+
+  <div style="position: relative; background: #ffffff; border-radius: 20px 20px 0 0; padding: 10px 16px 26px; display: flex; flex-direction: column; gap: 18px;">
+    <div style="width: 40px; height: 4px; border-radius: 9999px; background: #d6d5ce; align-self: center; margin-bottom: 2px;"></div>
+
+    <div style="display: flex; align-items: flex-start; gap: 12px;">
+      <div style="width: 44px; height: 44px; border-radius: 9999px; border: 2.5px solid #767469; background: #fafaf8; flex-shrink: 0;"></div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px;">
+        <div style="font-size: 20px; font-weight: 700; letter-spacing: -0.3px;">Poste P7</div>
+        <div style="font-size: 14px; color: #767469;">do projeto &middot; ainda n&atilde;o levantado</div>
+      </div>
+    </div>
+
+    <!-- o que o projeto diz deste poste -->
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.9px; color: #767469;">O PROJETO PREV&Ecirc; AQUI</div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 13px 15px; background: #fafaf8; border: 1px solid #e9e8e3; border-radius: 12px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#504f48" stroke-width="2" stroke-linecap="round"><path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>
+        <span style="flex-grow: 1; font-size: 17px; color: #262623;">Poste DT 9/300</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 7px;">
+        <div style="display: flex; align-items: center; gap: 10px; padding: 12px 15px; background: #fafaf8; border: 1px solid #e9e8e3; border-radius: 12px;">
+          <span style="flex-grow: 1; font-size: 15px; color: #504f48;">Cruzeta de concreto 2,00 m</span>
+          <span style="font-size: 15px; font-weight: 700; color: #504f48; font-variant-numeric: tabular-nums;">1</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 12px 15px; background: #fafaf8; border: 1px solid #e9e8e3; border-radius: 12px;">
+          <span style="flex-grow: 1; font-size: 15px; color: #504f48;">Isolador pilar 15 kV</span>
+          <span style="font-size: 15px; font-weight: 700; color: #504f48; font-variant-numeric: tabular-nums;">3</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 12px 15px; background: #fafaf8; border: 1px solid #e9e8e3; border-radius: 12px;">
+          <span style="flex-grow: 1; font-size: 15px; color: #504f48;">Chave fus&iacute;vel 15 kV</span>
+          <span style="font-size: 15px; font-weight: 700; color: #504f48; font-variant-numeric: tabular-nums;">1</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- a acao -->
+    <div style="display: flex; flex-direction: column; gap: 10px; padding-top: 2px;">
+      <div style="height: 58px; border-radius: 12px; background: #4472b4; display: flex; align-items: center; justify-content: center; gap: 10px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"><path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>
+        <span style="font-size: 17px; font-weight: 700; color: #ffffff;">Levantei este poste</span>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 4px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#767469" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        <span style="font-size: 14px; color: #767469;">Pede foto e confirma o tipo no passo seguinte</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

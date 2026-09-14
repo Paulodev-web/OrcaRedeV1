@@ -1,0 +1,172 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; font-family: "Inter var", "Inter", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #4472b4; text-decoration: none; }
+    a:hover { color: #355a92; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; background: #fafaf8; color: #262623; display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden;">
+
+  <div style="padding: 20px 28px 0; background: #ffffff; border-bottom: 1px solid #e9e8e3; display: flex; flex-direction: column; gap: 16px;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span style="font-size: 24px; font-weight: 700; letter-spacing: -0.4px;">Loteamento Sol Poente</span>
+      <div style="padding: 4px 10px; background: #dfeeee; border-radius: 9999px; font-size: 12px; font-weight: 600; color: #1a6162;">Em obra</div>
+      <div style="flex-grow: 1;"></div>
+      <div style="display: flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid #d6d5ce; border-radius: 8px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#504f48" stroke-width="2" stroke-linecap="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+        <span style="font-size: 13px; font-weight: 600; color: #504f48;">Imprimir o dia</span>
+      </div>
+    </div>
+    <div style="display: flex; gap: 4px;">
+      <div style="padding: 10px 16px; border-bottom: 2px solid transparent; font-size: 14px; color: #67665f;">Obra</div>
+      <div style="padding: 10px 16px; border-bottom: 2px solid #4472b4; font-size: 14px; font-weight: 600; color: #4472b4;">Dia a dia</div>
+      <div style="padding: 10px 16px; border-bottom: 2px solid transparent; font-size: 14px; color: #67665f;">Conversa</div>
+      <div style="padding: 10px 16px; border-bottom: 2px solid transparent; font-size: 14px; color: #67665f;">Marcos</div>
+    </div>
+  </div>
+
+  <div style="flex-grow: 1; display: flex; overflow: hidden;">
+
+    <!-- coluna de dias -->
+    <div style="width: 232px; border-right: 1px solid #e9e8e3; background: #ffffff; padding: 18px 0; display: flex; flex-direction: column; gap: 2px; overflow: hidden;">
+      <div style="padding: 0 20px 12px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; color: #767469;">SETEMBRO</div>
+      <div style="padding: 12px 20px; border-left: 3px solid #4472b4; background: #f2f6fd; display: flex; flex-direction: column; gap: 2px;">
+        <span style="font-size: 14px; font-weight: 700; color: #253b5c;">Ter&ccedil;a, 10</span>
+        <span style="font-size: 13px; color: #4472b4;">3 postes &middot; 184 m &middot; 7 estruturas</span>
+      </div>
+      <div style="padding: 12px 20px; border-left: 3px solid transparent; display: flex; flex-direction: column; gap: 2px;">
+        <span style="font-size: 14px; font-weight: 600;">Segunda, 9</span>
+        <span style="font-size: 13px; color: #767469;">2 postes &middot; 96 m</span>
+      </div>
+      <div style="padding: 12px 20px; border-left: 3px solid transparent; display: flex; flex-direction: column; gap: 2px;">
+        <span style="font-size: 14px; font-weight: 600;">Sexta, 6</span>
+        <span style="font-size: 13px; color: #767469;">4 postes &middot; 210 m</span>
+      </div>
+      <div style="padding: 12px 20px; border-left: 3px solid transparent; display: flex; align-items: center; gap: 8px;">
+        <div style="width: 6px; height: 6px; border-radius: 9999px; background: #ae443d;"></div>
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <span style="font-size: 14px; font-weight: 600;">Quinta, 5</span>
+          <span style="font-size: 13px; color: #8d352e;">impedimento &middot; sem registro</span>
+        </div>
+      </div>
+      <div style="padding: 12px 20px; border-left: 3px solid transparent; display: flex; flex-direction: column; gap: 2px;">
+        <span style="font-size: 14px; font-weight: 600;">Quarta, 4</span>
+        <span style="font-size: 13px; color: #767469;">3 postes &middot; 142 m</span>
+      </div>
+    </div>
+
+    <!-- o dia -->
+    <div style="flex-grow: 1; padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; overflow: hidden;">
+
+      <div style="display: flex; align-items: flex-end; gap: 16px;">
+        <div style="display: flex; flex-direction: column; gap: 3px;">
+          <span style="font-size: 20px; font-weight: 700; letter-spacing: -0.3px;">Ter&ccedil;a, 10 de setembro</span>
+          <span style="font-size: 14px; color: #767469;">Montado pelo sistema a partir de 6 registros do campo. Ningu&eacute;m digitou isto.</span>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px;">
+        <div style="flex-grow: 1; padding: 15px 18px; background: #ffffff; border: 1px solid #e9e8e3; border-radius: 10px; display: flex; flex-direction: column; gap: 3px;">
+          <span style="font-size: 22px; font-weight: 700; letter-spacing: -0.4px; font-variant-numeric: tabular-nums;">3</span>
+          <span style="font-size: 13px; color: #767469;">postes levantados</span>
+        </div>
+        <div style="flex-grow: 1; padding: 15px 18px; background: #ffffff; border: 1px solid #e9e8e3; border-radius: 10px; display: flex; flex-direction: column; gap: 3px;">
+          <span style="font-size: 22px; font-weight: 700; letter-spacing: -0.4px; font-variant-numeric: tabular-nums;">184 m</span>
+          <span style="font-size: 13px; color: #767469;">rede BT lan&ccedil;ada</span>
+        </div>
+        <div style="flex-grow: 1; padding: 15px 18px; background: #ffffff; border: 1px solid #e9e8e3; border-radius: 10px; display: flex; flex-direction: column; gap: 3px;">
+          <span style="font-size: 22px; font-weight: 700; letter-spacing: -0.4px; font-variant-numeric: tabular-nums;">7</span>
+          <span style="font-size: 13px; color: #767469;">estruturas montadas</span>
+        </div>
+        <div style="flex-grow: 1; padding: 15px 18px; background: #ffffff; border: 1px solid #e9e8e3; border-radius: 10px; display: flex; flex-direction: column; gap: 3px;">
+          <span style="font-size: 22px; font-weight: 700; letter-spacing: -0.4px; font-variant-numeric: tabular-nums;">9</span>
+          <span style="font-size: 13px; color: #767469;">fotos</span>
+        </div>
+      </div>
+
+      <div style="flex-grow: 1; display: flex; gap: 20px; overflow: hidden;">
+
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 12px;">
+          <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.8px; color: #767469;">A LINHA DO DIA</div>
+
+          <div style="display: flex; gap: 14px;">
+            <span style="font-size: 13px; color: #aaa9a2; width: 42px; padding-top: 2px; font-variant-numeric: tabular-nums;">08:42</span>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+              <div style="width: 9px; height: 9px; border-radius: 9999px; background: #357d49; margin-top: 5px;"></div>
+              <div style="width: 1.5px; flex-grow: 1; background: #e9e8e3;"></div>
+            </div>
+            <div style="flex-grow: 1; padding-bottom: 16px; display: flex; flex-direction: column; gap: 3px;">
+              <span style="font-size: 14px; font-weight: 600;">Poste P8 levantado</span>
+              <span style="font-size: 13px; color: #767469;">DT 9/300 &middot; GPS &plusmn;6 m &middot; 1 foto</span>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 14px;">
+            <span style="font-size: 13px; color: #aaa9a2; width: 42px; padding-top: 2px; font-variant-numeric: tabular-nums;">11:05</span>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+              <div style="width: 9px; height: 9px; border-radius: 9999px; background: #357d49; margin-top: 5px;"></div>
+              <div style="width: 1.5px; flex-grow: 1; background: #e9e8e3;"></div>
+            </div>
+            <div style="flex-grow: 1; padding-bottom: 16px; display: flex; flex-direction: column; gap: 3px;">
+              <span style="font-size: 14px; font-weight: 600;">3 estruturas montadas no P2</span>
+              <span style="font-size: 13px; color: #767469;">1 cruzeta 2,00 m &middot; 2 isoladores pilar 15 kV &middot; 2 fotos</span>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 14px;">
+            <span style="font-size: 13px; color: #aaa9a2; width: 42px; padding-top: 2px; font-variant-numeric: tabular-nums;">14:20</span>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+              <div style="width: 9px; height: 9px; border-radius: 9999px; background: #257a7b; margin-top: 5px;"></div>
+              <div style="width: 1.5px; flex-grow: 1; background: #e9e8e3;"></div>
+            </div>
+            <div style="flex-grow: 1; padding-bottom: 16px; display: flex; flex-direction: column; gap: 3px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 14px; font-weight: 600;">Trecho P2 &rarr; P3, 92 m BT</span>
+                <div style="padding: 2px 8px; background: #f5e8dd; border-radius: 9999px; font-size: 12px; font-weight: 600; color: #764b1b;">+4 m que o projeto</div>
+              </div>
+              <span style="font-size: 13px; color: #767469;">Multiplexado 3x1x70+70 mm&sup2;</span>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 14px;">
+            <span style="font-size: 13px; color: #aaa9a2; width: 42px; padding-top: 2px; font-variant-numeric: tabular-nums;">16:38</span>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+              <div style="width: 9px; height: 9px; border-radius: 9999px; background: #925f26; margin-top: 5px;"></div>
+            </div>
+            <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 3px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 14px; font-weight: 600;">Poste P9 levantado</span>
+                <div style="padding: 2px 8px; background: #f5e8dd; border-radius: 9999px; font-size: 12px; font-weight: 600; color: #764b1b;">chegou &agrave;s 19:12</div>
+              </div>
+              <span style="font-size: 13px; color: #767469;">registrado &agrave;s 16:38 sem sinal, sincronizado depois</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="width: 320px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.8px; color: #767469;">O QUE FOI FOTOGRAFADO</div>
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+            <div style="height: 100px; border-radius: 8px; background: #c3c2b8;"></div>
+            <div style="height: 100px; border-radius: 8px; background: #cbc9c0;"></div>
+            <div style="height: 100px; border-radius: 8px; background: #b9b8ad;"></div>
+            <div style="height: 100px; border-radius: 8px; background: #c9c7be;"></div>
+            <div style="height: 100px; border-radius: 8px; background: #bfbeb4;"></div>
+            <div style="height: 100px; border-radius: 8px; background: #d0cec6; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; color: #504f48;">+4</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

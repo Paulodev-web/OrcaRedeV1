@@ -26,7 +26,7 @@ import {
   saveIdealSelectionAction,
   bulkSaveIdealSelectionsAction,
   closeIdealScenarioAndUpdateMaterialsAction,
-  updateMaterialsFromSupplierAction,
+  updateMaterialsFromCompletedPurchaseOrdersAction,
   savePurchaseOrderAction,
   type ScenariosResult,
   type ScenarioItem,
@@ -52,6 +52,9 @@ import ScenarioComparisonTable from './ScenarioComparisonTable';
 import ScenarioItemExpandableTable from './ScenarioItemExpandableTable';
 import MaterialDetailModal from './MaterialDetailModal';
 import ManualQuoteDialog, { type ManualQuoteMaterialInfo } from './ManualQuoteDialog';
+import CreatePurchaseOrderModal, {
+  type PurchaseOrderCandidateItem,
+} from './CreatePurchaseOrderModal';
 import {
   deriveFilteredScenarios,
   defaultFilterState,
@@ -396,6 +399,7 @@ function ScenarioIdealView({
   purchaseOrders,
   onOcSave,
   savingOcMaterialId,
+  onOcCreated,
 }: {
   scenarios: ScenariosResult;
   idealSelections: Map<string, string>;
@@ -404,7 +408,7 @@ function ScenarioIdealView({
   onValidateAll: () => void;
   onRevalidateStale: () => void;
   onCloseIdeal: () => void | Promise<void>;
-  onUpdateSupplierMaterials: (supplierSlug: string, supplierName: string) => void | Promise<void>;
+  onUpdateSupplierMaterials: () => void | Promise<void>;
   isValidatingAll: boolean;
   isRevalidatingStale: boolean;
   isClosingIdeal: boolean;
@@ -414,46 +418,34 @@ function ScenarioIdealView({
   purchaseOrders: Map<string, string>;
   onOcSave: (materialId: string, ocNumber: string | null) => Promise<void>;
   savingOcMaterialId: string | null;
+  onOcCreated: () => void | Promise<void>;
 }) {
   const alertDialog = useAlertDialog();
   const [isExporting, setIsExporting] = useState(false);
   const [selectedSupplierSlug, setSelectedSupplierSlug] = useState('all');
-  const [updateSupplierSlug, setUpdateSupplierSlug] = useState('all');
+  const [selectedForOc, setSelectedForOc] = useState<Set<string>>(new Set());
+  const [ocModalOpen, setOcModalOpen] = useState(false);
   const items = scenarios.scenarioB.items;
 
-  // Lista de fornecedores com pelo menos uma oferta cotada nesta sessão (não só os
-  // que "venceram" no Cenário Ideal) — usada para "Atualizar materiais por fornecedor".
-  const supplierUpdateOptions = useMemo(() => {
-    const names = new Map<string, string>();
-    for (const item of items) {
-      for (const offer of item.all_offers) {
-        const slug = slugifyFileName(offer.supplier_name);
-        if (!names.has(slug)) names.set(slug, offer.supplier_name);
-      }
-    }
-    return Array.from(names.entries())
-      .map(([slug, name]) => ({ slug, name }))
-      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-  }, [items]);
-
-  useEffect(() => {
-    if (updateSupplierSlug !== 'all' && !supplierUpdateOptions.some((s) => s.slug === updateSupplierSlug)) {
-      setUpdateSupplierSlug('all');
-    }
-  }, [supplierUpdateOptions, updateSupplierSlug]);
+  const handleToggleOcSelect = useCallback((materialId: string) => {
+    setSelectedForOc((prev) => {
+      const next = new Set(prev);
+      if (next.has(materialId)) next.delete(materialId);
+      else next.add(materialId);
+      return next;
+    });
+  }, []);
 
   const handleUpdateSupplierClick = useCallback(() => {
-    if (updateSupplierSlug === 'all' || isUpdatingSupplierMaterials) return;
-    const supplier = supplierUpdateOptions.find((s) => s.slug === updateSupplierSlug);
-    if (!supplier) return;
+    if (isUpdatingSupplierMaterials) return;
 
     alertDialog.showConfirm(
-      `Atualizar materiais de ${supplier.name}?`,
-      `Somente os materiais cotados por ${supplier.name} nesta sessão terão o preço atualizado na base (com o preço deste fornecedor, mesmo que não seja o mais barato). Materiais sem cotação deste fornecedor não serão alterados.`,
-      () => onUpdateSupplierMaterials(updateSupplierSlug, supplier.name),
+      'Atualizar materiais com OC lançada?',
+      'Atualiza o preço na base apenas dos materiais cujo item de compra já tem OC lançada (emitida ou entregue) nesta sessão. Materiais sem OC concluída não são alterados.',
+      () => onUpdateSupplierMaterials(),
       { confirmText: 'Atualizar materiais' }
     );
-  }, [updateSupplierSlug, isUpdatingSupplierMaterials, supplierUpdateOptions, alertDialog, onUpdateSupplierMaterials]);
+  }, [isUpdatingSupplierMaterials, alertDialog, onUpdateSupplierMaterials]);
 
   const scenarioATotal = scenarios.scenarioA[0]?.total_normalizado ?? 0;
   const scenarioBTotal = scenarios.scenarioB.total_normalizado;
@@ -472,6 +464,26 @@ function ScenarioIdealView({
     for (const line of ideal.lines) m.set(line.material_id, line);
     return m;
   }, [ideal.lines]);
+
+  const ocCandidateItems: PurchaseOrderCandidateItem[] = useMemo(() => {
+    const result: PurchaseOrderCandidateItem[] = [];
+    for (const materialId of selectedForOc) {
+      const item = items.find((i) => i.material_id === materialId);
+      const line = lineByMaterialId.get(materialId);
+      if (!item || !line) continue;
+      result.push({
+        materialId,
+        materialName: item.material_name,
+        materialCode: item.material_code,
+        materialUnit: item.material_unit,
+        quantidade: item.net_qty,
+        suggestedUnitPrice: line.preco_normalizado,
+        supplierName: line.supplier_name,
+        supplierId: null,
+      });
+    }
+    return result;
+  }, [selectedForOc, items, lineByMaterialId]);
 
   // Com fornecedor selecionado (export PDF), oculta as linhas sem cotação desse fornecedor.
   const filteredIdealItems = useMemo(() => {
@@ -667,32 +679,14 @@ function ScenarioIdealView({
           </button>
 
           <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50/60 p-1.5">
-            <select
-              value={updateSupplierSlug}
-              onChange={(e) => setUpdateSupplierSlug(e.target.value)}
-              disabled={supplierUpdateOptions.length === 0 || isUpdatingSupplierMaterials}
-              className="max-w-[200px] rounded-lg border border-gray-200 bg-surface px-3 py-2 text-sm text-neutral-900 disabled:cursor-not-allowed disabled:opacity-50 sm:max-w-[240px]"
-              aria-label="Escolher fornecedor para atualizar materiais"
-            >
-              <option value="all">Escolher fornecedor…</option>
-              {supplierUpdateOptions.map((s) => (
-                <option key={s.slug} value={s.slug}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
             <span
-              title={
-                updateSupplierSlug === 'all'
-                  ? 'Escolha um fornecedor para atualizar somente os materiais que ele cotou'
-                  : `Atualiza na base apenas os materiais cotados por este fornecedor`
-              }
+              title="Atualiza na base somente os materiais cujo item de compra já tem OC lançada (não cancelada) nesta sessão"
               className="inline-flex"
             >
               <button
                 type="button"
                 onClick={handleUpdateSupplierClick}
-                disabled={updateSupplierSlug === 'all' || isUpdatingSupplierMaterials}
+                disabled={isUpdatingSupplierMaterials}
                 className="inline-flex items-center gap-2 rounded-md border border-neutral-900 bg-surface px-3 py-1.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-900/5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface"
               >
                 {isUpdatingSupplierMaterials ? (
@@ -700,10 +694,28 @@ function ScenarioIdealView({
                 ) : (
                   <Building2 className="h-4 w-4" />
                 )}
-                Atualizar deste fornecedor
+                Atualizar materiais com OC lançada
               </button>
             </span>
           </div>
+
+          <span
+            title={
+              selectedForOc.size === 0
+                ? 'Marque os materiais na tabela abaixo para agrupar numa mesma OC'
+                : `Criar OC com ${selectedForOc.size} material(is) selecionado(s)`
+            }
+            className="inline-flex"
+          >
+            <button
+              type="button"
+              onClick={() => setOcModalOpen(true)}
+              disabled={selectedForOc.size === 0}
+              className="inline-flex items-center gap-2 rounded-lg bg-accent-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-accent-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Criar OC {selectedForOc.size > 0 ? `(${selectedForOc.size})` : ''}
+            </button>
+          </span>
         </div>
       </div>
 
@@ -844,6 +856,19 @@ function ScenarioIdealView({
         ocByMaterialId={purchaseOrders}
         onOcSave={onOcSave}
         savingOcMaterialId={savingOcMaterialId}
+        selectedMaterialIds={selectedForOc}
+        onToggleMaterialSelect={handleToggleOcSelect}
+      />
+
+      <CreatePurchaseOrderModal
+        open={ocModalOpen}
+        onOpenChange={setOcModalOpen}
+        sessionId={sessionId}
+        items={ocCandidateItems}
+        onCreated={async () => {
+          setSelectedForOc(new Set());
+          await onOcCreated();
+        }}
       />
 
       <AlertDialog {...alertDialog.dialogProps} />
@@ -1000,9 +1025,14 @@ export default function SessionScenariosView({
   //     são visuais (client-side) e não substituem o cálculo canônico do
   //     servidor.
   // ---------------------------------------------------------------------------
+  const effectiveIdealSelections = useMemo(
+    () => buildEffectiveSelectionMap(scenarios.scenarioB.items, idealSelections),
+    [scenarios.scenarioB.items, idealSelections]
+  );
+
   const filteredScenarios = useMemo(
-    () => deriveFilteredScenarios(scenarios, effectiveFilterState),
-    [scenarios, effectiveFilterState]
+    () => deriveFilteredScenarios(scenarios, effectiveFilterState, effectiveIdealSelections),
+    [scenarios, effectiveFilterState, effectiveIdealSelections]
   );
 
   const [stockMap, setStockMap] = useState<Map<string, number>>(() => {
@@ -1202,11 +1232,6 @@ export default function SessionScenariosView({
     [manualQuoteMaterial, sessionId, refreshScenarios, alertDialog]
   );
 
-  const effectiveIdealSelections = useMemo(
-    () => buildEffectiveSelectionMap(scenarios.scenarioB.items, idealSelections),
-    [scenarios.scenarioB.items, idealSelections]
-  );
-
   const handleValidateAll = useCallback(() => {
     const rows: IdealSelectionRow[] = [];
     for (const item of scenarios.scenarioB.items) {
@@ -1298,39 +1323,30 @@ export default function SessionScenariosView({
     }
   }, [isClosingIdeal, sessionId, alertDialog, refreshScenarios]);
 
-  const handleUpdateSupplierMaterials = useCallback(
-    async (supplierSlug: string, supplierName: string) => {
-      if (isUpdatingSupplierMaterials) return;
+  const handleUpdateSupplierMaterials = useCallback(async () => {
+    if (isUpdatingSupplierMaterials) return;
 
-      setIsUpdatingSupplierMaterials(true);
-      try {
-        const res = await updateMaterialsFromSupplierAction(sessionId, supplierSlug);
-        if (!res.success) {
-          alertDialog.showError(
-            'Não foi possível atualizar',
-            res.error ?? 'Erro ao atualizar materiais deste fornecedor.'
-          );
-          return;
-        }
-
-        const { updated, skippedNoOffer } = res.data;
-        const details = [
-          `${updated} material(is) tiveram o preço atualizado com base em ${supplierName}.`,
-          skippedNoOffer > 0
-            ? `${skippedNoOffer} material(is) sem cotação deste fornecedor foram ignorados.`
-            : '',
-        ]
-          .filter(Boolean)
-          .join(' ');
-
-        alertDialog.showSuccess('Materiais atualizados', details);
-        await refreshScenarios();
-      } finally {
-        setIsUpdatingSupplierMaterials(false);
+    setIsUpdatingSupplierMaterials(true);
+    try {
+      const res = await updateMaterialsFromCompletedPurchaseOrdersAction(sessionId);
+      if (!res.success) {
+        alertDialog.showError(
+          'Não foi possível atualizar',
+          res.error ?? 'Erro ao atualizar materiais pelas OCs lançadas.'
+        );
+        return;
       }
-    },
-    [isUpdatingSupplierMaterials, sessionId, alertDialog, refreshScenarios]
-  );
+
+      const { updated, ordersApplied } = res.data;
+      alertDialog.showSuccess(
+        'Materiais atualizados',
+        `${updated} material(is) tiveram o preço atualizado com base em ${ordersApplied} OC(s) lançada(s).`
+      );
+      await refreshScenarios();
+    } finally {
+      setIsUpdatingSupplierMaterials(false);
+    }
+  }, [isUpdatingSupplierMaterials, sessionId, alertDialog, refreshScenarios]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
@@ -1421,6 +1437,7 @@ export default function SessionScenariosView({
               purchaseOrders={purchaseOrders}
               onOcSave={handleOcSave}
               savingOcMaterialId={savingOcMaterialId}
+              onOcCreated={refreshScenarios}
             />
           )}
         </div>

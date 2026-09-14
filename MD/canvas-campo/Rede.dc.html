@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; font-family: Roboto, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #4472b4; text-decoration: none; }
+    a:hover { color: #355a92; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: #fafaf8; color: #262623; display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden;">
+
+  <div style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: #ffffff; border-bottom: 1px solid #e9e8e3;">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#504f48" stroke-width="2.2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+    <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 1px;">
+      <div style="font-size: 20px; font-weight: 700; letter-spacing: -0.3px;">Trecho de rede</div>
+      <div style="font-size: 14px; color: #767469;">v&atilde;o P2 &rarr; P3, previsto no projeto</div>
+    </div>
+  </div>
+
+  <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 18px; padding: 16px; overflow: hidden;">
+
+    <!-- De onde para onde: escolhido na planta, nao numa lista -->
+    <div style="display: flex; align-items: center; gap: 10px; padding: 14px; background: #ffffff; border: 1px solid #e9e8e3; border-radius: 14px;">
+      <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+        <svg width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="11" fill="#357d49"/><text x="13" y="17" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle" font-family="Roboto, sans-serif">P2</text></svg>
+        <span style="font-size: 14px; color: #767469;">de</span>
+      </div>
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#aaa9a2" stroke-width="2.2" stroke-linecap="round"><path d="M4 12h16"/><path d="M14 6l6 6-6 6"/></svg>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+        <svg width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="11" fill="#357d49"/><text x="13" y="17" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle" font-family="Roboto, sans-serif">P3</text></svg>
+        <span style="font-size: 14px; color: #767469;">at&eacute;</span>
+      </div>
+      <div style="padding: 10px 14px; border: 1px solid #d6d5ce; border-radius: 9999px; font-size: 14px; font-weight: 600; color: #504f48;">Trocar v&atilde;o</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 9px;">
+      <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.9px; color: #767469;">CATEGORIA</div>
+      <div style="display: flex; gap: 8px;">
+        <div style="flex-grow: 1; height: 52px; border-radius: 12px; background: #4472b4; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 17px; font-weight: 700; color: #ffffff;">BT<span style="font-size: 13px; font-weight: 400; color: #c9dcf8;">do projeto</span></div>
+        <div style="flex-grow: 1; height: 52px; border-radius: 12px; background: #ffffff; border: 1px solid #d6d5ce; display: flex; align-items: center; justify-content: center; font-size: 17px; color: #504f48;">MT</div>
+        <div style="flex-grow: 1; height: 52px; border-radius: 12px; background: #ffffff; border: 1px solid #d6d5ce; display: flex; align-items: center; justify-content: center; font-size: 17px; color: #504f48;">Ramal</div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 9px;">
+      <div style="display: flex; align-items: baseline; justify-content: space-between;">
+        <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.9px; color: #767469;">METROS LAN&Ccedil;ADOS</div>
+        <div style="font-size: 14px; color: #767469;">projeto prev&ecirc; <span style="font-weight: 700; color: #504f48;">88 m</span></div>
+      </div>
+      <div style="height: 60px; border: 1px solid #d6d5ce; border-radius: 12px; background: #ffffff; display: flex; align-items: center; padding: 0 16px; gap: 10px;">
+        <span style="font-size: 24px; font-weight: 700; letter-spacing: -0.5px; font-variant-numeric: tabular-nums;">92</span>
+        <span style="font-size: 17px; color: #767469;">m</span>
+        <div style="flex-grow: 1;"></div>
+        <div style="padding: 7px 12px; background: #f5e8dd; border-radius: 9999px; font-size: 14px; font-weight: 600; color: #764b1b;">+4 m</div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 9px;">
+      <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.9px; color: #767469;">CABO</div>
+      <div style="height: 52px; border: 1px solid #d6d5ce; border-radius: 12px; background: #ffffff; display: flex; align-items: center; padding: 0 15px;">
+        <span style="font-size: 17px; color: #262623;">Multiplexado 3x1x70 + 70 mm&sup2;</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="background: #ffffff; border-top: 1px solid #e9e8e3; padding: 13px 16px 24px; display: flex; flex-direction: column; gap: 11px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="width: 46px; height: 46px; border-radius: 10px; border: 1.5px dashed #d6d5ce; display: flex; align-items: center; justify-content: center;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4472b4" stroke-width="1.9" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      </div>
+      <span style="font-size: 14px; color: #767469;">Foto do v&atilde;o, opcional</span>
+    </div>
+    <div style="height: 56px; border-radius: 12px; background: #4472b4; display: flex; align-items: center; justify-content: center;">
+      <span style="font-size: 17px; font-weight: 700; color: #ffffff;">Salvar trecho</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

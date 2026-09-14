@@ -7,31 +7,30 @@ import { cn } from '@/lib/utils';
 interface WorkTabsNavProps {
   workId: string;
   chatUnreadCount?: number;
-  diarioPendingCount?: number;
-  progressoPendingCount?: number;
-  checklistsPendingCount?: number;
-  alertsActiveCount?: number;
+  marcosPendingCount?: number;
 }
 
+/**
+ * Tres destinos, nao nove.
+ *
+ * O que saiu daqui nao foi apagado: checklists, equipe, galeria, documentos e o
+ * diario com aprovacao continuam no codigo e nas rotas, so nao tem mais porta.
+ * O que ficou e o que o engenheiro faz todo dia: olhar a obra crescer, conversar
+ * com o gerente e aprovar etapa.
+ *
+ * Alertas nao esta aqui de proposito: virou faixa no topo (WorkAlertBanner).
+ */
 const tabs = [
-  { slug: 'visao-geral', label: 'Visão Geral' },
-  { slug: 'chat', label: 'Chat' },
-  { slug: 'diario', label: 'Diário' },
-  { slug: 'progresso', label: 'Progresso' },
-  { slug: 'equipe', label: 'Equipe' },
-  { slug: 'checklists', label: 'Checklists' },
-  { slug: 'alertas', label: 'Alertas' },
-  { slug: 'galeria', label: 'Galeria' },
-  { slug: 'documentos', label: 'Documentos' },
+  { slug: 'visao-geral', label: 'Obra' },
+  { slug: 'dia-a-dia', label: 'Dia a dia' },
+  { slug: 'chat', label: 'Conversa' },
+  { slug: 'progresso', label: 'Marcos' },
 ];
 
 export function WorkTabsNav({
   workId,
   chatUnreadCount = 0,
-  diarioPendingCount = 0,
-  progressoPendingCount = 0,
-  checklistsPendingCount = 0,
-  alertsActiveCount = 0,
+  marcosPendingCount = 0,
 }: WorkTabsNavProps) {
   const pathname = usePathname();
   const base = `/tools/andamento-obra/obras/${workId}`;
@@ -44,10 +43,7 @@ export function WorkTabsNav({
           const active = pathname === href || pathname.startsWith(`${href}/`);
           let badgeCount = 0;
           if (tab.slug === 'chat') badgeCount = chatUnreadCount;
-          else if (tab.slug === 'diario') badgeCount = diarioPendingCount;
-          else if (tab.slug === 'progresso') badgeCount = progressoPendingCount;
-          else if (tab.slug === 'checklists') badgeCount = checklistsPendingCount;
-          else if (tab.slug === 'alertas') badgeCount = alertsActiveCount;
+          else if (tab.slug === 'progresso') badgeCount = marcosPendingCount;
 
           return (
             <Link

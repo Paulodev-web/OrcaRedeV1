@@ -48,6 +48,10 @@ export interface DreGroupRow {
 
 export interface DreResult {
   contractValue: number;
+  /** Preço final negociado com o cliente, se lançado. Distinto de preco_negociado de fornecedor (compra). */
+  negotiatedValue: number | null;
+  /** negotiatedValue quando lançado, senão contractValue — usado para lucro/margem. */
+  effectiveContractValue: number;
   revenueSource: DreRevenueSource;
   groups: DreGroupRow[];
   totalPlanejado: number;

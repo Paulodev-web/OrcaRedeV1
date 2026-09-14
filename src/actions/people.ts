@@ -81,6 +81,11 @@ export async function createManager(
       created_by: gate.engineerId,
       full_name: fullName,
       phone: phone ?? '',
+      // O app olha esta bandeira para obrigar a troca no primeiro acesso. Sem
+      // ela, a senha temporária que o engenheiro digitou aqui vira a senha
+      // definitiva do gerente, e ela costuma ser fraca de propósito, porque
+      // alguém vai ditá-la por telefone.
+      must_change_password: true,
     },
   });
 

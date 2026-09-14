@@ -39,6 +39,9 @@ interface Props {
   ocByMaterialId?: Map<string, string>;
   onOcSave?: (materialId: string, ocNumber: string | null) => Promise<void>;
   savingOcMaterialId?: string | null;
+  /** Seleção múltipla de materiais para criar uma OC com vários itens de uma vez. */
+  selectedMaterialIds?: Set<string>;
+  onToggleMaterialSelect?: (materialId: string) => void;
 }
 
 function OcCell({
@@ -122,10 +125,13 @@ export default function ScenarioItemExpandableTable({
   ocByMaterialId,
   onOcSave,
   savingOcMaterialId,
+  selectedMaterialIds,
+  onToggleMaterialSelect,
 }: Props) {
   const supplierQuotesMode = priceDisplay === 'supplierQuotes';
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const showOcColumn = !!onOcSave;
+  const showSelectColumn = !!onToggleMaterialSelect;
 
   if (items.length === 0) {
     return (
@@ -144,6 +150,9 @@ export default function ScenarioItemExpandableTable({
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
+              {showSelectColumn && (
+                <th className="px-4 py-3 w-8 bg-gray-50" />
+              )}
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                 Material
               </th>
@@ -179,20 +188,36 @@ export default function ScenarioItemExpandableTable({
               const highlightedQuoteId = highlightQuoteId?.(item.material_id) ?? null;
               const ocNumber = ocByMaterialId?.get(item.material_id) ?? '';
               const isPurchased = showOcColumn && !!ocNumber;
+              const isSelected = selectedMaterialIds?.has(item.material_id) ?? false;
+              const canSelect = showSelectColumn && !isNoPurchase && summary.unitPrice > 0;
 
               return (
                 <React.Fragment key={item.material_id}>
                   <tr
                     className={`transition-colors ${
-                      isPurchased
-                        ? 'bg-green-50 hover:bg-green-100'
-                        : isExpanded
-                          ? 'bg-accent-500/10'
-                          : isEvenRow
-                            ? 'bg-surface hover:bg-gray-50'
-                            : 'bg-gray-50/50 hover:bg-gray-100'
+                      isSelected
+                        ? 'bg-accent-500/10 hover:bg-accent-500/20'
+                        : isPurchased
+                          ? 'bg-green-50 hover:bg-green-100'
+                          : isExpanded
+                            ? 'bg-accent-500/10'
+                            : isEvenRow
+                              ? 'bg-surface hover:bg-gray-50'
+                              : 'bg-gray-50/50 hover:bg-gray-100'
                     } ${isNoPurchase ? 'opacity-55' : ''}`}
                   >
+                    {showSelectColumn && (
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          disabled={!canSelect}
+                          onChange={() => onToggleMaterialSelect!(item.material_id)}
+                          aria-label={`Selecionar ${item.material_name} para OC`}
+                          className="h-4 w-4 rounded border-gray-300 disabled:cursor-not-allowed disabled:opacity-40"
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-3">
                       <p className="text-sm font-medium text-neutral-900">{item.material_name}</p>
                       <p className="text-xs text-gray-400">
@@ -272,7 +297,10 @@ export default function ScenarioItemExpandableTable({
                   </tr>
                   {isExpanded && (
                     <tr className="bg-accent-500/5">
-                      <td colSpan={showOcColumn ? 7 : 6} className="px-4 py-3">
+                      <td
+                        colSpan={6 + (showOcColumn ? 1 : 0) + (showSelectColumn ? 1 : 0)}
+                        className="px-4 py-3"
+                      >
                         {hasNoOffers && onManualQuoteRequest ? (
                           <button
                             type="button"

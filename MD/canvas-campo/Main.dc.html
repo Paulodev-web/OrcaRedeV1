@@ -1,0 +1,126 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; font-family: Roboto, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #4472b4; text-decoration: none; }
+    a:hover { color: #355a92; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: #fafaf8; color: #262623; display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden;">
+
+  <div style="display: flex; align-items: center; gap: 12px; padding: 14px 16px 12px; background: #ffffff; border-bottom: 1px solid #e9e8e3;">
+    <div style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0;">
+      <div style="font-size: 20px; font-weight: 700; line-height: 25px; letter-spacing: -0.3px;">Sol Poente</div>
+      <div style="font-size: 14px; line-height: 19px; color: #767469;">12 de 32 postes de p&eacute;</div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 6px; padding: 6px 11px; background: #f5e8dd; border-radius: 9999px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#764b1b" stroke-width="2.2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
+      <span style="font-size: 14px; font-weight: 600; color: #764b1b;">3 na fila</span>
+    </div>
+  </div>
+
+  <div style="flex-grow: 1; position: relative; background: #f5f4f1; overflow: hidden;">
+
+    <svg viewBox="0 0 390 600" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+      <rect x="0" y="0" width="390" height="600" fill="#f7f6f3"/>
+      <rect x="26" y="70" width="140" height="128" fill="#efeee9" stroke="#e2e0d9"/>
+      <rect x="222" y="70" width="142" height="128" fill="#efeee9" stroke="#e2e0d9"/>
+      <rect x="26" y="268" width="140" height="150" fill="#efeee9" stroke="#e2e0d9"/>
+      <rect x="222" y="268" width="142" height="150" fill="#efeee9" stroke="#e2e0d9"/>
+      <path d="M0 234 H390 M194 40 V560" stroke="#ffffff" stroke-width="26"/>
+      <path d="M0 234 H390 M194 40 V560" stroke="#e2e0d9" stroke-width="26" stroke-dasharray="1 13" stroke-linecap="round"/>
+      <text x="34" y="60" font-size="11" fill="#aaa9a2" letter-spacing="1.4">RUA PROJETADA A</text>
+
+      <!-- vaos: cheio = cabo lancado, tracejado = previsto -->
+      <path d="M62 214 H150 H238" stroke="#357d49" stroke-width="3.5" stroke-linecap="round"/>
+      <path d="M238 214 H330" stroke="#aaa9a2" stroke-width="2.5" stroke-dasharray="7 6" stroke-linecap="round"/>
+      <path d="M150 214 V330" stroke="#357d49" stroke-width="3.5" stroke-linecap="round"/>
+      <path d="M150 330 V446 M238 214 V330 M62 214 V330" stroke="#aaa9a2" stroke-width="2.5" stroke-dasharray="7 6" stroke-linecap="round"/>
+
+      <!-- de pe -->
+      <circle cx="62" cy="214" r="11" fill="#357d49" stroke="#ffffff" stroke-width="3"/>
+      <circle cx="150" cy="214" r="11" fill="#357d49" stroke="#ffffff" stroke-width="3"/>
+      <circle cx="238" cy="214" r="11" fill="#357d49" stroke="#ffffff" stroke-width="3"/>
+      <!-- de pe e com equipamento montado: miolo branco -->
+      <circle cx="150" cy="330" r="11" fill="#357d49" stroke="#ffffff" stroke-width="3"/>
+      <circle cx="150" cy="330" r="4.5" fill="#ffffff"/>
+
+      <!-- a levantar: anel vazado, o alvo do dedo -->
+      <circle cx="330" cy="214" r="10" fill="#f7f6f3" stroke="#767469" stroke-width="2.8"/>
+      <circle cx="238" cy="330" r="10" fill="#f7f6f3" stroke="#767469" stroke-width="2.8"/>
+      <circle cx="62" cy="330" r="10" fill="#f7f6f3" stroke="#767469" stroke-width="2.8"/>
+      <circle cx="150" cy="446" r="10" fill="#f7f6f3" stroke="#767469" stroke-width="2.8"/>
+      <circle cx="238" cy="446" r="10" fill="#f7f6f3" stroke="#767469" stroke-width="2.8"/>
+      <circle cx="62" cy="446" r="10" fill="#f7f6f3" stroke="#767469" stroke-width="2.8"/>
+
+      <text x="62" y="192" font-size="12" font-weight="700" fill="#286438" text-anchor="middle">P1</text>
+      <text x="150" y="192" font-size="12" font-weight="700" fill="#286438" text-anchor="middle">P2</text>
+      <text x="238" y="192" font-size="12" font-weight="700" fill="#286438" text-anchor="middle">P3</text>
+      <text x="330" y="192" font-size="12" font-weight="700" fill="#767469" text-anchor="middle">P4</text>
+      <text x="238" y="308" font-size="12" font-weight="700" fill="#767469" text-anchor="middle">P7</text>
+    </svg>
+
+    <div style="position: absolute; top: 12px; left: 16px; display: flex; align-items: center; gap: 7px; padding: 7px 12px; background: rgba(38,38,35,0.86); border-radius: 9999px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"><path d="M2 2l20 20"/><path d="M8.5 16.4a5 5 0 0 1 7 0"/><path d="M5 12.9a10 10 0 0 1 3.1-2.1"/><path d="M19 12.9a10 10 0 0 0-4.6-2.6"/></svg>
+      <span style="font-size: 14px; font-weight: 600; color: #ffffff;">Sem sinal &middot; planta guardada</span>
+    </div>
+
+    <div style="position: absolute; right: 16px; bottom: 152px; width: 48px; height: 48px; background: #ffffff; border: 1px solid #d6d5ce; border-radius: 14px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(56,54,44,0.10);">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#504f48" stroke-width="2" stroke-linecap="round"><path d="M3 8V5a2 2 0 0 1 2-2h3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/></svg>
+    </div>
+
+    <!-- a instrucao mora na tela, nao num tutorial -->
+    <div style="position: absolute; left: 16px; right: 16px; bottom: 92px; display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: rgba(255,255,255,0.96); border: 1px solid #e9e8e3; border-radius: 12px; box-shadow: 0 2px 10px rgba(56,54,44,0.08);">
+      <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="#f7f6f3" stroke="#767469" stroke-width="2.4"/></svg>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 1px;">
+        <span style="font-size: 15px; font-weight: 600; color: #262623;">Toque num poste cinza</span>
+        <span style="font-size: 14px; color: #767469;">20 ainda por levantar</span>
+      </div>
+    </div>
+
+    <div style="position: absolute; left: 16px; bottom: 24px; display: flex; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 7px; padding: 8px 12px; background: rgba(255,255,255,0.94); border: 1px solid #e9e8e3; border-radius: 9999px;">
+        <svg width="15" height="15" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#357d49"/></svg>
+        <span style="font-size: 14px; color: #504f48;">De p&eacute;</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 7px; padding: 8px 12px; background: rgba(255,255,255,0.94); border: 1px solid #e9e8e3; border-radius: 9999px;">
+        <svg width="15" height="15" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="#767469" stroke-width="2.2"/></svg>
+        <span style="font-size: 14px; color: #504f48;">A levantar</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="position: relative; background: #ffffff; border-top: 1px solid #e9e8e3; display: flex; align-items: flex-start; padding: 10px 8px 22px; height: 84px; box-sizing: border-box;">
+    <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4472b4" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      <span style="font-size: 12px; font-weight: 700; color: #4472b4; letter-spacing: 0.2px;">Obra</span>
+    </div>
+    <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#767469" stroke-width="2" stroke-linecap="round"><path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/></svg>
+      <span style="font-size: 12px; font-weight: 600; color: #767469;">Dia</span>
+    </div>
+    <div style="width: 76px;"></div>
+    <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#767469" stroke-width="2" stroke-linecap="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 20.5l1.6-4.6A8.3 8.3 0 0 1 3.6 11 8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg>
+      <span style="font-size: 12px; font-weight: 600; color: #767469;">Conversa</span>
+    </div>
+    <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#767469" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/></svg>
+      <span style="font-size: 12px; font-weight: 600; color: #767469;">Equipe</span>
+    </div>
+    <div style="position: absolute; left: 50%; top: -26px; transform: translateX(-50%); width: 64px; height: 64px; border-radius: 9999px; background: #4472b4; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 18px rgba(56,54,44,0.22); border: 4px solid #fafaf8;">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,177 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; font-family: "Inter var", "Inter", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #4472b4; text-decoration: none; }
+    a:hover { color: #355a92; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; background: #fafaf8; color: #262623; display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden;">
+
+  <!-- Impedimento: faixa, nao aba. Interrompe. -->
+  <div style="display: flex; align-items: center; gap: 14px; padding: 12px 28px; background: #fee4e0; border-bottom: 1px solid #fccbc5;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8d352e" stroke-width="2.2" stroke-linecap="round"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+    <span style="font-size: 14px; font-weight: 600; color: #722c27;">Impedimento aberto h&aacute; 2 h</span>
+    <span style="font-size: 14px; color: #8d352e;">Falta de material: cruzeta 2,00 m acabou no canteiro &middot; Jos&eacute; Carlos</span>
+    <div style="flex-grow: 1;"></div>
+    <div style="padding: 7px 14px; background: #ffffff; border: 1px solid #fccbc5; border-radius: 8px; font-size: 13px; font-weight: 600; color: #8d352e;">Abrir</div>
+  </div>
+
+  <!-- Cabecalho da obra -->
+  <div style="padding: 20px 28px 0; background: #ffffff; border-bottom: 1px solid #e9e8e3; display: flex; flex-direction: column; gap: 16px;">
+    <div style="display: flex; align-items: flex-start; gap: 20px;">
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 24px; font-weight: 700; letter-spacing: -0.4px;">Loteamento Sol Poente</span>
+          <div style="padding: 4px 10px; background: #dfeeee; border-radius: 9999px; font-size: 12px; font-weight: 600; color: #1a6162;">Em obra</div>
+          <div style="display: flex; align-items: center; gap: 6px; padding: 4px 10px; background: #f2f6fd; border-radius: 9999px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4472b4" stroke-width="2.6" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg><span style="font-size: 12px; font-weight: 600; color: #355a92;">Segue o or&ccedil;amento #482</span></div>
+        </div>
+        <div style="font-size: 14px; color: #767469;">Construtora Vale Verde &middot; Chapec&oacute; SC &middot; gerente Jos&eacute; Carlos</div>
+      </div>
+      <div style="flex-grow: 1;"></div>
+      <div style="display: flex; gap: 28px; padding-top: 2px;">
+        <div style="display: flex; flex-direction: column; gap: 1px;">
+          <span style="font-size: 22px; font-weight: 700; letter-spacing: -0.4px; font-variant-numeric: tabular-nums;">12<span style="font-size: 15px; color: #aaa9a2; font-weight: 400;">/32</span></span>
+          <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.6px; color: #767469;">POSTES</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 1px;">
+          <span style="font-size: 22px; font-weight: 700; letter-spacing: -0.4px; font-variant-numeric: tabular-nums;">1.204<span style="font-size: 15px; color: #aaa9a2; font-weight: 400;"> m</span></span>
+          <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.6px; color: #767469;">REDE LAN&Ccedil;ADA</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 1px;">
+          <span style="font-size: 22px; font-weight: 700; letter-spacing: -0.4px; font-variant-numeric: tabular-nums;">2</span>
+          <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.6px; color: #767469;">DE 6 MARCOS</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 1px;">
+          <span style="font-size: 22px; font-weight: 700; letter-spacing: -0.4px; color: #357d49;">hoje</span>
+          <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.6px; color: #767469;">&Uacute;LTIMO REGISTRO</span>
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 4px;">
+      <div style="padding: 10px 16px; border-bottom: 2px solid #4472b4; font-size: 14px; font-weight: 600; color: #4472b4;">Obra</div>
+      <div style="padding: 10px 16px; border-bottom: 2px solid transparent; font-size: 14px; color: #67665f;">Dia a dia</div>
+      <div style="padding: 10px 16px; border-bottom: 2px solid transparent; font-size: 14px; color: #67665f;">Conversa</div>
+      <div style="padding: 10px 16px; border-bottom: 2px solid transparent; font-size: 14px; color: #67665f;">Marcos</div>
+    </div>
+  </div>
+
+  <!-- Canvas + painel -->
+  <div style="flex-grow: 1; display: flex; overflow: hidden;">
+
+    <div style="flex-grow: 1; position: relative; background: #f5f4f1;">
+      <svg viewBox="0 0 1020 660" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+        <rect width="1020" height="660" fill="#f7f6f3"/>
+        <rect x="60" y="70" width="360" height="200" fill="#efeee9" stroke="#e2e0d9"/>
+        <rect x="560" y="70" width="380" height="200" fill="#efeee9" stroke="#e2e0d9"/>
+        <rect x="60" y="360" width="360" height="230" fill="#efeee9" stroke="#e2e0d9"/>
+        <rect x="560" y="360" width="380" height="230" fill="#efeee9" stroke="#e2e0d9"/>
+        <path d="M0 315 H1020 M490 30 V630" stroke="#ffffff" stroke-width="42"/>
+        <path d="M0 315 H1020 M490 30 V630" stroke="#e2e0d9" stroke-width="42" stroke-dasharray="1 20" stroke-linecap="round"/>
+        <text x="70" y="58" font-size="13" fill="#aaa9a2" letter-spacing="1.6">RUA PROJETADA A</text>
+        <text x="506" y="620" font-size="13" fill="#aaa9a2" letter-spacing="1.6">RUA PROJETADA C</text>
+
+        <path d="M140 292 H310 H480" stroke="#357d49" stroke-width="4"/>
+        <path d="M480 292 H660" stroke="#357d49" stroke-width="4"/>
+        <path d="M660 292 H840" stroke="#aaa9a2" stroke-width="3" stroke-dasharray="9 8"/>
+        <path d="M480 292 V430 V560" stroke="#357d49" stroke-width="4"/>
+        <path d="M660 292 V430" stroke="#aaa9a2" stroke-width="3" stroke-dasharray="9 8"/>
+
+        <circle cx="140" cy="292" r="13" fill="#357d49" stroke="#ffffff" stroke-width="3.5"/>
+        <circle cx="310" cy="292" r="13" fill="#357d49" stroke="#ffffff" stroke-width="3.5"/>
+        <circle cx="480" cy="292" r="13" fill="#357d49" stroke="#ffffff" stroke-width="3.5"/><circle cx="480" cy="292" r="5" fill="#ffffff"/>
+        <circle cx="660" cy="292" r="13" fill="#357d49" stroke="#ffffff" stroke-width="3.5"/>
+        <circle cx="480" cy="430" r="13" fill="#357d49" stroke="#ffffff" stroke-width="3.5"/>
+        <circle cx="840" cy="292" r="11" fill="#f7f6f3" stroke="#767469" stroke-width="3"/>
+        <circle cx="660" cy="430" r="11" fill="#f7f6f3" stroke="#767469" stroke-width="3"/>
+        <circle cx="140" cy="430" r="11" fill="#f7f6f3" stroke="#767469" stroke-width="3"/>
+        <circle cx="310" cy="430" r="11" fill="#f7f6f3" stroke="#767469" stroke-width="3"/>
+
+        <!-- selecionado -->
+        <circle cx="480" cy="560" r="22" fill="none" stroke="#4472b4" stroke-width="3"/>
+        <circle cx="480" cy="560" r="13" fill="#357d49" stroke="#ffffff" stroke-width="3.5"/>
+
+        <text x="140" y="266" font-size="13" font-weight="700" fill="#286438" text-anchor="middle">P1</text>
+        <text x="310" y="266" font-size="13" font-weight="700" fill="#286438" text-anchor="middle">P2</text>
+        <text x="480" y="266" font-size="13" font-weight="700" fill="#286438" text-anchor="middle">P3</text>
+        <text x="660" y="266" font-size="13" font-weight="700" fill="#286438" text-anchor="middle">P4</text>
+        <text x="840" y="266" font-size="13" font-weight="700" fill="#767469" text-anchor="middle">P5</text>
+      </svg>
+
+      <div style="position: absolute; left: 20px; top: 18px; display: flex; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 13px; background: #ffffff; border: 1px solid #e9e8e3; border-radius: 8px;">
+          <svg width="15" height="15" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#357d49"/></svg>
+          <span style="font-size: 13px; color: #504f48;">De p&eacute;</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 13px; background: #ffffff; border: 1px solid #e9e8e3; border-radius: 8px;">
+          <svg width="15" height="15" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="#767469" stroke-width="2"/></svg>
+          <span style="font-size: 13px; color: #504f48;">A levantar</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 13px; background: #ffffff; border: 1px solid #e9e8e3; border-radius: 8px;">
+          <svg width="22" height="10" viewBox="0 0 22 10"><path d="M1 5h20" stroke="#357d49" stroke-width="3" stroke-linecap="round"/></svg>
+          <span style="font-size: 13px; color: #504f48;">Cabo lan&ccedil;ado</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Painel do poste -->
+    <div style="width: 400px; background: #ffffff; border-left: 1px solid #e9e8e3; display: flex; flex-direction: column; overflow: hidden;">
+      <div style="padding: 18px 22px 14px; border-bottom: 1px solid #e9e8e3; display: flex; align-items: flex-start; gap: 12px;">
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 3px;">
+          <span style="font-size: 18px; font-weight: 700; letter-spacing: -0.3px;">Poste P6</span>
+          <span style="font-size: 13px; color: #767469;">levantado hoje &agrave;s 08:42 por Jos&eacute; Carlos</span>
+        </div>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#767469" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+      </div>
+
+      <div style="flex-grow: 1; padding: 18px 22px; display: flex; flex-direction: column; gap: 20px; overflow: hidden;">
+        <div style="height: 190px; border-radius: 10px; background: #d6d5ce; overflow: hidden;">
+          <svg viewBox="0 0 356 190" style="width: 100%; height: 100%;">
+            <rect width="356" height="190" fill="#c3c2b8"/>
+            <rect x="0" y="132" width="356" height="58" fill="#b3b2a7"/>
+            <rect x="164" y="26" width="14" height="110" fill="#9b9a90"/>
+            <rect x="128" y="34" width="86" height="8" fill="#9b9a90"/>
+          </svg>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.8px; color: #767469;">MONTADO NESTE POSTE</div>
+          <div style="display: flex; flex-direction: column; gap: 7px;">
+            <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #fafaf8; border: 1px solid #e9e8e3; border-radius: 8px;">
+              <span style="flex-grow: 1; font-size: 14px; color: #262623;">Cruzeta de concreto 2,00 m</span>
+              <span style="font-size: 14px; font-weight: 700; color: #504f48; font-variant-numeric: tabular-nums;">1</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #fafaf8; border: 1px solid #e9e8e3; border-radius: 8px;">
+              <span style="flex-grow: 1; font-size: 14px; color: #262623;">Isolador pilar 15 kV</span>
+              <span style="font-size: 14px; font-weight: 700; color: #504f48; font-variant-numeric: tabular-nums;">3</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px dashed #d6d5ce; border-radius: 8px;">
+              <span style="flex-grow: 1; font-size: 14px; color: #aaa9a2;">Chave fus&iacute;vel 15 kV</span>
+              <span style="font-size: 13px; color: #aaa9a2;">prevista, n&atilde;o montada</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.8px; color: #767469;">ONDE</div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4472b4" stroke-width="2.2" stroke-linecap="round"><path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>
+            <span style="font-size: 14px; color: #4472b4; font-variant-numeric: tabular-nums;">27&deg;05'42"S 52&deg;37'11"W</span>
+            <span style="font-size: 13px; color: #aaa9a2;">&plusmn;6 m</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

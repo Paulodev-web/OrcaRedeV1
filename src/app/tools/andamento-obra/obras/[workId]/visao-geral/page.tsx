@@ -10,6 +10,7 @@ import { getWorkPdfSignedUrl } from '@/services/works/getWorkPdfSignedUrl';
 import { getWorkById } from '@/services/works/getWorkById';
 import { getPoleInstallations } from '@/services/works/getPoleInstallations';
 import { getPoleInstallationSignedUrls } from '@/services/works/getPoleInstallationSignedUrls';
+import { getWorkExecutionOverlay } from '@/services/works/getWorkExecutionOverlay';
 import { ProjectOverviewSummary } from '@/components/andamento-obra/works/ProjectOverviewSummary';
 import { WorkCanvas } from '@/components/andamento-obra/works/canvas/WorkCanvas';
 import { CanvasEmptyState } from '@/components/andamento-obra/works/canvas/CanvasEmptyState';
@@ -48,10 +49,11 @@ export default async function VisaoGeralPage({ params }: VisaoGeralPageProps) {
     redirect('/');
   }
 
-  const [bundle, work, installations] = await Promise.all([
+  const [bundle, work, installations, overlay] = await Promise.all([
     getWorkProjectSnapshot(supabase, workId),
     getWorkById(supabase, workId),
     getPoleInstallations(supabase, workId),
+    getWorkExecutionOverlay(supabase, workId),
   ]);
 
   if (!bundle) {
@@ -93,6 +95,8 @@ export default async function VisaoGeralPage({ params }: VisaoGeralPageProps) {
             initialInstallations={installations}
             initialInstallationSignedUrls={installationSignedUrls}
             initialCreatorNames={creatorNames}
+            executedSpans={overlay.spans}
+            mountedByInstallation={overlay.mountedByInstallation}
           />
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
-import { AcompanhamentoCenter, type WorkAlertCounts } from './AcompanhamentoCenter';
+import { AcompanhamentoCenter, type WorkImpedimentCounts } from './AcompanhamentoCenter';
 import { NotificationsCenter } from './NotificationsCenter';
 import { NewWorkDialog } from './NewWorkDialog';
 import { EmptyWorksState } from './EmptyWorksState';
@@ -16,8 +16,8 @@ interface WorksHomeViewProps {
   managers: ManagerRow[];
   hasAnyWork: boolean;
   unreadCountsByWorkId?: Record<string, number>;
-  alertCountsByWorkId?: Record<string, WorkAlertCounts>;
-  checklistCountsByWorkId?: Record<string, number>;
+  impedimentCountsByWorkId?: Record<string, WorkImpedimentCounts>;
+  lastRecordByWorkId?: Record<string, string | null>;
 }
 
 export function WorksHomeView({
@@ -26,8 +26,8 @@ export function WorksHomeView({
   managers,
   hasAnyWork,
   unreadCountsByWorkId,
-  alertCountsByWorkId,
-  checklistCountsByWorkId,
+  impedimentCountsByWorkId,
+  lastRecordByWorkId,
 }: WorksHomeViewProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -55,8 +55,8 @@ export function WorksHomeView({
           <AcompanhamentoCenter
             grouped={grouped}
             unreadCountsByWorkId={unreadCountsByWorkId}
-            alertCountsByWorkId={alertCountsByWorkId}
-            checklistCountsByWorkId={checklistCountsByWorkId}
+            impedimentCountsByWorkId={impedimentCountsByWorkId}
+            lastRecordByWorkId={lastRecordByWorkId}
           />
           <NotificationsCenter initialItems={notifications} />
         </div>

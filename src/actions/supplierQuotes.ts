@@ -14,7 +14,7 @@ import {
   getSuppliesExcludedMaterialIds,
 } from '@/services/supplies/materialSuppliesFilter';
 import { applyIdealScenarioPricesToMaterials } from '@/services/supplies/applyIdealScenarioPricesToMaterials';
-import { applySupplierQuotePricesToMaterials } from '@/services/supplies/applySupplierQuotePricesToMaterials';
+import { applyCompletedPurchaseOrderPricesToMaterials } from '@/services/supplies/applyCompletedPurchaseOrderPricesToMaterials';
 import {
   assertMaterialInBudgetScope,
   loadBudgetMaterialQuantities,
@@ -1013,8 +1013,6 @@ export async function calculateScenariosAction(
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
 
-    const budgetQtyMap = await loadBudgetMaterialQuantities(supabase, budgetId);
-
     let query = supabase
       .from('supplier_quote_items')
       .select(`
@@ -1049,26 +1047,36 @@ export async function calculateScenariosAction(
       query = query.eq('supplier_quotes.session_id', sessionId);
     }
 
-    const { data: rawItems, error } = await query;
+    // As quatro leituras são independentes entre si e antes rodavam em fila, uma
+    // esperando a anterior. Em produção, medido nos logs do Supabase, cada ida ao
+    // banco custa de 50 a 300 ms nesta instância, então a fila somava perto de
+    // 700 ms de espera pura para depois fazer um cálculo que roda em memória.
+    // Em paralelo, a aba passa a esperar só pela mais lenta delas.
+    const [budgetQtyMap, itemsRes, stockRows, excludedMaterialIds] = await Promise.all([
+      loadBudgetMaterialQuantities(supabase, budgetId),
+      query,
+      sessionId
+        ? supabase
+            .from('session_material_stock_inputs')
+            .select('material_id, stock_qty')
+            .eq('session_id', sessionId)
+            .then(({ data }) => data ?? [])
+        : Promise.resolve([] as { material_id: string; stock_qty: number | string }[]),
+      sessionId
+        ? getSessionExcludedMaterialIds(supabase, sessionId, userId)
+        : Promise.resolve(new Set<string>()),
+    ]);
+
+    const { data: rawItems, error } = itemsRes;
 
     if (error) {
       return { success: false, error: error.message };
     }
 
     const stockMap = new Map<string, number>();
-    if (sessionId) {
-      const { data: stockRows } = await supabase
-        .from('session_material_stock_inputs')
-        .select('material_id, stock_qty')
-        .eq('session_id', sessionId);
-      for (const r of stockRows ?? []) {
-        stockMap.set(r.material_id, Number(r.stock_qty));
-      }
+    for (const r of stockRows) {
+      stockMap.set(r.material_id, Number(r.stock_qty));
     }
-
-    const excludedMaterialIds = sessionId
-      ? await getSessionExcludedMaterialIds(supabase, sessionId, userId)
-      : new Set<string>();
 
     type Offer = {
       quote_item_id: string;
@@ -2347,23 +2355,17 @@ export async function closeIdealScenarioAndUpdateMaterialsAction(
   }
 }
 
-export async function updateMaterialsFromSupplierAction(
-  sessionId: string,
-  supplierSlug: string
+export async function updateMaterialsFromCompletedPurchaseOrdersAction(
+  sessionId: string
 ): Promise<
   ActionResult<{
     updated: number;
-    skippedNoOffer: number;
-    supplierName: string;
+    ordersApplied: number;
   }>
 > {
   try {
-    if (!supplierSlug || supplierSlug === 'all') {
-      return { success: false, error: 'Selecione um fornecedor.' };
-    }
-
     const supabase = await createSupabaseServerClient();
-    const userId = await requireAuthUserId(supabase);
+    await requireAuthUserId(supabase);
 
     const { data: session, error: sessionError } = await supabase
       .from('quotation_sessions')
@@ -2379,30 +2381,14 @@ export async function updateMaterialsFromSupplierAction(
       return { success: false, error: 'Sessão sem orçamento vinculado.' };
     }
 
-    const scenariosRes = await calculateScenariosAction(session.budget_id, sessionId);
-    if (!scenariosRes.success) {
-      return { success: false, error: scenariosRes.error };
-    }
-
-    const hasPurchaseDemand = scenariosRes.data.scenarioB.items.some((item) => item.net_qty > 0);
-    if (!hasPurchaseDemand) {
-      return {
-        success: false,
-        error: 'Nenhum material com necessidade de compra para atualizar.',
-      };
-    }
-
-    const result = await applySupplierQuotePricesToMaterials({
+    const result = await applyCompletedPurchaseOrderPricesToMaterials({
       supabase,
-      userId,
       sessionId,
       budgetId: session.budget_id,
-      scenarios: scenariosRes.data,
-      supplierSlug,
     });
 
-    if (!result.supplierName) {
-      return { success: false, error: 'Fornecedor não encontrado nesta sessão.' };
+    if (result.ordersApplied === 0) {
+      return { success: false, error: 'Nenhuma OC lançada para esta sessão ainda.' };
     }
 
     revalidatePath('/');
@@ -2412,7 +2398,7 @@ export async function updateMaterialsFromSupplierAction(
     return { success: true, data: result };
   } catch (err: unknown) {
     const message =
-      err instanceof Error ? err.message : 'Erro ao atualizar materiais deste fornecedor.';
+      err instanceof Error ? err.message : 'Erro ao atualizar materiais pelas OCs lançadas.';
     return { success: false, error: message };
   }
 }
