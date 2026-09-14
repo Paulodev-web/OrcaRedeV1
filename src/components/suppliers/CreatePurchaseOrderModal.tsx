@@ -6,6 +6,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -139,7 +140,7 @@ export default function CreatePurchaseOrderModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Criar OC</DialogTitle>
           <DialogDescription>
@@ -147,107 +148,117 @@ export default function CreatePurchaseOrderModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block text-sm font-medium text-gray-700">
-            Número da OC
-            <input
-              type="text"
-              value={ocNumber}
-              onChange={(e) => setOcNumber(e.target.value)}
-              placeholder="Ex.: 596"
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="block text-sm font-medium text-gray-700">
-            Fornecedor
-            <input
-              type="text"
-              value={supplierName}
-              onChange={(e) => setSupplierName(e.target.value)}
-              placeholder="Nome do fornecedor"
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="block text-sm font-medium text-gray-700">
-            Frete
-            <input
-              type="number"
-              min={0}
-              step="any"
-              value={freightValue}
-              onChange={(e) => setFreightValue(e.target.value)}
-              placeholder="0,00"
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="block text-sm font-medium text-gray-700">
-            Tipo de frete
-            <select
-              value={freightType}
-              onChange={(e) => setFreightType(e.target.value as 'cif' | 'fob' | '')}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            >
-              <option value="">Não informado</option>
-              <option value="cif">CIF (incluso no material)</option>
-              <option value="fob">FOB (à parte)</option>
-            </select>
-          </label>
-          <label className="block text-sm font-medium text-gray-700 col-span-2">
-            Data de entrega
-            <input
-              type="date"
-              value={deliveryDate}
-              onChange={(e) => setDeliveryDate(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            />
-          </label>
+        <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Número da OC
+              <input
+                type="text"
+                value={ocNumber}
+                onChange={(e) => setOcNumber(e.target.value)}
+                placeholder="Ex.: 596"
+                className="mt-1.5 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
+              />
+            </label>
+            <label className="block text-sm font-medium text-gray-700">
+              Fornecedor
+              <input
+                type="text"
+                value={supplierName}
+                onChange={(e) => setSupplierName(e.target.value)}
+                placeholder="Nome do fornecedor"
+                className="mt-1.5 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
+              />
+            </label>
+            <label className="block text-sm font-medium text-gray-700">
+              Frete
+              <input
+                type="number"
+                min={0}
+                step="any"
+                value={freightValue}
+                onChange={(e) => setFreightValue(e.target.value)}
+                placeholder="0,00"
+                className="mt-1.5 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
+              />
+            </label>
+            <label className="block text-sm font-medium text-gray-700">
+              Tipo de frete
+              <select
+                value={freightType}
+                onChange={(e) => setFreightType(e.target.value as 'cif' | 'fob' | '')}
+                className="mt-1.5 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
+              >
+                <option value="">Não informado</option>
+                <option value="cif">CIF (incluso no material)</option>
+                <option value="fob">FOB (à parte)</option>
+              </select>
+            </label>
+            <label className="block text-sm font-medium text-gray-700 sm:col-span-2">
+              Data de entrega
+              <input
+                type="date"
+                value={deliveryDate}
+                onChange={(e) => setDeliveryDate(e.target.value)}
+                className="mt-1.5 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500 sm:max-w-[calc(50%-0.5rem)]"
+              />
+            </label>
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Materiais desta OC
+            </p>
+            <div className="max-h-64 overflow-y-auto rounded-lg border border-gray-200">
+              <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <thead className="sticky top-0 bg-gray-50">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Material</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase w-24">Qtd.</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase w-32">
+                      Preço unit.
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 bg-surface">
+                  {items.map((item) => (
+                    <tr key={item.materialId}>
+                      <td className="px-3 py-2.5">
+                        <p className="font-medium text-neutral-900">{item.materialName}</p>
+                        <p className="text-xs text-gray-400">{item.materialCode}</p>
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-gray-600">
+                        {item.quantidade.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}
+                        {item.materialUnit ? ` ${item.materialUnit}` : ''}
+                      </td>
+                      <td className="px-3 py-2.5 text-right">
+                        <input
+                          type="number"
+                          min={0}
+                          step="any"
+                          value={unitPrices[item.materialId] ?? ''}
+                          onChange={(e) =>
+                            setUnitPrices((prev) => ({ ...prev, [item.materialId]: e.target.value }))
+                          }
+                          className="w-28 rounded border border-gray-300 px-2 py-1.5 text-right text-sm focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-2 text-right text-sm text-gray-600">
+              Total: <span className="font-bold text-neutral-900">{formatCurrency(total)}</span>
+            </p>
+          </div>
+
+          {error && (
+            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+          )}
         </div>
 
-        <div className="max-h-56 overflow-y-auto rounded-lg border border-gray-200">
-          <table className="min-w-full divide-y divide-gray-200 text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Material</th>
-                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase w-20">Qtd.</th>
-                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase w-28">Preço unit.</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {items.map((item) => (
-                <tr key={item.materialId}>
-                  <td className="px-3 py-2">
-                    <p className="font-medium text-neutral-900">{item.materialName}</p>
-                    <p className="text-xs text-gray-400">{item.materialCode}</p>
-                  </td>
-                  <td className="px-3 py-2 text-right text-gray-600">
-                    {item.quantidade.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}
-                    {item.materialUnit ? ` ${item.materialUnit}` : ''}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <input
-                      type="number"
-                      min={0}
-                      step="any"
-                      value={unitPrices[item.materialId] ?? ''}
-                      onChange={(e) =>
-                        setUnitPrices((prev) => ({ ...prev, [item.materialId]: e.target.value }))
-                      }
-                      className="w-24 rounded border border-gray-300 px-2 py-1 text-right text-sm"
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <p className="text-right text-sm text-gray-600">
-          Total: <span className="font-bold text-neutral-900">{formatCurrency(total)}</span>
-        </p>
-
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
-        <div className="flex justify-end gap-2">
+        <DialogFooter>
           <button
             type="button"
             onClick={() => onOpenChange(false)}
@@ -265,7 +276,7 @@ export default function CreatePurchaseOrderModal({
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             Criar OC
           </button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
