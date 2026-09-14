@@ -73,7 +73,7 @@ export async function getOrganizationScreenData(): Promise<OrganizationScreenDat
   // sem nome nenhum.
   const [{ data: profileRows }, { data: permissionRows }] = await Promise.all([
     userIds.length > 0
-      ? supabase.from("profiles").select("id, email").in("id", userIds)
+      ? supabase.from("profiles").select("id, email, full_name, phone, role").in("id", userIds)
       : Promise.resolve({ data: [] as Record<string, unknown>[] }),
     userIds.length > 0
       ? supabase
@@ -83,10 +83,17 @@ export async function getOrganizationScreenData(): Promise<OrganizationScreenDat
       : Promise.resolve({ data: [] as Record<string, unknown>[] }),
   ]);
 
-  const emailByUser = new Map(
+  const profileByUser = new Map(
     ((profileRows ?? []) as Record<string, unknown>[]).map((row) => [
       String(row.id),
-      (row.email as string | null) ?? null,
+      {
+        email: (row.email as string | null) ?? null,
+        fullName: (row.full_name as string | null) ?? null,
+        phone: (row.phone as string | null) ?? null,
+        // `profiles.role` não é papel de organização: 'manager' quer dizer
+        // conta de campo (APK), e é o que o select de Gerente da obra valida.
+        isWorkManager: row.role === "manager",
+      },
     ]),
   );
 
@@ -112,10 +119,14 @@ export async function getOrganizationScreenData(): Promise<OrganizationScreenDat
     viewerUserId,
     members: members.map((row) => {
       const userId = String(row.user_id);
+      const profile = profileByUser.get(userId);
       return {
         id: String(row.id),
         userId,
-        email: emailByUser.get(userId) ?? null,
+        email: profile?.email ?? null,
+        fullName: profile?.fullName ?? null,
+        phone: profile?.phone ?? null,
+        isWorkManager: profile?.isWorkManager ?? false,
         role: String(row.role) as OrgRole,
         sector: (row.sector as OrgSector | null) ?? null,
         isActive: Boolean(row.is_active),

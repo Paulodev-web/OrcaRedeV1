@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { AlertTriangle, Check, Copy, UserPlus } from "lucide-react";
+import { AlertTriangle, Check, Copy, HardHat, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -17,7 +17,7 @@ import { ORG_SECTOR_LABELS, ORG_SECTORS, type OrgSector } from "@/types/organiza
 const PASSWORD_ALPHABET =
   "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*?";
 
-/** Mesmo gerador de `ManagerFormDialog.tsx` — repetido em vez de extraído: dois usos não justificam um util novo ainda. */
+/** Senha temporária ditada por telefone: alfabeto sem caracteres ambíguos (0/O, 1/l/I). */
 function generateStrongPassword(length = 12): string {
   if (typeof window === "undefined" || !window.crypto?.getRandomValues) {
     let pwd = "";
@@ -37,11 +37,15 @@ const INPUT_CLASS =
 export function InviteMemberDialog({ onClose }: { onClose: () => void }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [sector, setSector] = useState<OrgSector | "">("");
+  const [isWorkManager, setIsWorkManager] = useState(false);
   const [password, setPassword] = useState(() => generateStrongPassword(12));
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const [created, setCreated] = useState<{ email: string; temporaryPassword: string } | null>(null);
+  const [created, setCreated] = useState<
+    { email: string; temporaryPassword: string; isWorkManager: boolean } | null
+  >(null);
   const [copied, setCopied] = useState(false);
 
   const firstFieldRef = useRef<HTMLInputElement | null>(null);
@@ -64,14 +68,20 @@ export function InviteMemberDialog({ onClose }: { onClose: () => void }) {
       const result = await createOrgUserAction({
         fullName,
         email,
+        phone: phone || null,
         temporaryPassword: password,
         sector: sector || null,
+        isWorkManager,
       });
       if (!result.success) {
         setError(result.error);
         return;
       }
-      setCreated({ email: result.data.email, temporaryPassword: result.data.temporaryPassword });
+      setCreated({
+        email: result.data.email,
+        temporaryPassword: result.data.temporaryPassword,
+        isWorkManager,
+      });
     });
   };
 
@@ -109,6 +119,20 @@ export function InviteMemberDialog({ onClose }: { onClose: () => void }) {
                 <p>Compartilhe a senha por um canal seguro. Depois de fechar, ela some daqui.</p>
               </div>
             </div>
+            {created.isWorkManager && (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+                <p className="flex items-center gap-2 font-medium text-slate-700">
+                  <HardHat className="h-4 w-4 shrink-0 text-slate-400" />
+                  Conta de campo
+                </p>
+                <p className="mt-1">
+                  É com este e-mail e esta senha que a pessoa entra no app Android — o app pede a
+                  troca da senha no primeiro acesso. Para ela receber uma obra, escolha o nome no
+                  campo <strong>Gerente</strong> ao criar ou editar a obra.
+                </p>
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <label className="block text-xs font-medium uppercase tracking-wide text-slate-500">
                 E-mail
@@ -159,7 +183,8 @@ export function InviteMemberDialog({ onClose }: { onClose: () => void }) {
             </DialogTitle>
             <DialogDescription>
               Cria uma conta de verdade, com senha temporária. A pessoa nasce sem acesso a nenhum
-              módulo — você concede depois, na lista de membros.
+              módulo — você concede depois, na lista de membros. É aqui também que se cadastra
+              gerente de obra.
             </DialogDescription>
           </DialogHeader>
 
@@ -189,6 +214,19 @@ export function InviteMemberDialog({ onClose }: { onClose: () => void }) {
                 required
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
+                className={INPUT_CLASS}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="invite-phone" className="block text-sm font-medium text-slate-700">
+                Telefone <span className="text-xs font-normal text-slate-400">(opcional)</span>
+              </label>
+              <input
+                id="invite-phone"
+                type="tel"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
                 className={INPUT_CLASS}
               />
             </div>
@@ -235,6 +273,25 @@ export function InviteMemberDialog({ onClose }: { onClose: () => void }) {
                 className={`${INPUT_CLASS} font-mono`}
               />
             </div>
+
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+              <input
+                type="checkbox"
+                checked={isWorkManager}
+                onChange={(event) => setIsWorkManager(event.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-accent-600 focus:ring-accent-500"
+              />
+              <span className="min-w-0">
+                <span className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <HardHat className="h-4 w-4 shrink-0 text-slate-400" />
+                  Gerente de obra (app de campo)
+                </span>
+                <span className="mt-1 block text-xs text-slate-500">
+                  A conta entra no app Android e passa a aparecer no campo Gerente das obras. Em
+                  troca, ela não executa as ações de engenheiro aqui no sistema.
+                </span>
+              </span>
+            </label>
 
             {error && (
               <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>

@@ -2,13 +2,12 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient, getCachedAuthUser } from '@/lib/supabaseServer';
 import { ensureEngineerProfile } from '@/services/people/ensureEngineerProfile';
-import { getManagers } from '@/services/people/getManagers';
 import { getCrewMembers } from '@/services/people/getCrewMembers';
 import { PeoplePage } from '@/components/andamento-obra/people/PeoplePage';
 
 export const metadata: Metadata = {
-  title: 'Pessoas — Andamento de Obra',
-  description: 'Gerencie gerentes de obra e membros de equipe.',
+  title: 'Equipe de campo — Andamento de Obra',
+  description: 'Cadastre os membros de equipe que atuam nas frentes de trabalho.',
 };
 
 export default async function PessoasPage() {
@@ -25,15 +24,12 @@ export default async function PessoasPage() {
     redirect('/');
   }
 
-  const [managers, crew] = await Promise.all([
-    getManagers(supabase, user.id),
-    getCrewMembers(supabase, user.id),
-  ]);
+  const crew = await getCrewMembers(supabase, user.id);
 
   return (
     <main className="p-6 lg:p-8">
       <div className="mx-auto max-w-7xl">
-        <PeoplePage initialManagers={managers} initialCrew={crew} />
+        <PeoplePage initialCrew={crew} />
       </div>
     </main>
   );

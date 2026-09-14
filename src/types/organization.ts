@@ -11,7 +11,10 @@
  *   sector → onde a pessoa trabalha (roteamento do Quadro de Trabalho)
  *   módulo → o que ela vê e edita (`module_permissions`)
  *
- * `profiles.role` (engineer/manager) não entra aqui: é contrato do APK Android.
+ * `profiles.role` (engineer/manager) é o quarto eixo — contrato do APK Android,
+ * não da organização. Aparece aqui só como `isWorkManager`, porque desde que o
+ * cadastro de gerente saiu de Andamento de Obra esta tela é o único lugar que
+ * o liga e desliga.
  */
 
 export const ORG_SECTORS = ["comercial", "engenharia", "compras", "execucao"] as const;
@@ -45,9 +48,17 @@ export interface OrgMemberRow {
   id: string;
   userId: string;
   email: string | null;
+  fullName: string | null;
+  phone: string | null;
   role: OrgRole;
   sector: OrgSector | null;
   isActive: boolean;
+  /**
+   * `profiles.role = 'manager'`: a pessoa entra no APK de campo e pode ser
+   * escolhida no campo "Gerente" de uma obra. É o quarto eixo, e o único que
+   * não vive em tabela da organização — `profiles` é contrato do Android.
+   */
+  isWorkManager: boolean;
   /** Módulos com `can_view`, e quais deles também têm `can_edit`. */
   modules: { moduleKey: string; canView: boolean; canEdit: boolean }[];
 }
@@ -68,8 +79,17 @@ export interface OrganizationScreenData {
 export interface CreateOrgUserInput {
   fullName: string;
   email: string;
+  phone: string | null;
   temporaryPassword: string;
   sector: OrgSector | null;
+  /** Cria a conta já como gerente de obra (acesso ao app de campo). */
+  isWorkManager: boolean;
+}
+
+export interface UpdateWorkManagerInput {
+  userId: string;
+  fullName: string;
+  phone: string | null;
 }
 
 export interface CreatedOrgUser {

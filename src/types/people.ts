@@ -29,20 +29,6 @@ export interface CurrentUserProfile {
   isActive: boolean;
 }
 
-export interface CreateManagerInput {
-  fullName: string;
-  email: string;
-  phone?: string | null;
-  temporaryPassword: string;
-}
-
-export interface UpdateManagerInput {
-  id: string;
-  fullName: string;
-  phone?: string | null;
-  isActive: boolean;
-}
-
 export interface CreateCrewInput {
   fullName: string;
   role?: string | null;
@@ -64,8 +50,3 @@ export interface UpdateCrewInput {
 export type ActionResult<T = undefined> =
   | { success: true; data?: T }
   | { success: false; error: string };
-
-export interface CreateManagerResultData {
-  manager: ManagerRow;
-  temporaryPassword: string;
-}

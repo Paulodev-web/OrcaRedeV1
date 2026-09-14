@@ -1,16 +1,26 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Building2, Check, Loader2, ShieldCheck, UserMinus, UserPlus } from "lucide-react";
+import {
+  Building2,
+  Check,
+  HardHat,
+  Loader2,
+  ShieldCheck,
+  UserMinus,
+  UserPlus,
+} from "lucide-react";
 import { toast } from "sonner";
 import { APP_MODULES } from "@/components/layout/modules";
 import { InviteMemberDialog } from "./InviteMemberDialog";
 import {
   setMemberActiveAction,
+  setMemberFieldAccessAction,
   setMemberRoleAction,
   setMemberSectorAction,
   setModulePermissionAction,
   switchActiveOrgAction,
+  updateWorkManagerAction,
 } from "../_actions/organization";
 import {
   ORG_ROLE_LABELS,
@@ -116,7 +126,7 @@ export function OrganizacaoManager({ data }: { data: OrganizationScreenData }) {
             <h2 className="text-base font-semibold text-brand-navy">Equipe</h2>
             <p className="mt-1 text-sm text-slate-500">
               {canManage
-                ? "Defina o setor de cada pessoa e a quais módulos ela tem acesso."
+                ? "Defina o setor de cada pessoa, a quais módulos ela tem acesso e quem é gerente de obra no app de campo."
                 : "Somente o administrador da organização pode alterar acessos."}
             </p>
           </div>
@@ -143,6 +153,7 @@ export function OrganizacaoManager({ data }: { data: OrganizationScreenData }) {
                 key={member.id}
                 member={member}
                 canManage={canManage}
+                canInvite={canInvite}
                 isSelf={member.userId === viewerUserId}
                 isPending={isPending}
                 expanded={expandedUserId === member.userId}
@@ -166,6 +177,8 @@ export function OrganizacaoManager({ data }: { data: OrganizationScreenData }) {
 interface MemberRowProps {
   member: OrgMemberRow;
   canManage: boolean;
+  /** Mexer em conta de campo é privilégio de owner, igual ao cadastro. */
+  canInvite: boolean;
   isSelf: boolean;
   isPending: boolean;
   expanded: boolean;
@@ -179,6 +192,7 @@ interface MemberRowProps {
 function MemberRow({
   member,
   canManage,
+  canInvite,
   isSelf,
   isPending,
   expanded,
@@ -200,13 +214,25 @@ function MemberRow({
 
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-slate-900">
-            {member.email ?? "Sem e-mail cadastrado"}
+            {member.fullName?.trim() || member.email || "Sem e-mail cadastrado"}
             {isSelf && <span className="ml-2 text-xs font-normal text-slate-400">(você)</span>}
           </p>
-          <p className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-500">
+            {member.fullName?.trim() && member.email && (
+              <>
+                <span className="truncate">{member.email}</span>
+                <span aria-hidden>·</span>
+              </>
+            )}
             {member.role === "owner" && <ShieldCheck className="h-3 w-3 text-accent-600" />}
             {ORG_ROLE_LABELS[member.role]}
-            {!member.isActive && " · acesso desativado"}
+            {member.isWorkManager && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-700">
+                <HardHat className="h-3 w-3" />
+                Gerente de obra
+              </span>
+            )}
+            {!member.isActive && <span>· acesso desativado</span>}
           </p>
         </div>
 
@@ -262,7 +288,7 @@ function MemberRow({
           onClick={onToggleExpand}
           className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
         >
-          Módulos ({member.modules.filter((mod) => mod.canView).length})
+          Acessos ({member.modules.filter((mod) => mod.canView).length})
         </button>
 
         {canManage && !isSelf && (
@@ -294,7 +320,22 @@ function MemberRow({
       </div>
 
       {expanded && (
-        <div className="border-t border-slate-100 bg-slate-50/50 px-6 py-4">
+        <div className="space-y-5 border-t border-slate-100 bg-slate-50/50 px-6 py-4">
+          <FieldAccessPanel
+            // Os campos de nome e telefone são estado local; a chave os remonta
+            // quando a action revalida, para não segurarem o valor antigo.
+            key={`${member.fullName ?? ""}|${member.phone ?? ""}`}
+            member={member}
+            canInvite={canInvite}
+            isSelf={isSelf}
+            isPending={isPending}
+            onRun={onRun}
+          />
+
+          <div>
+          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+            Módulos do sistema
+          </p>
           <p className="mb-3 text-xs text-slate-500">
             Ver dá acesso de leitura; editar inclui ver.
           </p>
@@ -339,9 +380,134 @@ function MemberRow({
               );
             })}
           </ul>
+          </div>
         </div>
       )}
     </li>
+  );
+}
+
+/**
+ * Acesso ao app de campo — o que antes era a aba "Gerentes de Obra" de
+ * Andamento de Obra → Pessoas.
+ *
+ * Fica dentro do painel expandido, junto dos módulos, porque é a mesma pergunta
+ * feita de outro jeito: o que esta pessoa alcança. Nome e telefone só aparecem
+ * aqui porque só no gerente eles saem do sistema (cabeçalho da obra, chat, e o
+ * telefone que o engenheiro usa para ligar para o campo).
+ */
+function FieldAccessPanel({
+  member,
+  canInvite,
+  isSelf,
+  isPending,
+  onRun,
+}: {
+  member: OrgMemberRow;
+  canInvite: boolean;
+  isSelf: boolean;
+  isPending: boolean;
+  onRun: MemberRowProps["onRun"];
+}) {
+  const [fullName, setFullName] = useState(member.fullName ?? "");
+  const [phone, setPhone] = useState(member.phone ?? "");
+
+  const dirty =
+    fullName.trim() !== (member.fullName ?? "").trim() ||
+    phone.trim() !== (member.phone ?? "").trim();
+
+  const isGovernance = member.role === "owner" || member.role === "admin";
+  const canToggle = canInvite && !isSelf && (member.isWorkManager || !isGovernance);
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-surface p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+            <HardHat className="h-3.5 w-3.5 text-slate-400" />
+            App de campo
+          </p>
+          <p className="mt-1 text-sm text-slate-600">
+            {member.isWorkManager
+              ? "Entra no app Android e pode ser escolhida no campo Gerente de uma obra."
+              : "Sem acesso ao app Android."}
+          </p>
+        </div>
+
+        {canToggle ? (
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() =>
+              onRun(
+                () => setMemberFieldAccessAction(member.userId, !member.isWorkManager),
+                member.isWorkManager
+                  ? "Acesso ao app de campo removido."
+                  : "Agora esta pessoa é gerente de obra.",
+              )
+            }
+            className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
+              member.isWorkManager
+                ? "border-slate-300 text-slate-600 hover:bg-red-50 hover:text-red-700"
+                : "border-accent-600 text-accent-700 hover:bg-accent-50"
+            }`}
+          >
+            {member.isWorkManager ? "Remover acesso de campo" : "Tornar gerente de obra"}
+          </button>
+        ) : (
+          <p className="max-w-xs shrink-0 text-xs text-slate-400">
+            {isSelf
+              ? "Você não pode transformar a própria conta em conta de campo."
+              : !canInvite
+                ? "Só o dono da organização altera isto."
+                : "Rebaixe para Membro antes: quem administra a organização não vira conta de campo."}
+          </p>
+        )}
+      </div>
+
+      {member.isWorkManager && (
+        <div className="mt-4 flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4">
+          <label className="min-w-[12rem] flex-1 text-xs text-slate-500">
+            Nome
+            <input
+              type="text"
+              value={fullName}
+              disabled={!canInvite || isPending}
+              onChange={(event) => setFullName(event.target.value)}
+              className={`mt-1 w-full ${SELECT_CLASS}`}
+            />
+          </label>
+          <label className="min-w-[10rem] flex-1 text-xs text-slate-500">
+            Telefone
+            <input
+              type="tel"
+              value={phone}
+              disabled={!canInvite || isPending}
+              onChange={(event) => setPhone(event.target.value)}
+              className={`mt-1 w-full ${SELECT_CLASS}`}
+            />
+          </label>
+          <button
+            type="button"
+            disabled={!canInvite || isPending || !dirty || fullName.trim().length === 0}
+            onClick={() =>
+              onRun(
+                () =>
+                  updateWorkManagerAction({
+                    userId: member.userId,
+                    fullName,
+                    phone: phone || null,
+                  }),
+                "Dados do gerente atualizados.",
+              )
+            }
+            className="rounded-lg bg-accent-600 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-accent-700 disabled:opacity-40"
+          >
+            Salvar
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 

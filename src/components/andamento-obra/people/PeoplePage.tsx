@@ -2,19 +2,15 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ChevronRight, Grid3X3 } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ManagersTable } from './ManagersTable';
+import { ChevronRight, Grid3X3, Settings } from 'lucide-react';
 import { CrewTable } from './CrewTable';
-import type { CrewMemberRow, ManagerRow } from '@/types/people';
+import type { CrewMemberRow } from '@/types/people';
 
 interface PeoplePageProps {
-  initialManagers: ManagerRow[];
   initialCrew: CrewMemberRow[];
 }
 
-export function PeoplePage({ initialManagers, initialCrew }: PeoplePageProps) {
-  const [managers, setManagers] = useState<ManagerRow[]>(initialManagers);
+export function PeoplePage({ initialCrew }: PeoplePageProps) {
   const [crew, setCrew] = useState<CrewMemberRow[]>(initialCrew);
 
   return (
@@ -36,29 +32,28 @@ export function PeoplePage({ initialManagers, initialCrew }: PeoplePageProps) {
             Andamento de obra
           </Link>
           <ChevronRight className="h-3 w-3 shrink-0 text-gray-300" aria-hidden />
-          <span className="font-medium text-gray-600">Pessoas</span>
+          <span className="font-medium text-gray-600">Equipe de campo</span>
         </p>
-        <h1 className="mt-1 text-2xl font-bold text-neutral-900">Pessoas</h1>
+        <h1 className="mt-1 text-2xl font-bold text-neutral-900">Equipe de campo</h1>
         <p className="mt-1 max-w-2xl text-sm text-gray-500">
-          Cadastre gerentes de obra (com login no sistema) e membros de equipe que vão atuar nas
-          frentes de trabalho.
+          Quem vai atuar nas frentes de trabalho. São pessoas sem login: entram no diário, nas
+          equipes e nos apontamentos, mas não acessam o sistema.
         </p>
       </div>
 
-      <Tabs defaultValue="managers" className="w-full">
-        <TabsList>
-          <TabsTrigger value="managers">Gerentes de Obra</TabsTrigger>
-          <TabsTrigger value="crew">Equipe</TabsTrigger>
-        </TabsList>
+      <p className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+        <Settings className="h-4 w-4 shrink-0 text-gray-400" />
+        Gerente de obra é conta com login, e agora se cadastra em
+        <Link
+          href="/configuracoes/organizacao"
+          className="font-medium text-link underline-offset-2 hover:underline"
+        >
+          Configurações → Organização e equipe
+        </Link>
+        .
+      </p>
 
-        <TabsContent value="managers">
-          <ManagersTable managers={managers} onChange={setManagers} />
-        </TabsContent>
-
-        <TabsContent value="crew">
-          <CrewTable crew={crew} onChange={setCrew} />
-        </TabsContent>
-      </Tabs>
+      <CrewTable crew={crew} onChange={setCrew} />
     </div>
   );
 }

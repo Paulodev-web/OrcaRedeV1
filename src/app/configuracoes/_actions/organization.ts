@@ -11,6 +11,7 @@ import {
   type OrgSector,
   type CreateOrgUserInput,
   type CreatedOrgUser,
+  type UpdateWorkManagerInput,
 } from "@/types/organization";
 
 type ActionResult = { success: boolean; error?: string };
@@ -174,7 +175,19 @@ export async function setMemberActiveAction(
       return { success: false, error: error.message };
     }
 
+    // Quem é gerente de obra vive em dois lugares: `org_members.is_active`
+    // governa o sistema web, `profiles.is_active` governa o APK e o select de
+    // Gerente da obra (`ensureManagerBelongsToEngineer`). Desativar em um só
+    // deixaria a pessoa desligada aqui e ainda entrando no app de campo.
+    const admin = createSupabaseServiceRoleClient();
+    await admin
+      .from("profiles")
+      .update({ is_active: isActive })
+      .eq("id", memberUserId)
+      .eq("role", "manager");
+
     revalidateOrg();
+    revalidatePath("/tools/andamento-obra");
     return { success: true };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Erro inesperado ao alterar o acesso.";
@@ -251,14 +264,22 @@ function normalizeEmail(raw: string): string {
   return raw.trim().toLowerCase();
 }
 
+function nullIfBlank(value: string | null | undefined): string | null {
+  const trimmed = value?.trim() ?? "";
+  return trimmed.length === 0 ? null : trimmed;
+}
+
 /**
  * Cadastra uma pessoa nova na organização — só o `owner` (`ensureOrgOwner`).
  *
- * Reaproveita o caminho de `createManager` (`src/actions/people.ts`): conta de
- * verdade via Auth Admin API com senha temporária. O mesmo trigger
- * `on_auth_user_created` cria `profiles` automaticamente com `role: 'engineer'`
- * — não passamos `user_metadata.role`, porque `profiles.role` é contrato do
- * APK e não tem relação nenhuma com a organização.
+ * Conta de verdade via Auth Admin API com senha temporária, criada pelo trigger
+ * `on_auth_user_created` a partir do metadata.
+ *
+ * `isWorkManager` é o que antes era o "Novo Gerente" de Andamento de Obra →
+ * Pessoas: grava `profiles.role = 'manager'` + `created_by`, o par que dá
+ * acesso ao APK de campo e habilita a pessoa no select "Gerente" da obra. Os
+ * dois cadastros viraram um só porque eram a mesma pessoa em duas listas que
+ * não se enxergavam.
  *
  * Nasce SEM nenhum módulo, de propósito: desde 20260811130000, ausência de
  * linha em `module_permissions` vale como "sem acesso". Não autoconceder aqui
@@ -274,8 +295,10 @@ export async function createOrgUserAction(
   try {
     const fullName = input.fullName?.trim() ?? "";
     const email = normalizeEmail(input.email ?? "");
+    const phone = nullIfBlank(input.phone);
     const temporaryPassword = input.temporaryPassword ?? "";
     const sector = input.sector;
+    const isWorkManager = input.isWorkManager === true;
 
     if (fullName.length === 0) {
       return { success: false, error: "Informe o nome completo." };
@@ -302,7 +325,18 @@ export async function createOrgUserAction(
       email,
       password: temporaryPassword,
       email_confirm: true,
-      user_metadata: { full_name: fullName },
+      user_metadata: {
+        full_name: fullName,
+        phone: phone ?? "",
+        // `role: 'manager'` + `created_by` é o par que o trigger exige para
+        // gravar uma conta de campo — sem o segundo ele rebaixa para engineer.
+        // `must_change_password` é o que obriga a troca no primeiro acesso ao
+        // APK: a senha daqui costuma ser fraca de propósito, porque alguém vai
+        // ditá-la por telefone.
+        ...(isWorkManager
+          ? { role: "manager", created_by: gate.userId, must_change_password: true }
+          : {}),
+      },
     });
 
     if (createError || !created?.user) {
@@ -335,7 +369,32 @@ export async function createOrgUserAction(
       };
     }
 
+    // O trigger `on_auth_user_created` já leu o metadata e gravou `profiles`.
+    // Reescrevemos mesmo assim porque ele faz `ON CONFLICT DO NOTHING`: se o
+    // perfil já existia (banco restaurado, conta recriada), o nome e o papel de
+    // campo teriam sido silenciosamente ignorados.
+    const { error: profileError } = await admin
+      .from("profiles")
+      .update({
+        full_name: fullName,
+        phone,
+        email,
+        is_active: true,
+        ...(isWorkManager ? { role: "manager", created_by: gate.userId } : {}),
+      })
+      .eq("id", newUserId);
+
+    if (profileError) {
+      await admin.auth.admin.deleteUser(newUserId).catch(() => undefined);
+      await admin.from("org_members").delete().eq("user_id", newUserId).eq("org_id", gate.orgId);
+      return {
+        success: false,
+        error: `Falha ao registrar o perfil. A conta foi revertida: ${profileError.message}`,
+      };
+    }
+
     revalidateOrg();
+    if (isWorkManager) revalidatePath("/tools/andamento-obra");
 
     return {
       success: true,
@@ -343,6 +402,153 @@ export async function createOrgUserAction(
     };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Erro inesperado ao cadastrar a pessoa.";
+    return { success: false, error: message };
+  }
+}
+
+
+/**
+ * Liga e desliga o acesso de campo (APK) de alguém que já é da organização.
+ *
+ * Mexe em `profiles.role`, não em `org_members`: são eixos diferentes, e é
+ * `role = 'manager'` + `created_by` que o APK e `ensureManagerBelongsToEngineer`
+ * (`src/actions/works.ts`) leem.
+ *
+ * `created_by` recebe o owner que ligou a chave — o mesmo escopo por engenheiro
+ * que o cadastro antigo tinha, e o que faz a pessoa aparecer no select de
+ * Gerente das obras dele.
+ */
+export async function setMemberFieldAccessAction(
+  memberUserId: string,
+  enabled: boolean,
+): Promise<ActionResult> {
+  try {
+    const gate = await ensureOrgOwner();
+    if (!gate.ok) return { success: false, error: gate.error };
+
+    if (memberUserId === gate.userId) {
+      return {
+        success: false,
+        error: "Você não pode transformar a própria conta em conta de campo.",
+      };
+    }
+
+    const { data: membership, error: membershipError } = await gate.supabase
+      .from("org_members")
+      .select("role")
+      .eq("org_id", gate.orgId)
+      .eq("user_id", memberUserId)
+      .maybeSingle();
+
+    if (membershipError) return { success: false, error: membershipError.message };
+    if (!membership) {
+      return { success: false, error: "Esta pessoa não pertence à organização ativa." };
+    }
+
+    const admin = createSupabaseServiceRoleClient();
+
+    if (enabled) {
+      // Conta de campo não passa por `ensureEngineer`: virar gerente tira as
+      // ações de engenheiro do sistema web. Quem administra a organização não
+      // pode perder isso sem perceber, então a troca é barrada antes.
+      if (membership.role === "owner" || membership.role === "admin") {
+        return {
+          success: false,
+          error:
+            "Quem administra a organização não pode virar conta de campo. Rebaixe a pessoa para Membro antes.",
+        };
+      }
+
+      const { error } = await admin
+        .from("profiles")
+        .update({ role: "manager", created_by: gate.userId })
+        .eq("id", memberUserId);
+
+      if (error) return { success: false, error: error.message };
+    } else {
+      // Tirar o acesso deixaria `works.manager_id` apontando para quem já não é
+      // gerente: a obra continuaria mostrando o nome e o APK deixaria de abrir,
+      // sem erro visível em lugar nenhum.
+      const { count, error: worksError } = await admin
+        .from("works")
+        .select("id", { count: "exact", head: true })
+        .eq("manager_id", memberUserId);
+
+      if (worksError) return { success: false, error: worksError.message };
+      if ((count ?? 0) > 0) {
+        return {
+          success: false,
+          error: `Esta pessoa é gerente de ${count} obra${count === 1 ? "" : "s"}. Troque o gerente ${
+            count === 1 ? "dessa obra" : "dessas obras"
+          } antes de remover o acesso de campo.`,
+        };
+      }
+
+      const { error } = await admin
+        .from("profiles")
+        .update({ role: "engineer", created_by: null })
+        .eq("id", memberUserId);
+
+      if (error) return { success: false, error: error.message };
+    }
+
+    revalidateOrg();
+    revalidatePath("/tools/andamento-obra");
+    return { success: true };
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : "Erro inesperado ao alterar o acesso de campo.";
+    return { success: false, error: message };
+  }
+}
+
+/**
+ * Corrige nome e telefone de um gerente de obra.
+ *
+ * Existe só para gerente porque é o único caso em que esses campos aparecem
+ * fora do sistema web: o nome vai no cabeçalho da obra e no chat, o telefone é
+ * como o engenheiro liga para o campo. E-mail e senha seguem imutáveis pela UI.
+ */
+export async function updateWorkManagerAction(
+  input: UpdateWorkManagerInput,
+): Promise<ActionResult> {
+  try {
+    const fullName = input.fullName?.trim() ?? "";
+    if (fullName.length === 0) {
+      return { success: false, error: "Informe o nome completo." };
+    }
+
+    const gate = await ensureOrgOwner();
+    if (!gate.ok) return { success: false, error: gate.error };
+
+    const { data: membership } = await gate.supabase
+      .from("org_members")
+      .select("id")
+      .eq("org_id", gate.orgId)
+      .eq("user_id", input.userId)
+      .maybeSingle();
+
+    if (!membership) {
+      return { success: false, error: "Esta pessoa não pertence à organização ativa." };
+    }
+
+    const admin = createSupabaseServiceRoleClient();
+    const { data, error } = await admin
+      .from("profiles")
+      .update({ full_name: fullName, phone: nullIfBlank(input.phone) })
+      .eq("id", input.userId)
+      .eq("role", "manager")
+      .select("id")
+      .maybeSingle();
+
+    if (error) return { success: false, error: error.message };
+    if (!data) return { success: false, error: "Gerente de obra não encontrado." };
+
+    revalidateOrg();
+    revalidatePath("/tools/andamento-obra");
+    return { success: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Erro inesperado ao salvar os dados.";
     return { success: false, error: message };
   }
 }
