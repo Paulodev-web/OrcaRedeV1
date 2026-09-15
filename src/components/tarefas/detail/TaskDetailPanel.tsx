@@ -7,7 +7,7 @@ import { Building2, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
 import { updateTaskFieldsAction } from '@/app/tarefas/_actions/tasks';
 import { TaskSidebar } from './TaskSidebar';
-import { TaskAttachmentGrid } from './TaskAttachmentGrid';
+import { TaskAttachmentList } from './TaskAttachmentList';
 import { TaskActivity } from './TaskActivity';
 import type { TaskBoardMember, TaskDetail } from '@/types/tasks';
 
@@ -96,7 +96,7 @@ export function TaskDetailPanel({ task, members, viewerId, orgId }: TaskDetailPa
           />
         </section>
 
-        <TaskAttachmentGrid
+        <TaskAttachmentList
           taskId={task.id}
           orgId={orgId}
           viewerId={viewerId}

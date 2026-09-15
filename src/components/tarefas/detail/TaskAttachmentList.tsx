@@ -11,7 +11,7 @@ import {
 import { uploadTaskFiles } from './uploadTaskFiles';
 import type { TaskAttachmentRow } from '@/types/tasks';
 
-interface TaskAttachmentGridProps {
+interface TaskAttachmentListProps {
   taskId: string;
   orgId: string;
   viewerId: string;
@@ -31,20 +31,26 @@ function humanSize(bytes: number | null): string {
 }
 
 /**
- * Grade de anexos do card, com upload por arrastar, colar ou botão.
+ * Lista de anexos do card, com upload por arrastar, colar ou botão.
  *
  * Mostra tanto os anexos soltos do card quanto os que vieram dentro de uma
  * mensagem do chat — é o `message_id NULL` de `task_attachments` que permite as
  * duas portas caírem no mesmo lugar, sem o usuário ter que escolher onde põe o
  * arquivo.
+ *
+ * Era uma grade de miniaturas 4/3 e virou lista: quatro arquivos já empurravam
+ * a conversa para fora da tela, e no card de uma obra o anexo é quase sempre um
+ * PDF, cuja miniatura é um ícone genérico. O nome do arquivo é o que identifica,
+ * não a imagem. A lista ainda rola dentro de si (`max-h`) para que vinte anexos
+ * não recomecem o mesmo problema.
  */
-export function TaskAttachmentGrid({
+export function TaskAttachmentList({
   taskId,
   orgId,
   viewerId,
   attachments,
   onChanged,
-}: TaskAttachmentGridProps) {
+}: TaskAttachmentListProps) {
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState<{ done: number; total: number } | null>(null);
@@ -114,11 +120,11 @@ export function TaskAttachmentGrid({
         void handleFiles(Array.from(e.dataTransfer.files));
       }}
       className={cn(
-        'rounded-xl border border-neutral-200 bg-surface p-4 transition-colors duration-150',
+        'rounded-xl border border-neutral-200 bg-surface p-3 transition-colors duration-150',
         dragging && 'border-accent-300 bg-accent-50',
       )}
     >
-      <header className="mb-3 flex items-center justify-between">
+      <header className="mb-2 flex items-center justify-between">
         <h2 className="flex items-center gap-1.5 text-sm font-semibold text-neutral-900">
           <Paperclip className="h-3.5 w-3.5 text-neutral-400" aria-hidden />
           Anexos
@@ -154,42 +160,47 @@ export function TaskAttachmentGrid({
       )}
 
       {attachments.length === 0 && !uploading ? (
-        <p className="rounded-lg border border-dashed border-neutral-300 px-3 py-6 text-center text-xs text-neutral-400">
+        <p className="rounded-lg border border-dashed border-neutral-300 px-3 py-4 text-center text-xs text-neutral-400">
           Arraste arquivos aqui, cole um print ou use “Enviar arquivo”.
         </p>
       ) : (
-        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+        <ul className="max-h-44 space-y-1 overflow-y-auto pr-0.5">
           {attachments.map((attachment) => {
             const url = urls[attachment.storagePath];
             const image = isImage(attachment.mimeType);
             const mine = attachment.uploadedBy === viewerId;
 
             return (
-              <li key={attachment.id} className="group relative">
+              <li
+                key={attachment.id}
+                className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 transition-colors hover:border-neutral-300 hover:bg-neutral-50"
+              >
                 <button
                   type="button"
                   onClick={() => (image ? setLightbox(attachment) : url && window.open(url, '_blank'))}
-                  className="block w-full overflow-hidden rounded-lg border border-neutral-200 bg-neutral-50 text-left transition-shadow hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500"
+                  className="flex min-w-0 flex-1 items-center gap-2.5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500"
                 >
                   {image && url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={url}
                       alt={attachment.fileName}
-                      width={attachment.width ?? undefined}
-                      height={attachment.height ?? undefined}
-                      className="aspect-4/3 w-full object-cover"
+                      className="h-8 w-8 shrink-0 rounded-md object-cover"
                       loading="lazy"
                     />
                   ) : (
-                    <span className="flex aspect-4/3 w-full items-center justify-center">
-                      <FileText className="h-6 w-6 text-neutral-400" aria-hidden />
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-neutral-100">
+                      <FileText className="h-4 w-4 text-neutral-400" aria-hidden />
                     </span>
                   )}
-                  <span className="block truncate px-2 py-1.5 text-[11px] text-neutral-600">
-                    {attachment.fileName}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs text-neutral-700">
+                      {attachment.fileName}
+                    </span>
                     {attachment.fileSize ? (
-                      <span className="text-neutral-400"> · {humanSize(attachment.fileSize)}</span>
+                      <span className="block text-[11px] text-neutral-400">
+                        {humanSize(attachment.fileSize)}
+                      </span>
                     ) : null}
                   </span>
                 </button>
@@ -199,7 +210,9 @@ export function TaskAttachmentGrid({
                     type="button"
                     onClick={() => void handleDelete(attachment)}
                     aria-label={`Remover ${attachment.fileName}`}
-                    className="absolute right-1 top-1 hidden rounded-md bg-surface/90 p-1 text-neutral-500 shadow-2xs transition-colors hover:text-red-600 group-hover:block"
+                    // Sempre visível, ao contrário do hover da grade antiga: na
+                    // linha sobra espaço, e no toque não existe hover.
+                    className="shrink-0 rounded-md p-1.5 text-neutral-300 transition-colors hover:bg-red-50 hover:text-red-600"
                   >
                     <Trash2 className="h-3.5 w-3.5" aria-hidden />
                   </button>

@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { updateTaskFieldsAction } from '@/app/tarefas/_actions/tasks';
 import { TaskSidebar } from './TaskSidebar';
-import { TaskAttachmentGrid } from './TaskAttachmentGrid';
+import { TaskAttachmentList } from './TaskAttachmentList';
 import { TaskActivity } from './TaskActivity';
 import {
   TASK_SECTOR_LABELS,
@@ -43,9 +43,10 @@ const TONE_PILL = {
  *   2. As duas colunas rolam de forma INDEPENDENTE. A lateral de propriedades
  *      é curta; se ela dividisse o scroll com a atividade, sobraria um vazio
  *      enorme do lado direito.
- *   3. A atividade ocupa a altura que sobra (`fill`), em vez do teto fixo de
- *      520px que a página cheia usa. Num modal de 85vh, um teto fixo deixaria
- *      uma faixa morta embaixo.
+ *   3. A atividade ocupa a altura que sobra (`fill`), em vez do teto fixo que a
+ *      página cheia usa. Num modal de altura fixa, um teto deixaria uma faixa
+ *      morta embaixo — e é dessa sobra que a conversa vive, então os anexos
+ *      acima dela são uma lista curta com rolagem própria, não uma grade.
  *
  * Fechar é `router.back()`: a rota interceptadora empilhou uma entrada de
  * histórico, então voltar desfaz a navegação e o board reaparece intacto —
@@ -82,7 +83,7 @@ export function TaskModal({ task, members, viewerId, orgId }: TaskModalProps) {
           aria-describedby={undefined}
           className={cn(
             'fixed left-1/2 top-1/2 z-50 flex w-[min(1120px,94vw)] -translate-x-1/2 -translate-y-1/2 flex-col',
-            'h-[min(860px,88vh)] overflow-hidden rounded-xl border border-neutral-200 bg-surface shadow-xl',
+            'h-[min(920px,92vh)] overflow-hidden rounded-xl border border-neutral-200 bg-surface shadow-xl',
             'duration-200 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
             'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
           )}
@@ -135,14 +136,24 @@ export function TaskModal({ task, members, viewerId, orgId }: TaskModalProps) {
               </div>
 
               <div className="flex shrink-0 items-center gap-1">
-                <Link
+                {/*
+                  `<a>` puro, e não `<Link>`, de propósito.
+
+                  Este modal JÁ está na URL `/tarefas/[taskId]` — quem o desenha
+                  é a rota interceptadora `@card/(.)[taskId]`. Um `<Link>` para
+                  a mesma URL é navegação client-side para onde já se está: o
+                  Next não faz nada e o botão parece quebrado. Só um carregamento
+                  de documento inteiro escapa da interceptação, porque ela vale
+                  apenas para navegação client-side, e cai na página cheia.
+                */}
+                <a
                   href={`/tarefas/${task.id}`}
                   title="Abrir em página cheia"
                   aria-label="Abrir em página cheia"
                   className="inline-flex h-8 w-8 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
                 >
                   <Maximize2 className="h-4 w-4" aria-hidden />
-                </Link>
+                </a>
                 <DialogPrimitive.Close
                   aria-label="Fechar"
                   className="inline-flex h-8 w-8 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
@@ -171,7 +182,7 @@ export function TaskModal({ task, members, viewerId, orgId }: TaskModalProps) {
               />
 
               <div className="shrink-0">
-                <TaskAttachmentGrid
+                <TaskAttachmentList
                   taskId={task.id}
                   orgId={orgId}
                   viewerId={viewerId}

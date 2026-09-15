@@ -213,8 +213,15 @@ export function TaskActivity({
 
       <div
         className={cn(
+          // Altura de leitura: o relato do campo era que a conversa cabia em
+          // poucas linhas e não dava para ler a resposta do colega.
+          //
+          // No modal (`fill`) quem resolve é o espaço que a lista de anexos
+          // devolveu — e NÃO um `min-h`, que numa tela baixa empurraria o campo
+          // de escrever para fora da área recortada pelo modal. Na página cheia,
+          // onde a página inteira rola, o piso é seguro e o teto subiu.
           'flex-1 space-y-3 overflow-y-auto px-4 py-4',
-          fill ? 'min-h-0' : 'max-h-[520px]',
+          fill ? 'min-h-0' : 'min-h-[22rem] max-h-[min(40rem,60vh)]',
         )}
         onScroll={(e) => {
           const el = e.currentTarget;
