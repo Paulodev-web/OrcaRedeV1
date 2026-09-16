@@ -335,11 +335,17 @@ export async function createWorkFromBudget(
     return { success: false, error: 'O nome da obra precisa ter ao menos 3 caracteres.' };
   }
 
+  const { data: orgId, error: orgIdError } = await gate.supabase.rpc('current_org_id');
+  if (orgIdError || !orgId) {
+    return { success: false, error: 'Não foi possível identificar a organização ativa.' };
+  }
+
   const serviceRole = createSupabaseServiceRoleClient();
   const ctx: ImportContext = { workId: null, planStoragePath: null, planUploaded: false };
 
   try {
     const insertBody: Record<string, unknown> = {
+      org_id: orgId,
       engineer_id: gate.engineerId,
       manager_id: managerId,
       budget_id: budget.budgetId,
