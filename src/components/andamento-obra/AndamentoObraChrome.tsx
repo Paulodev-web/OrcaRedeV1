@@ -6,7 +6,6 @@ import { ClipboardList } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ModuleHeader } from "@/components/layout/ModuleHeader";
 import { useAppSidebarChrome } from "@/components/layout/useAppSidebarChrome";
-import { ModuleSubNav } from "./ModuleSubNav";
 
 export interface AndamentoObraChromeProps {
   children: ReactNode;
@@ -26,9 +25,6 @@ export interface AndamentoObraChromeProps {
  * à mão) pelo `ModuleHeader` compartilhado, que é o mesmo que Propostas,
  * Configurações e OrçaRede usam — e, com ele, ganha a sidebar global que as
  * rotas de `/tools/andamento-obra` nunca tiveram.
- *
- * O `ModuleSubNav` (abas Obras/Pessoas/Checklists/Notificações/Admin) entra no
- * slot `tabs` do `ModuleHeader`, no lugar de ficar solto abaixo do header.
  *
  * Dentro de uma obra este cabeçalho sai de cena: o layout da obra monta o seu
  * próprio `ModuleHeader`, com o nome da obra no título e as abas dela. Sem
@@ -57,7 +53,6 @@ export function AndamentoObraChrome({ children, bell }: AndamentoObraChromeProps
             description="Cronograma, marcos e acompanhamento em campo."
             breadcrumb={[{ label: "Andamento de Obra" }]}
             actions={bell}
-            tabs={<ModuleSubNav />}
           />
         )
       }
