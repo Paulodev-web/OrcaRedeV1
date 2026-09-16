@@ -2,7 +2,10 @@
 
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
-import { AcompanhamentoCenter, type WorkImpedimentCounts } from './AcompanhamentoCenter';
+import {
+  AcompanhamentoCenter,
+  type WorkImpedimentCounts,
+} from './AcompanhamentoCenter';
 import { NotificationsCenter } from './NotificationsCenter';
 import { NewWorkDialog } from './NewWorkDialog';
 import { EmptyWorksState } from './EmptyWorksState';
@@ -35,7 +38,9 @@ export function WorksHomeView({
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Andamento de Obra</h1>
+          <h1 className="text-2xl font-bold text-neutral-900">
+            Andamento de Obra
+          </h1>
           <p className="mt-1 max-w-2xl text-sm text-gray-500">
             Central de Acompanhamento e Notificações das suas obras em campo.
           </p>
@@ -54,6 +59,7 @@ export function WorksHomeView({
         <div className="grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
           <AcompanhamentoCenter
             grouped={grouped}
+            managers={managers}
             unreadCountsByWorkId={unreadCountsByWorkId}
             impedimentCountsByWorkId={impedimentCountsByWorkId}
             lastRecordByWorkId={lastRecordByWorkId}

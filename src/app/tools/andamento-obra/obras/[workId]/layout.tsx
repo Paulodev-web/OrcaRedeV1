@@ -10,9 +10,14 @@ import { getPendingMilestonesCount } from '@/services/works/getPendingMilestones
 import { getWorkOpenAlert } from '@/services/works/getWorkOpenAlert';
 import { getWorkExecutionStats } from '@/services/works/getWorkExecutionStats';
 import { getInstallationsCountByWork } from '@/services/works/getInstallationsCountByWork';
-import { getManagers } from '@/services/people/getManagers';
 import { ensureOrgAdmin } from '@/lib/auth/ensureOrgAdmin';
-import { WorkHeader } from '@/components/andamento-obra/works/WorkHeader';
+import { ClipboardList } from 'lucide-react';
+import { ModuleHeader } from '@/components/layout/ModuleHeader';
+import { ModuleHeaderBell } from '@/components/andamento-obra/ModuleHeaderBell';
+import { WorkHeaderActions } from '@/components/andamento-obra/works/WorkHeaderActions';
+import { WorkHeaderMeta } from '@/components/andamento-obra/works/WorkHeaderMeta';
+import { WorkKPIs } from '@/components/andamento-obra/works/WorkKPIs';
+import { ImportedBudgetBadge } from '@/components/andamento-obra/works/ImportedBudgetBadge';
 import { WorkTabsNav } from '@/components/andamento-obra/works/WorkTabsNav';
 import { WorkAlertBanner } from '@/components/andamento-obra/works/WorkAlertBanner';
 
@@ -39,7 +44,6 @@ export default async function WorkDetailLayout({ children, params }: LayoutProps
 
   const [
     milestones,
-    managers,
     postsPlanned,
     chatUnread,
     marcosPending,
@@ -49,7 +53,6 @@ export default async function WorkDetailLayout({ children, params }: LayoutProps
     orgAdminGate,
   ] = await Promise.all([
     getWorkMilestones(supabase, workId),
-    getManagers(supabase, user.id),
     getWorkProjectPostsCount(supabase, workId),
     getUnreadMessagesCount(supabase, workId, 'engineer'),
     getPendingMilestonesCount(supabase, workId),
@@ -67,19 +70,51 @@ export default async function WorkDetailLayout({ children, params }: LayoutProps
       {/* Acima do cabecalho de proposito: obra parada nao espera o engenheiro
           navegar ate ela. */}
       <WorkAlertBanner workId={workId} alert={openAlert} />
-      <WorkHeader
-        work={work}
-        milestones={milestones}
-        managers={managers}
-        postsPlanned={postsPlanned}
-        postsInstalled={postsInstalled}
-        execution={executionStats[workId] ?? null}
-      />
-      <WorkTabsNav
-        workId={workId}
-        chatUnreadCount={chatUnread}
-        marcosPendingCount={marcosPending}
-        canManageOrg={canManageOrg}
+      {/* Um cabecalho so, o do sistema. Antes havia dois empilhados: o do
+          modulo, vindo do layout de cima, e um `WorkHeader` proprio da obra,
+          cada um com a sua trilha. O `AndamentoObraChrome` esconde o dele
+          quando a rota e a de uma obra, e este toma o lugar. */}
+      <ModuleHeader
+        icon={ClipboardList}
+        title={
+          <span className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className="truncate">{work.name}</span>
+            {work.budgetId && <ImportedBudgetBadge />}
+          </span>
+        }
+        description={<WorkHeaderMeta work={work} />}
+        breadcrumb={[
+          // A raiz do modulo ja e a lista de obras, entao nao existe um nivel
+          // "Obras" separado para apontar: seriam dois itens com o mesmo href.
+          { label: 'Andamento de Obra', href: '/tools/andamento-obra' },
+          { label: work.name },
+        ]}
+        actions={
+          <>
+            <WorkHeaderActions workId={work.id} status={work.status} />
+            {/* O sino vinha do cabecalho do modulo, que aqui nao e renderizado.
+                Sem isto o engenheiro perderia as notificacoes justamente na
+                tela onde passa mais tempo. */}
+            <ModuleHeaderBell />
+          </>
+        }
+        extra={
+          <WorkKPIs
+            work={work}
+            milestones={milestones}
+            postsPlanned={postsPlanned}
+            postsInstalled={postsInstalled}
+            execution={executionStats[workId] ?? null}
+          />
+        }
+        tabs={
+          <WorkTabsNav
+            workId={workId}
+            chatUnreadCount={chatUnread}
+            marcosPendingCount={marcosPending}
+            canManageOrg={canManageOrg}
+          />
+        }
       />
       <main className="p-6 lg:p-8">
         <div className="mx-auto max-w-7xl">{children}</div>

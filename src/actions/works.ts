@@ -254,6 +254,30 @@ export async function cancelWork(id: string): Promise<ActionResult<{ workId: str
   return updateWork({ id, status: 'cancelled' });
 }
 
+/**
+ * Apaga a obra e tudo que pende dela (marcos, alertas, checklists, mensagens,
+ * postes, equipe...) via ON DELETE CASCADE do banco. Não limpa arquivos do
+ * Storage (PDF do projeto, fotos) — ficam órfãos. Aceitável como primeira
+ * versão; se virar problema, replicar o rollback de Storage que
+ * `createWorkFromBudget` já faz.
+ */
+export async function deleteWork(id: string): Promise<ActionResult> {
+  const gate = await ensureEngineer();
+  if (!gate.ok) return { success: false, error: gate.error };
+
+  const { error } = await gate.supabase
+    .from('works')
+    .delete()
+    .eq('id', id)
+    .eq('engineer_id', gate.engineerId);
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath(WORKS_PATH);
+
+  return { success: true };
+}
+
 // =============================================================================
 // Importação de orçamento -> obra (Fase 3)
 // =============================================================================

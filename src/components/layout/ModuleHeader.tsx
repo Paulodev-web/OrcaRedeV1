@@ -23,6 +23,12 @@ export interface ModuleHeaderProps {
   actions?: ReactNode;
   /** Slot de abas de etapa — normalmente um `<StepTabs />`. */
   tabs?: ReactNode;
+  /**
+   * Faixa entre o título e as abas. Existe para os números da entidade (os
+   * KPIs de uma obra, por exemplo) caberem no cabeçalho do sistema em vez de
+   * exigirem um segundo cabeçalho só deles.
+   */
+  extra?: ReactNode;
   /** Bloco auxiliar entre o título e as ações (ex.: caixa de notas). */
   aside?: ReactNode;
   sticky?: boolean;
@@ -43,6 +49,7 @@ export function ModuleHeader({
   showHome = true,
   actions,
   tabs,
+  extra,
   aside,
   sticky = false,
   className,
@@ -123,6 +130,8 @@ export function ModuleHeader({
             </div>
           ) : null}
         </div>
+
+        {extra ? <div className="mt-4">{extra}</div> : null}
 
         {tabs ? <div className="mt-4">{tabs}</div> : null}
       </div>

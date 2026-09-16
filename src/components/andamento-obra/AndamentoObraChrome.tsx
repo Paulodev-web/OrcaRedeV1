@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { ClipboardList } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ModuleHeader } from "@/components/layout/ModuleHeader";
@@ -28,9 +29,20 @@ export interface AndamentoObraChromeProps {
  *
  * O `ModuleSubNav` (abas Obras/Pessoas/Checklists/Notificações/Admin) entra no
  * slot `tabs` do `ModuleHeader`, no lugar de ficar solto abaixo do header.
+ *
+ * Dentro de uma obra este cabeçalho sai de cena: o layout da obra monta o seu
+ * próprio `ModuleHeader`, com o nome da obra no título e as abas dela. Sem
+ * isso seriam dois cabeçalhos empilhados, cada um com a sua trilha e o seu
+ * conjunto de abas, que era o que a tela mostrava.
  */
+function isWorkDetailRoute(pathname: string | null): boolean {
+  return /^\/tools\/andamento-obra\/obras\/[^/]+/.test(pathname ?? "");
+}
+
 export function AndamentoObraChrome({ children, bell }: AndamentoObraChromeProps) {
   const { sections, sidebarFooter } = useAppSidebarChrome();
+  const pathname = usePathname();
+  const inWorkDetail = isWorkDetailRoute(pathname);
 
   return (
     <AppLayout
@@ -38,14 +50,16 @@ export function AndamentoObraChrome({ children, bell }: AndamentoObraChromeProps
       activeItemId="andamento-obra"
       sidebarFooter={sidebarFooter}
       header={
-        <ModuleHeader
-          icon={ClipboardList}
-          title="Andamento de Obra"
-          description="Cronograma, marcos e acompanhamento em campo."
-          breadcrumb={[{ label: "Andamento de Obra" }]}
-          actions={bell}
-          tabs={<ModuleSubNav />}
-        />
+        inWorkDetail ? null : (
+          <ModuleHeader
+            icon={ClipboardList}
+            title="Andamento de Obra"
+            description="Cronograma, marcos e acompanhamento em campo."
+            breadcrumb={[{ label: "Andamento de Obra" }]}
+            actions={bell}
+            tabs={<ModuleSubNav />}
+          />
+        )
       }
     >
       {children}

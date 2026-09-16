@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { WorkCard } from './WorkCard';
 import type { WorksGrouped, WorkWithManager } from '@/types/works';
+import type { ManagerRow } from '@/types/people';
 
 /** Impedimentos por obra, já agregados em batch pela page. */
 export interface WorkImpedimentCounts {
@@ -17,6 +18,7 @@ export interface WorkImpedimentCounts {
 
 interface AcompanhamentoCenterProps {
   grouped: WorksGrouped;
+  managers: ManagerRow[];
   unreadCountsByWorkId?: Record<string, number>;
   impedimentCountsByWorkId?: Record<string, WorkImpedimentCounts>;
   /** Último registro de execução por obra, para sinalizar obra em silêncio. */
@@ -64,6 +66,7 @@ const GROUPS: GroupConfig[] = [
 
 export function AcompanhamentoCenter({
   grouped,
+  managers,
   unreadCountsByWorkId,
   impedimentCountsByWorkId,
   lastRecordByWorkId,
@@ -72,7 +75,8 @@ export function AcompanhamentoCenter({
     Object.fromEntries(GROUPS.map((g) => [g.key, g.defaultOpen])),
   );
 
-  const toggle = (key: string) => setOpenKey((prev) => ({ ...prev, [key]: !prev[key] }));
+  const toggle = (key: string) =>
+    setOpenKey((prev) => ({ ...prev, [key]: !prev[key] }));
 
   return (
     <div className="space-y-3">
@@ -94,7 +98,9 @@ export function AcompanhamentoCenter({
                 <span className="text-base" aria-hidden>
                   {group.emoji}
                 </span>
-                <span className="text-sm font-semibold text-neutral-900">{group.label}</span>
+                <span className="text-sm font-semibold text-neutral-900">
+                  {group.label}
+                </span>
                 <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
                   {items.length}
                 </span>
@@ -117,6 +123,7 @@ export function AcompanhamentoCenter({
                         <WorkCard
                           key={work.id}
                           work={work}
+                          managers={managers}
                           unreadCount={unreadCountsByWorkId?.[work.id] ?? 0}
                           impedimentosGraves={impedimentos?.graves ?? 0}
                           impedimentosAtivos={impedimentos?.ativos ?? 0}
