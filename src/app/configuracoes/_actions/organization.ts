@@ -552,3 +552,90 @@ export async function updateWorkManagerAction(
     return { success: false, error: message };
   }
 }
+
+/**
+ * Reatribui a obra a outro engenheiro da organização.
+ *
+ * `works.engineer_id` nasce em createWork() e nunca mudava — a policy
+ * `works_update` (WITH CHECK auth.uid() = engineer_id) trava a troca vinda do
+ * cliente porque a linha nova teria que pertencer a quem está autenticado.
+ * Por isso a escrita aqui é feita com o service-role client, só depois do
+ * gate de permissão: mesmo padrão de setMemberFieldAccessAction acima.
+ *
+ * `trg_sync_work_engineer` (20260917000000) cuida de espelhar a troca em
+ * `work_members` e de notificar o novo engenheiro — não repetido aqui.
+ *
+ * `manager_id` não é tocado: fica como está, por decisão deliberada (a obra
+ * não perde o gerente de campo só porque trocou de engenheiro responsável).
+ */
+export async function reassignWorkEngineerAction(
+  workId: string,
+  newEngineerId: string,
+): Promise<ActionResult> {
+  try {
+    if (!workId || !newEngineerId) {
+      return { success: false, error: "Obra ou engenheiro inválido." };
+    }
+
+    const gate = await ensureOrgAdmin();
+    if (!gate.ok) return { success: false, error: gate.error };
+
+    const { data: work, error: workError } = await gate.supabase
+      .from("works")
+      .select("id, engineer_id, org_id")
+      .eq("id", workId)
+      .maybeSingle();
+
+    if (workError) return { success: false, error: workError.message };
+    if (!work || work.org_id !== gate.orgId) {
+      return { success: false, error: "Esta obra não pertence à organização ativa." };
+    }
+    if (work.engineer_id === newEngineerId) {
+      return { success: true };
+    }
+
+    const { data: membership, error: membershipError } = await gate.supabase
+      .from("org_members")
+      .select("is_active")
+      .eq("org_id", gate.orgId)
+      .eq("user_id", newEngineerId)
+      .maybeSingle();
+
+    if (membershipError) return { success: false, error: membershipError.message };
+    if (!membership) {
+      return { success: false, error: "Esta pessoa não pertence à organização ativa." };
+    }
+    if (!membership.is_active) {
+      return { success: false, error: "Esta pessoa está com o acesso desativado na organização." };
+    }
+
+    const { data: profile, error: profileError } = await gate.supabase
+      .from("profiles")
+      .select("role, is_active")
+      .eq("id", newEngineerId)
+      .maybeSingle();
+
+    if (profileError) return { success: false, error: profileError.message };
+    if (!profile || profile.role !== "engineer") {
+      return { success: false, error: "Esta pessoa não é um engenheiro — só engenheiros podem ser responsáveis por uma obra." };
+    }
+    if (!profile.is_active) {
+      return { success: false, error: "Este engenheiro está inativo." };
+    }
+
+    const admin = createSupabaseServiceRoleClient();
+    const { error } = await admin
+      .from("works")
+      .update({ engineer_id: newEngineerId })
+      .eq("id", workId);
+
+    if (error) return { success: false, error: error.message };
+
+    revalidatePath("/tools/andamento-obra");
+    revalidatePath(`/tools/andamento-obra/obras/${workId}`);
+    return { success: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Erro inesperado ao reatribuir a obra.";
+    return { success: false, error: message };
+  }
+}

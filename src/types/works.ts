@@ -64,12 +64,14 @@ export interface WorkRow {
 
 export interface WorkWithManager extends WorkRow {
   managerName: string | null;
+  engineerName: string | null;
 }
 
 export interface WorkMilestone {
   id: string;
   workId: string;
-  code: MilestoneCode;
+  /** Marcos padrao usam um MilestoneCode; marcos criados manualmente usam codigo livre (ex: "custom-<uuid>"). */
+  code: MilestoneCode | (string & {});
   name: string;
   orderIndex: number;
   status: MilestoneStatus;
@@ -549,6 +551,18 @@ export const MILESTONE_NOTES_MAX = 1000;
 export const MILESTONE_REJECTION_REASON_MIN = 5;
 export const MILESTONE_REJECTION_REASON_MAX = 1000;
 export const MILESTONE_EVIDENCE_DOWNLOAD_URL_TTL_SECONDS = 60 * 30;
+export const MILESTONE_NAME_MIN = 2;
+export const MILESTONE_NAME_MAX = 80;
+
+export interface CreateWorkMilestoneInput {
+  workId: string;
+  name: string;
+}
+
+export interface RenameWorkMilestoneInput {
+  milestoneId: string;
+  name: string;
+}
 
 // =============================================================================
 // Progresso da obra (Fase 6)
