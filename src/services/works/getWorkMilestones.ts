@@ -1,6 +1,6 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { MilestoneCode, MilestoneStatus, WorkMilestone } from '@/types/works';
+import type { MilestoneStatus, WorkMilestone } from '@/types/works';
 
 export async function getWorkMilestones(
   supabase: SupabaseClient,
@@ -17,7 +17,7 @@ export async function getWorkMilestones(
   return data.map((row) => ({
     id: row.id as string,
     workId: row.work_id as string,
-    code: row.code as MilestoneCode,
+    code: row.code as string,
     name: row.name as string,
     orderIndex: row.order_index as number,
     status: row.status as MilestoneStatus,

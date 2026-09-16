@@ -11,13 +11,17 @@ import { getDailyLogSignedUrls } from '@/services/works/getDailyLogSignedUrls';
 import { getMilestoneFullHistory } from '@/services/works/getMilestoneFullHistory';
 import {
   DAILY_LOG_MEDIA_LIMITS,
+  MILESTONE_NAME_MAX,
+  MILESTONE_NAME_MIN,
   MILESTONE_NOTES_MAX,
   MILESTONE_REJECTION_REASON_MAX,
   MILESTONE_REJECTION_REASON_MIN,
   type ActionResult,
+  type CreateWorkMilestoneInput,
   type GetUploadUrlForMilestoneEvidenceInput,
   type MilestoneEvidenceUploadInfo,
   type MilestoneFullHistory,
+  type RenameWorkMilestoneInput,
   type ReportMilestoneInput,
 } from '@/types/works';
 
@@ -595,4 +599,167 @@ export async function loadMilestoneHistory(
   const signedUrls = await getDailyLogSignedUrls(paths);
 
   return { success: true, data: { history, signedUrls } };
+}
+
+function validateMilestoneName(name: string): string | null {
+  if (name.length < MILESTONE_NAME_MIN || name.length > MILESTONE_NAME_MAX) {
+    return `Nome deve ter entre ${MILESTONE_NAME_MIN} e ${MILESTONE_NAME_MAX} caracteres.`;
+  }
+  return null;
+}
+
+/**
+ * Engineer adiciona um marco customizado ao fim da lista da obra
+ * (order_index = max atual + 1, status inicial 'pending').
+ */
+export async function createWorkMilestone(
+  input: CreateWorkMilestoneInput,
+): Promise<ActionResult<{ milestoneId: string }>> {
+  const name = (input.name ?? '').trim();
+  const nameError = validateMilestoneName(name);
+  if (nameError) return { success: false, error: nameError };
+
+  const gate = await ensureMember(input.workId);
+  if (!gate.ok) return { success: false, error: gate.error };
+  if (gate.role !== 'engineer') {
+    return { success: false, error: 'Apenas o engenheiro pode adicionar marcos.' };
+  }
+
+  const { data: last, error: maxErr } = await gate.supabase
+    .from('work_milestones')
+    .select('order_index')
+    .eq('work_id', input.workId)
+    .order('order_index', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (maxErr) return { success: false, error: maxErr.message };
+
+  const nextOrderIndex = last ? (last.order_index as number) + 1 : 1;
+  const code = `custom-${generateUuid()}`;
+
+  const { data: inserted, error: insErr } = await gate.supabase
+    .from('work_milestones')
+    .insert({ work_id: input.workId, code, name, order_index: nextOrderIndex })
+    .select('id')
+    .single();
+
+  if (insErr || !inserted) {
+    return { success: false, error: insErr?.message ?? 'Falha ao criar marco.' };
+  }
+
+  revalidatePath(WORKS_PATH);
+  revalidatePath(`${WORKS_PATH}/obras/${input.workId}/progresso`);
+  revalidatePath(`${WORKS_PATH}/obras/${input.workId}/visao-geral`);
+
+  return { success: true, data: { milestoneId: inserted.id as string } };
+}
+
+/**
+ * Engineer renomeia um marco existente. Nao mexe em status/historico.
+ */
+export async function renameWorkMilestone(
+  input: RenameWorkMilestoneInput,
+): Promise<ActionResult> {
+  if (!input.milestoneId || !UUID_RE.test(input.milestoneId)) {
+    return { success: false, error: 'ID de marco invalido.' };
+  }
+  const name = (input.name ?? '').trim();
+  const nameError = validateMilestoneName(name);
+  if (nameError) return { success: false, error: nameError };
+
+  const supabase = await createSupabaseServerClient();
+  try {
+    await requireAuthUserId(supabase);
+  } catch {
+    return { success: false, error: 'Sessao expirada. Faca login novamente.' };
+  }
+
+  const { data: milestone, error: msErr } = await supabase
+    .from('work_milestones')
+    .select('id, work_id')
+    .eq('id', input.milestoneId)
+    .maybeSingle();
+
+  if (msErr) return { success: false, error: msErr.message };
+  if (!milestone) return { success: false, error: 'Marco nao encontrado.' };
+
+  const workId = milestone.work_id as string;
+  const gate = await ensureMember(workId);
+  if (!gate.ok) return { success: false, error: gate.error };
+  if (gate.role !== 'engineer') {
+    return { success: false, error: 'Apenas o engenheiro pode renomear marcos.' };
+  }
+
+  const { error: updErr } = await supabase
+    .from('work_milestones')
+    .update({ name })
+    .eq('id', input.milestoneId);
+
+  if (updErr) {
+    return { success: false, error: updErr.message };
+  }
+
+  revalidatePath(WORKS_PATH);
+  revalidatePath(`${WORKS_PATH}/obras/${workId}/progresso`);
+
+  return { success: true };
+}
+
+/**
+ * Engineer exclui um marco que ainda nao foi reportado (status='pending').
+ * Marcos com historico (reportado/aprovado/rejeitado) nao podem ser
+ * excluidos: a RLS bloqueia e aqui devolvemos uma mensagem clara antes.
+ */
+export async function deleteWorkMilestone(input: {
+  milestoneId: string;
+}): Promise<ActionResult> {
+  if (!input.milestoneId || !UUID_RE.test(input.milestoneId)) {
+    return { success: false, error: 'ID de marco invalido.' };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  try {
+    await requireAuthUserId(supabase);
+  } catch {
+    return { success: false, error: 'Sessao expirada. Faca login novamente.' };
+  }
+
+  const { data: milestone, error: msErr } = await supabase
+    .from('work_milestones')
+    .select('id, work_id, status')
+    .eq('id', input.milestoneId)
+    .maybeSingle();
+
+  if (msErr) return { success: false, error: msErr.message };
+  if (!milestone) return { success: false, error: 'Marco nao encontrado.' };
+
+  const workId = milestone.work_id as string;
+  const gate = await ensureMember(workId);
+  if (!gate.ok) return { success: false, error: gate.error };
+  if (gate.role !== 'engineer') {
+    return { success: false, error: 'Apenas o engenheiro pode excluir marcos.' };
+  }
+
+  if ((milestone.status as string) !== 'pending') {
+    return {
+      success: false,
+      error: 'So e possivel excluir marcos que ainda nao foram reportados.',
+    };
+  }
+
+  const { error: delErr } = await supabase
+    .from('work_milestones')
+    .delete()
+    .eq('id', input.milestoneId);
+
+  if (delErr) {
+    return { success: false, error: delErr.message };
+  }
+
+  revalidatePath(WORKS_PATH);
+  revalidatePath(`${WORKS_PATH}/obras/${workId}/progresso`);
+  revalidatePath(`${WORKS_PATH}/obras/${workId}/visao-geral`);
+
+  return { success: true };
 }
