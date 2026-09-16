@@ -1,7 +1,6 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
-  MilestoneCode,
   MilestoneFullHistory,
   MilestoneStatus,
   WorkMilestoneEvent,
@@ -65,7 +64,7 @@ export async function getMilestoneFullHistory(
   const milestone: WorkMilestoneWithApproval = {
     id: m.id,
     workId: m.work_id,
-    code: m.code as MilestoneCode,
+    code: m.code as string,
     name: m.name,
     orderIndex: m.order_index,
     status: m.status,

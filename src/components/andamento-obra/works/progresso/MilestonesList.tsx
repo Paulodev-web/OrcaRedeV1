@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronRight, ListChecks, WifiOff } from 'lucide-react';
+import { toast } from 'sonner';
+import { ChevronRight, ListChecks, Pencil, Plus, Trash2, WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase as supabaseBrowser } from '@/lib/supabaseClient';
 import type {
@@ -13,7 +14,8 @@ import type {
 } from '@/types/works';
 import { MilestoneStatusBadge } from './MilestoneStatusBadge';
 import { MilestoneDetailsDrawer } from './MilestoneDetailsDrawer';
-import { loadMilestoneHistory } from '@/actions/workMilestones';
+import { MilestoneFormDialog } from './MilestoneFormDialog';
+import { deleteWorkMilestone, loadMilestoneHistory } from '@/actions/workMilestones';
 
 interface MilestonesListProps {
   workId: string;
@@ -31,9 +33,35 @@ export function MilestonesList({
   initialMilestones,
 }: MilestonesListProps) {
   const router = useRouter();
-  const [milestones] = useState<WorkMilestoneWithApproval[]>(initialMilestones);
+  // Nao usar useState(initialMilestones): mudar a prop nao reinicializa state
+  // em re-renders, entao criar/excluir marco (e ate updates via realtime)
+  // ficariam invisiveis ate um reload manual.
+  const milestones = initialMilestones;
   const [openId, setOpenId] = useState<string | null>(null);
   const [realtimeStatus, setRealtimeStatus] = useState<RealtimeStatus>('connecting');
+  const [formDialog, setFormDialog] = useState<
+    { mode: 'create' } | { mode: 'edit'; milestone: { id: string; name: string } } | null
+  >(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [, startDeleteTransition] = useTransition();
+  const canManage = viewerRole === 'engineer';
+
+  function handleDelete(milestoneId: string, name: string) {
+    const confirmed = confirm(`Excluir o marco "${name}"? Essa ação não pode ser desfeita.`);
+    if (!confirmed) return;
+
+    setDeletingId(milestoneId);
+    startDeleteTransition(async () => {
+      const result = await deleteWorkMilestone({ milestoneId });
+      setDeletingId(null);
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success('Marco excluído.');
+      router.refresh();
+    });
+  }
 
   const loadHistory = useCallback(
     async (milestoneId: string): Promise<{
@@ -112,9 +140,21 @@ export function MilestonesList({
 
   return (
     <section className="space-y-3">
-      <div className="flex items-center gap-2">
-        <ListChecks className="h-4 w-4 text-link" />
-        <h2 className="text-sm font-semibold text-neutral-900">Marcos da obra</h2>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <ListChecks className="h-4 w-4 text-link" />
+          <h2 className="text-sm font-semibold text-neutral-900">Marcos da obra</h2>
+        </div>
+        {canManage && (
+          <button
+            type="button"
+            onClick={() => setFormDialog({ mode: 'create' })}
+            className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-surface px-2 py-1 text-xs font-medium text-neutral-900 hover:bg-gray-50"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Adicionar
+          </button>
+        )}
       </div>
 
       {realtimeStatus === 'disconnected' && (
@@ -126,12 +166,12 @@ export function MilestonesList({
 
       <ol className="space-y-2">
         {milestones.map((m) => (
-          <li key={m.id}>
+          <li key={m.id} className="flex items-stretch gap-1.5">
             <button
               type="button"
               onClick={() => setOpenId(m.id)}
               className={cn(
-                'flex w-full items-center justify-between rounded-lg border border-gray-200 bg-surface px-3 py-2.5 text-left text-sm shadow-sm transition',
+                'flex flex-1 items-center justify-between rounded-lg border border-gray-200 bg-surface px-3 py-2.5 text-left text-sm shadow-sm transition',
                 'hover:border-accent-500/50 hover:shadow',
               )}
             >
@@ -153,6 +193,30 @@ export function MilestonesList({
               </div>
               <ChevronRight className="h-4 w-4 flex-shrink-0 text-gray-400" />
             </button>
+
+            {canManage && (
+              <div className="flex flex-shrink-0 items-center gap-1">
+                <button
+                  type="button"
+                  title="Renomear marco"
+                  onClick={() => setFormDialog({ mode: 'edit', milestone: { id: m.id, name: m.name } })}
+                  className="rounded-md border border-gray-200 bg-surface p-2 text-gray-500 transition hover:bg-gray-50 hover:text-neutral-900"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                {m.status === 'pending' && (
+                  <button
+                    type="button"
+                    title="Excluir marco"
+                    disabled={deletingId === m.id}
+                    onClick={() => handleDelete(m.id, m.name)}
+                    className="rounded-md border border-gray-200 bg-surface p-2 text-gray-500 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
           </li>
         ))}
       </ol>
@@ -167,6 +231,18 @@ export function MilestonesList({
           workStatusCancelled={workStatus === 'cancelled'}
           loadHistory={loadHistory}
           onChanged={() => router.refresh()}
+        />
+      )}
+
+      {canManage && (
+        <MilestoneFormDialog
+          open={formDialog !== null}
+          onOpenChange={(open) => {
+            if (!open) setFormDialog(null);
+          }}
+          workId={workId}
+          milestone={formDialog?.mode === 'edit' ? formDialog.milestone : null}
+          onSaved={() => router.refresh()}
         />
       )}
     </section>
