@@ -5,7 +5,7 @@ import { getWorkById } from '@/services/works/getWorkById';
 import { getViewerWorkRole } from '@/services/works/getViewerWorkRole';
 import { getWorkMessages } from '@/services/works/getWorkMessages';
 import { getAttachmentSignedUrls } from '@/services/works/getAttachmentSignedUrls';
-import { markMessagesAsRead } from '@/actions/workMessages';
+import { markMessagesRead } from '@/services/works/markMessagesRead';
 import { ChatRoom } from '@/components/andamento-obra/works/chat/ChatRoom';
 
 interface ChatPageProps {
@@ -39,7 +39,11 @@ export default async function ChatPage({ params }: ChatPageProps) {
 
   // Marca mensagens como lidas no carregamento (idempotente).
   // Realiza no servidor para que a contagem ja venha zerada na proxima visita.
-  await markMessagesAsRead(workId);
+  //
+  // Usa o serviço, não a Server Action: a action chama revalidatePath, e o
+  // Next recusa revalidar durante um render ("used revalidatePath during
+  // render which is unsupported"). Quem revalida é o ChatRoom, do cliente.
+  await markMessagesRead(supabase, workId, viewerRole);
 
   const { items, hasMore } = await getWorkMessages(supabase, workId);
   const orderedItems = [...items].reverse();

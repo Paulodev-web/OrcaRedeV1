@@ -639,3 +639,77 @@ export async function reassignWorkEngineerAction(
     return { success: false, error: message };
   }
 }
+
+/**
+ * Troca (ou remove) o gerente de obra da obra, na mesma aba "Responsável".
+ *
+ * O gerente só pode ser alguém que o ENGENHEIRO ATUAL da obra cadastrou
+ * (`profiles.created_by = works.engineer_id`) — mesma regra de
+ * `ensureManagerBelongsToEngineer` em `src/actions/works.ts`, aqui repetida
+ * porque aquele helper não é exportável (arquivo `"use server"`: só pode
+ * exportar async function, e não queremos esse validador virável em server
+ * action direta pelo cliente). Se a obra tiver acabado de trocar de
+ * engenheiro, o pool de gerentes já reflete o novo dono — é assim que a tela
+ * busca a lista (`getManagers(supabase, work.engineerId)`).
+ *
+ * `managerId = null` limpa o gerente. `trg_sync_work_manager` (já existente
+ * desde 20260504140000) cuida de `work_members` — nada a fazer aqui.
+ */
+export async function reassignWorkManagerAction(
+  workId: string,
+  managerId: string | null,
+): Promise<ActionResult> {
+  try {
+    if (!workId) {
+      return { success: false, error: "Obra inválida." };
+    }
+
+    const gate = await ensureOrgAdmin();
+    if (!gate.ok) return { success: false, error: gate.error };
+
+    const { data: work, error: workError } = await gate.supabase
+      .from("works")
+      .select("id, engineer_id, manager_id, org_id")
+      .eq("id", workId)
+      .maybeSingle();
+
+    if (workError) return { success: false, error: workError.message };
+    if (!work || work.org_id !== gate.orgId) {
+      return { success: false, error: "Esta obra não pertence à organização ativa." };
+    }
+    if ((work.manager_id ?? null) === managerId) {
+      return { success: true };
+    }
+
+    if (managerId) {
+      const { data: profile, error: profileError } = await gate.supabase
+        .from("profiles")
+        .select("role, created_by, is_active")
+        .eq("id", managerId)
+        .maybeSingle();
+
+      if (profileError) return { success: false, error: profileError.message };
+      if (!profile || profile.role !== "manager" || profile.created_by !== work.engineer_id) {
+        return { success: false, error: "Gerente inválido para o engenheiro responsável desta obra." };
+      }
+      if (!profile.is_active) {
+        return { success: false, error: "Este gerente está inativo." };
+      }
+    }
+
+    const admin = createSupabaseServiceRoleClient();
+    const { error } = await admin
+      .from("works")
+      .update({ manager_id: managerId })
+      .eq("id", workId);
+
+    if (error) return { success: false, error: error.message };
+
+    revalidatePath("/tools/andamento-obra");
+    revalidatePath(`/tools/andamento-obra/obras/${workId}`);
+    return { success: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Erro inesperado ao trocar o gerente.";
+    return { success: false, error: message };
+  }
+}
