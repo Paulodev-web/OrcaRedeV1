@@ -1,9 +1,46 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidateBudgetLists } from '@/lib/revalidateBudgetLists';
 import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
 
 type ActionResult = { success: boolean; error?: string };
+
+/**
+ * Impede que uma pasta vire descendente de si mesma.
+ *
+ * Sobe a cadeia de ancestrais a partir do novo pai: se `folderId` aparecer no
+ * caminho, a operação criaria um ciclo e a pasta (com tudo dentro dela)
+ * sumiria da árvore — não haveria caminho da raiz até ela.
+ */
+async function assertNoFolderCycle(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  folderId: string,
+  newParentId: string | null
+): Promise<ActionResult> {
+  if (!newParentId) return { success: true };
+
+  const { data: allFolders, error: fetchError } = await supabase
+    .from('budget_folders')
+    .select('id, parent_id');
+
+  if (fetchError) {
+    return { success: false, error: `Erro ao verificar hierarquia de pastas: ${fetchError.message}` };
+  }
+
+  const parentMap = new Map((allFolders ?? []).map((f) => [f.id, f.parent_id]));
+  let currentId: string | null = newParentId;
+  while (currentId) {
+    if (currentId === folderId) {
+      return {
+        success: false,
+        error: 'Não é possível mover uma pasta para dentro de si mesma ou de suas subpastas.',
+      };
+    }
+    currentId = parentMap.get(currentId) ?? null;
+  }
+
+  return { success: true };
+}
 
 export async function addFolderAction(
   name: string,
@@ -25,7 +62,7 @@ export async function addFolderAction(
       return { success: false, error: error.message };
     }
 
-    revalidatePath('/');
+    revalidateBudgetLists();
     return { success: true };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro inesperado ao criar pasta.';
@@ -36,24 +73,38 @@ export async function addFolderAction(
 export async function updateFolderAction(
   id: string,
   name: string,
-  color?: string
+  color?: string,
+  // `undefined` = não mexer no pai; `null` = mover para a raiz. Os dois casos
+  // precisam ser distinguíveis, senão renomear uma subpasta a jogaria na raiz.
+  parentId?: string | null
 ): Promise<ActionResult> {
   try {
     const supabase = await createSupabaseServerClient();
 
+    const updateData: Record<string, unknown> = {
+      name: name.trim(),
+      color: color || null,
+    };
+
+    if (parentId !== undefined) {
+      if (parentId === id) {
+        return { success: false, error: 'Uma pasta não pode ser pai dela mesma.' };
+      }
+      const cycleCheck = await assertNoFolderCycle(supabase, id, parentId);
+      if (!cycleCheck.success) return cycleCheck;
+      updateData.parent_id = parentId;
+    }
+
     const { error } = await supabase
       .from('budget_folders')
-      .update({
-        name: name.trim(),
-        color: color || null,
-      })
+      .update(updateData)
       .eq('id', id);
 
     if (error) {
       return { success: false, error: error.message };
     }
 
-    revalidatePath('/');
+    revalidateBudgetLists();
     return { success: true };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro inesperado ao atualizar pasta.';
@@ -106,7 +157,7 @@ export async function deleteFolderAction(id: string): Promise<ActionResult> {
       return { success: false, error: deleteError.message };
     }
 
-    revalidatePath('/');
+    revalidateBudgetLists();
     return { success: true };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro inesperado ao excluir pasta.';
@@ -130,7 +181,7 @@ export async function moveBudgetToFolderAction(
       return { success: false, error: error.message };
     }
 
-    revalidatePath('/');
+    revalidateBudgetLists();
     return { success: true };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro inesperado ao mover orçamento.';
@@ -145,29 +196,8 @@ export async function moveFolderToFolderAction(
   try {
     const supabase = await createSupabaseServerClient();
 
-    // Anti-cycle check: fetch all folders and walk the ancestor chain server-side
-    if (newParentId) {
-      const { data: allFolders, error: fetchError } = await supabase
-        .from('budget_folders')
-        .select('id, parent_id');
-
-      if (fetchError) {
-        return { success: false, error: `Erro ao verificar hierarquia de pastas: ${fetchError.message}` };
-      }
-
-      // Build a parent map and walk up from newParentId to detect if folderId appears
-      const parentMap = new Map((allFolders ?? []).map((f) => [f.id, f.parent_id]));
-      let currentId: string | null = newParentId;
-      while (currentId) {
-        if (currentId === folderId) {
-          return {
-            success: false,
-            error: 'Não é possível mover uma pasta para dentro de si mesma ou de suas subpastas.',
-          };
-        }
-        currentId = parentMap.get(currentId) ?? null;
-      }
-    }
+    const cycleCheck = await assertNoFolderCycle(supabase, folderId, newParentId);
+    if (!cycleCheck.success) return cycleCheck;
 
     const { error } = await supabase
       .from('budget_folders')
@@ -178,7 +208,7 @@ export async function moveFolderToFolderAction(
       return { success: false, error: error.message };
     }
 
-    revalidatePath('/');
+    revalidateBudgetLists();
     return { success: true };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro inesperado ao mover pasta.';

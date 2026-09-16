@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, useCallback, useTransition } from 'react';
-import { Plus, Calendar, Building2, Edit, Trash2, Copy, CheckCircle, Clock, BarChart3, TrendingUp, Search, Filter, X, Folder, FolderOpen, MoreVertical, FolderEdit, FileText, ArrowLeft, Home, ChevronRight, Move, Star } from 'lucide-react';
+import { Plus, CheckCircle, Clock, BarChart3, TrendingUp, Search, Filter, X, Folder, FileText, ArrowLeft, Home, ChevronRight, Star, List, LayoutGrid } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { CriarOrcamentoModal } from '@/components/modals/CriarOrcamentoModal';
 import { FolderModal } from '@/components/modals/FolderModal';
@@ -22,13 +22,19 @@ import { deleteBudgetAction, duplicateBudgetAction, finalizeBudgetAction, update
 import { addFolderAction, updateFolderAction, deleteFolderAction, moveBudgetToFolderAction, moveFolderToFolderAction } from '@/actions/folders';
 import { DragDropProvider } from '@dnd-kit/react';
 import { BudgetCard } from '@/components/orcamentos/BudgetCard';
+import { BudgetRow } from '@/components/orcamentos/BudgetRow';
 import { FolderCard } from '@/components/orcamentos/FolderCard';
+import { FolderRow } from '@/components/orcamentos/FolderRow';
+import { LIST_GRID } from '@/components/orcamentos/listLayout';
 import { FolderDropZone } from '@/components/orcamentos/dnd/FolderDropZone';
 import { parseDraggableId, parseDropZoneId } from '@/components/orcamentos/dnd/dashboardDnd';
 import { cardDragSensors } from '@/lib/dnd/sensors';
 
 const STATUS_FILTER_ALL = 'all';
 const CONCESSIONARIA_FILTER_ALL = 'all';
+const VIEW_MODE_STORAGE_KEY = 'orcarede:budgets-view';
+
+type ViewMode = 'list' | 'grid';
 
 export interface DashboardProps {
   /**
@@ -37,9 +43,15 @@ export interface DashboardProps {
    * estado do `AppContext` (OrçaRede legado dentro do `AppShell`).
    */
   onOpenBudget?: (budget: Orcamento) => void;
+  /**
+   * Quem controla a pasta aberta. A rota `/orcamentos` usa isto para refletir
+   * a pasta na URL (`?folder=`); sem a prop, vale o estado do `AppContext`,
+   * que é o comportamento do OrçaRede legado em `/`.
+   */
+  onFolderChange?: (folderId: string | null) => void;
 }
 
-export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
+export function Dashboard({ onOpenBudget, onFolderChange }: DashboardProps = {}) {
   const {
     budgets, 
     folders,
@@ -61,7 +73,12 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [folderModalMode, setFolderModalMode] = useState<'create' | 'edit'>('create');
   const [editingBudget, setEditingBudget] = useState<Orcamento | null>(null);
-  const [editingFolder, setEditingFolder] = useState<{ id: string; name: string; color?: string } | null>(null);
+  const [editingFolder, setEditingFolder] = useState<{
+    id: string;
+    name: string;
+    color?: string;
+    parentId: string | null;
+  } | null>(null);
   const [isFinalizing, setIsFinalizing] = useState<string | null>(null);
   const [isDuplicating, setIsDuplicating] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,7 +92,17 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
   const [openBudgetMenu, setOpenBudgetMenu] = useState<string | null>(null);
   const [moveMenuFor, setMoveMenuFor] = useState<{ type: 'budget' | 'folder'; id: string } | null>(null);
   const [templatesOnly, setTemplatesOnly] = useState(false);
+  // Lida do localStorage no primeiro render. O `typeof window` cobre o render
+  // do servidor, onde não existe storage.
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window === 'undefined') return 'list';
+    return window.localStorage.getItem(VIEW_MODE_STORAGE_KEY) === 'grid' ? 'grid' : 'list';
+  });
   const alertDialog = useAlertDialog();
+
+  useEffect(() => {
+    window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, viewMode);
+  }, [viewMode]);
 
   // Buscar orçamentos e pastas na montagem do componente
   useEffect(() => {
@@ -231,24 +258,31 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
     setShowFolderModal(true);
   };
 
+  // Ponto único de navegação entre pastas: quem monta o Dashboard decide se
+  // isso vira URL ou fica só no contexto.
+  const goToFolder = (folderId: string | null) => {
+    if (onFolderChange) onFolderChange(folderId);
+    else navigateToFolder(folderId);
+  };
+
   const handleOpenFolder = (folderId: string) => {
-    navigateToFolder(folderId);
+    goToFolder(folderId);
   };
 
   const handleGoBack = () => {
     const path = getFolderPath(currentFolderId);
-    if (path.length > 1) {
-      // Voltar para a pasta pai
-      navigateToFolder(path[path.length - 2].id);
-    } else {
-      // Voltar para a raiz
-      navigateToFolder(null);
-    }
+    // Sobe para a pasta pai; no primeiro nível, isso é a raiz.
+    goToFolder(path.length > 1 ? path[path.length - 2].id : null);
   };
 
-  const handleEditFolder = (folderId: string, folderName: string, folderColor?: string) => {
+  const handleEditFolder = (
+    folderId: string,
+    folderName: string,
+    folderColor: string | undefined,
+    folderParentId: string | null,
+  ) => {
     setFolderModalMode('edit');
-    setEditingFolder({ id: folderId, name: folderName, color: folderColor });
+    setEditingFolder({ id: folderId, name: folderName, color: folderColor, parentId: folderParentId });
     setShowFolderModal(true);
     setOpenFolderMenu(null);
   };
@@ -283,7 +317,7 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
     if (folderModalMode === 'create') {
       result = await addFolderAction(name, color, parentId);
     } else if (editingFolder) {
-      result = await updateFolderAction(editingFolder.id, name, color);
+      result = await updateFolderAction(editingFolder.id, name, color, parentId ?? null);
     } else {
       return;
     }
@@ -330,25 +364,41 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
     return filteredBudgets.filter(budget => budget.folderId === currentFolderId);
   }, [filteredBudgets, currentFolderId]);
 
-  // Organizar orçamentos por pasta (mantido para drag & drop)
-  const budgetsByFolder = useMemo(() => {
-    const organized: Record<string, Orcamento[]> = {
-      'no-folder': [],
+  // Quantos itens cada pasta guarda, contando tudo que está abaixo dela.
+  // A contagem direta dizia "0 itens" numa pasta cheia de subpastas cheias.
+  const folderItemCounts = useMemo(() => {
+    const childrenOf = new Map<string, BudgetFolder[]>();
+    folders.forEach((folder) => {
+      const parent = folder.parentId ?? null;
+      if (!parent) return;
+      const siblings = childrenOf.get(parent) ?? [];
+      siblings.push(folder);
+      childrenOf.set(parent, siblings);
+    });
+
+    const directBudgets = new Map<string, number>();
+    filteredBudgets.forEach((budget) => {
+      if (!budget.folderId) return;
+      directBudgets.set(budget.folderId, (directBudgets.get(budget.folderId) ?? 0) + 1);
+    });
+
+    const totals = new Map<string, number>();
+    const countOf = (folderId: string): number => {
+      const cached = totals.get(folderId);
+      if (cached !== undefined) return cached;
+      // Marca antes de descer: se o banco tiver um ciclo de parent_id, a
+      // recursão para aqui em vez de estourar a pilha.
+      totals.set(folderId, 0);
+      const children = childrenOf.get(folderId) ?? [];
+      const total =
+        (directBudgets.get(folderId) ?? 0) +
+        children.reduce((sum, child) => sum + 1 + countOf(child.id), 0);
+      totals.set(folderId, total);
+      return total;
     };
 
-    folders.forEach(folder => {
-      organized[folder.id] = [];
-    });
-
-    filteredBudgets.forEach(budget => {
-      if (budget.folderId && organized[budget.folderId]) {
-        organized[budget.folderId].push(budget);
-      } else {
-        organized['no-folder'].push(budget);
-      }
-    });
-
-    return organized;
+    folders.forEach((folder) => countOf(folder.id));
+    return totals;
   }, [filteredBudgets, folders]);
 
   // Obter caminho de navegação (breadcrumb)
@@ -472,6 +522,95 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
       }
     );
   };
+
+  // Card e Row compartilham a mesma API de props: montar o objeto uma vez aqui
+  // evita que as duas views se distanciem quando uma ação nova entrar.
+  const folderItemProps = (folder: BudgetFolder) => ({
+    folderId: folder.id,
+    folderName: folder.name,
+    folderColor: folder.color,
+    parentId: folder.parentId ?? null,
+    itemCount: folderItemCounts.get(folder.id) ?? 0,
+    subfolderCount: folders.filter((f) => f.parentId === folder.id).length,
+    draggingKind: activeItem?.kind ?? null,
+    validTarget: isValidDropTarget(folder.id),
+    menuOpen: openFolderMenu === folder.id,
+    moveMenuOpen: moveMenuFor?.type === 'folder' && moveMenuFor.id === folder.id,
+    moveTargets:
+      moveMenuFor?.type === 'folder' && moveMenuFor.id === folder.id
+        ? getValidFolderTargets('folder', folder.id, folder.parentId ?? null)
+        : [],
+    onOpen: () => handleOpenFolder(folder.id),
+    onToggleMenu: () => {
+      setMoveMenuFor(null);
+      setOpenFolderMenu(openFolderMenu === folder.id ? null : folder.id);
+    },
+    onCloseMenu: () => {
+      setOpenFolderMenu(null);
+      setMoveMenuFor(null);
+    },
+    onToggleMoveMenu: () =>
+      setMoveMenuFor(
+        moveMenuFor?.type === 'folder' && moveMenuFor.id === folder.id
+          ? null
+          : { type: 'folder' as const, id: folder.id },
+      ),
+    onRename: () => handleEditFolder(folder.id, folder.name, folder.color, folder.parentId ?? null),
+    onMoveTo: (targetId: string | null) =>
+      handleMoveViaMenu('folder', folder.id, folder.name, targetId),
+    onRemoveFromFolder: () => handleRemoveFromFolder(folder.id, 'folder', folder.name),
+    onDelete: () => handleDeleteFolder(folder.id, folder.name),
+  });
+
+  const budgetItemProps = (budget: Orcamento) => ({
+    budget,
+    concessionariaNome: getConcessionariaNome(budget.concessionariaId),
+    formattedDate: formatDate(budget.dataModificacao),
+    isFinalizing: isFinalizing === budget.id,
+    isDuplicating: isDuplicating === budget.id,
+    menuOpen: openBudgetMenu === budget.id,
+    moveMenuOpen: moveMenuFor?.type === 'budget' && moveMenuFor.id === budget.id,
+    moveTargets:
+      moveMenuFor?.type === 'budget' && moveMenuFor.id === budget.id
+        ? getValidFolderTargets('budget', budget.id, budget.folderId ?? null)
+        : [],
+    onOpen: () => {
+      if (onOpenBudget) {
+        onOpenBudget(budget);
+      } else {
+        setCurrentOrcamento(budget);
+        setCurrentView('orcamento');
+      }
+    },
+    onToggleMenu: () => {
+      setMoveMenuFor(null);
+      setOpenBudgetMenu(openBudgetMenu === budget.id ? null : budget.id);
+    },
+    onCloseMenu: () => {
+      setOpenBudgetMenu(null);
+      setMoveMenuFor(null);
+    },
+    onToggleMoveMenu: () =>
+      setMoveMenuFor(
+        moveMenuFor?.type === 'budget' && moveMenuFor.id === budget.id
+          ? null
+          : { type: 'budget' as const, id: budget.id },
+      ),
+    onEdit: () => handleEditBudget(budget),
+    onDuplicate: () => handleDuplicateBudget(budget),
+    onFinalize: () => {
+      handleFinalize(budget);
+      setOpenBudgetMenu(null);
+    },
+    onToggleTemplate: () => handleToggleTemplate(budget),
+    onMoveTo: (targetId: string | null) =>
+      handleMoveViaMenu('budget', budget.id, budget.nome, targetId),
+    onRemoveFromFolder: () => handleRemoveFromFolder(budget.id, 'budget', budget.nome),
+    onDelete: () => {
+      handleDeleteBudget(budget);
+      setOpenBudgetMenu(null);
+    },
+  });
 
   return (
     <DragDropProvider
@@ -644,6 +783,30 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
               </span>
             )}
           </button>
+
+          {/* Lista x grade — a escolha fica no localStorage, por navegador. */}
+          <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg shrink-0">
+            {([
+              { mode: 'list' as const, icon: List, label: 'Lista' },
+              { mode: 'grid' as const, icon: LayoutGrid, label: 'Grade' },
+            ]).map(({ mode, icon: Icon, label }) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setViewMode(mode)}
+                aria-pressed={viewMode === mode}
+                title={`Ver em ${label.toLowerCase()}`}
+                className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 ${
+                  viewMode === mode
+                    ? 'bg-surface text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="hidden sm:inline">{label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Painel de Filtros Expandido */}
@@ -794,7 +957,7 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
                 >
                   {({ isOver, valid }) => (
                     <button
-                      onClick={() => navigateToFolder(null)}
+                      onClick={() => goToFolder(null)}
                       className={`flex items-center space-x-1.5 rounded-lg px-3 py-1.5 transition-colors ${
                         isOver && valid
                           ? 'font-semibold text-accent-800'
@@ -821,7 +984,7 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
                     >
                       {({ isOver, valid }) => (
                         <button
-                          onClick={() => navigateToFolder(folder.id)}
+                          onClick={() => goToFolder(folder.id)}
                           className={`flex items-center space-x-1.5 rounded-lg px-3 py-1.5 transition-colors ${
                             isOver && valid
                               ? 'font-semibold text-accent-800'
@@ -888,28 +1051,74 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
 
       {/* Conteúdo Principal */}
       {loadingBudgets || loadingFolders ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="bg-surface border border-gray-200 rounded-xl p-4 animate-pulse">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-3/4" />
-                  <div className="h-3 bg-gray-100 rounded w-1/2" />
+        viewMode === 'list' ? (
+          <div className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-surface">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 px-3 py-3.5">
+                <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-gray-200" />
+                <div className="h-3.5 flex-1 animate-pulse rounded bg-gray-200" />
+                <div className="hidden h-3 w-24 animate-pulse rounded bg-gray-100 md:block" />
+                <div className="hidden h-5 w-24 animate-pulse rounded-full bg-gray-100 md:block" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="bg-surface border border-gray-200 rounded-xl p-4 animate-pulse">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-3/4" />
+                    <div className="h-3 bg-gray-100 rounded w-1/2" />
+                  </div>
+                  <div className="h-5 w-16 bg-gray-100 rounded-full" />
                 </div>
-                <div className="h-5 w-16 bg-gray-100 rounded-full" />
+                <div className="h-px bg-gray-100 my-3" />
+                <div className="flex justify-between">
+                  <div className="h-3 bg-gray-100 rounded w-1/3" />
+                  <div className="h-3 bg-gray-100 rounded w-1/4" />
+                </div>
               </div>
-              <div className="h-px bg-gray-100 my-3" />
-              <div className="flex justify-between">
-                <div className="h-3 bg-gray-100 rounded w-1/3" />
-                <div className="h-3 bg-gray-100 rounded w-1/4" />
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )
       ) : (
         <div className="space-y-4">
-          {/* Pastas do Nível Atual */}
-          {currentLevelFolders.length > 0 && (
+          {/* Lista: pastas e orçamentos num bloco contínuo, sem títulos de
+              seção — é o que dá a densidade que a grade não tem. A zona de drop
+              envolve o bloco inteiro para soltar entre linhas continuar valendo. */}
+          {viewMode === 'list' && (currentLevelFolders.length > 0 || currentLevelBudgets.length > 0) && (
+            <FolderDropZone
+              zone="level"
+              folderId={currentFolderId}
+              valid={isValidDropTarget(currentFolderId)}
+              className="overflow-hidden rounded-xl border border-gray-200 bg-surface"
+              activeClassName="ring-2 ring-accent-400"
+            >
+              <div
+                className={`${LIST_GRID} hidden border-b border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500 md:grid`}
+              >
+                <span>Nome</span>
+                <span>Cliente</span>
+                <span>Concessionária</span>
+                <span>Modificado</span>
+                <span>Status</span>
+                <span />
+              </div>
+
+              <div className="divide-y divide-gray-100">
+                {currentLevelFolders.map((folder) => (
+                  <FolderRow key={folder.id} {...folderItemProps(folder)} />
+                ))}
+                {currentLevelBudgets.map((budget) => (
+                  <BudgetRow key={budget.id} {...budgetItemProps(budget)} />
+                ))}
+              </div>
+            </FolderDropZone>
+          )}
+
+          {/* Grade: pastas e orçamentos em seções separadas, com título. */}
+          {viewMode === 'grid' && currentLevelFolders.length > 0 && (
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <Folder className="h-4 w-4 text-gray-400" />
@@ -919,58 +1128,13 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {currentLevelFolders.map((folder) => (
-                  <FolderCard
-                    key={folder.id}
-                    folderId={folder.id}
-                    folderName={folder.name}
-                    folderColor={folder.color}
-                    parentId={folder.parentId ?? null}
-                    itemCount={
-                      folders.filter((f) => f.parentId === folder.id).length +
-                      (budgetsByFolder[folder.id]?.length ?? 0)
-                    }
-                    subfolderCount={folders.filter((f) => f.parentId === folder.id).length}
-                    draggingKind={activeItem?.kind ?? null}
-                    validTarget={isValidDropTarget(folder.id)}
-                    menuOpen={openFolderMenu === folder.id}
-                    moveMenuOpen={moveMenuFor?.type === 'folder' && moveMenuFor.id === folder.id}
-                    moveTargets={
-                      moveMenuFor?.type === 'folder' && moveMenuFor.id === folder.id
-                        ? getValidFolderTargets('folder', folder.id, folder.parentId ?? null)
-                        : []
-                    }
-                    onOpen={() => handleOpenFolder(folder.id)}
-                    onToggleMenu={() => {
-                      setMoveMenuFor(null);
-                      setOpenFolderMenu(openFolderMenu === folder.id ? null : folder.id);
-                    }}
-                    onCloseMenu={() => {
-                      setOpenFolderMenu(null);
-                      setMoveMenuFor(null);
-                    }}
-                    onToggleMoveMenu={() =>
-                      setMoveMenuFor(
-                        moveMenuFor?.type === 'folder' && moveMenuFor.id === folder.id
-                          ? null
-                          : { type: 'folder', id: folder.id },
-                      )
-                    }
-                    onRename={() => handleEditFolder(folder.id, folder.name, folder.color)}
-                    onMoveTo={(targetId) =>
-                      handleMoveViaMenu('folder', folder.id, folder.name, targetId)
-                    }
-                    onRemoveFromFolder={() =>
-                      handleRemoveFromFolder(folder.id, 'folder', folder.name)
-                    }
-                    onDelete={() => handleDeleteFolder(folder.id, folder.name)}
-                  />
+                  <FolderCard key={folder.id} {...folderItemProps(folder)} />
                 ))}
               </div>
             </div>
           )}
 
-          {/* Orçamentos do Nível Atual */}
-          {currentLevelBudgets.length > 0 && (
+          {viewMode === 'grid' && currentLevelBudgets.length > 0 && (
             <FolderDropZone
               zone="level"
               folderId={currentFolderId}
@@ -989,67 +1153,13 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {currentLevelBudgets.map((budget) => (
-                    <BudgetCard
-                      key={budget.id}
-                      budget={budget}
-                      concessionariaNome={getConcessionariaNome(budget.concessionariaId)}
-                      formattedDate={formatDate(budget.dataModificacao)}
-                      isFinalizing={isFinalizing === budget.id}
-                      isDuplicating={isDuplicating === budget.id}
-                      menuOpen={openBudgetMenu === budget.id}
-                      moveMenuOpen={moveMenuFor?.type === 'budget' && moveMenuFor.id === budget.id}
-                      moveTargets={
-                        moveMenuFor?.type === 'budget' && moveMenuFor.id === budget.id
-                          ? getValidFolderTargets('budget', budget.id, budget.folderId ?? null)
-                          : []
-                      }
-                      onOpen={() => {
-                        if (onOpenBudget) {
-                          onOpenBudget(budget);
-                        } else {
-                          setCurrentOrcamento(budget);
-                          setCurrentView('orcamento');
-                        }
-                      }}
-                      onToggleMenu={() => {
-                        setMoveMenuFor(null);
-                        setOpenBudgetMenu(openBudgetMenu === budget.id ? null : budget.id);
-                      }}
-                      onCloseMenu={() => {
-                        setOpenBudgetMenu(null);
-                        setMoveMenuFor(null);
-                      }}
-                      onToggleMoveMenu={() =>
-                        setMoveMenuFor(
-                          moveMenuFor?.type === 'budget' && moveMenuFor.id === budget.id
-                            ? null
-                            : { type: 'budget', id: budget.id },
-                        )
-                      }
-                      onEdit={() => handleEditBudget(budget)}
-                      onDuplicate={() => handleDuplicateBudget(budget)}
-                      onFinalize={() => {
-                        handleFinalize(budget);
-                        setOpenBudgetMenu(null);
-                      }}
-                      onToggleTemplate={() => handleToggleTemplate(budget)}
-                      onMoveTo={(targetId) =>
-                        handleMoveViaMenu('budget', budget.id, budget.nome, targetId)
-                      }
-                      onRemoveFromFolder={() =>
-                        handleRemoveFromFolder(budget.id, 'budget', budget.nome)
-                      }
-                      onDelete={() => {
-                        handleDeleteBudget(budget);
-                        setOpenBudgetMenu(null);
-                      }}
-                    />
+                    <BudgetCard key={budget.id} {...budgetItemProps(budget)} />
                   ))}
                 </div>
               </div>
-
             </FolderDropZone>
           )}
+
 
           {/* Mensagem quando não há conteúdo no nível atual */}
           {currentLevelFolders.length === 0 && currentLevelBudgets.length === 0 && (
@@ -1145,6 +1255,8 @@ export function Dashboard({ onOpenBudget }: DashboardProps = {}) {
           onSave={handleSaveFolder}
           initialName={editingFolder?.name || ''}
           initialColor={editingFolder?.color}
+          folderId={editingFolder?.id}
+          initialParentId={editingFolder?.parentId ?? null}
           mode={folderModalMode}
         />
       )}

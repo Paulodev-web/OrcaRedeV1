@@ -7,6 +7,13 @@ export interface BreadcrumbItem {
   label: string;
   /** Sem `href`, o item vira texto (usado no último nível). */
   href?: string;
+  /**
+   * Intercepta o clique esquerdo em vez de deixar o router navegar. Serve para
+   * trilhas que representam estado da própria página (a pasta aberta, por
+   * exemplo): navegar de verdade refaria a request da rota e remontaria a tela.
+   * O `href` continua valendo para abrir em nova aba e copiar o link.
+   */
+  onNavigate?: () => void;
   icon?: ComponentType<{ className?: string }>;
 }
 
@@ -88,6 +95,23 @@ export function ModuleHeader({
                   {crumb.href && !isLast ? (
                     <Link
                       href={crumb.href}
+                      onClick={
+                        crumb.onNavigate
+                          ? (event) => {
+                              // Deixa passar ctrl/cmd/meio, que abrem nova aba.
+                              if (
+                                event.metaKey ||
+                                event.ctrlKey ||
+                                event.shiftKey ||
+                                event.button !== 0
+                              ) {
+                                return;
+                              }
+                              event.preventDefault();
+                              crumb.onNavigate?.();
+                            }
+                          : undefined
+                      }
                       className="inline-flex items-center gap-1 rounded-sm transition-colors hover:text-link"
                     >
                       {body}
