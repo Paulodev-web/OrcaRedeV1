@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useTransition, useMemo } from 'react';
-import { X, FileText, Sparkles } from 'lucide-react';
+import { X, FileText, Sparkles, Folder } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { AlertDialog } from '@/components/ui/alert-dialog';
@@ -27,7 +27,7 @@ interface CriarOrcamentoModalProps {
 type CreationMode = 'blank' | 'template';
 
 export function CriarOrcamentoModal({ isOpen, onClose, editingBudget }: CriarOrcamentoModalProps) {
-  const { budgets, utilityCompanies, fetchUtilityCompanies, fetchBudgets } = useApp();
+  const { budgets, folders, currentFolderId, utilityCompanies, fetchUtilityCompanies, fetchBudgets } = useApp();
   const [isPending, startTransition] = useTransition();
   const [creationMode, setCreationMode] = useState<CreationMode>('blank');
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
@@ -35,11 +35,19 @@ export function CriarOrcamentoModal({ isOpen, onClose, editingBudget }: CriarOrc
   const [clientName, setClientName] = useState('');
   const [city, setCity] = useState('');
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
+  // Pasta em que o orçamento vai nascer. Começa na pasta aberta no dashboard —
+  // criar estando dentro de uma pasta e o orçamento aparecer na raiz era o
+  // jeito mais rápido de o usuário achar que a criação falhou.
+  const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
 
   const alertDialog = useAlertDialog();
 
   const isEditing = !!editingBudget;
   const templates = useMemo(() => budgets.filter((b) => b.isTemplate), [budgets]);
+  const targetFolder = useMemo(
+    () => folders.find((f) => f.id === targetFolderId) ?? null,
+    [folders, targetFolderId],
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -54,6 +62,7 @@ export function CriarOrcamentoModal({ isOpen, onClose, editingBudget }: CriarOrc
       setCity(editingBudget.city || '');
       setSelectedCompanyId(editingBudget.company_id || '');
       setCreationMode('blank');
+      setTargetFolderId(null);
     } else if (isOpen && !editingBudget) {
       setNome('');
       setClientName('');
@@ -61,8 +70,9 @@ export function CriarOrcamentoModal({ isOpen, onClose, editingBudget }: CriarOrc
       setSelectedCompanyId('');
       setCreationMode('blank');
       setSelectedTemplateId('');
+      setTargetFolderId(currentFolderId);
     }
-  }, [isOpen, editingBudget]);
+  }, [isOpen, editingBudget, currentFolderId]);
 
   const handleSelectTemplate = (templateId: string) => {
     setSelectedTemplateId(templateId);
@@ -108,6 +118,7 @@ export function CriarOrcamentoModal({ isOpen, onClose, editingBudget }: CriarOrc
           client_name: clientName.trim() || undefined,
           city: city.trim() || undefined,
           company_id: selectedCompanyId,
+          folder_id: targetFolderId,
         });
       } else {
         result = await addBudgetAction({
@@ -115,6 +126,7 @@ export function CriarOrcamentoModal({ isOpen, onClose, editingBudget }: CriarOrc
           client_name: clientName.trim() || undefined,
           city: city.trim() || undefined,
           company_id: selectedCompanyId,
+          folder_id: targetFolderId,
         });
       }
 
@@ -123,7 +135,9 @@ export function CriarOrcamentoModal({ isOpen, onClose, editingBudget }: CriarOrc
           isEditing ? 'Orçamento Atualizado' : 'Orçamento Criado',
           isEditing
             ? 'O orçamento foi atualizado com sucesso.'
-            : 'O orçamento foi criado com sucesso e está pronto para uso.'
+            : targetFolder
+              ? `O orçamento foi criado na pasta "${targetFolder.name}" e está pronto para uso.`
+              : 'O orçamento foi criado com sucesso e está pronto para uso.'
         );
         fetchBudgets();
         onClose();
@@ -159,6 +173,28 @@ export function CriarOrcamentoModal({ isOpen, onClose, editingBudget }: CriarOrc
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {!isEditing && targetFolder && (
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+              <div className="flex min-w-0 items-center gap-2 text-sm text-gray-700">
+                <Folder
+                  className="h-4 w-4 shrink-0"
+                  style={{ color: targetFolder.color || '#6B7280' }}
+                />
+                <span className="truncate">
+                  Será criado em <span className="font-medium">{targetFolder.name}</span>
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTargetFolderId(null)}
+                className="shrink-0 text-xs font-medium text-neutral-900 underline underline-offset-2 hover:text-gray-600"
+                disabled={isPending}
+              >
+                criar na raiz
+              </button>
+            </div>
+          )}
+
           {!isEditing && (
             <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-lg">
               <button

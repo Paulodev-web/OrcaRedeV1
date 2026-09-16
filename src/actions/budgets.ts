@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidateBudgetLists } from '@/lib/revalidateBudgetLists';
 import { createSupabaseServerClient, requireAuthUserId } from '@/lib/supabaseServer';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -12,6 +12,8 @@ interface AddBudgetInput {
   city?: string;
   company_id: string;
   is_template?: boolean;
+  /** Pasta onde o orçamento nasce. `null`/ausente = raiz do dashboard. */
+  folder_id?: string | null;
 }
 
 interface UpdateBudgetInput {
@@ -22,28 +24,35 @@ interface UpdateBudgetInput {
   is_template?: boolean;
 }
 
-export async function addBudgetAction(data: AddBudgetInput): Promise<ActionResult> {
+export async function addBudgetAction(
+  data: AddBudgetInput
+): Promise<ActionResult & { newBudgetId?: string }> {
   try {
     const supabase = await createSupabaseServerClient();
     const userId = await requireAuthUserId(supabase);
 
-    const { error } = await supabase.from('budgets').insert({
-      project_name: data.project_name,
-      client_name: data.client_name || null,
-      city: data.city || null,
-      company_id: data.company_id,
-      status: 'Em Andamento',
-      render_version: 2,
-      user_id: userId,
-      is_template: data.is_template ?? false,
-    });
+    const { data: newBudget, error } = await supabase
+      .from('budgets')
+      .insert({
+        project_name: data.project_name,
+        client_name: data.client_name || null,
+        city: data.city || null,
+        company_id: data.company_id,
+        status: 'Em Andamento',
+        render_version: 2,
+        user_id: userId,
+        is_template: data.is_template ?? false,
+        folder_id: data.folder_id ?? null,
+      })
+      .select('id')
+      .single();
 
     if (error) {
       return { success: false, error: error.message };
     }
 
-    revalidatePath('/');
-    return { success: true };
+    revalidateBudgetLists();
+    return { success: true, newBudgetId: newBudget.id };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro inesperado ao criar orçamento.';
     return { success: false, error: message };
@@ -70,7 +79,7 @@ export async function updateBudgetAction(id: string, data: UpdateBudgetInput): P
       return { success: false, error: error.message };
     }
 
-    revalidatePath('/');
+    revalidateBudgetLists();
     return { success: true };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro inesperado ao atualizar orçamento.';
@@ -88,7 +97,7 @@ export async function deleteBudgetAction(id: string): Promise<ActionResult> {
       return { success: false, error: error.message };
     }
 
-    revalidatePath('/');
+    revalidateBudgetLists();
     return { success: true };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro inesperado ao excluir orçamento.';
@@ -108,7 +117,7 @@ export async function finalizeBudgetAction(budgetId: string): Promise<ActionResu
       return { success: false, error: `Falha ao finalizar o orçamento: ${error.message}` };
     }
 
-    revalidatePath('/');
+    revalidateBudgetLists();
     return { success: true };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro inesperado ao finalizar orçamento.';
@@ -277,7 +286,7 @@ export async function duplicateBudgetAction(budgetId: string): Promise<ActionRes
       return cloneResult;
     }
 
-    revalidatePath('/');
+    revalidateBudgetLists();
     return { success: true, newBudgetId: newBudget.id };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro inesperado ao duplicar orçamento.';
@@ -290,6 +299,8 @@ interface CreateBudgetFromTemplateInput {
   client_name?: string;
   city?: string;
   company_id: string;
+  /** Pasta onde o orçamento nasce. `null`/ausente = raiz do dashboard. */
+  folder_id?: string | null;
 }
 
 export async function createBudgetFromTemplateAction(
@@ -323,6 +334,7 @@ export async function createBudgetFromTemplateAction(
         user_id: userId,
         is_template: false,
         template_source_id: templateId,
+        folder_id: data.folder_id ?? null,
       })
       .select()
       .single();
@@ -336,7 +348,7 @@ export async function createBudgetFromTemplateAction(
       return cloneResult;
     }
 
-    revalidatePath('/');
+    revalidateBudgetLists();
     return { success: true, newBudgetId: newBudget.id };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro inesperado ao criar orçamento a partir do modelo.';

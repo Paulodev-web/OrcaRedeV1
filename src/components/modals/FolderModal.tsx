@@ -18,13 +18,25 @@ interface FolderModalProps {
   onSave: (name: string, color?: string, parentId?: string | null) => Promise<void>;
   initialName?: string;
   initialColor?: string;
+  /** Id da pasta em edição — usado para tirar ela e suas descendentes da lista de pais. */
+  folderId?: string;
+  initialParentId?: string | null;
   mode: 'create' | 'edit';
 }
 
 const ROOT_FOLDER_VALUE = '__root_folder__';
 
-export function FolderModal({ isOpen, onClose, onSave, initialName = '', initialColor = DEFAULT_FOLDER_COLOR, mode }: FolderModalProps) {
-  const { folders, currentFolderId } = useApp();
+export function FolderModal({
+  isOpen,
+  onClose,
+  onSave,
+  initialName = '',
+  initialColor = DEFAULT_FOLDER_COLOR,
+  folderId,
+  initialParentId = null,
+  mode,
+}: FolderModalProps) {
+  const { folders, currentFolderId, isFolderDescendant } = useApp();
   const [name, setName] = useState(initialName);
   // `resolveFolderColor`: pastas criadas antes da virada de paleta guardam um
   // hex legado que não bate com nenhuma opção — sem traduzir, o modal abriria
@@ -38,10 +50,10 @@ export function FolderModal({ isOpen, onClose, onSave, initialName = '', initial
     if (isOpen) {
       setName(initialName);
       setColor(resolveFolderColor(initialColor));
-      setParentId(mode === 'create' ? currentFolderId : null);
+      setParentId(mode === 'create' ? currentFolderId : initialParentId);
       setError(null);
     }
-  }, [isOpen, initialName, initialColor, currentFolderId, mode]);
+  }, [isOpen, initialName, initialColor, currentFolderId, initialParentId, mode]);
 
   if (!isOpen) return null;
 
@@ -64,8 +76,12 @@ export function FolderModal({ isOpen, onClose, onSave, initialName = '', initial
     }
   };
 
-  // Obter lista de pastas disponíveis (excluindo a pasta atual para evitar ciclos)
-  const availableFolders = folders.filter(folder => mode === 'create' || folder.id !== initialName);
+  // Pais possíveis: tudo menos a própria pasta e suas descendentes — mover uma
+  // pasta para dentro de si mesma a tiraria da árvore, junto com o conteúdo.
+  const availableFolders = folders.filter((folder) => {
+    if (!folderId) return true;
+    return folder.id !== folderId && !isFolderDescendant(folder.id, folderId);
+  });
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -125,34 +141,32 @@ export function FolderModal({ isOpen, onClose, onSave, initialName = '', initial
             </p>
           </div>
 
-          {/* Pasta Pai (apenas para criação) */}
-          {mode === 'create' && (
-            <div>
-              <label htmlFor="parent-folder" className="block text-sm font-medium text-gray-700 mb-1.5">
-                Pasta Pai (Opcional)
-              </label>
-              <Select
-                value={parentId || ROOT_FOLDER_VALUE}
-                onValueChange={(value) => setParentId(value === ROOT_FOLDER_VALUE ? null : value)}
-                disabled={loading}
-              >
-                <SelectTrigger id="parent-folder" className="w-full">
-                  <SelectValue placeholder="Raiz (Sem pasta pai)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ROOT_FOLDER_VALUE}>Raiz (Sem pasta pai)</SelectItem>
-                  {availableFolders.map((folder) => (
-                    <SelectItem key={folder.id} value={folder.id}>
-                      {folder.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="mt-1 text-xs text-gray-500">
-                Escolha onde criar a nova pasta
-              </p>
-            </div>
-          )}
+          {/* Pasta Pai */}
+          <div>
+            <label htmlFor="parent-folder" className="block text-sm font-medium text-gray-700 mb-1.5">
+              Pasta Pai (Opcional)
+            </label>
+            <Select
+              value={parentId || ROOT_FOLDER_VALUE}
+              onValueChange={(value) => setParentId(value === ROOT_FOLDER_VALUE ? null : value)}
+              disabled={loading}
+            >
+              <SelectTrigger id="parent-folder" className="w-full">
+                <SelectValue placeholder="Raiz (Sem pasta pai)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ROOT_FOLDER_VALUE}>Raiz (Sem pasta pai)</SelectItem>
+                {availableFolders.map((folder) => (
+                  <SelectItem key={folder.id} value={folder.id}>
+                    {folder.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-xs text-gray-500">
+              {mode === 'create' ? 'Escolha onde criar a nova pasta' : 'Mova a pasta para outro lugar'}
+            </p>
+          </div>
 
           {/* Cor da Pasta */}
           <div>

@@ -8,13 +8,8 @@ import {
   Clock,
   Copy,
   Edit,
-  Folder,
-  FolderOpen,
-  Home,
   MoreVertical,
-  Move,
   Star,
-  Trash2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,12 +18,10 @@ import { cn } from '@/lib/utils';
 import type { Orcamento } from '@/types';
 import { draggableId } from './dnd/dashboardDnd';
 import { useDragToOpenGuard } from './dnd/useDragToOpenGuard';
+import { BudgetActionsMenu } from './BudgetActionsMenu';
+import type { MoveTarget } from './ActionsMenu';
 
-export interface MoveTarget {
-  id: string | null;
-  name: string;
-  color?: string;
-}
+export type { MoveTarget };
 
 export interface BudgetCardProps {
   budget: Orcamento;
@@ -180,83 +173,19 @@ export function BudgetCard({
           </Button>
 
           {menuOpen && (
-            <>
-              <div className="fixed inset-0 z-20" onClick={onCloseMenu} />
-
-              <div className="absolute right-0 top-10 z-30 w-60 overflow-hidden rounded-xl border border-gray-100 bg-surface py-1.5 shadow-xl ring-1 ring-black/5 duration-100 animate-in fade-in-0 zoom-in-95">
-                {budget.status !== 'Finalizado' && (
-                  <button
-                    onClick={onFinalize}
-                    disabled={isFinalizing}
-                    className="mx-1 flex w-[calc(100%-8px)] items-center space-x-2.5 rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                  >
-                    <CheckCircle className="h-4 w-4 text-gray-400" />
-                    <span>{isFinalizing ? 'Finalizando…' : 'Finalizar Orçamento'}</span>
-                  </button>
-                )}
-
-                <button
-                  onClick={onToggleTemplate}
-                  className="mx-1 flex w-[calc(100%-8px)] items-center space-x-2.5 rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  <Star className="h-4 w-4 text-gray-400" />
-                  <span>{budget.isTemplate ? 'Desmarcar Modelo' : 'Marcar como Modelo'}</span>
-                </button>
-
-                <div className="my-1 border-t border-gray-100" />
-                <button
-                  onClick={onToggleMoveMenu}
-                  className="mx-1 flex w-[calc(100%-8px)] items-center space-x-2.5 rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  <Move className="h-4 w-4 text-gray-400" />
-                  <span>Mover para pasta…</span>
-                </button>
-
-                {moveMenuOpen && (
-                  <div className="mx-1 mb-1 max-h-40 overflow-y-auto rounded-lg bg-gray-50">
-                    {moveTargets.map((target) => (
-                      <button
-                        key={String(target.id)}
-                        onClick={() => onMoveTo(target.id)}
-                        className="flex w-full items-center space-x-2 rounded-lg px-3 py-1.5 text-left text-sm text-gray-600 hover:bg-gray-100"
-                      >
-                        {target.id === null ? (
-                          <Home className="h-3.5 w-3.5" />
-                        ) : (
-                          <Folder
-                            className="h-3.5 w-3.5"
-                            style={{ color: target.color || '#6B7280' }}
-                          />
-                        )}
-                        <span className="truncate">{target.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {budget.folderId && (
-                  <>
-                    <div className="my-1 border-t border-gray-100" />
-                    <button
-                      onClick={onRemoveFromFolder}
-                      className="mx-1 flex w-[calc(100%-8px)] items-center space-x-2.5 rounded-lg px-3 py-2 text-left text-sm text-neutral-900 hover:bg-accent-500/10"
-                    >
-                      <FolderOpen className="h-4 w-4" />
-                      <span>Mover para Raiz</span>
-                    </button>
-                  </>
-                )}
-
-                <div className="my-1 border-t border-gray-100" />
-                <button
-                  onClick={onDelete}
-                  className="mx-1 flex w-[calc(100%-8px)] items-center space-x-2.5 rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  <span>Excluir</span>
-                </button>
-              </div>
-            </>
+            <BudgetActionsMenu
+              budget={budget}
+              isFinalizing={isFinalizing}
+              moveMenuOpen={moveMenuOpen}
+              moveTargets={moveTargets}
+              onCloseMenu={onCloseMenu}
+              onToggleMoveMenu={onToggleMoveMenu}
+              onFinalize={onFinalize}
+              onToggleTemplate={onToggleTemplate}
+              onMoveTo={onMoveTo}
+              onRemoveFromFolder={onRemoveFromFolder}
+              onDelete={onDelete}
+            />
           )}
         </div>
       </div>
