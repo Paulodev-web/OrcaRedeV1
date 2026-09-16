@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Toaster } from "sonner";
 import "./globals.css";
 import Providers from "@/providers/Providers";
@@ -32,11 +33,24 @@ export default function RootLayout({
       <head>
         {/*
           Anti-flash: precisa rodar SÍNCRONO antes da primeira pintura, senão a
-          tela aparece clara e pisca para o escuro na hidratação. Por isso é
-          `dangerouslySetInnerHTML` com string, e não um componente.
-          Conteúdo estático nosso, sem interpolação de dado externo.
+          tela aparece clara e pisca para o escuro na hidratação. Conteúdo
+          estático nosso, sem interpolação de dado externo.
+
+          Vai por `next/script` com `beforeInteractive`, e não por uma tag
+          `<script>` crua, porque o React avisa no console que script renderizado
+          como elemento nunca executa em render de cliente:
+
+            Encountered a script tag while rendering React component.
+
+          No primeiro carregamento a tag crua até funcionava (o HTML do servidor
+          a traz pronta), mas o aviso é legítimo e, em navegação client-side,
+          uma tag assim de fato não roda. `beforeInteractive` é a forma que o
+          Next injeta o conteúdo no documento antes da hidratação, que é
+          exatamente a garantia que o anti-flash precisa.
         */}
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <Script id="theme-anti-flash" strategy="beforeInteractive">
+          {themeScript}
+        </Script>
       </head>
       <body className="antialiased">
         <Providers>

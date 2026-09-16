@@ -5,6 +5,7 @@ import { ensureMember } from '@/lib/auth/ensureMember';
 import { createSupabaseServiceRoleClient } from '@/lib/supabaseServer';
 import { getWorkMessages } from '@/services/works/getWorkMessages';
 import { getAttachmentSignedUrls } from '@/services/works/getAttachmentSignedUrls';
+import { markMessagesRead } from '@/services/works/markMessagesRead';
 import {
   CHAT_ATTACHMENT_LIMITS,
   CHAT_MESSAGE_BODY_MAX,
@@ -297,23 +298,12 @@ export async function markMessagesAsRead(
   const gate = await ensureMember(workId);
   if (!gate.ok) return { success: false, error: gate.error };
 
-  const otherRole = gate.role === 'engineer' ? 'manager' : 'engineer';
-  const readColumn =
-    gate.role === 'engineer' ? 'read_by_engineer_at' : 'read_by_manager_at';
-
-  const { data, error } = await gate.supabase
-    .from('work_messages')
-    .update({ [readColumn]: new Date().toISOString() })
-    .eq('work_id', workId)
-    .eq('sender_role', otherRole)
-    .is(readColumn, null)
-    .select('id');
+  const { count, error } = await markMessagesRead(gate.supabase, workId, gate.role);
 
   if (error) {
-    return { success: false, error: error.message };
+    return { success: false, error };
   }
 
-  const count = Array.isArray(data) ? data.length : 0;
   if (count > 0) {
     revalidatePath(WORKS_PATH);
   }
