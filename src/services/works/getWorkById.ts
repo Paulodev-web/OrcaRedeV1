@@ -40,15 +40,14 @@ export const getWorkById = cache(async (
 
   const row = data as unknown as RawRow;
 
-  let managerName: string | null = null;
-  if (row.manager_id) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('full_name')
-      .eq('id', row.manager_id)
-      .maybeSingle();
-    managerName = (profile?.full_name as string | null) ?? null;
-  }
+  const [managerProfile, engineerProfile] = await Promise.all([
+    row.manager_id
+      ? supabase.from('profiles').select('full_name').eq('id', row.manager_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    supabase.from('profiles').select('full_name').eq('id', row.engineer_id).maybeSingle(),
+  ]);
+  const managerName = (managerProfile.data?.full_name as string | null) ?? null;
+  const engineerName = (engineerProfile.data?.full_name as string | null) ?? null;
 
   return {
     id: row.id,
@@ -68,5 +67,6 @@ export const getWorkById = cache(async (
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     managerName,
+    engineerName,
   };
 });

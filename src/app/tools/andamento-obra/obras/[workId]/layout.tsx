@@ -11,6 +11,7 @@ import { getWorkOpenAlert } from '@/services/works/getWorkOpenAlert';
 import { getWorkExecutionStats } from '@/services/works/getWorkExecutionStats';
 import { getInstallationsCountByWork } from '@/services/works/getInstallationsCountByWork';
 import { getManagers } from '@/services/people/getManagers';
+import { ensureOrgAdmin } from '@/lib/auth/ensureOrgAdmin';
 import { WorkHeader } from '@/components/andamento-obra/works/WorkHeader';
 import { WorkTabsNav } from '@/components/andamento-obra/works/WorkTabsNav';
 import { WorkAlertBanner } from '@/components/andamento-obra/works/WorkAlertBanner';
@@ -45,6 +46,7 @@ export default async function WorkDetailLayout({ children, params }: LayoutProps
     openAlert,
     installationsCounts,
     executionStats,
+    orgAdminGate,
   ] = await Promise.all([
     getWorkMilestones(supabase, workId),
     getManagers(supabase, user.id),
@@ -54,7 +56,9 @@ export default async function WorkDetailLayout({ children, params }: LayoutProps
     getWorkOpenAlert(supabase, workId),
     getInstallationsCountByWork(supabase, [workId]),
     getWorkExecutionStats(supabase, [workId]),
+    ensureOrgAdmin(),
   ]);
+  const canManageOrg = orgAdminGate.ok;
 
   const postsInstalled = installationsCounts[workId]?.installed ?? 0;
 
@@ -75,6 +79,7 @@ export default async function WorkDetailLayout({ children, params }: LayoutProps
         workId={workId}
         chatUnreadCount={chatUnread}
         marcosPendingCount={marcosPending}
+        canManageOrg={canManageOrg}
       />
       <main className="p-6 lg:p-8">
         <div className="mx-auto max-w-7xl">{children}</div>

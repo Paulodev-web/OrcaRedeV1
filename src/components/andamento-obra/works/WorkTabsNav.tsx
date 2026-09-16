@@ -8,6 +8,8 @@ interface WorkTabsNavProps {
   workId: string;
   chatUnreadCount?: number;
   marcosPendingCount?: number;
+  /** Dono/admin da organização — só quem pode reatribuir a obra vê a aba "Responsável". */
+  canManageOrg?: boolean;
 }
 
 /**
@@ -19,6 +21,10 @@ interface WorkTabsNavProps {
  * com o gerente e aprovar etapa.
  *
  * Alertas nao esta aqui de proposito: virou faixa no topo (WorkAlertBanner).
+ *
+ * "Responsavel" e condicional (nao entra no array fixo): so aparece pra quem
+ * pode usa-la (dono/admin da org). Pra quem nao pode, a rota continua de pe,
+ * sem porta — mesmo tratamento que equipe/checklists ja recebem.
  */
 const tabs = [
   { slug: 'visao-geral', label: 'Obra' },
@@ -31,14 +37,16 @@ export function WorkTabsNav({
   workId,
   chatUnreadCount = 0,
   marcosPendingCount = 0,
+  canManageOrg = false,
 }: WorkTabsNavProps) {
   const pathname = usePathname();
   const base = `/tools/andamento-obra/obras/${workId}`;
+  const allTabs = canManageOrg ? [...tabs, { slug: 'responsavel', label: 'Responsável' }] : tabs;
 
   return (
     <nav aria-label="Abas da obra" className="border-b border-gray-200 bg-surface">
       <div className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-6 py-2 lg:px-8">
-        {tabs.map((tab) => {
+        {allTabs.map((tab) => {
           const href = `${base}/${tab.slug}`;
           const active = pathname === href || pathname.startsWith(`${href}/`);
           let badgeCount = 0;

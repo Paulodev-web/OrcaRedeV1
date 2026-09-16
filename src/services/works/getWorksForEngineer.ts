@@ -53,6 +53,18 @@ export async function getWorksForEngineer(
     }
   }
 
+  const engineerIds = Array.from(new Set(rows.map((r) => r.engineer_id)));
+  const engineerNameById = new Map<string, string | null>();
+  if (engineerIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', engineerIds);
+    for (const p of profiles ?? []) {
+      engineerNameById.set(p.id as string, (p.full_name as string | null) ?? null);
+    }
+  }
+
   return rows.map((row) => ({
     id: row.id,
     engineerId: row.engineer_id,
@@ -71,5 +83,6 @@ export async function getWorksForEngineer(
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     managerName: row.manager_id ? managerNameById.get(row.manager_id) ?? null : null,
+    engineerName: engineerNameById.get(row.engineer_id) ?? null,
   }));
 }

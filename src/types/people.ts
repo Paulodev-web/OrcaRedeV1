@@ -9,6 +9,12 @@ export interface ManagerRow {
   createdAt: string;
 }
 
+export interface EngineerRow {
+  id: string;
+  fullName: string;
+  email: string | null;
+}
+
 export interface CrewMemberRow {
   id: string;
   fullName: string;
