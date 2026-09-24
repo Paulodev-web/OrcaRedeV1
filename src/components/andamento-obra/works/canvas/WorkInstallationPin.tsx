@@ -12,12 +12,40 @@ import type { WorkPoleInstallation } from '@/types/works';
  * pra distinguir "planejado" de "executado".
  *
  *  - Planejado: circulo cinza, ~24px
- *  - Instalacao: gota verde, ~32px (44px area de toque)
+ *  - Instalacao: gota ambar ou verde, ~32px (44px area de toque)
  */
 const PIN_WIDTH = 24;
 const PIN_HEIGHT = 32;
 /** Area de toque minima em mobile (44px). */
 const TOUCH_TARGET = 44;
+
+/**
+ * As duas caras do pin de execucao.
+ *
+ * Ambar = levantado em campo, esperando o engenheiro. Verde = publicado, o
+ * cliente ja ve. Nao e cor inventada aqui: e o mesmo par que `DailyLogStatusBadge`
+ * e `MilestoneStatusBadge` usam para `pending_approval` e `approved`. Quem
+ * aprende o codigo de cor no diario le a planta sem precisar de legenda.
+ *
+ * Alem da cor, o tracejado no contorno carrega a mesma informacao, para
+ * sobreviver a zoom afastado, tela no sol e daltonismo.
+ */
+const APARENCIA = {
+  aguardando: {
+    fill: '#F59E0B',
+    stroke: '#B45309',
+    strokeSelecionado: '#92400E',
+    tracejado: '3 2',
+    halo: 'rgba(245,158,11,0.6)',
+  },
+  publicado: {
+    fill: '#10B981',
+    stroke: '#047857',
+    strokeSelecionado: '#065F46',
+    tracejado: undefined,
+    halo: 'rgba(16,185,129,0.6)',
+  },
+} as const;
 
 interface WorkInstallationPinProps {
   installation: WorkPoleInstallation;
@@ -32,9 +60,14 @@ interface WorkInstallationPinProps {
  *
  * Renderizado sobre o PDF, na coordenada (x_coord, y_coord) do espaco logico
  * 6000x6000. Diferenciado do `WorkPostMarker` por:
- *  - cor verde (#10B981) na fase atual (cores adicionais ficam pro Bloco 8)
+ *  - cor viva (ambar ou verde) contra o cinza do poste previsto
  *  - formato de gota invertida (SVG)
  *  - tamanho ligeiramente maior + area de toque 44px (mobile-friendly)
+ *
+ * Tres estados na mesma planta, cada um com forma e cor propria:
+ *  - cinza redondo: previsto no orcamento, campo ainda nao chegou
+ *  - gota ambar tracejada: levantado em campo, esperando o engenheiro publicar
+ *  - gota verde inteira: publicado, o cliente ja ve no portal
  *
  * `React.memo` para reduzir re-render durante pan/zoom (igual WorkPostMarker).
  *
@@ -52,9 +85,15 @@ export const WorkInstallationPin = memo(function WorkInstallationPin({
     : 'Sem numeracao';
 
   const installedDate = formatShort(installation.installedAt);
-  const tooltip = creatorName
+  const base = creatorName
     ? `Instalado em ${installedDate} por ${creatorName}`
     : `Instalado em ${installedDate}`;
+
+  const published = installation.approvedAt !== null;
+  const cor = published ? APARENCIA.publicado : APARENCIA.aguardando;
+  const tooltip = published
+    ? `${base}. Publicado no portal do cliente.`
+    : `${base}. Aguardando sua aprovacao para aparecer no portal do cliente.`;
 
   // z-index por installed_at: instalacoes mais recentes ficam por cima.
   // Convertemos timestamp em segundos desde epoch / 1000 para caber em
@@ -69,7 +108,7 @@ export const WorkInstallationPin = memo(function WorkInstallationPin({
       type="button"
       onClick={() => onSelect(installation)}
       title={tooltip}
-      aria-label={`Pin de instalacao ${label}. ${tooltip}.`}
+      aria-label={`Pin de instalacao ${label}. ${tooltip}`}
       data-installation-id={installation.id}
       className="absolute flex items-center justify-center bg-transparent p-0 transition-transform duration-150 ease-out hover:scale-110 focus:outline-none focus-visible:scale-110"
       style={{
@@ -87,7 +126,7 @@ export const WorkInstallationPin = memo(function WorkInstallationPin({
         aria-hidden="true"
         style={{
           filter: selected
-            ? 'drop-shadow(0 0 4px rgba(16,185,129,0.6))'
+            ? `drop-shadow(0 0 4px ${cor.halo})`
             : 'drop-shadow(0 1px 1px rgba(0,0,0,0.25))',
         }}
       >
@@ -95,9 +134,10 @@ export const WorkInstallationPin = memo(function WorkInstallationPin({
             cima. Path desenhado em coordenadas SVG locais. */}
         <path
           d="M12 0 C5 0 0 5 0 12 C0 19 5 24 12 32 C19 24 24 19 24 12 C24 5 19 0 12 0 Z"
-          fill="#10B981"
-          stroke={selected ? '#065F46' : '#047857'}
-          strokeWidth={selected ? 2.5 : 1.5}
+          fill={cor.fill}
+          stroke={selected ? cor.strokeSelecionado : cor.stroke}
+          strokeWidth={selected ? 2.5 : published ? 1.5 : 2}
+          strokeDasharray={cor.tracejado}
         />
         <circle cx={12} cy={12} r={4.5} fill="#FFFFFF" />
       </svg>

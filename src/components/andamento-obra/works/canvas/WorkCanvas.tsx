@@ -14,7 +14,7 @@ import {
   TransformWrapper,
   type ReactZoomPanPinchRef,
 } from 'react-zoom-pan-pinch';
-import { AlertTriangle, FileText, Loader2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, FileText, Loader2 } from 'lucide-react';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
@@ -40,8 +40,12 @@ import {
   isHighResRender,
 } from '@/lib/canvas/pdfRenderConfig';
 import { useRealtimeChannel, type RealtimeEventConfig } from '@/lib/hooks/useRealtimeChannel';
-import { loadPoleInstallation } from '@/actions/workPoleInstallations';
+import {
+  approvePoleInstallations,
+  loadPoleInstallation,
+} from '@/actions/workPoleInstallations';
 import { CanvasToolbar } from './CanvasToolbar';
+import { CanvasLegend } from './CanvasLegend';
 import { WorkPostMarker } from './WorkPostMarker';
 import { WorkConnectionLine } from './WorkConnectionLine';
 import type { MountedEquipment } from '@/services/works/getWorkExecutionOverlay';
@@ -53,6 +57,8 @@ configurePdfWorker();
 interface WorkCanvasProps {
   workId: string;
   viewerUserId: string;
+  /** Papel do usuario nesta obra. So o engenheiro publica no portal. */
+  viewerRole: 'engineer' | 'manager';
   snapshot: WorkProjectSnapshot;
   posts: WorkProjectPost[];
   connections: WorkProjectConnection[];
@@ -90,6 +96,7 @@ type LoadedPdfPage = Parameters<
 export function WorkCanvas({
   workId,
   viewerUserId,
+  viewerRole,
   snapshot,
   posts,
   connections,
@@ -353,6 +360,70 @@ export function WorkCanvas({
     }
   };
 
+  const [bulkApproveError, setBulkApproveError] = useState<string | null>(null);
+  const [isBulkApproving, setIsBulkApproving] = useState(false);
+
+  const instalacoesAtivas = useMemo(
+    () => installations.filter((i) => i.status === 'installed'),
+    [installations],
+  );
+
+  // Fila do engenheiro: o que o campo levantou e ainda nao atravessou para o
+  // portal do cliente.
+  const pendingApproval = useMemo(
+    () => instalacoesAtivas.filter((i) => i.approvedAt === null),
+    [instalacoesAtivas],
+  );
+
+  // Poste previsto que o campo ainda nao encostou. Conta pelo vinculo, nao
+  // pela diferenca de totais: poste levantado fora do projeto entra em
+  // `instalacoesAtivas` sem ter um poste previsto correspondente, e subtrair
+  // um do outro daria numero negativo numa obra com muitos desses.
+  const postesAindaCinzas = useMemo(() => {
+    const acesos = new Set(
+      instalacoesAtivas
+        .map((i) => i.projectPostId)
+        .filter((id): id is string => id !== null),
+    );
+    return posts.filter((p) => !acesos.has(p.id)).length;
+  }, [posts, instalacoesAtivas]);
+
+  const handleApprovalChanged = useCallback(
+    (installationId: string, approvedAt: string | null) => {
+      setInstallations((prev) =>
+        prev.map((i) => (i.id === installationId ? { ...i, approvedAt } : i)),
+      );
+      setSelected((prev) =>
+        prev && prev.kind === 'installation' && prev.installation.id === installationId
+          ? { kind: 'installation', installation: { ...prev.installation, approvedAt } }
+          : prev,
+      );
+    },
+    [],
+  );
+
+  const handleApproveAll = useCallback(async () => {
+    setBulkApproveError(null);
+    setIsBulkApproving(true);
+    try {
+      const result = await approvePoleInstallations({ workId });
+      if (result.success) {
+        const now = new Date().toISOString();
+        setInstallations((prev) =>
+          prev.map((i) =>
+            i.status === 'installed' && i.approvedAt === null
+              ? { ...i, approvedAt: now }
+              : i,
+          ),
+        );
+      } else {
+        setBulkApproveError(result.error);
+      }
+    } finally {
+      setIsBulkApproving(false);
+    }
+  }, [workId]);
+
   const installationsNearSelected = useMemo(() => {
     if (!selected || selected.kind !== 'planned') return [];
     const post = selected.post;
@@ -381,6 +452,33 @@ export function WorkCanvas({
         pdfPageNumber={pageNumber}
         onPageChange={handlePageChange}
       />
+
+      {viewerRole === 'engineer' && pendingApproval.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-200 bg-amber-50 px-3 py-2">
+          <p className="text-[11px] text-amber-900">
+            <strong className="font-semibold">
+              {pendingApproval.length}{' '}
+              {pendingApproval.length === 1 ? 'poste' : 'postes'}
+            </strong>{' '}
+            {pendingApproval.length === 1 ? 'levantado' : 'levantados'} em campo,
+            ainda fora do portal do cliente.
+          </p>
+          <button
+            type="button"
+            onClick={handleApproveAll}
+            disabled={isBulkApproving}
+            className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+            {isBulkApproving
+              ? 'Publicando…'
+              : `Publicar ${pendingApproval.length === 1 ? 'o poste' : 'os ' + pendingApproval.length}`}
+          </button>
+          {bulkApproveError && (
+            <p className="w-full text-[11px] text-red-700">{bulkApproveError}</p>
+          )}
+        </div>
+      )}
 
       {(planError || realtimeStatus === 'disconnected') && (
         <div className="flex flex-col gap-1 border-b border-gray-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
@@ -634,11 +732,22 @@ export function WorkCanvas({
             </div>
           </TransformComponent>
         </TransformWrapper>
+
+        {/* Fora do TransformWrapper de proposito: a legenda nao anda nem
+            escala com o pan e o zoom. */}
+        {hasProject && (
+          <CanvasLegend
+            previstos={postesAindaCinzas}
+            aguardando={pendingApproval.length}
+            publicados={instalacoesAtivas.length - pendingApproval.length}
+          />
+        )}
       </div>
 
       <PostDetailsPanel
         selected={selected}
         viewerUserId={viewerUserId}
+        viewerRole={viewerRole}
         installationsNearSelected={installationsNearSelected}
         installationSignedUrls={installationSignedUrls}
         creatorNames={creatorNames}
@@ -651,6 +760,7 @@ export function WorkCanvas({
           setInstallations((prev) => prev.filter((i) => i.id !== installationId));
           setSelected(null);
         }}
+        onInstallationApprovalChanged={handleApprovalChanged}
       />
     </div>
   );

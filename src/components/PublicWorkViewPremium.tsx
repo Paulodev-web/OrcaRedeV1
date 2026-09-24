@@ -131,6 +131,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
           ]);
           const work: WorkTracking = {
             id: row.public_id ?? workId, budget_id: row.budget_id ?? '',
+            work_id: row.work_id ?? null,
             name: row.name ?? '', status: row.status ?? 'Planejado',
             network_extension_km: row.network_extension_km ?? 0,
             planned_network_meters: row.planned_network_meters ?? undefined,
@@ -278,12 +279,24 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
 
   const donutBg = { background: `conic-gradient(${ON.blue} ${realPct * 3.6}deg, rgba(255,255,255,0.18) 0deg)` };
 
-  const postsForCanvas: BudgetPostDetail[] = workData.tracked_posts
+  /**
+   * Acompanhamento espelhado: o mapa desce com TODOS os postes do orçamento, e
+   * verde quer dizer "o engenheiro aprovou este poste". Por isso o status
+   * precisa viajar até o ícone, e `postIconAlwaysGreen` tem que sair do caminho.
+   *
+   * Acompanhamento legado continua pintando tudo de verde, que é o
+   * comportamento de sempre: lá o engenheiro só colocava no mapa poste que já
+   * estava levantado, e esses links já estão na mão de cliente.
+   */
+  const espelhado = Boolean(workData.work_id);
+
+  const postsForCanvas: (BudgetPostDetail & { status?: string })[] = workData.tracked_posts
     .filter(p => p.x_coord != null && p.y_coord != null)
     .map(p => ({
       id: p.id, name: p.name || 'Poste', custom_name: p.custom_name,
       counter: 0, x_coord: p.x_coord, y_coord: p.y_coord,
       post_types: null, post_item_groups: [], post_materials: [],
+      status: p.status,
     }));
     
   console.log('🎯 PostsForCanvas:', {
@@ -303,7 +316,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
     onAddPoste: () => {}, onUpdatePoste: () => {}, onUploadImage: () => {},
     onDeleteImage: () => {}, onDeletePoste: () => {},
     postConnections: workData.post_connections || [],
-    hidePostNames: true, postIconAlwaysGreen: true, loadingUpload: false,
+    hidePostNames: true, postIconAlwaysGreen: !espelhado, loadingUpload: false,
     hideToolbar: true,
   };
 

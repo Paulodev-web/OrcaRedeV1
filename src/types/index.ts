@@ -197,6 +197,15 @@ export interface BudgetDetails {
 export interface WorkTracking {
   id: string;
   budget_id: string;
+  /**
+   * Obra do Andamento de Obra que alimenta este acompanhamento.
+   *
+   * Preenchido = espelho. Os postes vêm do orçamento e acendem quando o
+   * engenheiro aprova o que o gerente marcou no APK; o Portal aqui não
+   * escreve poste nenhum. Ausente = acompanhamento legado, marcado à mão,
+   * que continua funcionando como sempre funcionou.
+   */
+  work_id?: string | null;
   name: string;
   status: 'Planejado' | 'Em Andamento' | 'Pausado' | 'Concluído';
   network_extension_km?: number;

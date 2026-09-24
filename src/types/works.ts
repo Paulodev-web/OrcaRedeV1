@@ -637,6 +637,10 @@ export interface WorkPoleInstallation {
   id: string;
   workId: string;
   createdBy: string;
+  /** Poste do projeto que esta marcacao acendeu. Null = poste levantado em
+   *  campo fora do projeto. E por ele que o portal do cliente casa o poste
+   *  com o do orcamento (project_post.source_post_id = budget_post.id). */
+  projectPostId: string | null;
   xCoord: number;
   yCoord: number;
   gpsLat: number | null;
@@ -649,6 +653,10 @@ export interface WorkPoleInstallation {
   status: PoleInstallationStatus;
   removedAt: string | null;
   removedBy: string | null;
+  /** Quando o engenheiro liberou este poste para o portal do cliente.
+   *  Null = registrado em campo, visivel internamente, ainda nao publicado. */
+  approvedAt: string | null;
+  approvedBy: string | null;
   clientEventId: string;
   createdAt: string;
   updatedAt: string;
@@ -671,6 +679,9 @@ export interface RecordPoleInstallationInput {
   /** Opcional; se ausente, e gerado server-side. APK costuma enviar este id
    *  para casar com o path de storage usado no upload offline-first. */
   installationId?: string;
+  /** Poste do projeto que esta sendo aceso. Null/ausente = poste levantado
+   *  fora do projeto. */
+  projectPostId?: string | null;
   xCoord: number;
   yCoord: number;
   gpsLat?: number | null;
@@ -695,6 +706,19 @@ export interface RecordPoleInstallationResult {
 export interface RemovePoleInstallationInput {
   installationId: string;
   reason?: string | null;
+}
+
+export interface ApprovePoleInstallationsInput {
+  workId: string;
+  /** Vazio ou ausente aprova tudo que esta pendente na obra. */
+  installationIds?: string[];
+}
+
+export interface ApprovePoleInstallationsResult {
+  /** Quantas marcacoes mudaram de estado neste clique. */
+  affected: number;
+  /** Quantas seguem esperando aprovacao na obra depois desta acao. */
+  pending: number;
 }
 
 export interface GetUploadUrlForPoleInstallationMediaInput {

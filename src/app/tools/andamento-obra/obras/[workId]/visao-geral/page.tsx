@@ -11,9 +11,12 @@ import { getWorkById } from '@/services/works/getWorkById';
 import { getPoleInstallations } from '@/services/works/getPoleInstallations';
 import { getPoleInstallationSignedUrls } from '@/services/works/getPoleInstallationSignedUrls';
 import { getWorkExecutionOverlay } from '@/services/works/getWorkExecutionOverlay';
+import { getViewerWorkRole } from '@/services/works/getViewerWorkRole';
+import { getWorkTrackingLink } from '@/services/works/getWorkTrackingLink';
 import { ProjectOverviewSummary } from '@/components/andamento-obra/works/ProjectOverviewSummary';
 import { WorkCanvas } from '@/components/andamento-obra/works/canvas/WorkCanvas';
 import { CanvasEmptyState } from '@/components/andamento-obra/works/canvas/CanvasEmptyState';
+import { ClientPortalCard } from '@/components/andamento-obra/works/ClientPortalCard';
 
 interface VisaoGeralPageProps {
   params: Promise<{ workId: string }>;
@@ -49,12 +52,16 @@ export default async function VisaoGeralPage({ params }: VisaoGeralPageProps) {
     redirect('/');
   }
 
-  const [bundle, work, installations, overlay] = await Promise.all([
+  const [bundle, work, installations, overlay, memberRole, portal] = await Promise.all([
     getWorkProjectSnapshot(supabase, workId),
     getWorkById(supabase, workId),
     getPoleInstallations(supabase, workId),
     getWorkExecutionOverlay(supabase, workId),
+    getViewerWorkRole(supabase, workId, viewerUserId),
+    getWorkTrackingLink(supabase, workId),
   ]);
+
+  const viewerRole = memberRole === 'engineer' ? 'engineer' : 'manager';
 
   if (!bundle) {
     return (
@@ -87,6 +94,7 @@ export default async function VisaoGeralPage({ params }: VisaoGeralPageProps) {
           <WorkCanvas
             workId={workId}
             viewerUserId={viewerUserId}
+            viewerRole={viewerRole}
             snapshot={bundle.snapshot}
             posts={bundle.posts}
             connections={bundle.connections}
@@ -102,6 +110,15 @@ export default async function VisaoGeralPage({ params }: VisaoGeralPageProps) {
 
       <aside className="flex w-full flex-col gap-3 lg:basis-[32%]">
         <ProjectOverviewSummary bundle={bundle} compact />
+        {viewerRole === 'engineer' && (
+          <ClientPortalCard
+            workId={workId}
+            publicId={portal?.publicId ?? null}
+            polesPublished={portal?.polesPublished ?? 0}
+            polesPlanned={portal?.polesPlanned ?? 0}
+            hasBudget={work?.budgetId != null}
+          />
+        )}
         <QuickLinks workId={workId} />
       </aside>
     </div>

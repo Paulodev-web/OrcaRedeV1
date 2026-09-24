@@ -10,6 +10,8 @@ import {
 import { getPoleInstallationSignedUrls } from '@/services/works/getPoleInstallationSignedUrls';
 import { mapRawInstallation } from '@/services/works/getPoleInstallations';
 import {
+  type ApprovePoleInstallationsInput,
+  type ApprovePoleInstallationsResult,
   POLE_INSTALLATION_MEDIA_LIMITS,
   POLE_INSTALLATION_NOTES_MAX,
   POLE_INSTALLATION_NUMBERING_MAX,
@@ -226,6 +228,25 @@ export async function recordPoleInstallation(
     };
   }
 
+  // O poste do projeto que esta marcacao acende. E por ele que o portal do
+  // cliente casa a marcacao de campo com o poste do orcamento; sem ele, o
+  // poste entra no portal como "levantado fora do projeto".
+  const projectPostId = input.projectPostId ?? null;
+  if (projectPostId !== null) {
+    if (!UUID_RE.test(projectPostId)) {
+      return { success: false, error: 'projectPostId invalido.' };
+    }
+    const { data: projectPost } = await gate.supabase
+      .from('work_project_posts')
+      .select('id')
+      .eq('id', projectPostId)
+      .eq('work_id', input.workId)
+      .maybeSingle();
+    if (!projectPost) {
+      return { success: false, error: 'Poste do projeto nao pertence a esta obra.' };
+    }
+  }
+
   // Bloquear se obra cancelada.
   const { data: workRow } = await gate.supabase
     .from('works')
@@ -293,6 +314,7 @@ export async function recordPoleInstallation(
       notes,
       installed_at: input.installedAt,
       client_event_id: input.clientEventId,
+      project_post_id: projectPostId,
     });
 
   if (insertErr) {
@@ -466,9 +488,10 @@ export async function loadPoleInstallation(
   const { data, error } = await supabase
     .from('work_pole_installations')
     .select(
-      `id, work_id, created_by, x_coord, y_coord, gps_lat, gps_lng,
+      `id, work_id, created_by, project_post_id, x_coord, y_coord, gps_lat, gps_lng,
        gps_accuracy_meters, numbering, pole_type, notes, installed_at,
-       status, removed_at, removed_by, client_event_id, created_at, updated_at,
+       status, removed_at, removed_by, approved_at, approved_by,
+       client_event_id, created_at, updated_at,
        work_pole_installation_media (
          id, installation_id, work_id, kind, storage_path, mime_type,
          size_bytes, width, height, duration_seconds, is_primary, created_at
@@ -498,4 +521,160 @@ export async function loadPoleInstallation(
     success: true,
     data: { installation, signedUrls, creatorName },
   };
+}
+
+/**
+ * O engenheiro libera para o portal do cliente o que o campo levantou.
+ *
+ * Por que existe: o canvas interno acende o poste na hora em que o gerente
+ * salva, e isso continua valendo (ver `docs/andamento-obra.md`, 5.1). O portal
+ * do cliente, porem, e superficie externa. Nada atravessa para la sem o
+ * engenheiro olhar. `approved_at` e esse portao.
+ *
+ * Quem pode: so o engenheiro da obra, e a trava e tripla:
+ *  - esta action confere `gate.role`;
+ *  - a policy `work_pole_installations_update_approval` exige membro engineer;
+ *  - o trigger `protect_fields` recusa aprovacao que venha junto de qualquer
+ *    outra alteracao, e exige `approved_by = auth.uid()`.
+ *
+ * O espelhamento em si NAO acontece aqui. Quem propaga para `tracked_posts` e
+ * o trigger `trg_pole_installation_sync_tracking`, por statement: aprovar 24
+ * postes de uma vez e um UPDATE so e um espelhamento so. Mantido no banco
+ * porque a aprovacao tambem pode chegar por outro caminho, e a regra nao pode
+ * morar em quem chama.
+ *
+ * `installationIds` vazio aprova tudo que esta pendente na obra.
+ */
+export async function approvePoleInstallations(
+  input: ApprovePoleInstallationsInput,
+): Promise<ActionResult<ApprovePoleInstallationsResult>> {
+  const gate = await ensureMember(input.workId);
+  if (!gate.ok) return { success: false, error: gate.error };
+  if (gate.role !== 'engineer') {
+    return {
+      success: false,
+      error: 'Apenas o engenheiro responsavel publica postes no portal do cliente.',
+    };
+  }
+
+  const ids = (input.installationIds ?? []).filter((id) => UUID_RE.test(id));
+  if ((input.installationIds?.length ?? 0) > 0 && ids.length === 0) {
+    return { success: false, error: 'Nenhuma marcacao valida para aprovar.' };
+  }
+
+  let query = gate.supabase
+    .from('work_pole_installations')
+    .update({
+      approved_at: new Date().toISOString(),
+      approved_by: gate.userId,
+    })
+    .eq('work_id', input.workId)
+    .eq('status', 'installed')
+    .is('approved_at', null);
+
+  if (ids.length > 0) {
+    query = query.in('id', ids);
+  }
+
+  const { data, error } = await query.select('id');
+  if (error) return { success: false, error: error.message };
+
+  const pending = await countPendingApprovals(gate.supabase, input.workId);
+
+  revalidatePath(`${WORKS_PATH}/obras/${input.workId}/visao-geral`);
+  revalidatePath(`${WORKS_PATH}/obras/${input.workId}/dia-a-dia`);
+  revalidatePath(WORKS_PATH);
+
+  return { success: true, data: { affected: (data ?? []).length, pending } };
+}
+
+/**
+ * Desfaz a publicacao de uma marcacao. O poste some do portal do cliente e
+ * volta para a fila do engenheiro; no canvas interno ele continua aceso,
+ * porque continua levantado em campo.
+ */
+export async function unapprovePoleInstallation(
+  installationId: string,
+): Promise<ActionResult<ApprovePoleInstallationsResult>> {
+  if (!installationId || !UUID_RE.test(installationId)) {
+    return { success: false, error: 'ID de instalacao invalido.' };
+  }
+
+  const supabaseRoot = createSupabaseServiceRoleClient();
+  const { data: install, error: fetchErr } = await supabaseRoot
+    .from('work_pole_installations')
+    .select('id, work_id, approved_at')
+    .eq('id', installationId)
+    .maybeSingle();
+
+  if (fetchErr) return { success: false, error: fetchErr.message };
+  if (!install) return { success: false, error: 'Instalacao nao encontrada.' };
+
+  const workId = install.work_id as string;
+  const gate = await ensureMember(workId);
+  if (!gate.ok) return { success: false, error: gate.error };
+  if (gate.role !== 'engineer') {
+    return {
+      success: false,
+      error: 'Apenas o engenheiro responsavel despublica postes.',
+    };
+  }
+  if (install.approved_at === null) {
+    return { success: false, error: 'Esta marcacao ainda nao foi publicada.' };
+  }
+
+  const { error: updErr } = await gate.supabase
+    .from('work_pole_installations')
+    .update({ approved_at: null, approved_by: null })
+    .eq('id', installationId);
+
+  if (updErr) return { success: false, error: updErr.message };
+
+  const pending = await countPendingApprovals(gate.supabase, workId);
+
+  revalidatePath(`${WORKS_PATH}/obras/${workId}/visao-geral`);
+  revalidatePath(WORKS_PATH);
+
+  return { success: true, data: { affected: 1, pending } };
+}
+
+/**
+ * Reconstroi o portal do cliente a partir da obra, do zero.
+ *
+ * Caminho de conserto, nao de rotina: o espelhamento normal roda no trigger a
+ * cada aprovacao. Serve para a primeira vez (obra importada antes desta
+ * versao) e para quando o orcamento mudou de poste e o portal ficou para tras.
+ */
+export async function resyncWorkTracking(
+  workId: string,
+): Promise<ActionResult<{ trackingId: string | null }>> {
+  const gate = await ensureMember(workId);
+  if (!gate.ok) return { success: false, error: gate.error };
+  if (gate.role !== 'engineer') {
+    return { success: false, error: 'Apenas o engenheiro ressincroniza o portal.' };
+  }
+
+  const { data, error } = await gate.supabase.rpc('sync_work_tracking_from_work', {
+    p_work_id: workId,
+  });
+  if (error) return { success: false, error: error.message };
+
+  const result = (data ?? {}) as { trackingId?: string };
+
+  revalidatePath(`${WORKS_PATH}/obras/${workId}/visao-geral`);
+
+  return { success: true, data: { trackingId: result.trackingId ?? null } };
+}
+
+async function countPendingApprovals(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  workId: string,
+): Promise<number> {
+  const { count } = await supabase
+    .from('work_pole_installations')
+    .select('id', { count: 'exact', head: true })
+    .eq('work_id', workId)
+    .eq('status', 'installed')
+    .is('approved_at', null);
+  return count ?? 0;
 }

@@ -244,6 +244,23 @@ export async function updateWork(input: UpdateWorkInput): Promise<ActionResult<{
 
   if (updateError) return { success: false, error: updateError.message };
 
+  // Nome, cliente, datas e status aparecem no portal do cliente. O espelho so
+  // acompanha se for avisado; sem isto, o cliente veria o nome antigo da obra
+  // para sempre. Idempotente e barato: se a obra nao tem portal espelhado, a
+  // funcao devolve `skipped` e nao escreve nada.
+  const mirroredFields = ['name', 'client_name', 'started_at', 'expected_end_at', 'status'];
+  if (mirroredFields.some((field) => field in updates)) {
+    const { error: trackingError } = await gate.supabase.rpc('sync_work_tracking_from_work', {
+      p_work_id: input.id,
+    });
+    if (trackingError) {
+      console.error('[updateWork] Falha ao atualizar portal do cliente', {
+        workId: input.id,
+        error: trackingError.message,
+      });
+    }
+  }
+
   revalidatePath(WORKS_PATH);
   revalidatePath(`${WORKS_PATH}/obras/${input.id}`);
 
@@ -595,6 +612,22 @@ export async function createWorkFromBudget(
       const chunk = connectionRows.slice(i, i + CONNECTIONS_INSERT_CHUNK);
       const { error: connError } = await serviceRole.from('work_project_connections').insert(chunk);
       if (connError) throw new Error(`Falha ao copiar conexões: ${connError.message}`);
+    }
+
+    // O portal do cliente nasce junto com a obra. Ate esta versao ele era uma
+    // ilha: o engenheiro criava o tracking a mao no Portal do Engenheiro e
+    // pintava poste por poste. Agora o mesmo orcamento que desce os postes do
+    // projeto desce os postes do portal, todos cinza, esperando a aprovacao do
+    // que o campo levantar. Falha aqui nao derruba a importacao: a obra existe,
+    // e o botao de ressincronizar conserta o portal depois.
+    const { error: trackingError } = await serviceRole.rpc('sync_work_tracking_from_work', {
+      p_work_id: ctx.workId,
+    });
+    if (trackingError) {
+      console.error('[createWorkFromBudget] Falha ao montar portal do cliente', {
+        workId: ctx.workId,
+        error: trackingError.message,
+      });
     }
 
     revalidatePath(WORKS_PATH);

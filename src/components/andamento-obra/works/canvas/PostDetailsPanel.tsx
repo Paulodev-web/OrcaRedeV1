@@ -7,12 +7,25 @@ import {
   useState,
   useTransition,
 } from 'react';
-import { ExternalLink, Eye, MapPin, Trash2, Video, X } from 'lucide-react';
+import {
+  CheckCircle2,
+  Clock,
+  ExternalLink,
+  Eye,
+  MapPin,
+  Trash2,
+  Video,
+  X,
+} from 'lucide-react';
 import type {
   WorkPoleInstallation,
   WorkProjectPost,
 } from '@/types/works';
-import { removePoleInstallation } from '@/actions/workPoleInstallations';
+import {
+  approvePoleInstallations,
+  removePoleInstallation,
+  unapprovePoleInstallation,
+} from '@/actions/workPoleInstallations';
 import type { MountedEquipment } from '@/services/works/getWorkExecutionOverlay';
 import { ImageLightbox } from '../shared/ImageLightbox';
 
@@ -25,6 +38,8 @@ interface PostDetailsPanelProps {
   selected: Selected;
   /** Id do usuario logado, usado para mostrar acoes de manager. */
   viewerUserId: string;
+  /** Papel do usuario nesta obra. So o engenheiro publica no portal. */
+  viewerRole: 'engineer' | 'manager';
   /** Instalacoes proximas ao poste planejado selecionado (heuristica visual). */
   installationsNearSelected: WorkPoleInstallation[];
   /** URLs assinadas das midias de instalacao (path -> url). */
@@ -36,6 +51,11 @@ interface PostDetailsPanelProps {
   onSelectInstallation: (installation: WorkPoleInstallation) => void;
   /** Notifica o canvas que uma instalacao foi removida pelo manager. */
   onInstallationRemoved: (installationId: string) => void;
+  /** Notifica o canvas que a publicacao no portal do cliente mudou. */
+  onInstallationApprovalChanged: (
+    installationId: string,
+    approvedAt: string | null,
+  ) => void;
   /** O que o campo montou em cada poste, por id de instalação. */
   mountedByInstallation?: Record<string, MountedEquipment[]>;
 }
@@ -63,12 +83,14 @@ interface PostDetailsPanelProps {
 export function PostDetailsPanel({
   selected,
   viewerUserId,
+  viewerRole,
   installationsNearSelected,
   installationSignedUrls,
   creatorNames,
   onClose,
   onSelectInstallation,
   onInstallationRemoved,
+  onInstallationApprovalChanged,
   mountedByInstallation = {},
 }: PostDetailsPanelProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -138,11 +160,13 @@ export function PostDetailsPanel({
             <InstallationBody
               installation={selected.installation}
               viewerUserId={viewerUserId}
+              viewerRole={viewerRole}
               signedUrls={installationSignedUrls}
               creatorName={
                 creatorNames[selected.installation.createdBy] ?? null
               }
               onInstallationRemoved={onInstallationRemoved}
+              onInstallationApprovalChanged={onInstallationApprovalChanged}
               mounted={mountedByInstallation[selected.installation.id] ?? []}
             />
           )}
@@ -328,9 +352,11 @@ function InstallationHeader({
 function InstallationBody({
   installation,
   viewerUserId,
+  viewerRole,
   signedUrls,
   creatorName,
   onInstallationRemoved,
+  onInstallationApprovalChanged,
   mounted,
 }: {
   installation: WorkPoleInstallation;
@@ -338,13 +364,20 @@ function InstallationBody({
   signedUrls: Record<string, string>;
   creatorName: string | null;
   onInstallationRemoved: (installationId: string) => void;
+  onInstallationApprovalChanged: (
+    installationId: string,
+    approvedAt: string | null,
+  ) => void;
+  viewerRole: 'engineer' | 'manager';
   /** O que o campo montou neste poste. */
   mounted: MountedEquipment[];
 }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isApproving, startApproval] = useTransition();
 
   const orderedMedia = useMemo(() => {
     const arr = installation.media.slice();
@@ -363,6 +396,9 @@ function InstallationBody({
   const isCreator = installation.createdBy === viewerUserId;
   const canRemove = isCreator && installation.status === 'installed';
 
+  const published = installation.approvedAt !== null;
+  const canPublish = viewerRole === 'engineer' && installation.status === 'installed';
+
   const dateLabel = new Date(installation.installedAt).toLocaleString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
@@ -375,6 +411,26 @@ function InstallationBody({
     installation.gpsLat !== null && installation.gpsLng !== null
       ? `https://www.google.com/maps?q=${installation.gpsLat},${installation.gpsLng}`
       : null;
+
+  function handlePublishToggle() {
+    setApprovalError(null);
+    startApproval(async () => {
+      const result = published
+        ? await unapprovePoleInstallation(installation.id)
+        : await approvePoleInstallations({
+            workId: installation.workId,
+            installationIds: [installation.id],
+          });
+      if (result.success) {
+        onInstallationApprovalChanged(
+          installation.id,
+          published ? null : new Date().toISOString(),
+        );
+      } else {
+        setApprovalError(result.error);
+      }
+    });
+  }
 
   function handleRemoveClick() {
     setRemoveError(null);
@@ -548,6 +604,60 @@ function InstallationBody({
           <p className="mt-1 whitespace-pre-wrap rounded-md bg-gray-50 p-2 text-[11px] text-gray-700">
             {installation.notes}
           </p>
+        )}
+      </Section>
+
+      <Section title="Portal do cliente">
+        <div
+          className={[
+            'flex items-start gap-2 rounded-md px-2.5 py-2 text-[11px]',
+            published
+              ? 'bg-emerald-50 text-emerald-800'
+              : 'bg-amber-50 text-amber-800',
+          ].join(' ')}
+        >
+          {published ? (
+            <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          ) : (
+            <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          )}
+          <p>
+            {published
+              ? 'Publicado. Este poste aparece verde no acompanhamento que o cliente abre.'
+              : 'Registrado em campo e visível aqui dentro. Ainda não aparece para o cliente.'}
+          </p>
+        </div>
+
+        {approvalError && (
+          <p className="mt-2 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[11px] text-red-700">
+            {approvalError}
+          </p>
+        )}
+
+        {canPublish && (
+          <button
+            type="button"
+            onClick={handlePublishToggle}
+            disabled={isApproving}
+            className={[
+              'mt-2 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+              published
+                ? 'border border-gray-300 bg-surface text-neutral-900 hover:bg-gray-50'
+                : 'bg-emerald-600 text-white hover:bg-emerald-700',
+            ].join(' ')}
+          >
+            {published ? (
+              <>
+                <Clock className="h-3 w-3" aria-hidden="true" />
+                {isApproving ? 'Despublicando…' : 'Tirar do portal'}
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+                {isApproving ? 'Publicando…' : 'Publicar no portal'}
+              </>
+            )}
+          </button>
         )}
       </Section>
 

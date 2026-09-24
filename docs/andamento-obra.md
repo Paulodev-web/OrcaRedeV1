@@ -24,7 +24,7 @@ O eixo do sistema é **o canvas mais a conversa**. Tudo o mais é consequência 
 
 | Quem | Onde | Pode |
 | --- | --- | --- |
-| Engenheiro responsável | portal web | ver a obra, conversar, aprovar marco, criar usuário do app |
+| Engenheiro responsável | portal web | ver a obra, conversar, aprovar marco, publicar poste no portal do cliente, criar usuário do app |
 | Gerente de obra | APK | registrar execução e conversar, só nas obras onde está alocado |
 
 ### 1.2. Princípios travados
@@ -268,8 +268,12 @@ gerada.
 4. **A fila.** Registro e foto entram no SQLite. O worker tenta, recua, tenta de novo.
    `client_event_id` único garante que reenviar dez vezes acende o poste uma vez.
 5. **Verde nos dois lados.** O mesmo poste acende no canvas do engenheiro, entra na linha do dia e
-   no feed da home. Sem ação nenhuma do engenheiro: poste não se aprova, se levanta. A partir daí a
-   ficha dele aceita equipamento.
+   no feed da home. Sem ação nenhuma do engenheiro: **aqui dentro**, poste não se aprova, se
+   levanta. A partir daí a ficha dele aceita equipamento.
+6. **A borda de fora tem portão.** O acompanhamento que o cliente abre (`/obra/<publicId>`, o antigo
+   Portal do Engenheiro) é superfície externa, e para lá o poste só atravessa quando o engenheiro
+   publica. No canvas o pin fica verde com borda âmbar tracejada até isso acontecer, e uma faixa no
+   topo diz quantos esperam. Ver 5.5.
 
 **Poste que o campo levanta e não estava no projeto:** o gerente avisa no chat, o engenheiro
 acrescenta no orçamento, e ele desce cinza. Só funciona sem travar o campo porque a sincronia é
@@ -303,13 +307,42 @@ o engenheiro encerra. Push nos dois sentidos.
 Gerente marca a etapa como concluída com foto e observação. O portal mostra junto o que o campo
 registrou no período. Engenheiro aprova ou devolve com observação. Push de volta ao gerente.
 
-### 5.5. A fila offline
+### 5.5. O portal do cliente
+
+O acompanhamento que o cliente abre não é um sistema à parte: é a mesma obra, vista de fora.
+`work_trackings.work_id` preenchido marca esse espelho.
+
+**A junção.** Os dois lados descendem de `budget_posts`. `work_project_posts.source_post_id` e
+`tracked_posts.original_post_id` apontam para a mesma linha do orçamento, com a mesma coordenada.
+Casar poste de campo com poste do portal é junção, não heurística de proximidade.
+
+**Os espaços de coordenada são dois.** `tracked_posts` vive no espaço do orçamento, porque é o
+`CanvasVisual` do OrçaRede que desenha o portal; `work_pole_installations` vive no quadro 6000x6000.
+Poste de projeto não precisa de conversão nenhuma (a coordenada vem direto de `budget_posts`). Poste
+que o campo levantou fora do projeto recebe a inversa da transformada raster gravada no snapshot,
+que é a identidade quando a planta é PDF.
+
+**Quem escreve.** Só o banco, por `sync_work_tracking_from_work`, disparada pelo trigger de statement
+a cada aprovação. As linhas do espelho são marcadas por `client_id` com prefixo `orcamento:` ou
+`campo:`, e nada aqui encosta em linha sem esse prefixo. O Portal do Engenheiro virou leitura para
+postes; descrição, foco atual, fotos e marcos continuam dele, porque não existem deste lado.
+
+**Acompanhamento legado não é adotado.** Tracking com postes marcados à mão (o caso do Loteamento
+Sol Poente, com 170) seria mostrado em duplicata se o espelho semeasse o orçamento por cima. Obra
+antiga fica como está; o espelho vale para o que nasce daqui pra frente e para tracking ainda vazio.
+
+**O progresso é ponderado e normalizado.** Poste 50, BT 25, MT 15, equipamento 8, iluminação 2,
+dividido pelo peso das metas que existem. Sem a normalização, obra só de iluminação travava em 50%
+com tudo pronto. A regra vive duas vezes, de propósito e em espelho: `refresh_work_tracking_progress`
+no banco e `calculateWeightedProgress` no TypeScript. As duas precisam concordar.
+
+### 5.6. A fila offline
 
 Toda escrita passa por ela, sem exceção. Backoff progressivo, telemetria no Sentry, e a regra de
 ouro: **a tela mostra o registro como feito assim que ele entra na fila**, com estado âmbar, nunca
 um spinner esperando servidor.
 
-### 5.6. A sincronia do orçamento
+### 5.7. A sincronia do orçamento
 
 Contrato, não implementação: quando os postes, os vãos ou as estruturas previstas do orçamento
 vinculado mudam, a obra recebe o diff, obedecendo às quatro regras de 1.4.
@@ -407,8 +440,8 @@ Coluna `project_post_id` em `work_pole_installations`, preenchida sempre. É o q
 "12 de 32 postes" uma frase verdadeira e o que faz o cinza virar verde.
 *Pronto quando:* o portal e o APK dizem, olhando a mesma tabela, quais postes ainda faltam.
 
-**C9. A sincronia do orçamento (5.6).**
-O contrato está em 5.6. É o item de maior risco do catálogo, porque toca um sistema que hoje é
+**C9. A sincronia do orçamento (5.7).**
+O contrato está em 5.7. É o item de maior risco do catálogo, porque toca um sistema que hoje é
 comercial e passa a ter consequência operacional.
 *Pronto quando:* o engenheiro acrescenta um poste no orçamento e ele aparece cinza no aparelho do
 gerente sem ninguém reimportar nada, e um poste já executado sobrevive a ser apagado do orçamento.
