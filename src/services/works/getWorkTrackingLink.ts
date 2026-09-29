@@ -6,6 +6,8 @@ export interface WorkTrackingLink {
   trackingId: string;
   /** Sufixo do link público: /obra/<publicId>. Null = tracking sem link. */
   publicId: string | null;
+  /** False quando a obra foi cancelada/excluida e o link esta despublicado. */
+  publicEnabled: boolean;
   /** Quantos postes do orçamento já acenderam para o cliente. */
   polesPublished: number;
   /** Quantos postes o orçamento prevê. */
@@ -31,7 +33,9 @@ export const getWorkTrackingLink = cache(async (
 ): Promise<WorkTrackingLink | null> => {
   const { data } = await supabase
     .from('work_trackings')
-    .select('id, public_id, poles_installed, planned_poles, progress_percentage')
+    .select(
+      'id, public_id, public_enabled, poles_installed, planned_poles, progress_percentage',
+    )
     .eq('work_id', workId)
     .maybeSingle();
 
@@ -40,6 +44,7 @@ export const getWorkTrackingLink = cache(async (
   return {
     trackingId: data.id as string,
     publicId: (data.public_id as string | null) ?? null,
+    publicEnabled: data.public_enabled !== false,
     polesPublished: Number(data.poles_installed ?? 0),
     polesPlanned: Number(data.planned_poles ?? 0),
     progressPercentage: Number(data.progress_percentage ?? 0),

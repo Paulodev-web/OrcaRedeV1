@@ -5922,6 +5922,7 @@ export type Database = {
           poles_installed: number | null
           progress_percentage: number | null
           project_description: string | null
+          public_enabled: boolean
           public_id: string | null
           public_lighting_installed: number | null
           responsible_person: string | null
@@ -5929,7 +5930,9 @@ export type Database = {
           status: string
           timeline_milestones: Json | null
           updated_at: string | null
+          unpublished_at: string | null
           work_images: Json | null
+          work_id: string | null
         }
         Insert: {
           actual_completion?: string | null
@@ -5958,6 +5961,7 @@ export type Database = {
           poles_installed?: number | null
           progress_percentage?: number | null
           project_description?: string | null
+          public_enabled?: boolean
           public_id?: string | null
           public_lighting_installed?: number | null
           responsible_person?: string | null
@@ -5965,7 +5969,9 @@ export type Database = {
           status?: string
           timeline_milestones?: Json | null
           updated_at?: string | null
+          unpublished_at?: string | null
           work_images?: Json | null
+          work_id?: string | null
         }
         Update: {
           actual_completion?: string | null
@@ -5994,6 +6000,7 @@ export type Database = {
           poles_installed?: number | null
           progress_percentage?: number | null
           project_description?: string | null
+          public_enabled?: boolean
           public_id?: string | null
           public_lighting_installed?: number | null
           responsible_person?: string | null
@@ -6001,7 +6008,9 @@ export type Database = {
           status?: string
           timeline_milestones?: Json | null
           updated_at?: string | null
+          unpublished_at?: string | null
           work_images?: Json | null
+          work_id?: string | null
         }
         Relationships: [
           {
@@ -6009,6 +6018,13 @@ export type Database = {
             columns: ["budget_id"]
             isOneToOne: false
             referencedRelation: "budgets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_trackings_work_id_fkey"
+            columns: ["work_id"]
+            isOneToOne: false
+            referencedRelation: "works"
             referencedColumns: ["id"]
           },
         ]

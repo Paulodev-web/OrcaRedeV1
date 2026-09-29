@@ -205,7 +205,7 @@ export function WorkCanvas({
   // Hidratacao sob demanda de uma instalacao por id (usada pelo Realtime)
   // -------------------------------------------------------------------------
   const hydrateInstallation = useCallback(
-    async (installationId: string) => {
+    async (installationId: string): Promise<WorkPoleInstallation | null> => {
       for (let attempt = 0; attempt < 3; attempt += 1) {
         const result = await loadPoleInstallation(installationId);
         if (result.success && result.data) {
@@ -236,12 +236,31 @@ export function WorkCanvas({
               b.installedAt.localeCompare(a.installedAt),
             );
           });
-          return;
+          return installation;
         }
         if (attempt < 2) await sleep(250);
       }
+      return null;
     },
     [],
+  );
+
+  /**
+   * O engenheiro acabou de acender um poste pelo painel. O pin ja vai aparecer
+   * sozinho pelo Realtime, mas esperar o round trip deixaria o painel parado
+   * num poste que acabou de deixar de ser cinza. Hidrata na hora e troca a
+   * ficha para a execucao, que e onde estao foto e o botao de publicar.
+   */
+  const handleInstallationCreated = useCallback(
+    async (installationId: string) => {
+      const installation = await hydrateInstallation(installationId);
+      if (installation) {
+        setSelected({ kind: 'installation', installation });
+      } else {
+        setSelected(null);
+      }
+    },
+    [hydrateInstallation],
   );
 
   // -------------------------------------------------------------------------
@@ -375,18 +394,28 @@ export function WorkCanvas({
     [instalacoesAtivas],
   );
 
+  /** Poste de projeto -> a instalacao que o acendeu. */
+  const instalacaoPorPosteDeProjeto = useMemo(() => {
+    const map = new Map<string, WorkPoleInstallation>();
+    for (const i of instalacoesAtivas) {
+      if (i.projectPostId) map.set(i.projectPostId, i);
+    }
+    return map;
+  }, [instalacoesAtivas]);
+
   // Poste previsto que o campo ainda nao encostou. Conta pelo vinculo, nao
   // pela diferenca de totais: poste levantado fora do projeto entra em
   // `instalacoesAtivas` sem ter um poste previsto correspondente, e subtrair
   // um do outro daria numero negativo numa obra com muitos desses.
-  const postesAindaCinzas = useMemo(() => {
-    const acesos = new Set(
-      instalacoesAtivas
-        .map((i) => i.projectPostId)
-        .filter((id): id is string => id !== null),
-    );
-    return posts.filter((p) => !acesos.has(p.id)).length;
-  }, [posts, instalacoesAtivas]);
+  //
+  // A mesma lista desenha a camada cinza: poste aceso sai do cinza, senao o
+  // circulo cinza e a gota verde ficam empilhados no mesmo ponto e a planta
+  // passa a mostrar dois postes onde ha um. O APK ja fazia isso desde a E3; o
+  // portal tinha ficado para tras.
+  const postesAindaCinzas = useMemo(
+    () => posts.filter((p) => !instalacaoPorPosteDeProjeto.has(p.id)),
+    [posts, instalacaoPorPosteDeProjeto],
+  );
 
   const handleApprovalChanged = useCallback(
     (installationId: string, approvedAt: string | null) => {
@@ -424,15 +453,14 @@ export function WorkCanvas({
     }
   }, [workId]);
 
-  const installationsNearSelected = useMemo(() => {
-    if (!selected || selected.kind !== 'planned') return [];
-    const post = selected.post;
-    return installations.filter((inst) => {
-      const dx = inst.xCoord - post.xCoord;
-      const dy = inst.yCoord - post.yCoord;
-      return Math.hypot(dx, dy) < 100;
-    });
-  }, [selected, installations]);
+  // Antes isto era um raio de 100 unidades em volta do poste selecionado,
+  // porque nao havia vinculo e alguem precisava adivinhar qual pin pertencia a
+  // qual poste do projeto. Desde a E3 existe `project_post_id`, e adivinhar
+  // virou junção.
+  const linkedInstallation = useMemo(() => {
+    if (!selected || selected.kind !== 'planned') return null;
+    return instalacaoPorPosteDeProjeto.get(selected.post.id) ?? null;
+  }, [selected, instalacaoPorPosteDeProjeto]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-surface">
@@ -679,7 +707,7 @@ export function WorkCanvas({
                         pointerEvents: 'auto',
                       }}
                     >
-                      {posts.map((post) => (
+                      {postesAindaCinzas.map((post) => (
                         <WorkPostMarker
                           key={post.id}
                           post={post}
@@ -737,7 +765,7 @@ export function WorkCanvas({
             escala com o pan e o zoom. */}
         {hasProject && (
           <CanvasLegend
-            previstos={postesAindaCinzas}
+            previstos={postesAindaCinzas.length}
             aguardando={pendingApproval.length}
             publicados={instalacoesAtivas.length - pendingApproval.length}
           />
@@ -746,15 +774,17 @@ export function WorkCanvas({
 
       <PostDetailsPanel
         selected={selected}
+        workId={workId}
         viewerUserId={viewerUserId}
         viewerRole={viewerRole}
-        installationsNearSelected={installationsNearSelected}
+        linkedInstallation={linkedInstallation}
         installationSignedUrls={installationSignedUrls}
         creatorNames={creatorNames}
         onClose={() => setSelected(null)}
         onSelectInstallation={(installation) =>
           setSelected({ kind: 'installation', installation })
         }
+        onInstallationCreated={handleInstallationCreated}
         mountedByInstallation={mountedByInstallation}
         onInstallationRemoved={(installationId) => {
           setInstallations((prev) => prev.filter((i) => i.id !== installationId));

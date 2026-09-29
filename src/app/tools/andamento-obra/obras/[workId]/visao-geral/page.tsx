@@ -114,6 +114,7 @@ export default async function VisaoGeralPage({ params }: VisaoGeralPageProps) {
           <ClientPortalCard
             workId={workId}
             publicId={portal?.publicId ?? null}
+            publicEnabled={portal?.publicEnabled ?? false}
             polesPublished={portal?.polesPublished ?? 0}
             polesPlanned={portal?.polesPlanned ?? 0}
             hasBudget={work?.budgetId != null}

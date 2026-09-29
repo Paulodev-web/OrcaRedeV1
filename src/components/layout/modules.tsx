@@ -1,8 +1,8 @@
 import {
+  Archive,
   Calculator,
   ClipboardList,
   FileText,
-  Hammer,
   KanbanSquare,
   LayoutGrid,
   Package,
@@ -96,17 +96,30 @@ export const APP_MODULES: AppModule[] = [
     status: "active",
     section: "operacao",
   },
+  // Antigo "Portal do Engenheiro".
+  //
+  // Ele deixou de ser um módulo par do Andamento de Obra e virou arquivo. O que
+  // fazia de útil foi para dentro da obra: postes, progresso e timeline agora
+  // são derivados da execução, e descrição, foco, logo e galeria viraram a aba
+  // "Portal do cliente". Obra nova não passa mais por aqui.
+  //
+  // **Não foi apagado, e o motivo é dado, não gosto.** Existe acompanhamento
+  // que nasceu antes do espelho e não tem obra por trás: o Loteamento Sol
+  // Poente tem 170 postes marcados na mão ao longo de meses, e o espelho se
+  // recusa a adotá-lo de propósito, porque semear os postes do orçamento por
+  // cima mostraria a rede em duplicata para o cliente. O link desse cliente
+  // está no ar, e esta é a única tela que ainda o edita. Sai do menu quando
+  // não sobrar nenhum.
   {
     id: "portal-engenheiro",
-    label: "Portal do Engenheiro",
-    description: "Gestão e acompanhamento de instalações em campo",
-    icon: Hammer,
-    tag: "Obras",
+    label: "Acompanhamentos antigos",
+    description: "Portais de cliente criados antes do Andamento de Obra",
+    icon: Archive,
     href: null,
     legacyModule: "portal-engenheiro",
     legacyView: "portal-engenheiro",
     status: "active",
-    section: "operacao",
+    section: "sistema",
   },
   {
     id: "andamento-obra",

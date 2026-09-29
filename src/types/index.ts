@@ -206,6 +206,8 @@ export interface WorkTracking {
    * que continua funcionando como sempre funcionou.
    */
   work_id?: string | null;
+  public_enabled?: boolean;
+  unpublished_at?: string | null;
   name: string;
   status: 'Planejado' | 'Em Andamento' | 'Pausado' | 'Concluído';
   network_extension_km?: number;

@@ -75,6 +75,7 @@ const loadWorkTrackings = async (
     const { data: rows, error } = await supabase
       .from('work_trackings')
       .select('*')
+      .is('work_id', null)
       .order('updated_at', { ascending: false });
 
     if (error) {

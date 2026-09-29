@@ -250,7 +250,8 @@ export async function updateWork(input: UpdateWorkInput): Promise<ActionResult<{
   // funcao devolve `skipped` e nao escreve nada.
   const mirroredFields = ['name', 'client_name', 'started_at', 'expected_end_at', 'status'];
   if (mirroredFields.some((field) => field in updates)) {
-    const { error: trackingError } = await gate.supabase.rpc('sync_work_tracking_from_work', {
+    const serviceRole = createSupabaseServiceRoleClient();
+    const { error: trackingError } = await serviceRole.rpc('sync_work_tracking_from_work', {
       p_work_id: input.id,
     });
     if (trackingError) {
@@ -316,6 +317,8 @@ interface ImportContext {
   workId: string | null;
   planStoragePath: string | null;
   planUploaded: boolean;
+  portalTrackingId: string | null;
+  portalWasPreexisting: boolean;
 }
 
 interface CoordTransform {
@@ -382,7 +385,13 @@ export async function createWorkFromBudget(
   }
 
   const serviceRole = createSupabaseServiceRoleClient();
-  const ctx: ImportContext = { workId: null, planStoragePath: null, planUploaded: false };
+  const ctx: ImportContext = {
+    workId: null,
+    planStoragePath: null,
+    planUploaded: false,
+    portalTrackingId: null,
+    portalWasPreexisting: false,
+  };
 
   try {
     const insertBody: Record<string, unknown> = {
@@ -618,16 +627,51 @@ export async function createWorkFromBudget(
     // ilha: o engenheiro criava o tracking a mao no Portal do Engenheiro e
     // pintava poste por poste. Agora o mesmo orcamento que desce os postes do
     // projeto desce os postes do portal, todos cinza, esperando a aprovacao do
-    // que o campo levantar. Falha aqui nao derruba a importacao: a obra existe,
-    // e o botao de ressincronizar conserta o portal depois.
-    const { error: trackingError } = await serviceRole.rpc('sync_work_tracking_from_work', {
+    // que o campo levantar. O portal e parte do contrato da importacao: se ele
+    // nao ficar pronto, a obra inteira volta pelo rollback abaixo.
+    const { data: portalAntes } = await serviceRole
+      .from('work_trackings')
+      .select('id')
+      .eq('budget_id', budget.budgetId)
+      .is('work_id', null)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    const { data: trackingSync, error: trackingError } = await serviceRole.rpc(
+      'sync_work_tracking_from_work',
+      {
       p_work_id: ctx.workId,
-    });
+      },
+    );
     if (trackingError) {
-      console.error('[createWorkFromBudget] Falha ao montar portal do cliente', {
-        workId: ctx.workId,
-        error: trackingError.message,
-      });
+      throw new Error(`Falha ao montar portal do cliente: ${trackingError.message}`);
+    }
+
+    const syncResult = (trackingSync ?? {}) as {
+      trackingId?: string;
+      skipped?: string;
+    };
+    if (!syncResult.trackingId) {
+      throw new Error(
+        syncResult.skipped
+          ? `Portal do cliente não criado: ${syncResult.skipped}`
+          : 'Portal do cliente não foi confirmado após a sincronização.',
+      );
+    }
+    ctx.portalTrackingId = syncResult.trackingId;
+    ctx.portalWasPreexisting = portalAntes?.id === syncResult.trackingId;
+
+    const { data: portal, error: portalError } = await serviceRole
+      .from('work_trackings')
+      .select('id, public_id')
+      .eq('id', syncResult.trackingId)
+      .eq('work_id', ctx.workId)
+      .single();
+    if (portalError || !portal?.public_id) {
+      throw new Error(
+        `Portal do cliente inválido: ${portalError?.message ?? 'link público ausente'}`,
+      );
     }
 
     revalidatePath(WORKS_PATH);
@@ -653,6 +697,20 @@ async function rollbackImport(
       await serviceRole.storage.from(ANDAMENTO_OBRA_BUCKET).remove([ctx.planStoragePath]);
     } catch {
       // ignore: best-effort cleanup; objeto pode ser limpado manualmente.
+    }
+  }
+  if (ctx.portalTrackingId) {
+    try {
+      if (ctx.portalWasPreexisting) {
+        await serviceRole
+          .from('work_trackings')
+          .update({ work_id: null, public_enabled: true, unpublished_at: null })
+          .eq('id', ctx.portalTrackingId);
+      } else {
+        await serviceRole.from('work_trackings').delete().eq('id', ctx.portalTrackingId);
+      }
+    } catch {
+      // best effort: a obra ainda sera apagada e o trigger despublica o portal.
     }
   }
   if (ctx.workId) {

@@ -703,6 +703,44 @@ export interface RecordPoleInstallationResult {
   isNew: boolean;
 }
 
+/**
+ * Lancamento de poste pelo portal, feito pelo engenheiro.
+ *
+ * Deliberadamente mais estreito que `RecordPoleInstallationInput`, que serve o
+ * APK. Tres diferencas, e cada uma tem motivo:
+ *
+ *  - `projectPostId` e OBRIGATORIO. Pelo portal nao se cria poste fora do
+ *    projeto: se faltou poste, ele entra no orcamento e a sincronia o traz
+ *    (principio 7 da doc). Isso tambem dispensa coordenada no input, porque
+ *    ela vem copiada do poste do projeto.
+ *  - Nao tem GPS. Quem esta no navegador nao esta no pe do poste, e inventar
+ *    coordenada de aparelho aqui sujaria a evidencia de onde a obra foi
+ *    construida de fato.
+ *  - Nao tem `clientEventId`: nao existe fila offline no navegador. A
+ *    idempotencia vem do indice unico parcial em `project_post_id`, que ja
+ *    garante um poste de projeto de pe uma vez so.
+ */
+export interface RecordPoleInstallationFromPortalInput {
+  workId: string;
+  projectPostId: string;
+  /**
+   * Gerado no navegador ANTES do upload, porque o path da foto no storage
+   * carrega este id. Ausente (lancamento sem foto) = gerado no servidor.
+   */
+  installationId?: string;
+  /** ISO. Quando o poste subiu de fato, nao quando foi digitado. */
+  installedAt: string;
+  notes?: string | null;
+  media?: RecordPoleInstallationMediaInput[];
+  /**
+   * Publicar no portal do cliente junto com o registro. Default true: quem
+   * lanca e o proprio dono do portao, entao pedir que ele aprove o que acabou
+   * de digitar seria teatro. Falso serve para o engenheiro que esta pondo o
+   * historico em dia e quer conferir antes de mostrar.
+   */
+  publishToClient?: boolean;
+}
+
 export interface RemovePoleInstallationInput {
   installationId: string;
   reason?: string | null;

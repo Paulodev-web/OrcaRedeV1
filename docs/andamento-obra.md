@@ -9,7 +9,8 @@
 > plano paralelo, roadmap separado nem contrato em outro lugar. Se der vontade de criar um, é sinal
 > de que a seção 9 está grande demais.
 
-**Última atualização:** 10 set 2026 (E1 a E8 fechadas; resta o ciclo com aparelho)
+**Última atualização:** 26 set 2026 (o Portal do Engenheiro acabou e virou aba da obra, 5.9 e 5.10;
+resta o ciclo com aparelho)
 
 ---
 
@@ -24,7 +25,7 @@ O eixo do sistema é **o canvas mais a conversa**. Tudo o mais é consequência 
 
 | Quem | Onde | Pode |
 | --- | --- | --- |
-| Engenheiro responsável | portal web | ver a obra, conversar, aprovar marco, publicar poste no portal do cliente, criar usuário do app |
+| Engenheiro responsável | portal web | ver a obra, conversar, aprovar marco, lançar poste levantado, publicar poste no portal do cliente, **editar o portal do cliente**, criar usuário do app |
 | Gerente de obra | APK | registrar execução e conversar, só nas obras onde está alocado |
 
 ### 1.2. Princípios travados
@@ -39,7 +40,8 @@ O eixo do sistema é **o canvas mais a conversa**. Tudo o mais é consequência 
 6. **O orçamento manda sempre.** O planejado vive no orçamento; a obra o segue. Isto **substitui**
    o princípio antigo de snapshot congelado, e a troca está explicada em 1.4.
 7. **Ninguém cria poste em campo.** O gerente acende o que já foi projetado. Faltou poste, ele fala
-   no chat e o engenheiro acrescenta no orçamento.
+   no chat e o engenheiro acrescenta no orçamento. Vale igual para o engenheiro no portal: ele
+   também só acende o que o orçamento desenhou (ver 5.8).
 
 ### 1.3. O corte de 10 set 2026
 
@@ -115,6 +117,7 @@ estar, o outro diz onde está.
 | A3b | Ficha do poste | W4 | Obra · conversa |
 | A4 | Obra · dia | W5 | Obra · marcos |
 | A5 | Obra · conversa | W6 | Usuários do app |
+| | | W7 | Obra · portal do cliente |
 | A6 | Registrar (folha) | | |
 | A7 | Capturas: poste, equipamento, rede, impedimento, marco | | |
 
@@ -356,6 +359,116 @@ O que precisa ser verdade, seja qual for o mecanismo:
   esquecer e o gerente vai trabalhar em cima de projeto velho.
 - **Deixa rastro.** Poste que sumiu ou apareceu vira entrada no dia a dia, senão a obra muda de
   forma sem ninguém saber por quê.
+
+---
+
+### 5.8. O engenheiro lança poste pelo portal
+
+Decidido em 25 set 2026. Até aqui a execução tinha uma porta só, o APK do gerente. Isso cobre a obra
+com gerente alocado e aparelho na mão, e deixa de fora todo o resto: obra que o próprio engenheiro
+toca, poste que subiu antes de existir gerente, e o registro que chega por telefone porque o
+aparelho ficou sem bateria. Nada disso entrava, e a obra ficava mentindo para menos.
+
+**O que é.** No canvas do portal, clicar num poste cinza abre a ficha com um formulário: data do
+levantamento, observação, foto opcional, e a opção de já publicar no portal do cliente. O poste
+acende na hora, igual ao toque no aparelho.
+
+**O que não é.** Não cria poste fora do projeto. Pelo portal só se acende o que o orçamento já
+desenhou, exatamente como no campo (princípio 7). Faltou poste, ele entra no orçamento e a sincronia
+o traz cinza. É por isso que o formulário não tem coordenada: ela é copiada do poste do projeto,
+como a RPC do APK passou a fazer na E3. Os dois lados acendem o mesmo ponto, e não há como
+divergirem.
+
+**Três assimetrias em relação ao campo, cada uma com motivo:**
+
+| No APK | No portal | Por quê |
+| --- | --- | --- |
+| Foto obrigatória | Foto opcional | No campo a foto prova que alguém esteve no pé do poste. De escritório não prova nada, e exigir só faria anexar qualquer coisa. |
+| GPS sempre | GPS nulo | Quem está no navegador não está no poste. A coluna existe para dizer onde a obra foi construída de fato, e preenchê-la daqui sujaria a evidência. |
+| Nasce pendente | Nasce publicado | O portão existe para o engenheiro revisar o que o **campo** mandou. Quando é ele quem digita, a revisão aconteceu no ato. A caixa de "publicar" vem marcada e pode ser desmarcada por quem está pondo histórico em dia. |
+
+**Idempotência.** Não há fila offline no navegador, então não há `client_event_id` gerado pelo
+cliente. Quem garante "um poste de projeto de pé uma vez só" é o índice único parcial em
+`project_post_id`, criado na E3. Clique duplo esbarra nele e vira mensagem, não poste duplicado.
+
+**O furo que isto abriu, e que foi fechado junto.** `trg_pole_installation_sync_tracking` era
+`AFTER UPDATE`, o que bastava enquanto toda linha nascia pendente e a aprovação era sempre um UPDATE
+posterior. Poste lançado pelo engenheiro nasce aprovado e nunca sofre UPDATE, então o portal do
+cliente jamais saberia dele. Entrou um gatilho irmão de INSERT, que só dispara para linha que já
+nasce aprovada.
+
+**A correção mudou de dono.** `protect_fields` dizia "somente o gerente pode atualizar", porque
+quando foi escrito só existia gerente escrevendo nessa tabela. A trava real nunca foi o papel e sim
+a autoria, e ela continua inteira: quem criou a marcação corrige a própria, e ninguém corrige a dos
+outros. Engenheiro não remove marcação de gerente.
+
+### 5.9. O Portal do Engenheiro acabou
+
+Decidido em 26 set 2026. O módulo que vivia ao lado do Andamento de Obra deixou de existir como par dele.
+O que ele fazia foi para dentro da obra, e o que sobrou virou arquivo.
+
+**A conta do que ele era.** Postes marcados à mão, progresso, timeline do cliente, descrição do
+projeto, foco atual, responsável, logo e galeria. Os três primeiros já tinham virado derivados da
+obra nas entregas anteriores; os cinco últimos não tinham casa deste lado, e é isso que a aba nova
+resolve.
+
+**W7 · Obra · portal do cliente.** Aba nova, ao lado de Marcos. Em cima, o link, a contagem do que
+atravessou e o botão de ressincronizar. Embaixo, o que só uma pessoa sabe escrever: descrição, a
+caixa de destaque (título e texto), responsável, logo e a galeria que o cliente vê.
+
+Uma escolha de tela que vale registrar: **os campos de texto mostram como placeholder a frase exata
+que a página do cliente usa quando eles estão vazios.** Não é decoração. Esses textos padrão existem
+desde sempre dentro do componente público, e o resultado é que toda obra sem descrição preenchida
+entrega ao cliente um parágrafo genérico ("Painel executivo com visão de avanço físico...") que
+parece escrito para ele e não foi escrito por ninguém. Agora dá para ver isso antes de o cliente ver.
+
+**A galeria mudou de lugar sem mudar de forma.** O Portal antigo gravava cada foto como data URI
+base64 dentro do próprio JSONB, com um comentário no código admitindo que era provisório. A aba nova
+sobe para o bucket `plans` e guarda a URL. O formato do JSON é o mesmo, então foto antiga continua
+abrindo: para quem lê, os dois são só uma string em `url`.
+
+**A timeline passou a sair dos marcos (5.10).**
+
+**O que ficou de pé, e por quê.** O módulo virou "Acompanhamentos antigos", fora de Módulos, dentro
+de Sistema. Ele não foi apagado porque existe acompanhamento que nasceu antes do espelho e não tem
+obra por trás. O espelho se recusa a adotá-los de propósito (ver 5.5), o link desses clientes está no
+ar, e aquela é a única tela que ainda os edita. O item some do menu quando não sobrar nenhum.
+
+**O caso que mede o tamanho disso, e que ainda não tem decisão.** O Loteamento Sol Poente existe dos
+dois lados, com o mesmo orçamento (`76f1b51b`) e, por acidente de importação, o mesmo UUID na linha
+de `works` e na de `work_trackings`. Só que a obra tem **9 postes de projeto** e o portal que o
+cliente abre tem **170 marcados à mão, 151 concluídos**. Não é divergência de sincronia: são dois
+retratos diferentes da mesma obra, feitos em épocas diferentes. Enquanto isso não for resolvido a mão
+(ou reimportando a obra do orçamento de 227 postes, ou aposentando o link antigo), o módulo de
+arquivo precisa continuar existindo.
+
+### 5.10. A timeline do cliente sai dos marcos da obra
+
+Decidido em 26 set 2026. Antes existiam duas linhas do tempo que não se falavam: os seis marcos de
+`work_milestones`, que o gerente reporta e o engenheiro aprova, e o JSON
+`work_trackings.timeline_milestones`, digitado à mão no Portal antigo. O cliente lia o segundo. O
+descompasso aparecia na cara na obra de teste: "Timeline 1/2" para o cliente enquanto a obra dizia
+"Marcos 0/6", e aprovar marco não mexia em nada do lado de fora.
+
+Agora a timeline é derivada, como os postes e o progresso. `build_work_client_timeline` traduz os
+cinco estados do marco nos três do painel do cliente, com uma decisão: marco devolvido (`rejected`)
+aparece como pendente. Devolver é conversa entre engenheiro e gerente; para quem contratou a obra,
+aquilo simplesmente não ficou pronto.
+
+**O que não atravessa:** as observações do marco. São o que o gerente escreveu do canteiro para o
+engenheiro ler, e podem conter recado interno. O cliente recebe nome, estado e data.
+
+**É merge, não substituição.** Os seis marcos são o esqueleto, e dizem em que etapa a obra está. Mas
+a timeline sempre foi também onde o engenheiro conta a história em palavras dele: o Sol Poente tem
+quatro entradas semanais escritas à mão, do tipo "Semana 01: abertura de cavas e instalação de 23
+postes". Isso é comunicação com cliente, não estado de obra, e marco fixo nenhum substitui. Entrada
+sem `source: 'obra'` sobrevive a toda sincronia, e isso vale inclusive para o que foi escrito antes
+de a marca existir.
+
+**Dois achados de fuso que vieram junto.** O painel do cliente formatava toda data com
+`new Date('2026-09-28')`, que é meia-noite **UTC** e vira 27/09 em Brasília: o cliente lia um dia a
+menos em toda data da tela, inclusive nos acompanhamentos antigos. E a ordenação da timeline era por
+data, o que jogava marco futuro (sem data) para o topo; passou a respeitar a ordem construtiva.
 
 ---
 
@@ -808,6 +921,43 @@ Em dev, com `gerente@teste.orcarede`, num Android real, com o portal aberto do l
 6. **Modo avião:** repetir 1, 3 e 4 sem rede, religar e ver a fila drenar.
 7. Acrescentar um poste no orçamento e ver ele chegar cinza no aparelho.
 8. Conferir que o dia de hoje no portal bate com o que foi feito, sem ninguém ter escrito nada.
+
+---
+
+### E11 · Gate do Portal do Cliente ✅
+
+**Feita em 29 set 2026.**
+
+O portal espelhado deixou de depender de ajustes manuais do banco. A migration de
+hardening repete de forma idempotente a coluna/FK de `project_post_id`, os índices
+de idempotência e fecha as funções internas. `sync_work_tracking_from_work` e a
+sincronia da timeline não são mais RPCs de usuário; as Server Actions conferem o
+papel de engenheiro e usam a porta interna.
+
+O endereço público virou identidade permanente. Novos portais recebem token
+aleatório, portais antigos conservam o link que já foi enviado e cancelar/apagar
+a obra apenas despublica. A leitura anônima foi fechada no pai e também em
+`tracked_posts`/`post_connections`, portanto conhecer o UUID interno não contorna
+o bloqueio.
+
+O módulo antigo lista somente acompanhamento legado (`work_id IS NULL`) e as
+Server Actions recusam exclusão ou ocultação de dados espelhados. A aba canônica
+é **Andamento de Obra → obra → Portal do cliente**, onde ficam o link, a cópia e
+os textos/fotos que o engenheiro escolhe mostrar.
+
+**Gate repetível:**
+
+- `npm test` cobre a ponderação nova e a compatibilidade do legado;
+- `supabase/tests/portal_client_release_gate.sql` valida schema, índices,
+  privilégios, duplicidades, links e obras canceladas;
+- build e TypeScript precisam passar;
+- migrations de banco rodam antes do frontend;
+- smoke test abre `/obra/{public_id}` anonimamente e confere postes, progresso e
+  timeline contra o banco.
+
+No preflight somente leitura de produção havia quatro portais (um espelhado e
+três legados), sem órfãos, duplicidades ou `public_id` ausente. Nenhuma migration
+foi aplicada em produção durante o preflight.
 
 ---
 

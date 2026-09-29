@@ -8,6 +8,7 @@ interface ClientPortalCardProps {
   workId: string;
   /** Sufixo do link público (/obra/<publicId>). Null = ainda sem portal. */
   publicId: string | null;
+  publicEnabled: boolean;
   polesPublished: number;
   polesPlanned: number;
   /** Obra sem orçamento não tem planta nem postes: não há portal a montar. */
@@ -27,6 +28,7 @@ interface ClientPortalCardProps {
 export function ClientPortalCard({
   workId,
   publicId,
+  publicEnabled,
   polesPublished,
   polesPlanned,
   hasBudget,
@@ -36,6 +38,7 @@ export function ClientPortalCard({
   const [isPending, startTransition] = useTransition();
 
   const href = publicId ? `/obra/${publicId}` : null;
+  const publicHref = publicEnabled ? href : null;
 
   function handleCopy() {
     if (!href) return;
@@ -72,6 +75,11 @@ export function ClientPortalCard({
           tem um acompanhamento antigo, marcado à mão, ele continua sendo o do
           cliente e não é substituído.
         </p>
+      ) : !publicEnabled ? (
+        <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs text-amber-800">
+          Portal despublicado. O endereço foi preservado, mas o cliente não
+          consegue abrir enquanto a obra estiver cancelada.
+        </p>
       ) : (
         <>
           <p className="mt-2 text-xs text-gray-600">
@@ -83,7 +91,7 @@ export function ClientPortalCard({
 
           <div className="mt-3 flex flex-wrap gap-1.5">
             <a
-              href={href}
+                href={publicHref ?? undefined}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-neutral-900 transition-colors hover:border-neutral-900 hover:bg-gray-50"

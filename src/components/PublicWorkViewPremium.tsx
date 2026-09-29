@@ -11,6 +11,7 @@ import { BudgetPostDetail, WorkTracking } from '@/types';
 import { supabase } from '@/lib/supabaseClient';
 import { CanvasVisual } from './CanvasVisual';
 import { ON_ENGENHARIA_LOGO_SRC } from '@/lib/branding';
+import { calculateWeightedProgress } from '@/lib/tracking/syncWorkTracking';
 
 interface PublicWorkViewProps {
   workId: string;
@@ -104,7 +105,27 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
   }>>([]);
   const [loading, setLoading] = useState(true);
 
+  /**
+   * O número que o cliente lê como "Progresso geral".
+   *
+   * **Acompanhamento espelhado usa a regra única** (`calculateWeightedProgress`),
+   * a mesma que o banco aplica em `refresh_work_tracking_progress` e que o
+   * Portal do Engenheiro já usava. Antes esta tela tinha a própria conta, com
+   * pesos diferentes (poste 40, MT 15, BT 25, equipamento 10, iluminação 10) e
+   * sem normalizar pelo peso das metas existentes. O estrago era grande e
+   * aparecia para o cliente: numa obra só de postes, a barra travava em 40% com
+   * todos os postes de pé, e a mesma tela mostrava "Postes 52/52" logo acima.
+   * Era o defeito que a migration do espelho consertou no banco, sobrevivendo
+   * numa terceira cópia que ninguém sabia que existia.
+   *
+   * **Acompanhamento legado continua na conta antiga, de propósito.** São links
+   * que estão na mão de cliente há meses, e mexer no número faria a barra andar
+   * sozinha num dia qualquer, sem nada ter acontecido na obra. A mesma razão
+   * pela qual o banco não recalcula os legados.
+   */
   const calcProgress = (work: WorkTracking): number => {
+    if (work.work_id) return calculateWeightedProgress(work);
+
     const ratio = (v: number, p?: number) => (!p || p <= 0 ? 0 : Math.min(v / p, 1));
     const pMt = work.planned_mt_meters ?? 0, pBt = work.planned_bt_meters ?? 0;
     const pPoles = work.planned_poles ?? 0, pEquip = work.planned_equipment ?? 0;
@@ -123,7 +144,11 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
     (async () => {
       try {
         const { data: row, error } = await supabase
-          .from('work_trackings').select('*').eq('public_id', workId).maybeSingle();
+          .from('work_trackings')
+          .select('*')
+          .eq('public_id', workId)
+          .eq('public_enabled', true)
+          .maybeSingle();
         if (!error && row) {
           const [pr, cr] = await Promise.all([
             supabase.from('tracked_posts').select('*').eq('tracking_id', row.id).eq('is_visible', true).order('name'),
@@ -197,6 +222,21 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
           if (Array.isArray(row.work_images)) setWorkImages(row.work_images);
           if (Array.isArray(row.timeline_milestones) && row.timeline_milestones.length > 0) {
             setTimelineMilestones([...row.timeline_milestones].sort((a: any, b: any) => {
+              // Marco vindo da obra traz `order`, que é a ordem construtiva
+              // (Locação, Postes, BT, MT, Energização, Comissionamento). Ele
+              // não pode ser ordenado por data: marco que ainda não aconteceu
+              // vem sem data, e `new Date('')` cai no epoch, o que jogaria todo
+              // o futuro da obra para o topo da lista.
+              const ao = typeof a.order === 'number';
+              const bo = typeof b.order === 'number';
+              if (ao && bo) return a.order - b.order;
+              // Etapa da obra antes do que o engenheiro escreveu à mão: o
+              // esqueleto primeiro, a narrativa depois.
+              if (ao) return -1;
+              if (bo) return 1;
+
+              // Acompanhamento legado, com a timeline toda escrita à mão:
+              // regra de sempre, intocada.
               if (a.id?.includes('milestone-start')) return -1;
               if (b.id?.includes('milestone-start')) return 1;
               if (a.id?.includes('milestone-completion')) return 1;
@@ -219,7 +259,27 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
     })();
   }, [workId]);
 
-  const fmt = (d?: string) => d ? new Date(d).toLocaleDateString('pt-BR') : '-';
+  /**
+   * Data para o cliente ler.
+   *
+   * O cuidado com `YYYY-MM-DD` não é preciosismo: `new Date('2026-09-28')` é
+   * interpretado como meia-noite **UTC**, e renderizado em Brasília (UTC-3)
+   * vira 27/09. Toda data desta tela vem de coluna `date` ou da timeline, que
+   * são exatamente esse formato, então o painel inteiro mostrava um dia a menos:
+   * marco aprovado hoje aparecia como ontem para quem contratou a obra.
+   *
+   * Com os componentes separados, a data é montada no fuso local e o dia é o
+   * que está escrito. Timestamp completo (com hora ou fuso) continua no caminho
+   * normal, porque aí o instante é real e a conversão é desejada.
+   */
+  const fmt = (d?: string) => {
+    if (!d) return '-';
+    const soData = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+    const dt = soData
+      ? new Date(Number(soData[1]), Number(soData[2]) - 1, Number(soData[3]))
+      : new Date(d);
+    return Number.isNaN(dt.getTime()) ? '-' : dt.toLocaleDateString('pt-BR');
+  };
 
   const statusBadge = (s: WorkTracking['status']) => {
     if (s === 'Concluído') return 'bg-emerald-100 text-emerald-800 border border-emerald-200';
