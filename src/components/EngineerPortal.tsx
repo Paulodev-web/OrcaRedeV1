@@ -75,6 +75,7 @@ const loadWorkTrackings = async (
     const { data: rows, error } = await supabase
       .from('work_trackings')
       .select('*')
+      .is('work_id', null)
       .order('updated_at', { ascending: false });
 
     if (error) {
@@ -118,6 +119,7 @@ const loadWorkTrackings = async (
       return {
         id: row.public_id ?? row.id,
         budget_id: row.budget_id ?? '',
+        work_id: row.work_id ?? null,
         name: row.name ?? '',
         status: row.status ?? 'Planejado',
         network_extension_km: row.network_extension_km ?? 0,
@@ -346,6 +348,22 @@ export function EngineerPortal() {
     [workTrackings, activeTrackingId]
   );
 
+  /**
+   * Acompanhamento espelhado: os postes descem do orçamento e acendem quando o
+   * engenheiro aprova, no Andamento de Obra, o que o gerente marcou no APK.
+   * Marcar poste na mão aqui escreveria por cima do que veio do campo, então o
+   * mapa vira leitura. O resto da página (descrição, foco, fotos, marcos)
+   * continua editável: não existe equivalente do outro lado.
+   */
+  const isMirrored = Boolean(activeTracking?.work_id);
+
+  const blockMirroredEdit = () => {
+    alertDialog.showError(
+      'Os postes desta obra vêm do Andamento de Obra',
+      'Eles descem do orçamento e acendem quando você aprova, no Andamento de Obra, o que o gerente marcou no APK. Desenhar a rede, trocar fotos e editar a descrição continua sendo aqui.'
+    );
+  };
+
   // Hidrata postes/conexões apenas quando o usuário abre o detalhe da obra.
   useEffect(() => {
     if (!activeTrackingId || currentView !== 'tracking-detail') return;
@@ -472,6 +490,7 @@ export function EngineerPortal() {
   /** Adicionar poste no mapa: clique direito no canvas. */
   const handleCanvasRightClickAddPoste = (coords: { x: number; y: number }) => {
     if (!activeTracking || isLoadingDetails) return;
+    if (isMirrored) return blockMirroredEdit();
 
     const trackingId = activeTracking.id;
     let nextNumber = nextPostNumberRef.current.get(trackingId);
@@ -510,6 +529,7 @@ export function EngineerPortal() {
   /** Excluir poste do mapa: clique direito no ícone. Único lugar que apaga poste do banco. */
   const handleDeletePosteFromMap = async (posteId: string) => {
     if (!activeTracking) return;
+    if (isMirrored) return blockMirroredEdit();
 
     const post = activeTracking.tracked_posts?.find(
       (p) => p.id === posteId || getPostClientId(p) === posteId
@@ -938,6 +958,12 @@ export function EngineerPortal() {
 
   // Função para cliques em postes baseado no modo
   const handleCanvasPostClick = (post: TrackedPost) => {
+    // No espelho, marcar e desmarcar poste é ato do Andamento de Obra. Desenhar
+    // a rede continua sendo daqui, então o modo de conexão passa.
+    if (isMirrored && interactionMode === 'select-posts') {
+      blockMirroredEdit();
+      return;
+    }
     switch (interactionMode) {
       case 'select-posts': {
         // Alternar status do poste
@@ -1015,6 +1041,7 @@ export function EngineerPortal() {
 
   const handleSavePostProgress = (updatedPost: TrackedPost) => {
     if (!activeTracking) return;
+    if (isMirrored) return blockMirroredEdit();
     
     updateTracking(activeTracking.id, (tracking) => {
       const trackedPosts = tracking.tracked_posts.map((post) =>
@@ -2030,6 +2057,23 @@ export function EngineerPortal() {
               </div>
             )}
 
+            {isMirrored && (
+              <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900">
+                <Link2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <p className="min-w-0 flex-1">
+                  Os postes vêm do Andamento de Obra: descem do orçamento e
+                  acendem quando você aprova o que o gerente marcou no APK.
+                  Desenhar a rede e o resto da página continua sendo aqui.
+                </p>
+                <a
+                  href={`/tools/andamento-obra/obras/${activeTracking.work_id}/visao-geral`}
+                  className="shrink-0 rounded-md border border-blue-300 bg-surface px-2.5 py-1 text-xs font-medium text-blue-800 hover:bg-blue-100"
+                >
+                  Abrir a obra
+                </a>
+              </div>
+            )}
+
             {/* Controles de conexão de rede (azul/verde) */}
             <div className="mb-3 flex items-center gap-2 flex-wrap">
               <button
@@ -2123,7 +2167,10 @@ export function EngineerPortal() {
                 onAddConnection={handleAddConnectionFromMap}
                 postConnections={activeTracking.post_connections || []}
                 hidePostNames
-                postIconAlwaysGreen
+                // No espelho o verde significa "aprovado", então o mapa tem que
+                // obedecer ao status. No legado continua tudo verde, que é como
+                // sempre foi: lá só entrava no mapa poste já levantado.
+                postIconAlwaysGreen={!isMirrored}
                 loadingUpload={isUploadingPlan}
               />
 

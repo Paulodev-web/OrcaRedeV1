@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "tsx --test src/lib/**/*.test.ts",
     "gen:supabase-types": "supabase gen types typescript --linked --schema public > src/types/supabase.ts",
     "pdf:proposta": "tsx src/services/pdf/proposal/dev/render-fixture.ts"
   },

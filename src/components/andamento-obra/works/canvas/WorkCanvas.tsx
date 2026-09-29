@@ -14,7 +14,7 @@ import {
   TransformWrapper,
   type ReactZoomPanPinchRef,
 } from 'react-zoom-pan-pinch';
-import { AlertTriangle, FileText, Loader2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, FileText, Loader2 } from 'lucide-react';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
@@ -40,8 +40,12 @@ import {
   isHighResRender,
 } from '@/lib/canvas/pdfRenderConfig';
 import { useRealtimeChannel, type RealtimeEventConfig } from '@/lib/hooks/useRealtimeChannel';
-import { loadPoleInstallation } from '@/actions/workPoleInstallations';
+import {
+  approvePoleInstallations,
+  loadPoleInstallation,
+} from '@/actions/workPoleInstallations';
 import { CanvasToolbar } from './CanvasToolbar';
+import { CanvasLegend } from './CanvasLegend';
 import { WorkPostMarker } from './WorkPostMarker';
 import { WorkConnectionLine } from './WorkConnectionLine';
 import type { MountedEquipment } from '@/services/works/getWorkExecutionOverlay';
@@ -53,6 +57,8 @@ configurePdfWorker();
 interface WorkCanvasProps {
   workId: string;
   viewerUserId: string;
+  /** Papel do usuario nesta obra. So o engenheiro publica no portal. */
+  viewerRole: 'engineer' | 'manager';
   snapshot: WorkProjectSnapshot;
   posts: WorkProjectPost[];
   connections: WorkProjectConnection[];
@@ -90,6 +96,7 @@ type LoadedPdfPage = Parameters<
 export function WorkCanvas({
   workId,
   viewerUserId,
+  viewerRole,
   snapshot,
   posts,
   connections,
@@ -198,7 +205,7 @@ export function WorkCanvas({
   // Hidratacao sob demanda de uma instalacao por id (usada pelo Realtime)
   // -------------------------------------------------------------------------
   const hydrateInstallation = useCallback(
-    async (installationId: string) => {
+    async (installationId: string): Promise<WorkPoleInstallation | null> => {
       for (let attempt = 0; attempt < 3; attempt += 1) {
         const result = await loadPoleInstallation(installationId);
         if (result.success && result.data) {
@@ -229,12 +236,31 @@ export function WorkCanvas({
               b.installedAt.localeCompare(a.installedAt),
             );
           });
-          return;
+          return installation;
         }
         if (attempt < 2) await sleep(250);
       }
+      return null;
     },
     [],
+  );
+
+  /**
+   * O engenheiro acabou de acender um poste pelo painel. O pin ja vai aparecer
+   * sozinho pelo Realtime, mas esperar o round trip deixaria o painel parado
+   * num poste que acabou de deixar de ser cinza. Hidrata na hora e troca a
+   * ficha para a execucao, que e onde estao foto e o botao de publicar.
+   */
+  const handleInstallationCreated = useCallback(
+    async (installationId: string) => {
+      const installation = await hydrateInstallation(installationId);
+      if (installation) {
+        setSelected({ kind: 'installation', installation });
+      } else {
+        setSelected(null);
+      }
+    },
+    [hydrateInstallation],
   );
 
   // -------------------------------------------------------------------------
@@ -353,15 +379,88 @@ export function WorkCanvas({
     }
   };
 
-  const installationsNearSelected = useMemo(() => {
-    if (!selected || selected.kind !== 'planned') return [];
-    const post = selected.post;
-    return installations.filter((inst) => {
-      const dx = inst.xCoord - post.xCoord;
-      const dy = inst.yCoord - post.yCoord;
-      return Math.hypot(dx, dy) < 100;
-    });
-  }, [selected, installations]);
+  const [bulkApproveError, setBulkApproveError] = useState<string | null>(null);
+  const [isBulkApproving, setIsBulkApproving] = useState(false);
+
+  const instalacoesAtivas = useMemo(
+    () => installations.filter((i) => i.status === 'installed'),
+    [installations],
+  );
+
+  // Fila do engenheiro: o que o campo levantou e ainda nao atravessou para o
+  // portal do cliente.
+  const pendingApproval = useMemo(
+    () => instalacoesAtivas.filter((i) => i.approvedAt === null),
+    [instalacoesAtivas],
+  );
+
+  /** Poste de projeto -> a instalacao que o acendeu. */
+  const instalacaoPorPosteDeProjeto = useMemo(() => {
+    const map = new Map<string, WorkPoleInstallation>();
+    for (const i of instalacoesAtivas) {
+      if (i.projectPostId) map.set(i.projectPostId, i);
+    }
+    return map;
+  }, [instalacoesAtivas]);
+
+  // Poste previsto que o campo ainda nao encostou. Conta pelo vinculo, nao
+  // pela diferenca de totais: poste levantado fora do projeto entra em
+  // `instalacoesAtivas` sem ter um poste previsto correspondente, e subtrair
+  // um do outro daria numero negativo numa obra com muitos desses.
+  //
+  // A mesma lista desenha a camada cinza: poste aceso sai do cinza, senao o
+  // circulo cinza e a gota verde ficam empilhados no mesmo ponto e a planta
+  // passa a mostrar dois postes onde ha um. O APK ja fazia isso desde a E3; o
+  // portal tinha ficado para tras.
+  const postesAindaCinzas = useMemo(
+    () => posts.filter((p) => !instalacaoPorPosteDeProjeto.has(p.id)),
+    [posts, instalacaoPorPosteDeProjeto],
+  );
+
+  const handleApprovalChanged = useCallback(
+    (installationId: string, approvedAt: string | null) => {
+      setInstallations((prev) =>
+        prev.map((i) => (i.id === installationId ? { ...i, approvedAt } : i)),
+      );
+      setSelected((prev) =>
+        prev && prev.kind === 'installation' && prev.installation.id === installationId
+          ? { kind: 'installation', installation: { ...prev.installation, approvedAt } }
+          : prev,
+      );
+    },
+    [],
+  );
+
+  const handleApproveAll = useCallback(async () => {
+    setBulkApproveError(null);
+    setIsBulkApproving(true);
+    try {
+      const result = await approvePoleInstallations({ workId });
+      if (result.success) {
+        const now = new Date().toISOString();
+        setInstallations((prev) =>
+          prev.map((i) =>
+            i.status === 'installed' && i.approvedAt === null
+              ? { ...i, approvedAt: now }
+              : i,
+          ),
+        );
+      } else {
+        setBulkApproveError(result.error);
+      }
+    } finally {
+      setIsBulkApproving(false);
+    }
+  }, [workId]);
+
+  // Antes isto era um raio de 100 unidades em volta do poste selecionado,
+  // porque nao havia vinculo e alguem precisava adivinhar qual pin pertencia a
+  // qual poste do projeto. Desde a E3 existe `project_post_id`, e adivinhar
+  // virou junção.
+  const linkedInstallation = useMemo(() => {
+    if (!selected || selected.kind !== 'planned') return null;
+    return instalacaoPorPosteDeProjeto.get(selected.post.id) ?? null;
+  }, [selected, instalacaoPorPosteDeProjeto]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-surface">
@@ -381,6 +480,33 @@ export function WorkCanvas({
         pdfPageNumber={pageNumber}
         onPageChange={handlePageChange}
       />
+
+      {viewerRole === 'engineer' && pendingApproval.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-200 bg-amber-50 px-3 py-2">
+          <p className="text-[11px] text-amber-900">
+            <strong className="font-semibold">
+              {pendingApproval.length}{' '}
+              {pendingApproval.length === 1 ? 'poste' : 'postes'}
+            </strong>{' '}
+            {pendingApproval.length === 1 ? 'levantado' : 'levantados'} em campo,
+            ainda fora do portal do cliente.
+          </p>
+          <button
+            type="button"
+            onClick={handleApproveAll}
+            disabled={isBulkApproving}
+            className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+            {isBulkApproving
+              ? 'Publicando…'
+              : `Publicar ${pendingApproval.length === 1 ? 'o poste' : 'os ' + pendingApproval.length}`}
+          </button>
+          {bulkApproveError && (
+            <p className="w-full text-[11px] text-red-700">{bulkApproveError}</p>
+          )}
+        </div>
+      )}
 
       {(planError || realtimeStatus === 'disconnected') && (
         <div className="flex flex-col gap-1 border-b border-gray-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
@@ -581,7 +707,7 @@ export function WorkCanvas({
                         pointerEvents: 'auto',
                       }}
                     >
-                      {posts.map((post) => (
+                      {postesAindaCinzas.map((post) => (
                         <WorkPostMarker
                           key={post.id}
                           post={post}
@@ -634,23 +760,37 @@ export function WorkCanvas({
             </div>
           </TransformComponent>
         </TransformWrapper>
+
+        {/* Fora do TransformWrapper de proposito: a legenda nao anda nem
+            escala com o pan e o zoom. */}
+        {hasProject && (
+          <CanvasLegend
+            previstos={postesAindaCinzas.length}
+            aguardando={pendingApproval.length}
+            publicados={instalacoesAtivas.length - pendingApproval.length}
+          />
+        )}
       </div>
 
       <PostDetailsPanel
         selected={selected}
+        workId={workId}
         viewerUserId={viewerUserId}
-        installationsNearSelected={installationsNearSelected}
+        viewerRole={viewerRole}
+        linkedInstallation={linkedInstallation}
         installationSignedUrls={installationSignedUrls}
         creatorNames={creatorNames}
         onClose={() => setSelected(null)}
         onSelectInstallation={(installation) =>
           setSelected({ kind: 'installation', installation })
         }
+        onInstallationCreated={handleInstallationCreated}
         mountedByInstallation={mountedByInstallation}
         onInstallationRemoved={(installationId) => {
           setInstallations((prev) => prev.filter((i) => i.id !== installationId));
           setSelected(null);
         }}
+        onInstallationApprovalChanged={handleApprovalChanged}
       />
     </div>
   );

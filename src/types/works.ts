@@ -637,6 +637,10 @@ export interface WorkPoleInstallation {
   id: string;
   workId: string;
   createdBy: string;
+  /** Poste do projeto que esta marcacao acendeu. Null = poste levantado em
+   *  campo fora do projeto. E por ele que o portal do cliente casa o poste
+   *  com o do orcamento (project_post.source_post_id = budget_post.id). */
+  projectPostId: string | null;
   xCoord: number;
   yCoord: number;
   gpsLat: number | null;
@@ -649,6 +653,10 @@ export interface WorkPoleInstallation {
   status: PoleInstallationStatus;
   removedAt: string | null;
   removedBy: string | null;
+  /** Quando o engenheiro liberou este poste para o portal do cliente.
+   *  Null = registrado em campo, visivel internamente, ainda nao publicado. */
+  approvedAt: string | null;
+  approvedBy: string | null;
   clientEventId: string;
   createdAt: string;
   updatedAt: string;
@@ -671,6 +679,9 @@ export interface RecordPoleInstallationInput {
   /** Opcional; se ausente, e gerado server-side. APK costuma enviar este id
    *  para casar com o path de storage usado no upload offline-first. */
   installationId?: string;
+  /** Poste do projeto que esta sendo aceso. Null/ausente = poste levantado
+   *  fora do projeto. */
+  projectPostId?: string | null;
   xCoord: number;
   yCoord: number;
   gpsLat?: number | null;
@@ -692,9 +703,60 @@ export interface RecordPoleInstallationResult {
   isNew: boolean;
 }
 
+/**
+ * Lancamento de poste pelo portal, feito pelo engenheiro.
+ *
+ * Deliberadamente mais estreito que `RecordPoleInstallationInput`, que serve o
+ * APK. Tres diferencas, e cada uma tem motivo:
+ *
+ *  - `projectPostId` e OBRIGATORIO. Pelo portal nao se cria poste fora do
+ *    projeto: se faltou poste, ele entra no orcamento e a sincronia o traz
+ *    (principio 7 da doc). Isso tambem dispensa coordenada no input, porque
+ *    ela vem copiada do poste do projeto.
+ *  - Nao tem GPS. Quem esta no navegador nao esta no pe do poste, e inventar
+ *    coordenada de aparelho aqui sujaria a evidencia de onde a obra foi
+ *    construida de fato.
+ *  - Nao tem `clientEventId`: nao existe fila offline no navegador. A
+ *    idempotencia vem do indice unico parcial em `project_post_id`, que ja
+ *    garante um poste de projeto de pe uma vez so.
+ */
+export interface RecordPoleInstallationFromPortalInput {
+  workId: string;
+  projectPostId: string;
+  /**
+   * Gerado no navegador ANTES do upload, porque o path da foto no storage
+   * carrega este id. Ausente (lancamento sem foto) = gerado no servidor.
+   */
+  installationId?: string;
+  /** ISO. Quando o poste subiu de fato, nao quando foi digitado. */
+  installedAt: string;
+  notes?: string | null;
+  media?: RecordPoleInstallationMediaInput[];
+  /**
+   * Publicar no portal do cliente junto com o registro. Default true: quem
+   * lanca e o proprio dono do portao, entao pedir que ele aprove o que acabou
+   * de digitar seria teatro. Falso serve para o engenheiro que esta pondo o
+   * historico em dia e quer conferir antes de mostrar.
+   */
+  publishToClient?: boolean;
+}
+
 export interface RemovePoleInstallationInput {
   installationId: string;
   reason?: string | null;
+}
+
+export interface ApprovePoleInstallationsInput {
+  workId: string;
+  /** Vazio ou ausente aprova tudo que esta pendente na obra. */
+  installationIds?: string[];
+}
+
+export interface ApprovePoleInstallationsResult {
+  /** Quantas marcacoes mudaram de estado neste clique. */
+  affected: number;
+  /** Quantas seguem esperando aprovacao na obra depois desta acao. */
+  pending: number;
 }
 
 export interface GetUploadUrlForPoleInstallationMediaInput {

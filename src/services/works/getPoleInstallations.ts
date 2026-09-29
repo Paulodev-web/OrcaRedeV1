@@ -26,6 +26,7 @@ interface RawInstallation {
   id: string;
   work_id: string;
   created_by: string;
+  project_post_id: string | null;
   x_coord: number | string;
   y_coord: number | string;
   gps_lat: number | string | null;
@@ -38,6 +39,8 @@ interface RawInstallation {
   status: PoleInstallationStatus;
   removed_at: string | null;
   removed_by: string | null;
+  approved_at: string | null;
+  approved_by: string | null;
   client_event_id: string;
   created_at: string;
   updated_at: string;
@@ -64,9 +67,10 @@ export async function getPoleInstallations(
   let query = supabase
     .from('work_pole_installations')
     .select(
-      `id, work_id, created_by, x_coord, y_coord, gps_lat, gps_lng,
+      `id, work_id, created_by, project_post_id, x_coord, y_coord, gps_lat, gps_lng,
        gps_accuracy_meters, numbering, pole_type, notes, installed_at,
-       status, removed_at, removed_by, client_event_id, created_at, updated_at,
+       status, removed_at, removed_by, approved_at, approved_by,
+       client_event_id, created_at, updated_at,
        work_pole_installation_media (
          id, installation_id, work_id, kind, storage_path, mime_type,
          size_bytes, width, height, duration_seconds, is_primary, created_at
@@ -91,6 +95,7 @@ export function mapRawInstallation(row: RawInstallation): WorkPoleInstallation {
     id: row.id,
     workId: row.work_id,
     createdBy: row.created_by,
+    projectPostId: row.project_post_id,
     xCoord: Number(row.x_coord),
     yCoord: Number(row.y_coord),
     gpsLat: row.gps_lat === null ? null : Number(row.gps_lat),
@@ -104,6 +109,8 @@ export function mapRawInstallation(row: RawInstallation): WorkPoleInstallation {
     status: row.status,
     removedAt: row.removed_at,
     removedBy: row.removed_by,
+    approvedAt: row.approved_at,
+    approvedBy: row.approved_by,
     clientEventId: row.client_event_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

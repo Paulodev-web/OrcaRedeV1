@@ -17,7 +17,7 @@ export async function deleteWorkTrackingAction(publicId: string): Promise<Action
 
     const { data: tracking, error: fetchError } = await supabase
       .from('work_trackings')
-      .select('id, budget_id')
+      .select('id, budget_id, work_id')
       .eq('public_id', publicId)
       .maybeSingle();
 
@@ -26,6 +26,12 @@ export async function deleteWorkTrackingAction(publicId: string): Promise<Action
     }
     if (!tracking) {
       return { success: false, error: 'Obra não encontrada.' };
+    }
+    if (tracking.work_id) {
+      return {
+        success: false,
+        error: 'Este portal pertence ao Andamento de Obra e não pode ser excluído aqui.',
+      };
     }
     if (!tracking.budget_id) {
       return { success: false, error: 'Obra sem orçamento vinculado; não é possível excluir.' };
@@ -84,12 +90,18 @@ export async function hideTrackedPostAction(
 
     const { data: tracking, error: fetchError } = await supabase
       .from('work_trackings')
-      .select('id, budget_id')
+      .select('id, budget_id, work_id')
       .eq('public_id', trackingPublicId)
       .maybeSingle();
 
     if (fetchError) return { success: false, error: fetchError.message };
     if (!tracking?.budget_id) return { success: false, error: 'Obra não encontrada.' };
+    if (tracking.work_id) {
+      return {
+        success: false,
+        error: 'Postes espelhados são controlados pelo Andamento de Obra.',
+      };
+    }
 
     const { data: budget, error: budgetError } = await supabase
       .from('budgets')

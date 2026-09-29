@@ -31,6 +31,11 @@ const tabs = [
   { slug: 'dia-a-dia', label: 'Dia a dia' },
   { slug: 'chat', label: 'Conversa' },
   { slug: 'progresso', label: 'Marcos' },
+  // Herdeira do Portal do Engenheiro. Ele era um módulo à parte, com o próprio
+  // menu, e virou aba porque o que sobrou dele depois do espelho é presentação
+  // de UMA obra: descrição, foco, logo e galeria. Não entra condicional porque
+  // o layout desta área já redireciona quem não é engenheiro.
+  { slug: 'portal-cliente', label: 'Portal do cliente' },
 ];
 
 export function WorkTabsNav({

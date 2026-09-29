@@ -7,14 +7,28 @@ import {
   useState,
   useTransition,
 } from 'react';
-import { ExternalLink, Eye, MapPin, Trash2, Video, X } from 'lucide-react';
+import {
+  CheckCircle2,
+  Clock,
+  ExternalLink,
+  Eye,
+  MapPin,
+  Trash2,
+  Video,
+  X,
+} from 'lucide-react';
 import type {
   WorkPoleInstallation,
   WorkProjectPost,
 } from '@/types/works';
-import { removePoleInstallation } from '@/actions/workPoleInstallations';
+import {
+  approvePoleInstallations,
+  removePoleInstallation,
+  unapprovePoleInstallation,
+} from '@/actions/workPoleInstallations';
 import type { MountedEquipment } from '@/services/works/getWorkExecutionOverlay';
 import { ImageLightbox } from '../shared/ImageLightbox';
+import { MarkPoleInstalledForm } from './MarkPoleInstalledForm';
 
 type Selected =
   | { kind: 'planned'; post: WorkProjectPost }
@@ -23,10 +37,23 @@ type Selected =
 
 interface PostDetailsPanelProps {
   selected: Selected;
-  /** Id do usuario logado, usado para mostrar acoes de manager. */
+  /** Obra corrente, necessaria para lancar poste pelo portal. */
+  workId: string;
+  /** Id do usuario logado, usado para mostrar acoes de quem criou a marcacao. */
   viewerUserId: string;
-  /** Instalacoes proximas ao poste planejado selecionado (heuristica visual). */
-  installationsNearSelected: WorkPoleInstallation[];
+  /** Papel do usuario nesta obra. So o engenheiro publica e lanca pelo portal. */
+  viewerRole: 'engineer' | 'manager';
+  /**
+   * A instalacao que acendeu o poste planejado selecionado, se houver.
+   *
+   * Era uma lista de "possiveis instalacoes proximas", por raio de 100 unidades
+   * no quadro 6000x6000. A heuristica existia porque nao havia vinculo: o campo
+   * criava poste solto e alguem precisava adivinhar a qual poste do projeto ele
+   * correspondia. Desde a E3 existe `project_post_id`, e adivinhar virou
+   * junção. Um poste de projeto tem no maximo uma instalacao de pe, garantida
+   * por indice unico parcial no banco.
+   */
+  linkedInstallation: WorkPoleInstallation | null;
   /** URLs assinadas das midias de instalacao (path -> url). */
   installationSignedUrls: Record<string, string>;
   /** Nomes dos criadores (user_id -> nome). */
@@ -34,8 +61,15 @@ interface PostDetailsPanelProps {
   onClose: () => void;
   /** Muda o painel para modo "instalacao". */
   onSelectInstallation: (installation: WorkPoleInstallation) => void;
-  /** Notifica o canvas que uma instalacao foi removida pelo manager. */
+  /** Notifica o canvas que uma instalacao foi removida por quem a criou. */
   onInstallationRemoved: (installationId: string) => void;
+  /** Notifica o canvas que o engenheiro acabou de acender um poste. */
+  onInstallationCreated: (installationId: string) => void;
+  /** Notifica o canvas que a publicacao no portal do cliente mudou. */
+  onInstallationApprovalChanged: (
+    installationId: string,
+    approvedAt: string | null,
+  ) => void;
   /** O que o campo montou em cada poste, por id de instalação. */
   mountedByInstallation?: Record<string, MountedEquipment[]>;
 }
@@ -62,13 +96,17 @@ interface PostDetailsPanelProps {
  */
 export function PostDetailsPanel({
   selected,
+  workId,
   viewerUserId,
-  installationsNearSelected,
+  viewerRole,
+  linkedInstallation,
   installationSignedUrls,
   creatorNames,
   onClose,
   onSelectInstallation,
   onInstallationRemoved,
+  onInstallationCreated,
+  onInstallationApprovalChanged,
   mountedByInstallation = {},
 }: PostDetailsPanelProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -130,19 +168,24 @@ export function PostDetailsPanel({
           {selected.kind === 'planned' ? (
             <PlannedBody
               post={selected.post}
-              installationsNear={installationsNearSelected}
+              workId={workId}
+              viewerRole={viewerRole}
+              linkedInstallation={linkedInstallation}
               creatorNames={creatorNames}
               onSelectInstallation={onSelectInstallation}
+              onInstallationCreated={onInstallationCreated}
             />
           ) : (
             <InstallationBody
               installation={selected.installation}
               viewerUserId={viewerUserId}
+              viewerRole={viewerRole}
               signedUrls={installationSignedUrls}
               creatorName={
                 creatorNames[selected.installation.createdBy] ?? null
               }
               onInstallationRemoved={onInstallationRemoved}
+              onInstallationApprovalChanged={onInstallationApprovalChanged}
               mounted={mountedByInstallation[selected.installation.id] ?? []}
             />
           )}
@@ -196,20 +239,55 @@ function PlannedHeader({
 
 function PlannedBody({
   post,
-  installationsNear,
+  workId,
+  viewerRole,
+  linkedInstallation,
   creatorNames,
   onSelectInstallation,
+  onInstallationCreated,
 }: {
   post: WorkProjectPost;
-  installationsNear: WorkPoleInstallation[];
+  workId: string;
+  viewerRole: 'engineer' | 'manager';
+  linkedInstallation: WorkPoleInstallation | null;
   creatorNames: Record<string, string>;
   onSelectInstallation: (installation: WorkPoleInstallation) => void;
+  onInstallationCreated: (installationId: string) => void;
 }) {
   const metadataEntries = Object.entries(post.metadata).filter(
     ([key]) => !!key,
   );
+
   return (
     <>
+      <Section title="Execução">
+        {linkedInstallation ? (
+          <JaLevantado
+            installation={linkedInstallation}
+            creatorName={creatorNames[linkedInstallation.createdBy] ?? null}
+            onSelectInstallation={onSelectInstallation}
+          />
+        ) : viewerRole === 'engineer' ? (
+          <div className="space-y-2">
+            <p className="rounded-md border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-[11px] text-gray-600">
+              Este poste ainda não foi levantado. O gerente acende pelo
+              aplicativo; você pode registrar por aqui quando o campo não o
+              fizer.
+            </p>
+            <MarkPoleInstalledForm
+              workId={workId}
+              post={post}
+              onRegistered={onInstallationCreated}
+            />
+          </div>
+        ) : (
+          <p className="rounded-md border border-dashed border-gray-200 bg-gray-50 px-3 py-3 text-[11px] text-gray-500">
+            Este poste ainda não foi levantado. Toque nele no aplicativo para
+            registrar.
+          </p>
+        )}
+      </Section>
+
       <Section title="Coordenadas do projeto">
         <KeyValue label="X" value={formatCoord(post.xCoord)} />
         <KeyValue label="Y" value={formatCoord(post.yCoord)} />
@@ -230,53 +308,61 @@ function PlannedBody({
           </ul>
         )}
       </Section>
-
-      <Section title="Possíveis instalações relacionadas">
-        {installationsNear.length === 0 ? (
-          <p className="rounded-md border border-dashed border-gray-200 bg-gray-50 px-3 py-3 text-[11px] text-gray-500">
-            Sem instalações próximas a este ponto. A camada de execução é
-            independente do projeto: o gerente marca instalações livremente
-            no campo via APK.
-          </p>
-        ) : (
-          <>
-            <p className="mb-2 text-[11px] text-gray-500">
-              Sugestão visual por proximidade no projeto (raio ~100 unidades).
-              Não é vínculo formal.
-            </p>
-            <ul className="space-y-1.5">
-              {installationsNear.map((inst) => {
-                const label = inst.numbering?.trim()
-                  ? inst.numbering
-                  : 'Sem numeração';
-                const creator = creatorNames[inst.createdBy] ?? null;
-                return (
-                  <li key={inst.id}>
-                    <button
-                      type="button"
-                      onClick={() => onSelectInstallation(inst)}
-                      className="flex w-full items-center justify-between gap-2 rounded-md border border-gray-200 px-3 py-2 text-left text-xs text-neutral-900 transition-colors hover:border-green-500 hover:bg-emerald-50/50"
-                    >
-                      <span className="truncate">
-                        <span className="font-medium">{label}</span>
-                        {creator && (
-                          <span className="ml-2 text-[10px] text-gray-500">
-                            por {creator}
-                          </span>
-                        )}
-                      </span>
-                      <span className="text-[10px] text-gray-400">
-                        {formatRelativeShort(inst.installedAt)}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </>
-        )}
-      </Section>
     </>
+  );
+}
+
+/**
+ * O poste planejado que ja acendeu. Leva para a ficha da execucao, que e onde
+ * moram foto, GPS, o que foi montado nele e o botao de publicar.
+ */
+function JaLevantado({
+  installation,
+  creatorName,
+  onSelectInstallation,
+}: {
+  installation: WorkPoleInstallation;
+  creatorName: string | null;
+  onSelectInstallation: (installation: WorkPoleInstallation) => void;
+}) {
+  const published = installation.approvedAt !== null;
+  return (
+    <button
+      type="button"
+      onClick={() => onSelectInstallation(installation)}
+      className="w-full rounded-md border border-gray-200 px-3 py-2.5 text-left transition-colors hover:border-emerald-500 hover:bg-emerald-50/50"
+    >
+      <span className="flex items-center gap-1.5">
+        <CheckCircle2
+          className={[
+            'h-3.5 w-3.5 shrink-0',
+            published ? 'text-emerald-600' : 'text-amber-600',
+          ].join(' ')}
+          aria-hidden="true"
+        />
+        <span className="text-xs font-medium text-neutral-900">
+          Levantado em {formatRelativeShort(installation.installedAt)}
+        </span>
+      </span>
+      {creatorName && (
+        <span className="mt-0.5 block text-[10px] text-gray-500">
+          por {creatorName}
+        </span>
+      )}
+      <span
+        className={[
+          'mt-1.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium',
+          published
+            ? 'bg-emerald-50 text-emerald-800'
+            : 'bg-amber-50 text-amber-800',
+        ].join(' ')}
+      >
+        {published ? 'No portal do cliente' : 'Aguardando publicação'}
+      </span>
+      <span className="mt-1.5 block text-[10px] text-gray-400">
+        Abrir a ficha da execução
+      </span>
+    </button>
   );
 }
 
@@ -299,8 +385,11 @@ function InstallationHeader({
   return (
     <header className="flex items-start justify-between gap-3 border-b border-gray-200 px-4 py-3">
       <div className="min-w-0 flex-1">
+        {/* "Poste levantado" e nao "Instalacao em campo": desde que o
+            engenheiro tambem lanca pelo portal, nem toda marcacao nasce no
+            canteiro, e o cabecalho nao pode afirmar o que nao sabe. */}
         <p className="text-[11px] font-medium uppercase tracking-wide text-emerald-700">
-          Instalação em campo
+          Poste levantado
         </p>
         <h2
           id="post-details-title"
@@ -328,9 +417,11 @@ function InstallationHeader({
 function InstallationBody({
   installation,
   viewerUserId,
+  viewerRole,
   signedUrls,
   creatorName,
   onInstallationRemoved,
+  onInstallationApprovalChanged,
   mounted,
 }: {
   installation: WorkPoleInstallation;
@@ -338,13 +429,20 @@ function InstallationBody({
   signedUrls: Record<string, string>;
   creatorName: string | null;
   onInstallationRemoved: (installationId: string) => void;
+  onInstallationApprovalChanged: (
+    installationId: string,
+    approvedAt: string | null,
+  ) => void;
+  viewerRole: 'engineer' | 'manager';
   /** O que o campo montou neste poste. */
   mounted: MountedEquipment[];
 }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isApproving, startApproval] = useTransition();
 
   const orderedMedia = useMemo(() => {
     const arr = installation.media.slice();
@@ -363,6 +461,9 @@ function InstallationBody({
   const isCreator = installation.createdBy === viewerUserId;
   const canRemove = isCreator && installation.status === 'installed';
 
+  const published = installation.approvedAt !== null;
+  const canPublish = viewerRole === 'engineer' && installation.status === 'installed';
+
   const dateLabel = new Date(installation.installedAt).toLocaleString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
@@ -375,6 +476,26 @@ function InstallationBody({
     installation.gpsLat !== null && installation.gpsLng !== null
       ? `https://www.google.com/maps?q=${installation.gpsLat},${installation.gpsLng}`
       : null;
+
+  function handlePublishToggle() {
+    setApprovalError(null);
+    startApproval(async () => {
+      const result = published
+        ? await unapprovePoleInstallation(installation.id)
+        : await approvePoleInstallations({
+            workId: installation.workId,
+            installationIds: [installation.id],
+          });
+      if (result.success) {
+        onInstallationApprovalChanged(
+          installation.id,
+          published ? null : new Date().toISOString(),
+        );
+      } else {
+        setApprovalError(result.error);
+      }
+    });
+  }
 
   function handleRemoveClick() {
     setRemoveError(null);
@@ -539,7 +660,7 @@ function InstallationBody({
 
       <Section title="Registro">
         <KeyValue label="Data/Hora" value={dateLabel} />
-        <KeyValue label="Gerente" value={creatorName ?? '—'} />
+        <KeyValue label="Registrado por" value={creatorName ?? 'n/d'} />
         <KeyValue
           label="Status"
           value={installation.status === 'installed' ? 'Instalado' : 'Removido'}
@@ -548,6 +669,60 @@ function InstallationBody({
           <p className="mt-1 whitespace-pre-wrap rounded-md bg-gray-50 p-2 text-[11px] text-gray-700">
             {installation.notes}
           </p>
+        )}
+      </Section>
+
+      <Section title="Portal do cliente">
+        <div
+          className={[
+            'flex items-start gap-2 rounded-md px-2.5 py-2 text-[11px]',
+            published
+              ? 'bg-emerald-50 text-emerald-800'
+              : 'bg-amber-50 text-amber-800',
+          ].join(' ')}
+        >
+          {published ? (
+            <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          ) : (
+            <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          )}
+          <p>
+            {published
+              ? 'Publicado. Este poste aparece verde no acompanhamento que o cliente abre.'
+              : 'Registrado em campo e visível aqui dentro. Ainda não aparece para o cliente.'}
+          </p>
+        </div>
+
+        {approvalError && (
+          <p className="mt-2 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[11px] text-red-700">
+            {approvalError}
+          </p>
+        )}
+
+        {canPublish && (
+          <button
+            type="button"
+            onClick={handlePublishToggle}
+            disabled={isApproving}
+            className={[
+              'mt-2 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+              published
+                ? 'border border-gray-300 bg-surface text-neutral-900 hover:bg-gray-50'
+                : 'bg-emerald-600 text-white hover:bg-emerald-700',
+            ].join(' ')}
+          >
+            {published ? (
+              <>
+                <Clock className="h-3 w-3" aria-hidden="true" />
+                {isApproving ? 'Despublicando…' : 'Tirar do portal'}
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+                {isApproving ? 'Publicando…' : 'Publicar no portal'}
+              </>
+            )}
+          </button>
         )}
       </Section>
 

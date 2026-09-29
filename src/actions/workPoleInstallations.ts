@@ -10,6 +10,8 @@ import {
 import { getPoleInstallationSignedUrls } from '@/services/works/getPoleInstallationSignedUrls';
 import { mapRawInstallation } from '@/services/works/getPoleInstallations';
 import {
+  type ApprovePoleInstallationsInput,
+  type ApprovePoleInstallationsResult,
   POLE_INSTALLATION_MEDIA_LIMITS,
   POLE_INSTALLATION_NOTES_MAX,
   POLE_INSTALLATION_NUMBERING_MAX,
@@ -17,6 +19,7 @@ import {
   type ActionResult,
   type GetUploadUrlForPoleInstallationMediaInput,
   type PoleInstallationMediaUploadInfo,
+  type RecordPoleInstallationFromPortalInput,
   type RecordPoleInstallationInput,
   type RecordPoleInstallationResult,
   type RemovePoleInstallationInput,
@@ -77,17 +80,22 @@ function isValidIsoTimestamp(value: string): boolean {
  *
  * Path: {workId}/pole-installations/{installationId}/{uuid}.{ext}
  *
- * Politica do bucket exige role='manager' membro da obra (ver migration 7).
+ * Dois papeis chegam aqui: o gerente pelo APK e o engenheiro pelo canvas do
+ * portal. Cada um tem a sua policy de storage (ver a migration
+ * `20260925120000_engenheiro_lanca_poste_pelo_portal.sql`), mas a policy NAO e
+ * quem decide neste ponto: a URL assinada e emitida com service role, que passa
+ * por cima da RLS de storage. O `if` abaixo e o portao de verdade, e por isso
+ * ele lista os papeis em vez de simplesmente aceitar qualquer membro.
  */
 export async function getUploadUrlForPoleInstallationMedia(
   input: GetUploadUrlForPoleInstallationMediaInput,
 ): Promise<ActionResult<PoleInstallationMediaUploadInfo>> {
   const gate = await ensureMember(input.workId);
   if (!gate.ok) return { success: false, error: gate.error };
-  if (gate.role !== 'manager') {
+  if (gate.role !== 'manager' && gate.role !== 'engineer') {
     return {
       success: false,
-      error: 'Apenas o gerente pode anexar midia de instalacao.',
+      error: 'Papel sem permissao para anexar midia de instalacao.',
     };
   }
 
@@ -226,6 +234,25 @@ export async function recordPoleInstallation(
     };
   }
 
+  // O poste do projeto que esta marcacao acende. E por ele que o portal do
+  // cliente casa a marcacao de campo com o poste do orcamento; sem ele, o
+  // poste entra no portal como "levantado fora do projeto".
+  const projectPostId = input.projectPostId ?? null;
+  if (projectPostId !== null) {
+    if (!UUID_RE.test(projectPostId)) {
+      return { success: false, error: 'projectPostId invalido.' };
+    }
+    const { data: projectPost } = await gate.supabase
+      .from('work_project_posts')
+      .select('id')
+      .eq('id', projectPostId)
+      .eq('work_id', input.workId)
+      .maybeSingle();
+    if (!projectPost) {
+      return { success: false, error: 'Poste do projeto nao pertence a esta obra.' };
+    }
+  }
+
   // Bloquear se obra cancelada.
   const { data: workRow } = await gate.supabase
     .from('works')
@@ -293,6 +320,7 @@ export async function recordPoleInstallation(
       notes,
       installed_at: input.installedAt,
       client_event_id: input.clientEventId,
+      project_post_id: projectPostId,
     });
 
   if (insertErr) {
@@ -362,13 +390,217 @@ export async function recordPoleInstallation(
 }
 
 /**
- * Manager corrige uma marcacao errada via soft-delete.
+ * O engenheiro acende um poste do projeto direto do canvas do portal.
  *
- * Apenas o criador da instalacao pode remover (validado tanto na RLS quanto
- * no trigger protect_fields). Engineer nunca remove.
+ * Por que existe: ate aqui a execucao tinha uma porta so, o APK do gerente.
+ * Isso cobre a obra com gerente alocado e aparelho na mao, e deixa de fora
+ * tudo o mais: obra que o proprio engenheiro toca, poste levantado antes de o
+ * gerente existir, e o registro que chega por telefone porque o aparelho ficou
+ * sem bateria. Nada disso entrava, e a obra ficava mentindo para menos.
  *
- * Nao gera notificacao (correcao interna do gerente, nao interessa ao
- * engineer no feed).
+ * O que ela NAO faz, de proposito: criar poste fora do projeto. Pelo portal so
+ * se acende o que o orcamento ja desenhou. Faltou poste, ele entra no orcamento
+ * e a sincronia o traz cinza (principio 7 da doc). E por isso que a coordenada
+ * nao vem no input: ela e copiada do poste do projeto, exatamente como a RPC do
+ * APK passou a fazer na E3. Os dois lados acendem o mesmo ponto.
+ *
+ * Publicacao: por padrao o poste ja nasce no portal do cliente. O portao de
+ * aprovacao existe para o engenheiro revisar o que o CAMPO mandou; quando e ele
+ * mesmo quem digita, a revisao aconteceu no ato. `publishToClient: false`
+ * atende quem esta pondo historico em dia e quer conferir antes.
+ *
+ * Idempotencia: nao ha fila offline aqui, entao nao ha `clientEventId`. Quem
+ * garante "um poste de projeto de pe uma vez so" e o indice unico parcial em
+ * `project_post_id`, criado na E3. Clique duplo esbarra nele e vira mensagem,
+ * nao poste duplicado.
+ */
+export async function recordPoleInstallationFromPortal(
+  input: RecordPoleInstallationFromPortalInput,
+): Promise<ActionResult<RecordPoleInstallationResult>> {
+  const gate = await ensureMember(input.workId);
+  if (!gate.ok) return { success: false, error: gate.error };
+  if (gate.role !== 'engineer') {
+    return {
+      success: false,
+      error: 'Apenas o engenheiro responsavel lanca poste pelo portal.',
+    };
+  }
+
+  if (!input.projectPostId || !UUID_RE.test(input.projectPostId)) {
+    return { success: false, error: 'Poste do projeto invalido.' };
+  }
+  if (!isValidIsoTimestamp(input.installedAt)) {
+    return { success: false, error: 'Data do levantamento invalida.' };
+  }
+  // Data no futuro nao existe em obra: ou o relogio esta errado, ou o dedo
+  // escorregou no ano. Uma folga de um dia cobre fuso e relogio adiantado.
+  if (new Date(input.installedAt).getTime() > Date.now() + 24 * 60 * 60 * 1000) {
+    return { success: false, error: 'Data do levantamento esta no futuro.' };
+  }
+
+  const notes = input.notes?.trim() ?? null;
+  if (notes && notes.length > POLE_INSTALLATION_NOTES_MAX) {
+    return {
+      success: false,
+      error: `Observacoes muito longas (max ${POLE_INSTALLATION_NOTES_MAX}).`,
+    };
+  }
+
+  // A coordenada e a numeracao vem do projeto, nunca do cliente. E o que impede
+  // o pin do portal de cair num ponto diferente do pin do APK para o mesmo
+  // poste.
+  const { data: projectPost, error: postErr } = await gate.supabase
+    .from('work_project_posts')
+    .select('id, x_coord, y_coord, numbering, post_type')
+    .eq('id', input.projectPostId)
+    .eq('work_id', input.workId)
+    .maybeSingle();
+
+  if (postErr) return { success: false, error: postErr.message };
+  if (!projectPost) {
+    return { success: false, error: 'Poste do projeto nao pertence a esta obra.' };
+  }
+
+  const { data: workRow } = await gate.supabase
+    .from('works')
+    .select('status')
+    .eq('id', input.workId)
+    .maybeSingle();
+  if (workRow && (workRow.status as string) === 'cancelled') {
+    return { success: false, error: 'Obra cancelada nao recebe novas instalacoes.' };
+  }
+
+  // Ja aceso: responde a verdade em vez de esbarrar no indice unico e devolver
+  // erro de banco na cara do engenheiro.
+  const { data: jaAceso } = await gate.supabase
+    .from('work_pole_installations')
+    .select('id')
+    .eq('project_post_id', input.projectPostId)
+    .eq('status', 'installed')
+    .maybeSingle();
+  if (jaAceso?.id) {
+    return {
+      success: false,
+      error: 'Este poste ja consta como levantado.',
+    };
+  }
+
+  // Veio do navegador quando houve foto: o path no storage ja foi escrito com
+  // este id, e inventar outro aqui orfanaria o arquivo.
+  const installationId =
+    input.installationId && UUID_RE.test(input.installationId)
+      ? input.installationId
+      : generateUuid();
+  const publish = input.publishToClient !== false;
+
+  const media = Array.isArray(input.media) ? input.media : [];
+  for (const m of media) {
+    if (m.kind !== 'image' && m.kind !== 'video') {
+      return { success: false, error: 'Tipo de midia invalido.' };
+    }
+    if (
+      !m.storagePath
+      || !m.storagePath.startsWith(`${input.workId}/pole-installations/`)
+    ) {
+      return { success: false, error: 'Path de midia fora da obra.' };
+    }
+    const limits = POLE_INSTALLATION_MEDIA_LIMITS[m.kind];
+    if (m.mimeType && !m.mimeType.startsWith(limits.mimePrefix)) {
+      return { success: false, error: `MIME incompativel com ${limits.label}.` };
+    }
+    if (typeof m.sizeBytes === 'number' && m.sizeBytes > limits.maxBytes) {
+      const maxMb = Math.round(limits.maxBytes / (1024 * 1024));
+      return { success: false, error: `${capitalize(limits.label)} excede ${maxMb} MB.` };
+    }
+  }
+
+  const nowIso = new Date().toISOString();
+  const { error: insertErr } = await gate.supabase
+    .from('work_pole_installations')
+    .insert({
+      id: installationId,
+      work_id: input.workId,
+      created_by: gate.userId,
+      project_post_id: input.projectPostId,
+      x_coord: projectPost.x_coord as number,
+      y_coord: projectPost.y_coord as number,
+      // GPS fica nulo de proposito: quem esta no navegador nao esta no pe do
+      // poste, e a coluna existe para dizer onde a obra foi construida de fato.
+      gps_lat: null,
+      gps_lng: null,
+      gps_accuracy_meters: null,
+      numbering: (projectPost.numbering as string | null) ?? null,
+      pole_type: (projectPost.post_type as string | null) ?? null,
+      notes,
+      installed_at: input.installedAt,
+      client_event_id: generateUuid(),
+      approved_at: publish ? nowIso : null,
+      approved_by: publish ? gate.userId : null,
+    });
+
+  if (insertErr) {
+    // 23505 aqui e a corrida do indice unico parcial: outro clique acendeu o
+    // mesmo poste entre a checagem acima e este insert.
+    if (insertErr.code === '23505') {
+      return { success: false, error: 'Este poste ja consta como levantado.' };
+    }
+    return { success: false, error: insertErr.message };
+  }
+
+  if (media.length > 0) {
+    let primaryAssigned = media.some((m) => m.isPrimary === true);
+    const rows = media.map((m, idx) => {
+      let isPrimary = m.isPrimary === true;
+      if (!primaryAssigned && idx === 0) {
+        isPrimary = true;
+        primaryAssigned = true;
+      }
+      return {
+        installation_id: installationId,
+        work_id: input.workId,
+        kind: m.kind,
+        storage_path: m.storagePath,
+        mime_type: m.mimeType ?? null,
+        size_bytes:
+          typeof m.sizeBytes === 'number' && m.sizeBytes > 0 ? m.sizeBytes : null,
+        width: typeof m.width === 'number' && m.width > 0 ? m.width : null,
+        height: typeof m.height === 'number' && m.height > 0 ? m.height : null,
+        duration_seconds:
+          typeof m.durationSeconds === 'number' && m.durationSeconds > 0
+            ? m.durationSeconds
+            : null,
+        is_primary: isPrimary,
+      };
+    });
+    const { error: mediaErr } = await gate.supabase
+      .from('work_pole_installation_media')
+      .insert(rows);
+    if (mediaErr) {
+      return {
+        success: false,
+        error: `Poste registrado, mas falha ao salvar a foto: ${mediaErr.message}`,
+      };
+    }
+  }
+
+  revalidatePath(`${WORKS_PATH}/obras/${input.workId}/visao-geral`);
+  revalidatePath(`${WORKS_PATH}/obras/${input.workId}/dia-a-dia`);
+  revalidatePath(`${WORKS_PATH}/obras/${input.workId}/galeria`);
+  revalidatePath(WORKS_PATH);
+
+  return { success: true, data: { installationId, isNew: true } };
+}
+
+/**
+ * Quem criou a marcacao corrige a propria via soft-delete.
+ *
+ * Vale para o gerente que marcou pelo APK e para o engenheiro que lancou pelo
+ * portal, cada um sobre o que e seu. A trava nunca foi o papel, e sim a
+ * autoria, e ela e conferida em dois lugares: aqui e no trigger
+ * `protect_fields`. Ninguem apaga marcacao alheia: quem levantou o poste e
+ * quem sabe se ele foi mesmo derrubado.
+ *
+ * Nao gera notificacao (correcao interna, nao interessa ao outro lado no feed).
  */
 export async function removePoleInstallation(
   input: RemovePoleInstallationInput,
@@ -391,13 +623,10 @@ export async function removePoleInstallation(
   const workId = install.work_id as string;
   const gate = await ensureMember(workId);
   if (!gate.ok) return { success: false, error: gate.error };
-  if (gate.role !== 'manager') {
-    return { success: false, error: 'Apenas o gerente remove marcacoes.' };
-  }
   if ((install.created_by as string) !== gate.userId) {
     return {
       success: false,
-      error: 'Apenas o gerente que criou a marcacao pode remove-la.',
+      error: 'Somente quem criou a marcacao pode remove-la.',
     };
   }
   if ((install.status as string) === 'removed') {
@@ -466,9 +695,10 @@ export async function loadPoleInstallation(
   const { data, error } = await supabase
     .from('work_pole_installations')
     .select(
-      `id, work_id, created_by, x_coord, y_coord, gps_lat, gps_lng,
+      `id, work_id, created_by, project_post_id, x_coord, y_coord, gps_lat, gps_lng,
        gps_accuracy_meters, numbering, pole_type, notes, installed_at,
-       status, removed_at, removed_by, client_event_id, created_at, updated_at,
+       status, removed_at, removed_by, approved_at, approved_by,
+       client_event_id, created_at, updated_at,
        work_pole_installation_media (
          id, installation_id, work_id, kind, storage_path, mime_type,
          size_bytes, width, height, duration_seconds, is_primary, created_at
@@ -498,4 +728,163 @@ export async function loadPoleInstallation(
     success: true,
     data: { installation, signedUrls, creatorName },
   };
+}
+
+/**
+ * O engenheiro libera para o portal do cliente o que o campo levantou.
+ *
+ * Por que existe: o canvas interno acende o poste na hora em que o gerente
+ * salva, e isso continua valendo (ver `docs/andamento-obra.md`, 5.1). O portal
+ * do cliente, porem, e superficie externa. Nada atravessa para la sem o
+ * engenheiro olhar. `approved_at` e esse portao.
+ *
+ * Quem pode: so o engenheiro da obra, e a trava e tripla:
+ *  - esta action confere `gate.role`;
+ *  - a policy `work_pole_installations_update_approval` exige membro engineer;
+ *  - o trigger `protect_fields` recusa aprovacao que venha junto de qualquer
+ *    outra alteracao, e exige `approved_by = auth.uid()`.
+ *
+ * O espelhamento em si NAO acontece aqui. Quem propaga para `tracked_posts` e
+ * o trigger `trg_pole_installation_sync_tracking`, por statement: aprovar 24
+ * postes de uma vez e um UPDATE so e um espelhamento so. Mantido no banco
+ * porque a aprovacao tambem pode chegar por outro caminho, e a regra nao pode
+ * morar em quem chama.
+ *
+ * `installationIds` vazio aprova tudo que esta pendente na obra.
+ */
+export async function approvePoleInstallations(
+  input: ApprovePoleInstallationsInput,
+): Promise<ActionResult<ApprovePoleInstallationsResult>> {
+  const gate = await ensureMember(input.workId);
+  if (!gate.ok) return { success: false, error: gate.error };
+  if (gate.role !== 'engineer') {
+    return {
+      success: false,
+      error: 'Apenas o engenheiro responsavel publica postes no portal do cliente.',
+    };
+  }
+
+  const ids = (input.installationIds ?? []).filter((id) => UUID_RE.test(id));
+  if ((input.installationIds?.length ?? 0) > 0 && ids.length === 0) {
+    return { success: false, error: 'Nenhuma marcacao valida para aprovar.' };
+  }
+
+  let query = gate.supabase
+    .from('work_pole_installations')
+    .update({
+      approved_at: new Date().toISOString(),
+      approved_by: gate.userId,
+    })
+    .eq('work_id', input.workId)
+    .eq('status', 'installed')
+    .is('approved_at', null);
+
+  if (ids.length > 0) {
+    query = query.in('id', ids);
+  }
+
+  const { data, error } = await query.select('id');
+  if (error) return { success: false, error: error.message };
+
+  const pending = await countPendingApprovals(gate.supabase, input.workId);
+
+  revalidatePath(`${WORKS_PATH}/obras/${input.workId}/visao-geral`);
+  revalidatePath(`${WORKS_PATH}/obras/${input.workId}/dia-a-dia`);
+  revalidatePath(WORKS_PATH);
+
+  return { success: true, data: { affected: (data ?? []).length, pending } };
+}
+
+/**
+ * Desfaz a publicacao de uma marcacao. O poste some do portal do cliente e
+ * volta para a fila do engenheiro; no canvas interno ele continua aceso,
+ * porque continua levantado em campo.
+ */
+export async function unapprovePoleInstallation(
+  installationId: string,
+): Promise<ActionResult<ApprovePoleInstallationsResult>> {
+  if (!installationId || !UUID_RE.test(installationId)) {
+    return { success: false, error: 'ID de instalacao invalido.' };
+  }
+
+  const supabaseRoot = createSupabaseServiceRoleClient();
+  const { data: install, error: fetchErr } = await supabaseRoot
+    .from('work_pole_installations')
+    .select('id, work_id, approved_at')
+    .eq('id', installationId)
+    .maybeSingle();
+
+  if (fetchErr) return { success: false, error: fetchErr.message };
+  if (!install) return { success: false, error: 'Instalacao nao encontrada.' };
+
+  const workId = install.work_id as string;
+  const gate = await ensureMember(workId);
+  if (!gate.ok) return { success: false, error: gate.error };
+  if (gate.role !== 'engineer') {
+    return {
+      success: false,
+      error: 'Apenas o engenheiro responsavel despublica postes.',
+    };
+  }
+  if (install.approved_at === null) {
+    return { success: false, error: 'Esta marcacao ainda nao foi publicada.' };
+  }
+
+  const { error: updErr } = await gate.supabase
+    .from('work_pole_installations')
+    .update({ approved_at: null, approved_by: null })
+    .eq('id', installationId);
+
+  if (updErr) return { success: false, error: updErr.message };
+
+  const pending = await countPendingApprovals(gate.supabase, workId);
+
+  revalidatePath(`${WORKS_PATH}/obras/${workId}/visao-geral`);
+  revalidatePath(WORKS_PATH);
+
+  return { success: true, data: { affected: 1, pending } };
+}
+
+/**
+ * Reconstroi o portal do cliente a partir da obra, do zero.
+ *
+ * Caminho de conserto, nao de rotina: o espelhamento normal roda no trigger a
+ * cada aprovacao. Serve para a primeira vez (obra importada antes desta
+ * versao) e para quando o orcamento mudou de poste e o portal ficou para tras.
+ */
+export async function resyncWorkTracking(
+  workId: string,
+): Promise<ActionResult<{ trackingId: string | null }>> {
+  const gate = await ensureMember(workId);
+  if (!gate.ok) return { success: false, error: gate.error };
+  if (gate.role !== 'engineer') {
+    return { success: false, error: 'Apenas o engenheiro ressincroniza o portal.' };
+  }
+
+  // A RPC privilegiada nao e endpoint do Data API. A action ja confirmou que
+  // o usuario e o engenheiro da obra; a chamada interna usa service role.
+  const serviceRole = createSupabaseServiceRoleClient();
+  const { data, error } = await serviceRole.rpc('sync_work_tracking_from_work', {
+    p_work_id: workId,
+  });
+  if (error) return { success: false, error: error.message };
+
+  const result = (data ?? {}) as { trackingId?: string };
+
+  revalidatePath(`${WORKS_PATH}/obras/${workId}/visao-geral`);
+
+  return { success: true, data: { trackingId: result.trackingId ?? null } };
+}
+
+async function countPendingApprovals(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  workId: string,
+): Promise<number> {
+  const { count } = await supabase
+    .from('work_pole_installations')
+    .select('id', { count: 'exact', head: true })
+    .eq('work_id', workId)
+    .eq('status', 'installed')
+    .is('approved_at', null);
+  return count ?? 0;
 }
