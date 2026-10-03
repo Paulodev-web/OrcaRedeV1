@@ -91,12 +91,37 @@ function ProgressBar({ label, value, total, color = '#5f8dd1', weight }: {
   );
 }
 
+// ── Galeria do cliente ───────────────────────────────────────────────────────
+/**
+ * As fotos que o engenheiro escolheu mostrar, na aba Portal do cliente da obra.
+ * A página já carregava `work_images` e descartava; o cliente nunca as via.
+ */
+function GaleriaCliente({ imagens, onAbrir, className = '' }: {
+  imagens: Array<{ id: string; name: string; url: string; description?: string }>;
+  onAbrir: (indice: number) => void;
+  className?: string;
+}) {
+  return (
+    <ul className={`grid grid-cols-2 gap-2 lg:grid-cols-3 ${className}`}>
+      {imagens.map((img, i) => (
+        <li key={img.id}>
+          <button type="button" onClick={() => onAbrir(i)} className="block w-full overflow-hidden rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={img.url} alt={img.description || img.name} loading="lazy" className="aspect-video w-full object-cover" />
+          </button>
+          {img.description && <p className="mt-1 text-[11px] text-slate-500 line-clamp-2">{img.description}</p>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 export function PublicWorkView({ workId }: PublicWorkViewProps) {
   const ON = { navy: '#262623', blue: '#5f8dd1', accent: '#4472b4' };
 
   const [workData, setWorkData] = useState<WorkTracking | null>(null);
-  const [, setWorkImages] = useState<Array<{
+  const [workImages, setWorkImages] = useState<Array<{
     id: string; name: string; url: string; uploadDate: string; description?: string;
   }>>([]);
   const [timelineMilestones, setTimelineMilestones] = useState<Array<{
@@ -104,6 +129,9 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
     status: 'completed' | 'in-progress' | 'pending'; createdAt: string;
   }>>([]);
   const [loading, setLoading] = useState(true);
+  /** Painel do meio: a planta ou as fotos que o engenheiro escolheu mostrar. */
+  const [painelCentral, setPainelCentral] = useState<'planta' | 'fotos'>('planta');
+  const [fotoAberta, setFotoAberta] = useState<number | null>(null);
 
   /**
    * O número que o cliente lê como "Progresso geral".
@@ -331,6 +359,20 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
   const completedMs = timelineMilestones.filter(m => m.status === 'completed').length;
   const realPct = calcProgress(workData);
 
+  /**
+   * As metas que esta obra tem. Obra só de iluminação não tem rede de média
+   * tensão, e mostrar "Rede MT 0/0m" ao cliente parece trabalho que não
+   * começou (pedido do Luan, 30/09). Mesma regra de `calculateWeightedProgress`:
+   * conta o que existe. Poste aparece sempre, porque é o eixo da obra.
+   */
+  const metas = [
+    { key: 'postes', titulo: 'Postes', curto: 'Postes', barra: 'Postes', installed: completedPosts, planned: totalPosts, suffix: '', color: ON.blue, sempre: true },
+    { key: 'mt', titulo: 'Rede Media Tensao', curto: 'MT', barra: 'Rede MT (m)', installed: mtInstalled, planned: mtPlanned, suffix: 'm', color: '#4472b4', sempre: false },
+    { key: 'bt', titulo: 'Rede Baixa Tensao', curto: 'BT', barra: 'Rede BT (m)', installed: btInstalled, planned: btPlanned, suffix: 'm', color: '#2dd4bf', sempre: false },
+    { key: 'equip', titulo: 'Equipamentos', curto: 'Equip.', barra: 'Equipamentos', installed: equipInstalled, planned: equipPlanned, suffix: '', color: '#a78bfa', sempre: false },
+    { key: 'ilum', titulo: 'Iluminacao Publica', curto: 'Ilum.', barra: 'Iluminacao', installed: lightInstalled, planned: lightPlanned, suffix: '', color: '#fb923c', sempre: false },
+  ].filter((m) => m.sempre || m.planned > 0 || m.installed > 0);
+
   const daysPlanned = (() => {
     if (!workData.start_date || !workData.estimated_completion) return null;
     const s = new Date(workData.start_date).getTime(), e = new Date(workData.estimated_completion).getTime();
@@ -457,13 +499,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
         <div className="h-full xl:hidden flex flex-col gap-2.5 overflow-y-auto overflow-x-hidden min-w-0">
           {/* Métricas compactas */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 flex-shrink-0">
-            {[
-              { title: 'Postes', installed: completedPosts, planned: totalPosts, suffix: '' },
-              { title: 'MT', installed: mtInstalled, planned: mtPlanned, suffix: 'm' },
-              { title: 'BT', installed: btInstalled, planned: btPlanned, suffix: 'm' },
-              { title: 'Equip.', installed: equipInstalled, planned: equipPlanned, suffix: '' },
-              { title: 'Ilum.', installed: lightInstalled, planned: lightPlanned, suffix: '' },
-            ].map(({ title, installed, planned, suffix }) => {
+            {metas.map(({ curto: title, installed, planned, suffix }) => {
               const percent = planned > 0 ? Math.min(Math.round((installed / planned) * 100), 100) : 0;
               return (
                 <div key={title} className="bg-surface rounded-xl p-3 shadow-sm border border-slate-200">
@@ -509,13 +545,18 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
             <div className="bg-surface rounded-2xl p-3 shadow-sm border border-slate-200">
               <p className="text-sm font-semibold text-slate-900 mb-2.5">Painel de execucao</p>
               <div className="space-y-2">
-                <ProgressBar label="Postes" value={completedPosts} total={totalPosts} color={ON.blue} />
-                <ProgressBar label="Rede MT (m)" value={mtInstalled} total={mtPlanned} color="#4472b4" />
-                <ProgressBar label="Rede BT (m)" value={btInstalled} total={btPlanned} color="#2dd4bf" />
-                <ProgressBar label="Equipamentos" value={equipInstalled} total={equipPlanned} color="#a78bfa" />
-                <ProgressBar label="Iluminacao" value={lightInstalled} total={lightPlanned} color="#fb923c" />
+                {metas.map((m) => (
+                  <ProgressBar key={m.key} label={m.barra} value={m.installed} total={m.planned} color={m.color} />
+                ))}
               </div>
             </div>
+
+            {workImages.length > 0 && (
+              <div className="sm:col-span-2 bg-surface rounded-2xl p-3 shadow-sm border border-slate-200">
+                <p className="text-sm font-semibold text-slate-900 mb-2">Fotos da obra</p>
+                <GaleriaCliente imagens={workImages} onAbrir={setFotoAberta} />
+              </div>
+            )}
 
             {/* Timeline compacta */}
             <div className="bg-surface rounded-2xl p-3 shadow-sm border border-slate-200">
@@ -563,15 +604,12 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
               <p className="text-[11px] font-bold text-link uppercase tracking-widest">Avanco fisico</p>
             </div>
             <div className="flex-1 overflow-y-auto px-4 xl:px-6 pb-5 space-y-5 [scrollbar-width:thin]">
-              <MetricDonut title="Postes" installed={completedPosts} planned={totalPosts} />
-              <div className="border-t border-white/10" />
-              <MetricDonut title="Rede Media Tensao" installed={mtInstalled} planned={mtPlanned} suffix="m" />
-              <div className="border-t border-white/10" />
-              <MetricDonut title="Rede Baixa Tensao" installed={btInstalled} planned={btPlanned} suffix="m" />
-              <div className="border-t border-white/10" />
-              <MetricDonut title="Equipamentos" installed={equipInstalled} planned={equipPlanned} />
-              <div className="border-t border-white/10" />
-              <MetricDonut title="Iluminacao Publica" installed={lightInstalled} planned={lightPlanned} />
+              {metas.map((m, i) => (
+                <div key={m.key} className="space-y-5">
+                  {i > 0 && <div className="border-t border-white/10" />}
+                  <MetricDonut title={m.titulo} installed={m.installed} planned={m.planned} suffix={m.suffix} />
+                </div>
+              ))}
             </div>
             <div className="flex-shrink-0 border-t border-white/10 px-4 xl:px-6 py-4">
               <div className="flex justify-between text-[11px] text-white/60 mb-2">
@@ -585,9 +623,24 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
             </div>
           </div>
 
-          {/* ── MIDDLE: canvas ───────────────────────────────────────────── */}
+          {/* ── MIDDLE: canvas ou fotos ───────────────────────────────────── */}
           <div className="h-full min-w-0 rounded-2xl overflow-hidden bg-surface shadow-sm border border-slate-200 relative">
-            {workData.budget_data.plan_image_url ? (
+            {workImages.length > 0 && (
+              <div className="absolute left-3 top-3 z-10 flex rounded-lg border border-slate-200 bg-white/95 p-0.5 shadow-sm" role="group" aria-label="O que mostrar">
+                {([
+                  { k: 'planta', l: 'Planta' },
+                  { k: 'fotos', l: `Fotos (${workImages.length})` },
+                ] as const).map(({ k, l }) => (
+                  <button key={k} type="button" onClick={() => setPainelCentral(k)} aria-pressed={painelCentral === k}
+                    className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${painelCentral === k ? 'bg-slate-900 text-white' : 'text-slate-600 hover:text-slate-900'}`}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            )}
+            {painelCentral === 'fotos' && workImages.length > 0 ? (
+              <GaleriaCliente imagens={workImages} onAbrir={setFotoAberta} className="h-full overflow-y-auto p-3 pt-14" />
+            ) : workData.budget_data.plan_image_url ? (
               <CanvasVisual {...canvasProps} />
             ) : (
               <div className="flex items-center justify-center h-full text-slate-300">
@@ -620,11 +673,9 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
             <div className="bg-surface rounded-2xl p-3 shadow-sm border border-slate-200 flex-shrink-0 min-w-0 overflow-hidden">
               <p className="text-sm font-semibold text-slate-900 mb-2.5">Painel de execucao</p>
               <div className="space-y-2">
-                <ProgressBar label="Postes" value={completedPosts} total={totalPosts} color={ON.blue} />
-                <ProgressBar label="Rede MT (m)" value={mtInstalled} total={mtPlanned} color="#4472b4" />
-                <ProgressBar label="Rede BT (m)" value={btInstalled} total={btPlanned} color="#2dd4bf" />
-                <ProgressBar label="Equipamentos" value={equipInstalled} total={equipPlanned} color="#a78bfa" />
-                <ProgressBar label="Iluminacao" value={lightInstalled} total={lightPlanned} color="#fb923c" />
+                {metas.map((m) => (
+                  <ProgressBar key={m.key} label={m.barra} value={m.installed} total={m.planned} color={m.color} />
+                ))}
               </div>
             </div>
 
@@ -707,6 +758,20 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
           </div>{/* /right */}
         </div>
       </div>
+
+      {fotoAberta !== null && workImages[fotoAberta] && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4" role="dialog" aria-modal="true"
+          aria-label={workImages[fotoAberta].description || workImages[fotoAberta].name}
+          onClick={() => setFotoAberta(null)}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={workImages[fotoAberta].url} alt={workImages[fotoAberta].description || workImages[fotoAberta].name}
+            className="max-h-full max-w-full rounded-lg object-contain" />
+          <button type="button" onClick={() => setFotoAberta(null)}
+            className="absolute right-4 top-4 rounded-full bg-white/15 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/25">
+            Fechar
+          </button>
+        </div>
+      )}
     </div>
   );
 }
