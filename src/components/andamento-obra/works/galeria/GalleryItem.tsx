@@ -18,6 +18,7 @@ import {
 import { cn } from '@/lib/utils';
 import type { GalleryItem, GalleryItemSource } from '@/types/works';
 import { MediaFallback } from '../shared/MediaFallback';
+import { formatDateTimeBR } from '@/lib/formatDateTimeBR';
 
 interface GalleryItemProps {
   item: GalleryItem;
@@ -133,7 +134,7 @@ function KindIcon({ kind }: { kind: GalleryItem['kind'] }) {
 function formatDateTimeShort(iso: string): string {
   const dt = new Date(iso);
   if (Number.isNaN(dt.getTime())) return '—';
-  return dt.toLocaleString('pt-BR', {
+  return formatDateTimeBR(dt, {
     day: '2-digit',
     month: '2-digit',
     year: '2-digit',

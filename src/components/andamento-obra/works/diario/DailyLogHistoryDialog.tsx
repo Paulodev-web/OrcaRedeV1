@@ -14,6 +14,7 @@ import type {
   WorkDailyLogWithHistory,
 } from '@/types/works';
 import { DailyLogMediaGallery } from './DailyLogMediaGallery';
+import { formatDateTimeBR } from '@/lib/formatDateTimeBR';
 
 interface DailyLogHistoryDialogProps {
   open: boolean;
@@ -120,7 +121,7 @@ function RevisionItem({
             </span>
           )}
           <span className="text-gray-400">
-            {created.toLocaleString('pt-BR')}
+            {formatDateTimeBR(created)}
           </span>
         </div>
       </div>

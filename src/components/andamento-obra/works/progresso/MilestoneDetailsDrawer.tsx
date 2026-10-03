@@ -28,6 +28,7 @@ import { ImageLightbox } from '../shared/ImageLightbox';
 import { MilestoneStatusBadge } from './MilestoneStatusBadge';
 import { ReportMilestoneDialog } from './ReportMilestoneDialog';
 import { RejectMilestoneDialog } from './RejectMilestoneDialog';
+import { formatDateTimeBR } from '@/lib/formatDateTimeBR';
 
 interface MilestoneDetailsDrawerProps {
   open: boolean;
@@ -286,7 +287,7 @@ function EventItem({
           <Icon className="h-3.5 w-3.5" /> {EVENT_TYPE_LABEL[event.eventType]} ·{' '}
           {event.actorRole === 'engineer' ? 'engenheiro' : 'gerente'}
         </span>
-        <span className="text-gray-400">{dt.toLocaleString('pt-BR')}</span>
+        <span className="text-gray-400">{formatDateTimeBR(dt)}</span>
       </div>
       {event.notes && (
         <p className="whitespace-pre-wrap text-sm text-gray-700">{event.notes}</p>

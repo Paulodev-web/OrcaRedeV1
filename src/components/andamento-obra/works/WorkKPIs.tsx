@@ -2,6 +2,7 @@ import { HardHat, Flag, Radio } from 'lucide-react';
 import type { WorkMilestone, WorkRow } from '@/types/works';
 import type { WorkExecutionStats } from '@/services/works/getWorkExecutionStats';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
+import { formatDateTimeBR } from '@/lib/formatDateTimeBR';
 
 interface WorkKPIsProps {
   work: WorkRow;
@@ -66,7 +67,7 @@ export function WorkKPIs({
       label: 'Último registro',
       value: ultimoRegistro ? formatRelativeTime(ultimoRegistro) : 'Nenhum',
       hint: ultimoRegistro
-        ? new Date(ultimoRegistro).toLocaleDateString('pt-BR', {
+        ? formatDateTimeBR(ultimoRegistro, {
             day: '2-digit',
             month: 'short',
             hour: '2-digit',

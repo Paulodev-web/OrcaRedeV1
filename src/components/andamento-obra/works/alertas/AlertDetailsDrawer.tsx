@@ -12,6 +12,7 @@ import type { WorkAlertWithHistory } from '@/types/works';
 import { ALERT_SEVERITY_LABELS, ALERT_CATEGORY_LABELS, ALERT_STATUS_LABELS } from '@/types/works';
 import { AlertSeverityBadge } from './AlertSeverityBadge';
 import { AlertStatusBadge } from './AlertStatusBadge';
+import { formatDateTimeBR } from '@/lib/formatDateTimeBR';
 
 interface Props {
   alertId: string;
@@ -185,7 +186,7 @@ export function AlertDetailsDrawer({ alertId, workId, role, onClose }: Props) {
                           {UPDATE_TYPE_LABELS[u.updateType] ?? u.updateType}
                         </span>
                         <span className="text-[10px] text-gray-400">
-                          {new Date(u.createdAt).toLocaleString('pt-BR')}
+                          {formatDateTimeBR(u.createdAt)}
                         </span>
                       </div>
                       {u.notes && <p className="mt-1 text-xs text-gray-600">{u.notes}</p>}

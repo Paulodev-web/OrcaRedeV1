@@ -4,6 +4,7 @@ import { Check, CheckCheck, Clock, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { WorkMessage, WorkMessageSenderRole } from '@/types/works';
 import { ChatAttachmentBubble } from './ChatAttachmentBubble';
+import { formatTimeBR } from '@/lib/formatDateTimeBR';
 
 interface ChatMessageProps {
   message: WorkMessage;
@@ -20,7 +21,7 @@ interface ChatMessageProps {
 function formatTime(value: string): string {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return formatTimeBR(d);
 }
 
 export function ChatMessage({

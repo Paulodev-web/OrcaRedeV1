@@ -24,6 +24,7 @@ import { DailyLogMediaGallery } from './DailyLogMediaGallery';
 import { RejectDailyLogDialog } from './RejectDailyLogDialog';
 import { DailyLogHistoryDialog } from './DailyLogHistoryDialog';
 import { loadDailyLogHistory } from '@/actions/workDailyLogs';
+import { formatDateTimeBR } from '@/lib/formatDateTimeBR';
 
 interface DailyLogCardProps {
   log: WorkDailyLog;
@@ -262,7 +263,7 @@ function CardFooter({
       <div className="mt-3 flex items-center gap-2 text-xs text-emerald-700">
         <CheckCircle2 className="h-3.5 w-3.5" />
         <span>
-          Aprovado{approvedAt ? ` em ${new Date(approvedAt).toLocaleString('pt-BR')}` : ''}
+          Aprovado{approvedAt ? ` em ${formatDateTimeBR(approvedAt)}` : ''}
         </span>
       </div>
     );
@@ -272,7 +273,7 @@ function CardFooter({
       <div className="mt-3 flex items-center gap-2 text-xs text-red-700">
         <XCircle className="h-3.5 w-3.5" />
         <span>
-          Rejeitado{rejectedAt ? ` em ${new Date(rejectedAt).toLocaleString('pt-BR')}` : ''}
+          Rejeitado{rejectedAt ? ` em ${formatDateTimeBR(rejectedAt)}` : ''}
           {viewerRole === 'manager' && ' — aguardando republicação.'}
         </span>
       </div>

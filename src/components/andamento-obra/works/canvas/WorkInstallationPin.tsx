@@ -2,6 +2,7 @@
 
 import { memo } from 'react';
 import type { WorkPoleInstallation } from '@/types/works';
+import { formatDateTimeBR } from '@/lib/formatDateTimeBR';
 
 /**
  * Tamanho efetivo do pin de execucao em pixels logicos.
@@ -148,9 +149,10 @@ export const WorkInstallationPin = memo(function WorkInstallationPin({
 function formatShort(iso: string): string {
   const dt = new Date(iso);
   if (Number.isNaN(dt.getTime())) return '-';
-  const dd = String(dt.getDate()).padStart(2, '0');
-  const mm = String(dt.getMonth() + 1).padStart(2, '0');
-  const hh = String(dt.getHours()).padStart(2, '0');
-  const min = String(dt.getMinutes()).padStart(2, '0');
-  return `${dd}/${mm} ${hh}:${min}`;
+  return formatDateTimeBR(dt, {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).replace(',', '');
 }

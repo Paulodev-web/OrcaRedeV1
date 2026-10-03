@@ -29,6 +29,7 @@ import {
 import type { MountedEquipment } from '@/services/works/getWorkExecutionOverlay';
 import { ImageLightbox } from '../shared/ImageLightbox';
 import { MarkPoleInstalledForm } from './MarkPoleInstalledForm';
+import { formatDateTimeBR } from '@/lib/formatDateTimeBR';
 
 type Selected =
   | { kind: 'planned'; post: WorkProjectPost }
@@ -464,7 +465,7 @@ function InstallationBody({
   const published = installation.approvedAt !== null;
   const canPublish = viewerRole === 'engineer' && installation.status === 'installed';
 
-  const dateLabel = new Date(installation.installedAt).toLocaleString('pt-BR', {
+  const dateLabel = formatDateTimeBR(installation.installedAt, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
