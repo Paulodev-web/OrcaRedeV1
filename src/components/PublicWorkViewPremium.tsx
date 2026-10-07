@@ -12,6 +12,8 @@ import { supabase } from '@/lib/supabaseClient';
 import { CanvasVisual } from './CanvasVisual';
 import { ON_ENGENHARIA_LOGO_SRC } from '@/lib/branding';
 import { calculateWeightedProgress } from '@/lib/tracking/syncWorkTracking';
+import { ImageLightbox } from './andamento-obra/works/shared/ImageLightbox';
+import { PublicCrewDocuments } from './PublicCrewDocuments';
 
 interface PublicWorkViewProps {
   workId: string;
@@ -363,10 +365,10 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
    * As metas que esta obra tem. Obra só de iluminação não tem rede de média
    * tensão, e mostrar "Rede MT 0/0m" ao cliente parece trabalho que não
    * começou (pedido do Luan, 30/09). Mesma regra de `calculateWeightedProgress`:
-   * conta o que existe. Poste aparece sempre, porque é o eixo da obra.
+   * conta o que existe, inclusive em obras sem postes.
    */
   const metas = [
-    { key: 'postes', titulo: 'Postes', curto: 'Postes', barra: 'Postes', installed: completedPosts, planned: totalPosts, suffix: '', color: ON.blue, sempre: true },
+    { key: 'postes', titulo: 'Postes', curto: 'Postes', barra: 'Postes', installed: completedPosts, planned: totalPosts, suffix: '', color: ON.blue, sempre: false },
     { key: 'mt', titulo: 'Rede Media Tensao', curto: 'MT', barra: 'Rede MT (m)', installed: mtInstalled, planned: mtPlanned, suffix: 'm', color: '#4472b4', sempre: false },
     { key: 'bt', titulo: 'Rede Baixa Tensao', curto: 'BT', barra: 'Rede BT (m)', installed: btInstalled, planned: btPlanned, suffix: 'm', color: '#2dd4bf', sempre: false },
     { key: 'equip', titulo: 'Equipamentos', curto: 'Equip.', barra: 'Equipamentos', installed: equipInstalled, planned: equipPlanned, suffix: '', color: '#a78bfa', sempre: false },
@@ -485,7 +487,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
                 <div className="min-w-0">
                   <p className="text-xs text-white/70">Atualizado em</p>
                   <p className="font-semibold text-sm">{fmt(workData.updated_at?.split('T')[0])}</p>
-                  <p className="text-xs text-white/60 mt-0.5">{completedPosts} de {totalPosts} postes concluidos</p>
+                  {(totalPosts > 0 || completedPosts > 0) && <p className="text-xs text-white/60 mt-0.5">{completedPosts} de {totalPosts} postes concluidos</p>}
                 </div>
               </div>
             </div>
@@ -558,6 +560,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
               </div>
             )}
 
+            <PublicCrewDocuments publicId={workId} />
             {/* Timeline compacta */}
             <div className="bg-surface rounded-2xl p-3 shadow-sm border border-slate-200">
               <div className="flex items-center justify-between mb-2">
@@ -661,7 +664,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
                 { label: 'Progresso', value: `${realPct}%`, color: ON.blue },
                 { label: 'Postes', value: `${completedPosts}/${totalPosts}`, color: '#10b981' },
                 { label: 'Marcos', value: `${completedMs}/${timelineMilestones.length}`, color: '#f59e0b' },
-              ].map(({ label, value, color }) => (
+              ].filter((metric) => metric.label !== 'Postes' || totalPosts > 0 || completedPosts > 0).map(({ label, value, color }) => (
                 <div key={label} className="bg-surface rounded-lg p-2 shadow-sm border border-slate-200 text-center min-w-0 overflow-hidden">
                   <p className="text-[10px] text-slate-400 uppercase tracking-wide leading-tight">{label}</p>
                   <p className="text-sm font-bold" style={{ color }}>{value}</p>
@@ -679,6 +682,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
               </div>
             </div>
 
+            <PublicCrewDocuments publicId={workId} />
             {/* cronograma + mensagem lado a lado */}
             <div className="grid grid-cols-2 gap-2 flex-shrink-0 min-w-0">
               {/* schedule summary */}
@@ -707,7 +711,7 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
                   {workData.current_focus_description?.trim() || (
                     workData.status === 'Concluído'
                       ? 'Obra concluída. Painel em modo de histórico final.'
-                      : 'Priorizar finalização dos postes e consolidação da rede para acelerar o encerramento.'
+                      : 'Acompanhe as metas e os marcos definidos para esta obra.'
                   )}
                 </p>
               </div>
@@ -759,19 +763,13 @@ export function PublicWorkView({ workId }: PublicWorkViewProps) {
         </div>
       </div>
 
-      {fotoAberta !== null && workImages[fotoAberta] && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4" role="dialog" aria-modal="true"
-          aria-label={workImages[fotoAberta].description || workImages[fotoAberta].name}
-          onClick={() => setFotoAberta(null)}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={workImages[fotoAberta].url} alt={workImages[fotoAberta].description || workImages[fotoAberta].name}
-            className="max-h-full max-w-full rounded-lg object-contain" />
-          <button type="button" onClick={() => setFotoAberta(null)}
-            className="absolute right-4 top-4 rounded-full bg-white/15 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/25">
-            Fechar
-          </button>
-        </div>
-      )}
+      <ImageLightbox
+        open={fotoAberta !== null}
+        onOpenChange={(open) => { if (!open) setFotoAberta(null); }}
+        images={workImages.map((image) => image.url)}
+        initialIndex={fotoAberta ?? 0}
+        alt="Fotos da obra"
+      />
     </div>
   );
 }

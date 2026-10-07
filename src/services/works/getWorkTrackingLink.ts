@@ -19,7 +19,7 @@ export interface WorkTrackingLink {
  * O acompanhamento que o cliente abre, quando ele é espelho desta obra.
  *
  * Devolve null em dois casos: a obra ainda não tem portal espelhado (nasceu
- * antes desta versão, ou foi criada do zero sem orçamento), e a obra cujo
+ * antes desta versão), e a obra cujo
  * orçamento tem um acompanhamento legado marcado à mão, que o espelho não
  * adota de propósito.
  *
@@ -31,7 +31,7 @@ export const getWorkTrackingLink = cache(async (
   supabase: SupabaseClient,
   workId: string,
 ): Promise<WorkTrackingLink | null> => {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('work_trackings')
     .select(
       'id, public_id, public_enabled, poles_installed, planned_poles, progress_percentage',
@@ -39,6 +39,7 @@ export const getWorkTrackingLink = cache(async (
     .eq('work_id', workId)
     .maybeSingle();
 
+  if (error) throw new Error(`Não foi possível consultar o portal da obra: ${error.message}`);
   if (!data) return null;
 
   return {

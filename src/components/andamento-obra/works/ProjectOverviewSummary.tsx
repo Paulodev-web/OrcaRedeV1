@@ -9,6 +9,7 @@ interface ProjectOverviewSummaryProps {
    * grid de KPIs e tipografia.
    */
   compact?: boolean;
+  hasBudget?: boolean;
 }
 
 /**
@@ -22,6 +23,7 @@ interface ProjectOverviewSummaryProps {
 export function ProjectOverviewSummary({
   bundle,
   compact = false,
+  hasBudget = true,
 }: ProjectOverviewSummaryProps) {
   const { snapshot, posts, connections } = bundle;
   const meters = snapshot.metersPlanned;
@@ -40,11 +42,11 @@ export function ProjectOverviewSummary({
   return (
     <section className={containerClass}>
       <header className="flex flex-wrap items-center gap-2">
-        <h2 className="text-sm font-semibold text-neutral-900">Projeto importado</h2>
+        <h2 className="text-sm font-semibold text-neutral-900">{hasBudget ? 'Projeto importado' : 'Planta da obra'}</h2>
         <span className="text-[11px] text-gray-500">Importado em {importedAt}</span>
       </header>
       <p className="mt-1 text-xs text-gray-500">
-        Snapshot fixo do orçamento original. Alterações no orçamento não atualizam esta obra.
+        {hasBudget ? 'Snapshot fixo do orçamento original. Alterações no orçamento não atualizam esta obra.' : 'Planta anexada ao cadastro da obra. Postes e materiais não são gerados automaticamente.'}
       </p>
 
       <ul className={kpiGridClass}>
@@ -82,13 +84,13 @@ export function ProjectOverviewSummary({
             : 'mt-4 grid grid-cols-1 gap-2 text-xs text-gray-700 sm:grid-cols-3'
         }
       >
-        <MetersRow label="BT" value={meters.BT} />
-        <MetersRow label="MT" value={meters.MT} />
-        <MetersRow label="Rede" value={meters.rede} />
+        {meters.BT > 0 && <MetersRow label="BT" value={meters.BT} />}
+        {meters.MT > 0 && <MetersRow label="MT" value={meters.MT} />}
+        {meters.rede > 0 && <MetersRow label="Rede" value={meters.rede} />}
       </div>
       {totalMeters === 0 && (
         <p className="mt-2 text-[11px] text-gray-500">
-          Metragem planejada: <strong>0 m</strong> (não definida no orçamento).
+          Metragem planejada não definida.
         </p>
       )}
 

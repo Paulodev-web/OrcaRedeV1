@@ -23,7 +23,7 @@ export function PostsProgressCard({ postsPlanned, postsInstalled }: PostsProgres
         />
       </div>
       <p className="mt-2 text-[11px] text-gray-500">
-        Atualização em tempo real disponível no Bloco 7 (instalação por poste).
+        Postes registrados como instalados pela equipe. A publicação para o cliente depende da aprovação do engenheiro.
       </p>
     </div>
   );

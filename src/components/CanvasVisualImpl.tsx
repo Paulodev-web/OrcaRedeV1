@@ -285,6 +285,23 @@ export function CanvasVisual({
     setShowPdfLayer(true);
   }, [isPDF, orcamento.imagemPlanta]);
 
+  // No portal sem ferramentas, enquadra a planta inteira em vez de abrir
+  // um recorte fixo de 6000 px. Observa também a troca mobile/desktop.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!hideToolbar || !isPDF || !imageDimensions || !container) return;
+    const fit = () => {
+      const { width, height } = container.getBoundingClientRect();
+      if (!width || !height) return;
+      const scale = Math.max(0.02, Math.min(width / imageDimensions.width, height / imageDimensions.height) * 0.94);
+      transformRef.current?.setTransform(width / 2 - 3000 * scale, height / 2 - 3000 * scale, scale, 0);
+    };
+    const observer = new ResizeObserver(fit);
+    observer.observe(container);
+    fit();
+    return () => observer.disconnect();
+  }, [hideToolbar, isPDF, imageDimensions]);
+
   // Marco final da medição de abertura: o primeiro quadro em que os postes
   // realmente foram para a tela. Dois rAF encadeados esperam o browser pintar —
   // um só ainda está antes do paint. Instrumentação temporária.
@@ -759,16 +776,16 @@ export function CanvasVisual({
       )}
 
       {/* Container principal com imagem e tabela */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 min-h-0 min-w-0 flex flex-col">
         {/* Área da imagem com postes */}
         <div 
           ref={containerRef}
-          className="flex-1 relative bg-gray-50"
+          className="flex-1 min-h-0 min-w-0 overflow-hidden relative bg-gray-50"
         >
           <TransformWrapper
             key={`transform-${hasImage}-${isPDF}`} // Força re-renderização quando tipo muda
             ref={transformRef}
-            minScale={0.1}
+            minScale={hideToolbar ? 0.02 : 0.1}
             maxScale={5}
             initialScale={hasImage && !isPDF ? 0.8 : 0.5}
             initialPositionX={hasImage && !isPDF ? 0 : -1000}
@@ -865,6 +882,7 @@ export function CanvasVisual({
               return (
                 <TransformComponent
                   wrapperClass="w-full h-full"
+                  wrapperStyle={{ width: '100%', height: '100%' }}
                   contentClass={hasImage && !isPDF ? "w-full h-full flex items-center justify-center" : "w-full h-full"}
                 >
 

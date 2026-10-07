@@ -19,6 +19,7 @@ import {
   uploadWorkClientPortalLogo,
 } from '@/actions/workClientPortal';
 import { resyncWorkTracking } from '@/actions/workPoleInstallations';
+import { ExecutionPhotoPicker } from './ExecutionPhotoPicker';
 import type {
   WorkClientPortal,
   WorkPortalImage,
@@ -190,7 +191,7 @@ export function ClientPortalSettings({ workId, portal }: ClientPortalSettingsPro
                 className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 disabled:opacity-60"
               >
                 <RefreshCw className={`h-3.5 w-3.5 ${ressincronizando ? 'animate-spin' : ''}`} />
-                Ressincronizar com o orçamento
+                Ressincronizar com a obra
               </button>
             </div>
           </>
@@ -399,6 +400,8 @@ export function ClientPortalSettings({ workId, portal }: ClientPortalSettingsPro
             onChange={(e) => void handleFoto(e.target.files?.[0] ?? null)} />
         </div>
 
+        <ExecutionPhotoPicker workId={workId} images={imagens} onChange={setImagens} />
+
         {imagens.length === 0 ? (
           <p className="mt-3 rounded-md border border-dashed border-gray-200 bg-gray-50 px-3 py-4 text-center text-xs text-gray-500">
             Nenhuma foto na galeria do cliente.
@@ -476,6 +479,5 @@ function numText(v: number | null): string {
 function textNum(v: string): number | null {
   const t = v.trim();
   if (t === '') return null;
-  const n = Number(t);
-  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : null;
+  return Number(t);
 }

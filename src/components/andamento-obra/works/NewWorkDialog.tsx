@@ -172,6 +172,7 @@ function WorkForm({ managers, work, onClose, onBack }: WorkFormProps) {
   const [startedAt, setStartedAt] = useState(work?.startedAt ?? '');
   const [expectedEndAt, setExpectedEndAt] = useState(work?.expectedEndAt ?? '');
   const [notes, setNotes] = useState(work?.notes ?? '');
+  const [plan, setPlan] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const firstFieldRef = useRef<HTMLInputElement | null>(null);
@@ -220,7 +221,9 @@ function WorkForm({ managers, work, onClose, onBack }: WorkFormProps) {
         return;
       }
 
-      const result = await createWork(payload);
+      const attachments = new FormData();
+      if (plan) attachments.set('plan', plan);
+      const result = await createWork(payload, attachments);
       if (!result.success) {
         setError(result.error);
         return;
@@ -248,6 +251,13 @@ function WorkForm({ managers, work, onClose, onBack }: WorkFormProps) {
       </DialogHeader>
 
       <div className="grid gap-4 px-6 py-4 sm:grid-cols-2">
+        {!isEdit && <div className="space-y-1.5 sm:col-span-2">
+          <label htmlFor="work-plan" className="block text-sm font-medium text-gray-700">Planta do projeto (PDF, opcional)</label>
+          <input id="work-plan" type="file" accept=".pdf,application/pdf" disabled={pending}
+            onChange={(event) => setPlan(event.target.files?.[0] ?? null)}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+          <p className="text-xs text-gray-500">Até 8 MB, sem senha. A planta será exibida na obra e no portal do cliente. Não cria postes automaticamente.</p>
+        </div>}
         <div className="space-y-1.5 sm:col-span-2">
           <label htmlFor="work-name" className="block text-sm font-medium text-gray-700">
             Nome da obra

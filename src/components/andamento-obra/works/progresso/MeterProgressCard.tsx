@@ -12,6 +12,8 @@ const CATEGORIES: { key: keyof MetersByCategory['planned']; label: string }[] = 
 ];
 
 export function MeterProgressCard({ meters }: MeterProgressCardProps) {
+  const categories = CATEGORIES.filter((c) => meters.planned[c.key] > 0 || meters.realized[c.key] > 0);
+  if (categories.length === 0) return null;
   return (
     <div className="rounded-xl border border-gray-200 bg-surface p-4 shadow-sm">
       <header className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -19,7 +21,7 @@ export function MeterProgressCard({ meters }: MeterProgressCardProps) {
         Metragem instalada vs planejada
       </header>
       <div className="mt-3 space-y-3">
-        {CATEGORIES.map((c) => {
+        {categories.map((c) => {
           const planned = meters.planned[c.key];
           const realized = meters.realized[c.key];
           const pct = planned > 0 ? Math.min(100, (realized / planned) * 100) : 0;

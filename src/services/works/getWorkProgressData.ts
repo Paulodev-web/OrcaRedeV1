@@ -28,10 +28,6 @@ interface SnapshotRow {
   meters_planned: unknown;
 }
 
-interface PostRow {
-  id: string;
-}
-
 interface MilestoneStatusRow {
   status: MilestoneStatus;
 }
@@ -70,6 +66,7 @@ export async function getWorkProgressData(
     workRes,
     snapshotRes,
     postsCountRes,
+    installationsCountRes,
     milestonesRes,
     approvedLogsRes,
   ] = await Promise.all([
@@ -88,6 +85,11 @@ export async function getWorkProgressData(
       .select('id', { count: 'exact', head: true })
       .eq('work_id', workId),
     supabase
+      .from('work_pole_installations')
+      .select('id', { count: 'exact', head: true })
+      .eq('work_id', workId)
+      .eq('status', 'installed'),
+    supabase
       .from('work_milestones')
       .select('status')
       .eq('work_id', workId),
@@ -99,6 +101,10 @@ export async function getWorkProgressData(
       .order('log_date', { ascending: true }),
   ]);
 
+  // Uma falha de leitura não é uma obra sem execução.
+  for (const result of [workRes, snapshotRes, postsCountRes, installationsCountRes, milestonesRes, approvedLogsRes]) {
+    if (result.error) throw new Error(`Falha ao carregar progresso: ${result.error.message}`);
+  }
   const work = (workRes.data ?? null) as WorkRow | null;
   const snapshot = (snapshotRes.data ?? null) as SnapshotRow | null;
   const postsPlanned = postsCountRes.count ?? 0;
@@ -114,10 +120,11 @@ export async function getWorkProgressData(
 
   const revisionsMap = new Map<string, MetersPlanned>();
   if (revisionIds.length > 0) {
-    const { data: revData } = await supabase
+    const { data: revData, error: revisionError } = await supabase
       .from('work_daily_log_revisions')
       .select('id, meters_installed')
       .in('id', revisionIds);
+    if (revisionError) throw new Error(`Falha ao carregar metragem: ${revisionError.message}`);
     const rows = (revData ?? []) as unknown as RevisionMetersRow[];
     for (const r of rows) {
       revisionsMap.set(r.id, parseMeters(r.meters_installed));
@@ -169,7 +176,7 @@ export async function getWorkProgressData(
 
   return {
     postsPlanned,
-    postsInstalled: 0, // Bloco 7 vai popular via work_pole_installations
+    postsInstalled: installationsCountRes.count ?? 0,
     metersByCategory: {
       planned,
       realized,

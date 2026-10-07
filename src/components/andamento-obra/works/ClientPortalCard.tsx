@@ -11,7 +11,7 @@ interface ClientPortalCardProps {
   publicEnabled: boolean;
   polesPublished: number;
   polesPlanned: number;
-  /** Obra sem orçamento não tem planta nem postes: não há portal a montar. */
+  /** Identifica se a ressincronização inclui um orçamento de origem. */
   hasBudget: boolean;
 }
 
@@ -64,16 +64,10 @@ export function ClientPortalCard({
     <section className="rounded-2xl border border-gray-200 bg-surface p-4">
       <h2 className="text-sm font-semibold text-neutral-900">Portal do cliente</h2>
 
-      {!hasBudget ? (
+      {!href ? (
         <p className="mt-2 text-xs text-gray-500">
-          Esta obra não veio de um orçamento, então não tem planta nem postes
-          para mostrar ao cliente.
-        </p>
-      ) : !href ? (
-        <p className="mt-2 text-xs text-gray-500">
-          Esta obra ainda não tem acompanhamento publicado. Se o orçamento já
-          tem um acompanhamento antigo, marcado à mão, ele continua sendo o do
-          cliente e não é substituído.
+          Esta obra ainda não tem acompanhamento publicado.
+          {hasBudget && ' Se o orçamento já tem um acompanhamento antigo, marcado à mão, ele continua sendo o do cliente e não é substituído.'}
         </p>
       ) : !publicEnabled ? (
         <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs text-amber-800">
@@ -82,12 +76,12 @@ export function ClientPortalCard({
         </p>
       ) : (
         <>
-          <p className="mt-2 text-xs text-gray-600">
+          {polesPlanned > 0 || polesPublished > 0 ? <p className="mt-2 text-xs text-gray-600">
             <strong className="font-semibold text-neutral-900">
               {polesPublished}
             </strong>{' '}
             de {polesPlanned} postes já aparecem para o cliente.
-          </p>
+          </p> : <p className="mt-2 text-xs text-gray-600">Portal disponível. Configure metas e conteúdo na aba Portal do cliente.</p>}
 
           <div className="mt-3 flex flex-wrap gap-1.5">
             <a

@@ -21,6 +21,7 @@ import { readPdfPageGeometry } from '@/lib/canvas/pdfPageGeometry';
 import { isBudgetFinalizedForImport } from '@/lib/budgetStatus';
 import { getImportableBudgets } from '@/services/works/getImportableBudgets';
 import { getBudgetForImport } from '@/services/works/getBudgetForImport';
+import { prepareWorkPlan } from '@/services/works/prepareWorkPlan';
 import type {
   ActionResult,
   CreateWorkFromBudgetInput,
@@ -102,6 +103,7 @@ async function ensureManagerBelongsToEngineer(
 
 export async function createWork(
   input: CreateWorkInput,
+  attachments?: FormData,
 ): Promise<ActionResult<{ workId: string }>> {
   const gate = await ensureEngineer();
   if (!gate.ok) return { success: false, error: gate.error };
@@ -126,6 +128,14 @@ export async function createWork(
     if (!check.ok) return { success: false, error: check.error };
   }
 
+  const file = attachments?.get('plan');
+  let plan: Awaited<ReturnType<typeof prepareWorkPlan>> | null = null;
+  if (file) {
+    if (!(file instanceof File)) return { success: false, error: 'Arquivo de planta inválido.' };
+    try { plan = await prepareWorkPlan(file); }
+    catch (error) { return { success: false, error: error instanceof Error ? error.message : 'PDF inválido.' }; }
+  }
+
   const { data, error } = await gate.supabase
     .from('works')
     .insert({
@@ -147,6 +157,34 @@ export async function createWork(
   }
 
   const workId = data.id as string;
+  if (plan) {
+    const admin = createSupabaseServiceRoleClient();
+    const path = `${workId}/project/projeto.pdf`;
+    let uploaded = false;
+    try {
+      const upload = await admin.storage.from(ANDAMENTO_OBRA_BUCKET).upload(path, plan.bytes, { contentType: 'application/pdf', upsert: false });
+      if (upload.error) throw new Error(upload.error.message);
+      uploaded = true;
+      const snapshot = await admin.from('work_project_snapshot').insert({
+        work_id: workId, source_budget_id: null, pdf_storage_path: path,
+        render_version: 2, pdf_num_pages: plan.numPages, plan_geometry: plan.geometry,
+        materials_planned: [], meters_planned: {}, imported_by: gate.engineerId,
+      });
+      if (snapshot.error) throw new Error(snapshot.error.message);
+      const portal = await admin.rpc('sync_work_tracking_from_work', { p_work_id: workId });
+      if (portal.error) throw new Error(portal.error.message);
+    } catch (error) {
+      // Apenas artefatos desta criação: nunca apaga uma obra preexistente.
+      const portalCleanup = await admin.from('work_trackings').delete().eq('work_id', workId);
+      const workCleanup = await admin.from('works').delete().eq('id', workId).eq('engineer_id', gate.engineerId);
+      const storageCleanup = uploaded ? await admin.storage.from(ANDAMENTO_OBRA_BUCKET).remove([path]) : null;
+      if (portalCleanup.error || workCleanup.error || storageCleanup?.error) {
+        console.error('[createWork] rollback incompleto', { workId });
+        return { success: false, error: `Falha na planta; a limpeza da criação ficou incompleta. Confira a obra ${workId} antes de repetir.` };
+      }
+      return { success: false, error: error instanceof Error ? `Falha ao salvar a planta: ${error.message}` : 'Falha ao salvar a planta.' };
+    }
+  }
   revalidatePath(WORKS_PATH);
   revalidatePath(`${WORKS_PATH}/obras/${workId}`);
 

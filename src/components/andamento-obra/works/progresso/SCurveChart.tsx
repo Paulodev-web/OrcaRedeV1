@@ -28,10 +28,14 @@ export function SCurveChart({ data, totalPlanned, startedAt, expectedEndAt }: SC
       <header className="flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
           <TrendingUp className="h-3.5 w-3.5" />
-          Curva S — planejado vs realizado
+          Evolução da rede — metros acumulados
         </h3>
         <Legend />
       </header>
+      <p className="mt-2 text-xs text-gray-500">
+        As barras mostram os metros registrados em diários aprovados. A linha tracejada é uma
+        referência de ritmo constante até o prazo previsto, não o percentual total da obra.
+      </p>
 
       <div className="mt-3">
         {!startedAt ? (
@@ -111,7 +115,7 @@ function SvgChart({
     <svg
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
       role="img"
-      aria-label="Curva S de progresso"
+      aria-label="Metros de rede acumulados: referência planejada e execução aprovada"
       className="w-full"
     >
       {/* Grid horizontal */}

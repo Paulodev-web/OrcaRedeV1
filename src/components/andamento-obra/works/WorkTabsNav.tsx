@@ -13,10 +13,10 @@ interface WorkTabsNavProps {
 }
 
 /**
- * Tres destinos, nao nove.
+ * Navegação concentrada na operação da obra.
  *
- * O que saiu daqui nao foi apagado: checklists, equipe, galeria, documentos e o
- * diario com aprovacao continuam no codigo e nas rotas, so nao tem mais porta.
+ * Checklists e diário com aprovação continuam nas rotas, fora da navegação.
+ * Equipe retorna em out/2026 para publicação seletiva de documentos ao cliente.
  * O que ficou e o que o engenheiro faz todo dia: olhar a obra crescer, conversar
  * com o gerente e aprovar etapa.
  *
@@ -24,13 +24,14 @@ interface WorkTabsNavProps {
  *
  * "Responsavel" e condicional (nao entra no array fixo): so aparece pra quem
  * pode usa-la (dono/admin da org). Pra quem nao pode, a rota continua de pe,
- * sem porta — mesmo tratamento que equipe/checklists ja recebem.
+ * sem porta — mesmo tratamento que checklists recebe.
  */
 const tabs = [
   { slug: 'visao-geral', label: 'Obra' },
   { slug: 'dia-a-dia', label: 'Dia a dia' },
   { slug: 'chat', label: 'Conversa' },
   { slug: 'progresso', label: 'Marcos' },
+  { slug: 'equipe', label: 'Equipe e documentos' },
   // Herdeira do Portal do Engenheiro. Ele era um módulo à parte, com o próprio
   // menu, e virou aba porque o que sobrou dele depois do espelho é presentação
   // de UMA obra: descrição, foco, logo e galeria. Não entra condicional porque

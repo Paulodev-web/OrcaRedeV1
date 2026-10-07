@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { CalendarRange, ClipboardCheck, Images } from 'lucide-react';
+import { CalendarRange, Images } from 'lucide-react';
 import {
   createSupabaseServerClient,
   requireAuthUserId,
@@ -109,7 +109,7 @@ export default async function VisaoGeralPage({ params }: VisaoGeralPageProps) {
       </div>
 
       <aside className="flex w-full flex-col gap-3 lg:basis-[32%]">
-        <ProjectOverviewSummary bundle={bundle} compact />
+        <ProjectOverviewSummary bundle={bundle} compact hasBudget={work?.budgetId != null} />
         {viewerRole === 'engineer' && (
           <ClientPortalCard
             workId={workId}
@@ -159,11 +159,6 @@ function QuickLinks({ workId }: { workId: string }) {
   const items = [
     { href: `${base}/galeria`, label: 'Ver galeria', icon: Images },
     { href: `${base}/progresso`, label: 'Ver progresso', icon: CalendarRange },
-    {
-      href: `${base}/checklists`,
-      label: 'Ver checklists',
-      icon: ClipboardCheck,
-    },
   ];
   return (
     <nav

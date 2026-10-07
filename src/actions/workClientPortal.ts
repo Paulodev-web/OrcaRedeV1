@@ -5,6 +5,7 @@ import { ensureMember } from '@/lib/auth/ensureMember';
 import { createSupabaseServiceRoleClient } from '@/lib/supabaseServer';
 import type { WorkPortalImage } from '@/services/works/getWorkClientPortal';
 import type { ActionResult } from '@/types/works';
+import { executionPhotoPath, listExecutionPhotos, type ExecutionPhotoKind, type ExecutionPhoto } from '@/services/works/workExecutionPhotos';
 
 const WORKS_PATH = '/tools/andamento-obra';
 /** Bucket público: a página do cliente é anônima e precisa abrir estas imagens. */
@@ -14,6 +15,44 @@ const TEXTO_CURTO_MAX = 120;
 const TEXTO_LONGO_MAX = 2000;
 const IMAGEM_MAX_BYTES = 8 * 1024 * 1024;
 const GALERIA_MAX = 30;
+
+export async function getWorkExecutionPhotos(workId: string, kind: ExecutionPhotoKind, page: number): Promise<ActionResult<{ photos: ExecutionPhoto[]; hasMore: boolean }>> {
+  const porta = await portaoDoEngenheiro(workId);
+  if (!porta.ok) return { success: false, error: porta.error };
+  try {
+    return { success: true, data: await listExecutionPhotos(porta.gate.supabase, workId, kind, page) };
+  } catch {
+    return { success: false, error: 'Não foi possível carregar as fotos da execução.' };
+  }
+}
+
+export async function publishWorkExecutionPhoto(workId: string, imageId: string): Promise<ActionResult<{ images: WorkPortalImage[] }>> {
+  const porta = await portaoDoEngenheiro(workId);
+  if (!porta.ok) return { success: false, error: porta.error };
+  try {
+    const db = porta.gate.supabase;
+    if (!await executionPhotoPath(db, workId, imageId)) return { success: false, error: 'Foto não encontrada nesta obra.' };
+    const { data: portal, error } = await db.from('work_trackings')
+      .select('id,public_id,work_images,updated_at').eq('work_id', workId).maybeSingle();
+    if (error) throw error;
+    if (!portal?.public_id) return { success: false, error: 'Esta obra ainda não tem portal do cliente.' };
+    const images: WorkPortalImage[] = Array.isArray(portal.work_images) ? portal.work_images : [];
+    if (images.some((image) => image.id === imageId)) return { success: true, data: { images } };
+    if (images.length >= GALERIA_MAX) return { success: false, error: 'A galeria já tem 30 fotos. Remova uma antes de publicar outra.' };
+    const next = [...images, {
+      id: imageId, name: 'Foto da execução', description: '', uploadDate: new Date().toISOString(),
+      url: `/api/obra/${encodeURIComponent(portal.public_id)}/fotos/${imageId}`,
+    }];
+    const saved = await db.from('work_trackings').update({ work_images: next, updated_at: new Date().toISOString() })
+      .eq('id', portal.id).eq('updated_at', portal.updated_at).select('id').maybeSingle();
+    if (saved.error) throw saved.error;
+    if (!saved.data) return { success: false, error: 'O portal mudou durante a publicação. Atualize e tente novamente.' };
+    revalidatePath(`${WORKS_PATH}/obras/${workId}/portal-cliente`);
+    return { success: true, data: { images: next } };
+  } catch {
+    return { success: false, error: 'Não foi possível publicar a foto.' };
+  }
+}
 
 export interface UpdateWorkClientPortalInput {
   workId: string;
@@ -73,7 +112,13 @@ export async function updateWorkClientPortal(
   const porta = await portaoDoEngenheiro(input.workId);
   if (!porta.ok) return { success: false, error: porta.error };
 
-  const { error } = await porta.gate.supabase
+  for (const value of [input.plannedEquipment, input.equipmentInstalled, input.plannedPublicLighting, input.publicLightingInstalled]) {
+    if (value !== undefined && value !== null && (!Number.isSafeInteger(value) || value < 0 || value > 2147483647)) {
+      return { success: false, error: 'Os contadores devem ser números inteiros entre 0 e 2.147.483.647.' };
+    }
+  }
+
+  const { data: saved, error } = await porta.gate.supabase
     .from('work_trackings')
     .update({
       project_description: limpaTexto(input.projectDescription, TEXTO_LONGO_MAX),
@@ -89,9 +134,11 @@ export async function updateWorkClientPortal(
       public_lighting_installed: limpaContador(input.publicLightingInstalled),
       updated_at: new Date().toISOString(),
     })
-    .eq('work_id', input.workId);
+    .eq('work_id', input.workId).select('id').single();
 
   if (error) return { success: false, error: error.message };
+  const recalculated = await createSupabaseServiceRoleClient().rpc('refresh_work_tracking_progress', { p_tracking_id: saved.id });
+  if (recalculated.error) return { success: false, error: 'Dados salvos, mas não foi possível recalcular o progresso. Tente salvar novamente.' };
 
   revalidatePath(`${WORKS_PATH}/obras/${input.workId}/portal-cliente`);
   revalidatePath(`${WORKS_PATH}/obras/${input.workId}/visao-geral`);
@@ -206,7 +253,7 @@ export async function addWorkClientPortalImage(
 
   const { data: tracking } = await porta.gate.supabase
     .from('work_trackings')
-    .select('id, work_images')
+    .select('id, work_images, updated_at')
     .eq('work_id', workId)
     .maybeSingle();
   if (!tracking?.id) {
@@ -236,11 +283,12 @@ export async function addWorkClientPortalImage(
   };
   const proximas = [...atuais, nova];
 
-  const { error } = await porta.gate.supabase
+  const { data: saved, error } = await porta.gate.supabase
     .from('work_trackings')
     .update({ work_images: proximas, updated_at: new Date().toISOString() })
-    .eq('work_id', workId);
+    .eq('work_id', workId).eq('updated_at', tracking.updated_at).select('id').maybeSingle();
   if (error) return { success: false, error: error.message };
+  if (!saved) return { success: false, error: 'A galeria mudou. Atualize a página e tente novamente.' };
 
   revalidatePath(`${WORKS_PATH}/obras/${workId}/portal-cliente`);
   return { success: true, data: { images: proximas } };
@@ -255,7 +303,7 @@ export async function removeWorkClientPortalImage(
 
   const { data: tracking } = await porta.gate.supabase
     .from('work_trackings')
-    .select('work_images')
+    .select('work_images, updated_at')
     .eq('work_id', workId)
     .maybeSingle();
   if (!tracking) {
@@ -270,11 +318,12 @@ export async function removeWorkClientPortalImage(
   // O arquivo no bucket fica. Ele é público e barato, e apagar exigiria
   // distinguir foto subida por aqui de data URI legado, que não tem arquivo
   // nenhum para apagar.
-  const { error } = await porta.gate.supabase
+  const { data: saved, error } = await porta.gate.supabase
     .from('work_trackings')
     .update({ work_images: proximas, updated_at: new Date().toISOString() })
-    .eq('work_id', workId);
+    .eq('work_id', workId).eq('updated_at', tracking.updated_at).select('id').maybeSingle();
   if (error) return { success: false, error: error.message };
+  if (!saved) return { success: false, error: 'A galeria mudou. Atualize a página e tente novamente.' };
 
   revalidatePath(`${WORKS_PATH}/obras/${workId}/portal-cliente`);
   return { success: true, data: { images: proximas } };

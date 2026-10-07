@@ -76,11 +76,6 @@ function LightboxBody({
   }, [next, prev]);
 
   const current = images[Math.max(0, Math.min(index, images.length - 1))];
-  const [errored, setErrored] = useState(false);
-
-  useEffect(() => {
-    setErrored(false);
-  }, [current]);
 
   return (
     <>
@@ -121,7 +116,14 @@ function LightboxBody({
         </>
       )}
 
-      {errored ? (
+      <LightboxImage key={current} src={current} alt={alt} />
+    </>
+  );
+}
+
+function LightboxImage({ src, alt }: { src: string; alt: string }) {
+  const [errored, setErrored] = useState(false);
+  return errored ? (
         <div className="flex flex-col items-center gap-2 text-white/60">
           <ImageOff className="h-10 w-10" />
           <span className="text-sm">Mídia indisponível</span>
@@ -129,13 +131,11 @@ function LightboxBody({
       ) : (
         /* eslint-disable-next-line @next/next/no-img-element */
         <img
-          src={current}
+          src={src}
           alt={alt}
           className="max-h-[90vh] max-w-[90vw] select-none object-contain"
           draggable={false}
           onError={() => setErrored(true)}
         />
-      )}
-    </>
-  );
+      );
 }

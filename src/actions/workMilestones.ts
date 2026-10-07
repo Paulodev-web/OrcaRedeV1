@@ -344,13 +344,6 @@ export async function approveMilestone(input: {
     return { success: false, error: 'Apenas o engenheiro pode aprovar marcos.' };
   }
 
-  if ((milestone.status as string) !== 'awaiting_approval') {
-    return {
-      success: false,
-      error: `Marco nao esta aguardando aprovacao (status: ${milestone.status as string}).`,
-    };
-  }
-
   const comment = input.comment ? input.comment.trim() : null;
   if (comment && comment.length > MILESTONE_NOTES_MAX) {
     return {
@@ -359,39 +352,12 @@ export async function approveMilestone(input: {
     };
   }
 
-  const nowIso = new Date().toISOString();
-  const { error: updErr } = await supabase
-    .from('work_milestones')
-    .update({
-      status: 'approved',
-      approved_by: userId,
-      approved_at: nowIso,
-    })
-    .eq('id', input.milestoneId);
-
-  if (updErr) {
-    return { success: false, error: updErr.message };
-  }
-
-  // Registrar evento (RLS valida actor_role='engineer' bate com role real).
-  const { error: evErr } = await supabase
-    .from('work_milestone_events')
-    .insert({
-      milestone_id: input.milestoneId,
-      work_id: workId,
-      event_type: 'approved',
-      actor_id: userId,
-      actor_role: 'engineer',
-      notes: comment,
-    });
-
-  if (evErr) {
-    // Marco ja foi aprovado, mas evento nao registrou. Nao revertemos.
-    return {
-      success: false,
-      error: `Marco aprovado, mas falha ao registrar evento: ${evErr.message}`,
-    };
-  }
+  // O banco trava o marco e grava status + auditoria na mesma transação.
+  const { error: completionError } = await supabase.rpc('complete_work_milestone', {
+    p_milestone_id: input.milestoneId,
+    p_comment: comment,
+  });
+  if (completionError) return { success: false, error: completionError.message };
 
   revalidatePath(WORKS_PATH);
   revalidatePath(`${WORKS_PATH}/obras/${workId}/progresso`);

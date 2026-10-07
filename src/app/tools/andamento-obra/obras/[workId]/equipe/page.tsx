@@ -4,6 +4,9 @@ import { getWorkAttendanceHistory } from '@/services/works/getWorkAttendanceHist
 import { getViewerWorkRole } from '@/services/works/getViewerWorkRole';
 import { WorkTeamSection } from '@/components/andamento-obra/works/equipe/WorkTeamSection';
 import { AttendanceTable } from '@/components/andamento-obra/works/equipe/AttendanceTable';
+import { CrewDocumentsPanel } from '@/components/andamento-obra/works/equipe/CrewDocumentsPanel';
+import { getCrewDocuments } from '@/services/works/getCrewDocuments';
+import { notFound } from 'next/navigation';
 
 interface Props {
   params: Promise<{ workId: string }>;
@@ -30,11 +33,13 @@ export default async function WorkTeamPage({ params }: Props) {
       .order('full_name', { ascending: true }),
   ]);
 
-  const role = viewerRole ?? 'engineer';
+  if (!viewerRole) notFound();
+  const role = viewerRole;
   const isEngineer = role === 'engineer';
   const allCrew = (crewRes.data ?? []) as Array<{ id: string; full_name: string; role: string | null }>;
   const allocatedIds = new Set(team.map((t) => t.crewMemberId));
   const availableCrew = allCrew.filter((c) => !allocatedIds.has(c.id));
+  const documents = isEngineer ? await getCrewDocuments(supabase, workId, team.map((member) => member.crewMemberId)) : [];
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-6 lg:px-8">
@@ -44,6 +49,8 @@ export default async function WorkTeamPage({ params }: Props) {
         workId={workId}
         isEngineer={isEngineer}
       />
+
+      {isEngineer && <CrewDocumentsPanel workId={workId} team={team} documents={documents} />}
 
       <div className="mt-8">
         <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">

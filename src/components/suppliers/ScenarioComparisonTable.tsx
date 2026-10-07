@@ -413,10 +413,7 @@ export default function ScenarioComparisonTable({
     );
   }
 
-  const withPurchaseCount = useMemo(
-    () => items.filter((item) => item.net_qty > 0).length,
-    [items]
-  );
+  const withPurchaseCount = items.filter((item) => item.net_qty > 0).length;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">

@@ -53,10 +53,9 @@ export default async function PortalClientePage({ params }: PortalClientePagePro
           Esta obra ainda não tem portal do cliente
         </h2>
         <p className="mx-auto mt-2 max-w-lg text-xs text-gray-600">
-          O portal nasce junto com a obra quando ela vem de um orçamento: é dele
-          que saem a planta e os postes que o cliente enxerga. Obra criada do
-          zero, ou cujo orçamento já tem um acompanhamento antigo marcado à mão,
-          fica sem.
+          Esta obra precisa de revisão da integração. Um acompanhamento antigo
+          marcado à mão não é substituído automaticamente. Obras criadas do zero
+          também devem receber um portal próprio.
         </p>
       </div>
     );

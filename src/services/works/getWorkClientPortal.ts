@@ -57,7 +57,7 @@ export const getWorkClientPortal = cache(async (
   supabase: SupabaseClient,
   workId: string,
 ): Promise<WorkClientPortal | null> => {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('work_trackings')
     .select(
       `id, public_id, public_enabled, project_description, current_focus_title,
@@ -69,6 +69,7 @@ export const getWorkClientPortal = cache(async (
     .eq('work_id', workId)
     .maybeSingle();
 
+  if (error) throw new Error(`Falha ao carregar portal do cliente: ${error.message}`);
   if (!data) return null;
 
   const rawImages = Array.isArray(data.work_images) ? data.work_images : [];

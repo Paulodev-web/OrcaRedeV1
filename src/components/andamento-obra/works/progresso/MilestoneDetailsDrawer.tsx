@@ -78,7 +78,7 @@ export function MilestoneDetailsDrawer({
         setLoading(false);
       }
     })();
-  }, [open, milestone.id, loadHistory]);
+  }, [open, milestone.id, milestone.status, loadHistory]);
 
   function refresh() {
     onChanged?.();
@@ -89,6 +89,8 @@ export function MilestoneDetailsDrawer({
         const { history: h, signedUrls: u } = await loadHistory(milestone.id);
         setHistory(h);
         setSignedUrls(u);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Falha ao atualizar histórico.');
       } finally {
         setLoading(false);
       }
@@ -410,9 +412,13 @@ function DrawerActions({
           <p className="text-xs font-medium text-emerald-700">Marco aprovado.</p>
         )}
         {viewerRole === 'engineer' && status !== 'awaiting_approval' && status !== 'approved' && (
-          <p className="text-xs text-gray-500">
-            Aguardando o gerente reportar a conclusão.
-          </p>
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500">Se você já conferiu a execução, pode concluir sem aguardar o relatório da equipe.</p>
+            <button type="button" onClick={onApprove} disabled={isPending}
+              className="rounded-md bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
+              {isPending ? 'Concluindo…' : 'Concluir como engenheiro'}
+            </button>
+          </div>
         )}
       </div>
     </footer>

@@ -52,6 +52,9 @@ saber.
 **Sai da navegação (o código dorme, não é apagado):** checklists, formulário de diário e seu fluxo
 de aprovação, equipe e presença, galeria, documentos, curva S.
 
+**Atualização de 6 out 2026:** Equipe retorna como “Equipe e documentos” para atender ao
+compartilhamento seletivo de NR/CNH solicitado em 30 set. O fluxo novo está descrito em 9.1.
+
 **Fica:** canvas compartilhado (poste, equipamento, trecho de rede), conversa, dia automático,
 impedimento, marcos, e o cadastro de usuários do app.
 
@@ -250,6 +253,11 @@ mesmos chips de contexto.
 Os seis marcos em coluna. O que está aguardando decisão traz as fotos, a observação do gerente, e
 **o que o sistema conta no período**: metros somados dos trechos, número de trechos, fotos. A
 aprovação deixa de ser ato de fé.
+
+Desde 6 out 2026, o engenheiro também pode concluir diretamente um marco pendente, em andamento
+ou rejeitado, sem exigir relatório prévio. A mesma RPC atende a aprovação de um relato. Status e
+evento de auditoria são gravados na mesma transação; repetir a conclusão não duplica eventos.
+Gerentes não podem aprovar. Obras canceladas recusam a operação.
 
 ### W6 · Usuários do app
 
@@ -960,6 +968,55 @@ três legados), sem órfãos, duplicidades ou `public_id` ausente. Nenhuma migra
 foi aplicada em produção durante o preflight.
 
 ---
+
+### 9.1. Revisão da reunião de 30 set — implementação em desenvolvimento (6 out 2026)
+
+**Não houve deploy em produção.** A revisão está na branch `ajustes/on-2026-09-30` e as quatro
+migrations `20261006003736`, `20261006003950`, `20261006004333` e `20261006005000` foram
+executadas somente no projeto dev `cvumyonqcazhnwxpclms`, via SQL, sem registrar histórico de
+migration. Antes de promover, conferir o histórico e o diff do ambiente alvo; não executar
+`db push` indiscriminadamente, pois há migrations de outras frentes no checkout.
+
+Comportamentos implementados:
+
+- Obras sem orçamento recebem portal próprio e permanente. PDF opcional no cadastro: até 8 MB,
+  validado, sem senha, armazenado no bucket privado. A planta não cria postes automaticamente.
+  A rota pública verifica token, publicação e obra não cancelada antes de emitir URL de 60 s.
+- Contagem interna usa instalações reais, não um zero fixo. Equipamento/iluminação validam
+  inteiros não negativos e recalculam o progresso após salvar. Metas sem previsto nem realizado
+  ficam ocultas. A curva informa que representa metros acumulados e uma estimativa linear,
+  não o percentual total. Marcos continuam personalizáveis; BT/MT não são apagados automaticamente.
+- Conclusão direta pelo engenheiro e histórico transacional, conforme W5. Removido o atalho
+  de checklist. Textos de obra independente corrigidos. A planta pública é enquadrada no espaço
+  disponível, inclusive na troca entre desktop e mobile.
+- Galeria pública permite selecionar fotos de postes/equipamentos da execução. A seleção é
+  explícita; notas internas não são copiadas. Origem, obra pai, status e caminho são validados.
+  O acesso público usa rota autenticada pelo token do portal e URL de Storage de 60 s; retirar
+  a imagem bloqueia novas URLs. Escritas concorrentes na galeria detectam conflito por `updated_at`.
+- NR/CNH/outros anexos pertencem à pessoa, mas a publicação é por obra. Upload privado por
+  padrão, somente engenheiro proprietário com pessoa alocada ativa. PDF/JPG/PNG até 8 MB.
+  Tabelas protegidas por RLS e bucket privado sem acesso anônimo. A rota pública não expõe o
+  caminho de Storage. Desalocar a pessoa ou inativá-la remove as publicações; realocar não
+  republica automaticamente. URLs já emitidas podem continuar válidas por até 60 s.
+
+Validação realizada em dev: 33 testes unitários; gates SQL transacionais para marcos, portal
+independente e documentos; gate de compatibilidade de portais antigos; criação real via interface
+com PDF sintético; iluminação 4/12 = 33%; conclusão direta com um evento; documentos e fotos
+privados → publicados → retirados, com HTTP 404 antes/depois e download autorizado durante a
+publicação. Fixtures são isoladas por conta/organização QA e removidas pelo script
+`scripts/meeting-e2e-fixture.ts`. `scripts/verify-meeting-dev.ts` faz verificação somente leitura.
+
+Fechamento desta rodada: build de produção e TypeScript passaram; ESLint sem erros nos 41
+arquivos novos/alterados de `src`. Depois da limpeza da fixture, a verificação somente leitura
+voltou à base de 7 obras, 47 instalações e 22 fotos, com acesso anônimo operacional bloqueado.
+Conta, organização, obra e arquivos sintéticos foram removidos. A conferência visual incluiu
+desktop e largura de 390 px. Uma falha transitória de rede na recarga motivou um error boundary
+com orientação para conferir a gravação antes de repetir a operação.
+
+Limites da homologação: o lint global possui erros anteriores fora desta entrega; não foram
+suprimidas regras para escondê-los. A esteira comercial R11 exige desenho e aprovação de Luan
+antes do código, conforme triagem. O bloco exato que deve “voltar para cima” em R7 ainda precisa
+de confirmação visual. Esses pontos impedem declarar a reunião inteira encerrada.
 
 ## 10. Achados que custaram investigação
 

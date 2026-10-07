@@ -12,19 +12,19 @@ export function ProgressOverview({ data }: { data: WorkProgressData }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <PostsProgressCard
+        {(data.postsPlanned > 0 || data.postsInstalled > 0) && <PostsProgressCard
           postsPlanned={data.postsPlanned}
           postsInstalled={data.postsInstalled}
-        />
+        />}
         <MilestoneStatusSummary counts={data.milestonesCounts} />
       </div>
       <MeterProgressCard meters={data.metersByCategory} />
-      <SCurveChart
+      {(data.totalMetersPlanned > 0 || data.totalMetersRealized > 0) && <SCurveChart
         data={data.sCurveData}
         totalPlanned={data.totalMetersPlanned}
         startedAt={data.startedAt}
         expectedEndAt={data.expectedEndAt}
-      />
+      />}
     </div>
   );
 }
