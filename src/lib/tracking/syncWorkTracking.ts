@@ -14,6 +14,16 @@ export type SyncWorkTrackingOptions = {
   onConnectionError?: (message: string) => void;
 };
 
+/**
+ * - `saved`: tudo gravado e nenhum sync mais novo apareceu no meio.
+ * - `superseded`: a linha da obra foi gravada, mas um sync mais novo começou
+ *   antes do fim e assumiu postes e conexões. Para quem clicou em Salvar, os
+ *   campos da obra estão no banco.
+ * - `skipped`: nada foi escrito (sem orçamento ou já nasceu obsoleto).
+ * - `failed`: o banco recusou (RLS, rede, constraint).
+ */
+export type SyncWorkTrackingResult = 'saved' | 'superseded' | 'skipped' | 'failed';
+
 function isStaleSync(opts: SyncWorkTrackingOptions): boolean {
   return opts.syncGeneration !== opts.getCurrentGeneration();
 }
@@ -68,9 +78,9 @@ export async function syncWorkTrackingToSupabase(
   supabase: SupabaseClient,
   t: WorkTracking,
   opts: SyncWorkTrackingOptions
-): Promise<boolean> {
-  if (!t.budget_id) return false;
-  if (isStaleSync(opts)) return false;
+): Promise<SyncWorkTrackingResult> {
+  if (!t.budget_id) return 'skipped';
+  if (isStaleSync(opts)) return 'skipped';
 
   // Acompanhamento espelhado tem um dono só: o Andamento de Obra. Postes,
   // conexões, contadores e progresso são escritos pelo banco quando o
@@ -133,10 +143,10 @@ export async function syncWorkTrackingToSupabase(
       .single();
 
     if (workError) throw workError;
-    if (isStaleSync(opts)) return false;
 
     const trackingId = workData?.id;
-    if (!trackingId) return false;
+    if (!trackingId) return 'failed';
+    if (isStaleSync(opts)) return 'superseded';
 
     // Espelho: o poste tem dono do outro lado, a linha de rede não.
     //
@@ -193,7 +203,7 @@ export async function syncWorkTrackingToSupabase(
       if (postsError) throw postsError;
     }
 
-    if (isStaleSync(opts)) return false;
+    if (isStaleSync(opts)) return 'superseded';
 
     if (t.post_connections?.length > 0) {
       const pairKey = (a: string, b: string, type: string) => `${[a, b].sort().join('|')}|${type}`;
@@ -237,9 +247,9 @@ export async function syncWorkTrackingToSupabase(
       }
     }
 
-    return !isStaleSync(opts);
+    return isStaleSync(opts) ? 'superseded' : 'saved';
   } catch (e) {
     console.warn('Sync obra/postes para Supabase:', e);
-    return false;
+    return 'failed';
   }
 }
