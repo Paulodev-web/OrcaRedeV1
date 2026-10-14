@@ -1078,9 +1078,13 @@ export function EngineerPortal() {
   };
 
   /** Persiste a obra atual no Supabase (inclui totais planejados MT/BT/postes e extensões). */
+  // O Salvar atualiza o estado antes de gravar, e isso dispara o autosave, que
+  // incrementa a geração enquanto este upsert ainda está em voo. `superseded`
+  // quer dizer que a linha da obra já foi gravada e o autosave assumiu o resto:
+  // para o usuário, salvou.
   const persistTrackingToSupabase = async (t: WorkTracking): Promise<boolean> => {
     const generation = ++syncGenerationRef.current;
-    return syncWorkTrackingToSupabase(supabase, t, {
+    const result = await syncWorkTrackingToSupabase(supabase, t, {
       deletedPostIds: deletedPostIdsRef.current,
       syncGeneration: generation,
       getCurrentGeneration: () => syncGenerationRef.current,
@@ -1088,6 +1092,7 @@ export function EngineerPortal() {
         console.error('Erro ao salvar conexões (persistTracking):', message);
       },
     });
+    return result === 'saved' || result === 'superseded';
   };
 
   const handleSaveChanges = async () => {
